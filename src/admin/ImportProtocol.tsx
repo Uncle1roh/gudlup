@@ -59,7 +59,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
         setSpec(res.spec)
         void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `spec doc · ${res.spec.code} · ${res.spec.versions.length} versions` })
       } catch (err) {
-        setError(`Could not read that file: ${(err as Error).message}`)
+        const msg = (err as Error).message
+        setError(/dynamically imported module|Failed to fetch|import/i.test(msg)
+          ? 'The app was updated since this page was opened, so part of it is stale — refresh the page (Ctrl+Shift+R) and pick the file again.'
+          : `Could not read that file: ${msg}`)
       } finally {
         setReading(false)
       }
@@ -225,7 +228,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
             <b>{reading ? 'Reading document…' : 'Choose a protocol PDF — or a CSV/JSON for bulk import'}</b>
             <span className="adm-drop__meta">PDF/TXT/MD: the full "Protocol for Developers" document (timelines, affirmations, audio config) · CSV/JSON: one protocol per row</span>
           </span>
-          <span className="b2b-btn b2b-btn--primary adm-drop__btn" onClick={() => fileRef.current?.click()}>Browse…</span>
+          {/* NOTE: no onClick here — this span sits inside the <label>, whose
+              native activation already opens the file input; a programmatic
+              .click() on top of that opened the dialog twice. */}
+          <span className="b2b-btn b2b-btn--primary adm-drop__btn">Browse…</span>
         </label>
 
         {error && <div className="adm-issues adm-issues--err" style={{ maxWidth: 720 }}><span>{error}</span></div>}
