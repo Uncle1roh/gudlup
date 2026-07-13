@@ -283,4 +283,23 @@ export const IT: Record<string, string> = {
   'Risk distribution': 'Distribuzione del rischio',
   'Hidden — group under {n}': 'Nascosto — gruppo sotto {n}',
   'This is a risk-management aid for NR-1 psychosocial risk, not a clinical or individual diagnosis. Figures are anonymised aggregates from consenting employees. Report generated {date}.': 'Questo è uno strumento di gestione del rischio psicosociale NR-1, non una diagnosi clinica o individuale. I dati sono aggregati anonimizzati di dipendenti consenzienti. Report generato il {date}.',
+
+  /* ---- demo hub ---- */
+  'All apps': 'Tutte le app',
+  'One platform, four surfaces': 'Una piattaforma, quattro superfici',
+  'Pick a surface to test. Each one has its own login.': 'Scegli una superficie da testare. Ognuna ha il proprio accesso.',
+  'Employee app': 'App dipendente',
+  'Guided sound sessions, progress, quarterly check-in. Create your own account with any email and password.': 'Sessioni sonore guidate, progressi, check-in trimestrale. Crea il tuo account con qualsiasi email e password.',
+  'Therapist app': 'App terapeuta',
+  'Patient roster, live sessions, clinical reports. Sign up with name and CRP — new clinicians start as pending until approved in the admin console.': 'Elenco pazienti, sessioni live, report clinici. Registrati con nome e CRP — i nuovi clinici partono come "in attesa" finché non vengono approvati nella console admin.',
+  'Employer dashboard': 'Dashboard azienda',
+  'Aggregate NR-1 psychosocial report — anonymous by design.': 'Report psicosociale NR-1 aggregato — anonimo per costruzione.',
+  'Admin console': 'Console admin',
+  'Protocol catalog, companies, users, therapist credential approvals.': 'Catalogo protocolli, aziende, utenti, approvazione credenziali dei terapeuti.',
+  'Sound Studio': 'Sound Studio',
+  'Internal audio-authoring tool (in English).': 'Strumento interno di produzione audio (in inglese).',
+  'Sign in as': 'Accedi come',
+  'Open': 'Apri',
+  'Continue': 'Continua',
+  'Signed in': 'Accesso effettuato',
 }

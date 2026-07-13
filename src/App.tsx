@@ -8,6 +8,7 @@ import { DataLayerProvider } from './data/provider'
 import { AuthProvider } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
 import { I18nProvider } from './i18n'
+import { Hub } from './hub/Hub'
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash)
@@ -22,6 +23,11 @@ export default function App() {
   const isEmployer = route === '#employer' || route === '#hr'
 
   function content() {
+    // Demo hub: links every surface for testers. No gate — it's just links.
+    if (route === '#hub') {
+      return <Hub />
+    }
+
     // The Sound Studio is an internal authoring tool — left ungated.
     if (route === '#studio') {
       return (

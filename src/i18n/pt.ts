@@ -283,4 +283,23 @@ export const PT: Record<string, string> = {
   'Risk distribution': 'Distribuição de risco',
   'Hidden — group under {n}': 'Oculto — grupo abaixo de {n}',
   'This is a risk-management aid for NR-1 psychosocial risk, not a clinical or individual diagnosis. Figures are anonymised aggregates from consenting employees. Report generated {date}.': 'Este é um apoio à gestão de risco psicossocial NR-1, não um diagnóstico clínico ou individual. Os números são agregados anonimizados de colaboradores que consentiram. Relatório gerado em {date}.',
+
+  /* ---- demo hub ---- */
+  'All apps': 'Todos os apps',
+  'One platform, four surfaces': 'Uma plataforma, quatro superfícies',
+  'Pick a surface to test. Each one has its own login.': 'Escolha uma superfície para testar. Cada uma tem seu próprio login.',
+  'Employee app': 'App do colaborador',
+  'Guided sound sessions, progress, quarterly check-in. Create your own account with any email and password.': 'Sessões sonoras guiadas, progresso, check-in trimestral. Crie sua conta com qualquer email e senha.',
+  'Therapist app': 'App do terapeuta',
+  'Patient roster, live sessions, clinical reports. Sign up with name and CRP — new clinicians start as pending until approved in the admin console.': 'Lista de pacientes, sessões ao vivo, relatórios clínicos. Cadastre-se com nome e CRP — novos clínicos começam como "pendentes" até serem aprovados no console admin.',
+  'Employer dashboard': 'Painel da empresa',
+  'Aggregate NR-1 psychosocial report — anonymous by design.': 'Relatório psicossocial NR-1 agregado — anônimo por construção.',
+  'Admin console': 'Console admin',
+  'Protocol catalog, companies, users, therapist credential approvals.': 'Catálogo de protocolos, empresas, usuários, aprovação de credenciais de terapeutas.',
+  'Sound Studio': 'Sound Studio',
+  'Internal audio-authoring tool (in English).': 'Ferramenta interna de produção de áudio (em inglês).',
+  'Sign in as': 'Entre como',
+  'Open': 'Abrir',
+  'Continue': 'Continuar',
+  'Signed in': 'Conectado',
 }

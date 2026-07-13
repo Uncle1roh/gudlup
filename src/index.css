@@ -1576,3 +1576,35 @@ img, svg, video, canvas { max-width: 100%; }
 .voice-panel__err { color: #b3402a; margin: 0; }
 .voice-panel__fine { color: var(--slate); font-size: 11.5px; margin: 0; }
 @media (max-width: 560px) { .voice-panel__fields { grid-template-columns: 1fr; } }
+
+/* ----------------------------------------------------------------------------
+   Demo hub (#hub) — launcher for every surface
+   ---------------------------------------------------------------------------- */
+.hub { min-height: 100dvh; display: grid; place-items: center; background: var(--mist, #f2f1ec); padding: 28px 16px; }
+.hub__inner { width: min(680px, 100%); display: flex; flex-direction: column; gap: 22px; }
+.hub__head { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.hub__title { font-family: var(--display); font-weight: 500; font-size: 28px; color: var(--ink); margin: 8px 0 0; }
+.hub__sub { color: var(--slate); font-size: 14px; margin: 0; }
+.hub__grid { display: flex; flex-direction: column; gap: 12px; }
+.hub__card {
+  display: flex; align-items: center; gap: 16px; text-decoration: none;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg, 16px);
+  padding: 18px 20px; box-shadow: var(--shadow-soft); color: inherit;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.hub__card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(20, 35, 28, 0.08); }
+.hub__icon { font-size: 26px; }
+.hub__body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.hub__cardtitle { font-family: var(--display); font-size: 17px; color: var(--ink); }
+.hub__blurb { font-size: 13px; color: var(--slate); line-height: 1.45; }
+.hub__hint { font-size: 12.5px; color: var(--slate); margin-top: 3px; }
+.hub__hint b { color: var(--ink); font-weight: 600; }
+.hub__open { font-size: 13px; color: var(--slate); white-space: nowrap; }
+@media (max-width: 480px) { .hub__card { flex-wrap: wrap; } .hub__open { width: 100%; text-align: right; } }
+
+/* hub link on the auth card */
+.auth__hub {
+  display: block; text-align: center; margin-top: 14px;
+  font-size: 12.5px; color: var(--slate); text-decoration: none;
+}
+.auth__hub:hover { text-decoration: underline; }

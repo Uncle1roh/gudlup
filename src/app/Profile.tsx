@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SignOutButton } from '../auth/auth'
+import { SignOutButton, useAuth } from '../auth/auth'
 import { useI18n, LOCALES } from '../i18n'
 
 interface ProfileProps {
@@ -14,6 +14,7 @@ export function Profile({ demoSeconds, onDemoToggle }: ProfileProps) {
   const [reminder, setReminder] = useState<Reminder>('daily')
   const [toast, setToast] = useState<string | null>(null)
   const { t, locale, setLocale } = useI18n()
+  const { user } = useAuth()
 
   function flash(msg: string) {
     setToast(msg)
@@ -34,7 +35,7 @@ export function Profile({ demoSeconds, onDemoToggle }: ProfileProps) {
         <div className="profile__avatar">🙂</div>
         <div>
           <div className="history__title">{t('You')}</div>
-          <div className="muted small">{t('Signed in with Apple')}</div>
+          <div className="muted small">{user?.email ?? t('Signed in')}</div>
         </div>
       </div>
 

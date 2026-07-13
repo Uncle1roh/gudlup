@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   JOURNEY_TOTAL_WEEKS,
-  JOURNEY_WEEKS_DONE,
   JOURNEY_SESSIONS_PER_WEEK,
 } from '../data/seed'
 import { getProtocol } from '../data/protocols'
@@ -58,6 +57,12 @@ export function Progress({ history }: ProgressProps) {
   const monthStart = Date.now() - 30 * 86_400_000
   const thisMonth = history.filter((r) => r.startedAt >= monthStart).length
 
+  // journey position derives from the user's REAL history: weeks since their
+  // first session (0 when they're just starting), capped to the program length
+  const firstAt = history.length ? Math.min(...history.map((r) => r.startedAt)) : null
+  const weeksDone = firstAt == null ? 0
+    : Math.min(JOURNEY_TOTAL_WEEKS - 1, Math.floor((Date.now() - firstAt) / (7 * 86_400_000)))
+
   function flash(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 1800)
@@ -72,11 +77,11 @@ export function Progress({ history }: ProgressProps) {
       <section className="card">
         <div className="card__head">
           <h2 className="card__title">{t('3-month journey')}</h2>
-          <span className="muted small">{t('Week {n} of {total}', { n: JOURNEY_WEEKS_DONE + 1, total: JOURNEY_TOTAL_WEEKS })}</span>
+          <span className="muted small">{t('Week {n} of {total}', { n: weeksDone + 1, total: JOURNEY_TOTAL_WEEKS })}</span>
         </div>
         <div className="journey">
           {Array.from({ length: JOURNEY_TOTAL_WEEKS }, (_, i) => {
-            const state = i < JOURNEY_WEEKS_DONE ? 'done' : i === JOURNEY_WEEKS_DONE ? 'now' : 'todo'
+            const state = i < weeksDone ? 'done' : i === weeksDone ? 'now' : 'todo'
             return <span key={i} className={`journey__wk journey__wk--${state}`}>{i + 1}</span>
           })}
         </div>
