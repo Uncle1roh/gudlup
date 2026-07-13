@@ -17,6 +17,16 @@ import { registerProtocols } from './protocols'
  * All methods are async on purpose: the contract already matches a real network
  * backend, so the screens' loading handling is correct from day one.
  */
+export interface SessionRequest {
+  id: string
+  requesterName: string
+  requesterEmail?: string
+  company?: string
+  note?: string
+  status: 'open' | 'claimed'
+  createdAt: number
+}
+
 export interface DataProvider {
   // --- B2C ---
   listSessions(): Promise<SessionRecord[]>
@@ -24,6 +34,12 @@ export interface DataProvider {
   // --- B2B ---
   getTherapist(): Promise<Therapist>
   listPatients(): Promise<Patient[]>
+  /** B2C→therapist intake queue. */
+  requestSession(note?: string): Promise<void>
+  getMySessionRequest(): Promise<SessionRequest | null>
+  listSessionRequests(): Promise<SessionRequest[]>
+  /** Accept an open request: creates the linked patient, returns its id. */
+  acceptSessionRequest(requestId: string): Promise<string>
   /** Create a patient owned by the signed-in therapist; returns the new id. */
   createPatient(name: string): Promise<string>
   getPatient(id: string): Promise<Patient | undefined>

@@ -17,7 +17,7 @@ import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
 export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin'
 
 export interface AuthUser { id: string; email: string }
-export interface SignUpExtra { name?: string; crp?: string }
+export interface SignUpExtra { name?: string; crp?: string; companyId?: string; team?: string }
 
 export interface AuthApi {
   ready: boolean
@@ -92,8 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!data.session) throw new Error('Email confirmation is ON in Supabase, so this sign-up has no session yet. Disable it (Authentication → Sign In / Providers → Email → "Confirm email") and sign up again.')
         const { error: pErr } = await sb.from('profiles').insert({
           auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
+          company_id: extra?.companyId?.trim() || null,
+          team: extra?.team?.trim() || null,
         })
-        if (pErr) throw pErr
+        if (pErr) {
+          if ((pErr as { code?: string }).code === '23503')
+            throw new Error('Unknown company code — ask HR for the right one.')
+          throw pErr
+        }
         if (role === 'therapist') {
           const { data: prof, error: gErr } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
           if (gErr) throw gErr

@@ -1,5 +1,5 @@
 import type { SessionRecord } from '../types/domain'
-import type { DataProvider } from './provider'
+import type { DataProvider, SessionRequest } from './provider'
 import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
@@ -128,6 +128,11 @@ function buildPopulation(): PsychosocialResponse[] {
 }
 
 let psychosocialResponses: PsychosocialResponse[] = buildPopulation()
+
+/* B2C→therapist intake queue (one seeded open request so the roster demo shows it) */
+let sessionRequests: SessionRequest[] = [
+  { id: 'sr1', requesterName: 'Mariana Alves', requesterEmail: 'mariana@aurora.co', company: 'Aurora Tech', note: 'Ansiedade no trabalho', status: 'open', createdAt: nowMs - 2 * 3_600_000 },
+]
 const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 
 export function createMockProvider(): DataProvider {
@@ -157,6 +162,27 @@ export function createMockProvider(): DataProvider {
     // --- B2B ---
     getTherapist: () => delay(DEMO_THERAPIST),
     listPatients: () => delay(patients),
+    requestSession: async (note) => {
+      sessionRequests.push({ id: `sr-${Date.now()}`, requesterName: 'You', note, company: NR1_COMPANY, status: 'open', createdAt: Date.now() })
+      await wait()
+    },
+    getMySessionRequest: () => delay(sessionRequests.find((r) => r.requesterName === 'You') ?? null),
+    listSessionRequests: () => delay(sessionRequests.map((r) => ({ ...r }))),
+    acceptSessionRequest: async (requestId) => {
+      const req = sessionRequests.find((r) => r.id === requestId && r.status === 'open')
+      if (!req) throw new Error('Request already accepted')
+      const id = `p-${Date.now()}`
+      patients.push({
+        id, name: req.requesterName, age: 0, sex: 'F', reason: req.note ?? '',
+        conditions: [], medications: [], contraindications: [],
+        goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
+        clinicalNotes: '', vasTrend: 'stable', unread: 0,
+        consents: { therapy: true, sharing: false, aggregates: false },
+      })
+      req.status = 'claimed'
+      await wait()
+      return id
+    },
     createPatient: async (name) => {
       const id = `p-${Date.now()}`
       patients.push({

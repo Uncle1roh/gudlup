@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
+import { useDataProvider } from '../data/provider'
+import { useMySessionRequest } from '../data/hooks'
 import { greeting, lastSession, todayRecommendation } from '../data/seed'
 import { getProtocol } from '../data/protocols'
 import { useI18n } from '../i18n'
@@ -15,6 +18,23 @@ interface HomeSessionProps {
 /** B9: one large CTA, one recommendation card, no catalog scrolling. */
 export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }: HomeSessionProps) {
   const { t } = useI18n()
+  const dp = useDataProvider()
+  const { data: myRequest, refetch: refetchRequest } = useMySessionRequest()
+  const [requesting, setRequesting] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  async function requestTherapist() {
+    if (myRequest || requesting) return
+    setRequesting(true)
+    try {
+      await dp.requestSession()
+      refetchRequest()
+      setToast(t('Request sent'))
+      setTimeout(() => setToast(null), 2200)
+    } finally {
+      setRequesting(false)
+    }
+  }
   const last = lastSession(history)
   const lastProtocol = getProtocol(last.protocolCode)
   const rec = todayRecommendation()
@@ -54,6 +74,23 @@ export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }
         <span className="compose-card__arrow">→</span>
       </button>
 
+      <button className="assess-card" onClick={requestTherapist} disabled={!!myRequest || requesting} style={myRequest ? { opacity: 0.75 } : undefined}>
+        <span className="assess-card__icon">🩺</span>
+        <span className="assess-card__text">
+          <strong>{myRequest
+            ? (myRequest.status === 'claimed'
+              ? t('A therapist accepted your request')
+              : t('Request sent — waiting for a therapist'))
+            : t('Talk to a therapist')}</strong>
+          <span>{myRequest
+            ? (myRequest.status === 'claimed'
+              ? t('They will schedule the session with you.')
+              : t("You'll be contacted to schedule."))
+            : t('Request a session — a clinician will pick it up.')}</span>
+        </span>
+        {!myRequest && <span className="assess-card__arrow">→</span>}
+      </button>
+
       <button className="assess-card" onClick={onAssess}>
         <span className="assess-card__icon">🗒️</span>
         <span className="assess-card__text">
@@ -66,6 +103,8 @@ export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }
       <button className="btn btn--quiet" style={{ alignSelf: 'center', marginTop: 'auto' }} onClick={onExplore}>
         {t('Explore other sessions')}
       </button>
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

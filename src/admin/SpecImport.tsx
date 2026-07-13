@@ -9,6 +9,7 @@ import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
+import { getSupabaseClient, hasSupabaseEnv } from '../auth/supabaseClient'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
 import { phasesFromSpec, voiceLinesForVersion, type ProtocolSpec } from './protocolDoc'
@@ -54,7 +55,9 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
   const [progress, setProgress] = useState<string | null>(null)
   const [renderNotes, setRenderNotes] = useState<string[]>([])
   const [renderError, setRenderError] = useState<string | null>(null)
-  const [rendered, setRendered] = useState<{ name: string; seconds: number; voice: string } | null>(null)
+  const [rendered, setRendered] = useState<{ name: string; seconds: number; voice: string; blob: Blob; duration: number; preview: boolean } | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [attached, setAttached] = useState<string | null>(null)
 
   const totalEvents = spec.versions.reduce((n, v) => n + v.events.length, 0)
   const totalVoice = spec.versions.reduce((n, v) => n + voiceLinesForVersion(spec, v.duration).length, 0)
@@ -97,13 +100,53 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
       const name = wavFileName(spec, renderDur, preview)
       downloadBlob(name, result.blob)
       setRenderNotes(result.notes)
-      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} lines` })
+      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} lines`, blob: result.blob, duration: renderDur, preview })
+      setAttached(null)
       await dp.logAudit({ actor, action: 'protocol.audio.rendered', target: spec.code, detail: `${renderDur} min${preview ? ' (90s preview)' : ''} · voice ${result.voiceRendered}/${result.voiceLines}` })
     } catch (e) {
       setRenderError((e as Error).message)
     } finally {
       setProgress(null)
       setBusy(false)
+    }
+  }
+
+  /** Upload the rendered WAV to Supabase Storage and attach its URL to the
+      catalog version — from then on the SAME file plays in the employee app
+      and in the therapist's monitored sessions (both read version.audioUrl). */
+  async function uploadAndAttach() {
+    if (!rendered || !published || rendered.preview) return
+    const url = import.meta.env.VITE_SUPABASE_URL as string
+    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+    setUploading(true)
+    setRenderError(null)
+    try {
+      const sb = getSupabaseClient(url, anon)
+      const safeCode = published.code.replace(/[^A-Za-z0-9_-]+/g, '_')
+      const path = `${safeCode}/${rendered.duration}min-ptBR.wav`
+      const { error: upErr } = await sb.storage.from('protocol-audio')
+        .upload(path, rendered.blob, { upsert: true, contentType: 'audio/wav' })
+      if (upErr) throw upErr
+      const { data: pub } = sb.storage.from('protocol-audio').getPublicUrl(path)
+      const audioUrl = pub.publicUrl
+      const next: CatalogProtocol = {
+        ...published,
+        versions: published.versions.map((v) =>
+          v.duration === rendered.duration
+            ? { ...v, audioUrl: { ...(v.audioUrl ?? {}), 'pt-BR': audioUrl } }
+            : v),
+        audioReady: true,
+        updatedAt: Date.now(),
+      }
+      await dp.saveProtocol(next)
+      registerProtocol(next)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: next.code, detail: `${rendered.duration} min · ${path}` })
+      setPublished(next)
+      setAttached(audioUrl)
+    } catch (e) {
+      setRenderError((e as Error).message)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -173,7 +216,23 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
           {rendered && (
             <div className="adm-note adm-note--ok" style={{ marginTop: 12 }}>
               <b>{rendered.name}</b> downloaded — {mmss(rendered.seconds)} rendered, voice {rendered.voice}.
-              Drop it into the protocol's version assets (or the audio library) and it becomes the session bed.
+              {rendered.preview
+                ? ' Preview renders are for checking only — render the full session to attach it to the catalog.'
+                : hasSupabaseEnv()
+                  ? ' Attach it below and this exact file becomes the session audio in the employee app and in monitored sessions.'
+                  : ' Connect Supabase env to upload it to the catalog (mock mode keeps download-only).'}
+            </div>
+          )}
+          {rendered && !rendered.preview && hasSupabaseEnv() && !attached && (
+            <div className="adm-cred__actions" style={{ marginTop: 10 }}>
+              <button className="b2b-btn b2b-btn--primary" disabled={uploading} onClick={uploadAndAttach}>
+                {uploading ? 'Uploading…' : '⬆ Upload & attach to catalog'}
+              </button>
+            </div>
+          )}
+          {attached && (
+            <div className="adm-note adm-note--ok" style={{ marginTop: 10 }}>
+              <b>Attached.</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
             </div>
           )}
           {renderError && <div className="adm-note adm-note--warn" style={{ marginTop: 12 }}>Render failed: {renderError}</div>}

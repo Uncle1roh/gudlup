@@ -33,14 +33,14 @@ function buildB2bSession(result: SessionResult): B2bSession {
 
 export function TherapistApp() {
   const dp = useDataProvider()
-  const { data: therapist } = useTherapist()
+  const { data: therapist, loading: thLoading, error: thError, refetch: refetchTherapist } = useTherapist()
   const [screen, setScreen] = useState<Screen>('roster')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: patient, refetch: refetchPatient } = usePatient(selectedId ?? '')
   const [config, setConfig] = useState<LaunchConfig | null>(null)
   const [result, setResult] = useState<SessionResult | null>(null)
   const [debrief, setDebrief] = useState<DebriefData | null>(null)
-  const [fullLength, setFullLength] = useState(false)
+  const [fullLength, setFullLength] = useState(true)  // real duration by default; demo compress is opt-in
 
   function reset() {
     setConfig(null)
@@ -51,10 +51,49 @@ export function TherapistApp() {
   }
 
   async function confirmReport() {
-    if (selectedId && result) {
-      await dp.recordB2bSession(selectedId, buildB2bSession(result))
+    try {
+      if (selectedId && result) {
+        await dp.recordB2bSession(selectedId, buildB2bSession(result))
+      }
+      reset()
+    } catch (e) {
+      window.alert(`Couldn't save the report: ${(e as Error).message}`)
     }
-    reset()
+  }
+
+  // ---- credential gate: the clinical app opens only for APPROVED clinicians.
+  if (thLoading && !therapist) {
+    return <div className="b2b-app"><div className="b2b-gate"><Loading label="Loading your account…" /></div></div>
+  }
+  if (thError) {
+    return (
+      <div className="b2b-app"><div className="b2b-gate">
+        <div className="b2b-gate__card">
+          <h1 className="b2b-h1">Not a clinician account</h1>
+          <p className="b2b-sub">This login isn't registered as a clinician. Sign out and create a clinician account (name + CRP) from the sign-in screen.</p>
+          <SignOutButton className="b2b-btn b2b-btn--primary" />
+        </div>
+      </div></div>
+    )
+  }
+  if (therapist && therapist.status !== 'approved') {
+    return (
+      <div className="b2b-app"><div className="b2b-gate">
+        <div className="b2b-gate__card">
+          <span className="b2b-gate__badge">⏳</span>
+          <h1 className="b2b-h1">Credentials under review</h1>
+          <p className="b2b-sub">
+            {therapist.name} · {therapist.crp}<br />
+            Your registration was received. An administrator reviews and approves clinician credentials before
+            patient access is enabled — you'll get in as soon as it's approved.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <button className="b2b-btn" onClick={refetchTherapist}>Check again</button>
+            <SignOutButton className="b2b-btn" />
+          </div>
+        </div>
+      </div></div>
+    )
   }
 
   // The monitored session takes over the full frame (no chrome).

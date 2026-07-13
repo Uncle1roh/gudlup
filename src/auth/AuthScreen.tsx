@@ -20,6 +20,8 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const [password, setPassword] = useState(demo ? 'demo' : '')
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
+  const [companyCode, setCompanyCode] = useState('')
+  const [team, setTeam] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,6 +32,8 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
         await auth.signUp(email.trim(), password, role, {
           name: name.trim() || undefined,
           crp: crp.trim() || undefined,
+          companyId: companyCode.trim() || undefined,
+          team: team.trim() || undefined,
         })
       } else {
         await auth.signIn(email.trim(), password)
@@ -65,9 +69,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             <input className="auth__input" type="text" placeholder={t('CRP / CFP registration')}
               value={crp} onChange={(e) => setCrp(e.target.value)} />
           </>}
-          {signup && !isB2b &&
+          {signup && !isB2b && <>
             <input className="auth__input" type="text" placeholder={t('Your name (optional)')}
-              value={name} onChange={(e) => setName(e.target.value)} />}
+              value={name} onChange={(e) => setName(e.target.value)} />
+            {!demo && <>
+              <input className="auth__input" type="text" placeholder={t('Company code (from HR, optional)')}
+                value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+              <input className="auth__input" type="text" placeholder={t('Team (optional)')}
+                value={team} onChange={(e) => setTeam(e.target.value)} />
+            </>}
+          </>}
         </div>
 
         {error && <div className="auth__error">{error}</div>}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { relWhen, type Patient } from './data'
-import { usePatients } from '../data/hooks'
+import { usePatients, useSessionRequests } from '../data/hooks'
 import { useDataProvider } from '../data/provider'
 import { Loading } from '../components/Loading'
 
@@ -30,6 +30,22 @@ function urgencyScore(p: Patient): number {
 export function Roster({ onOpenPatient }: RosterProps) {
   const dp = useDataProvider()
   const { data: patients = [], loading, refetch } = usePatients()
+  const { data: requests = [], refetch: refetchRequests } = useSessionRequests()
+  const [accepting, setAccepting] = useState<string | null>(null)
+
+  async function accept(id: string) {
+    setAccepting(id)
+    try {
+      const patientId = await dp.acceptSessionRequest(id)
+      refetch(); refetchRequests()
+      onOpenPatient(patientId)
+    } catch (e) {
+      window.alert((e as Error).message)
+      refetchRequests()
+    } finally {
+      setAccepting(null)
+    }
+  }
   const [creating, setCreating] = useState(false)
 
   async function newPatient() {
@@ -104,6 +120,25 @@ export function Roster({ onOpenPatient }: RosterProps) {
           </button>
         </div>
       </div>
+
+      {requests.length > 0 && (
+        <section className="req-queue">
+          <h2 className="req-queue__title">Session requests <span className="req-queue__count">{requests.length}</span></h2>
+          <p className="b2b-sub" style={{ marginBottom: 10 }}>Employees asking for a session from the app. Accepting creates the linked patient record.</p>
+          {requests.map((r) => (
+            <div key={r.id} className="req-queue__row">
+              <span className="req-queue__who">
+                <strong>{r.requesterName}</strong>
+                <span className="b2b-sub">{[r.company, r.requesterEmail, relWhen(r.createdAt)].filter(Boolean).join(' · ')}</span>
+              </span>
+              <span className="b2b-sub req-queue__note">{r.note ?? '—'}</span>
+              <button className="b2b-btn b2b-btn--primary" disabled={accepting === r.id} onClick={() => accept(r.id)}>
+                {accepting === r.id ? 'Accepting…' : 'Accept'}
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
 
       <div className="b2b-filterbar">
         {FILTERS.map(([id, label]) => (

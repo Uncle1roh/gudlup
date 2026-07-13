@@ -17,7 +17,7 @@
 
 import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
-import type { DataProvider } from './provider'
+import type { DataProvider, SessionRequest } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, Goal, Score, Message, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
@@ -103,6 +103,18 @@ function mapPatient(r: any): Patient {
     assessmentDue: undefined,
     unread: messages.filter((m: Message) => m.from === 'patient').length,
     consents: consentsFrom(r.patient_consents ?? []),
+  }
+}
+
+function mapSessionRequest(r: any): SessionRequest {
+  return {
+    id: r.id,
+    requesterName: r.requester_name,
+    requesterEmail: r.requester_email ?? undefined,
+    company: r.company_id ?? undefined,
+    note: r.note ?? undefined,
+    status: r.status === 'claimed' ? 'claimed' : 'open',
+    createdAt: toMs(r.created_at),
   }
 }
 
@@ -206,6 +218,65 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       const { data, error } = await sb.from('patients').select(PATIENT_SELECT).order('name')
       if (error) throw error
       return (data ?? []).map(mapPatient)
+    },
+
+    async requestSession(note?: string): Promise<void> {
+      const pid = await profileId()
+      const { data: prof, error: pErr } = await sb.from('profiles')
+        .select('name, email, company_id').eq('id', pid).single()
+      if (pErr) throw pErr
+      const row = prof as { name: string; email: string | null; company_id: string | null }
+      const { error } = await sb.from('session_requests').insert({
+        profile_id: pid,
+        company_id: row.company_id,
+        requester_name: row.name,
+        requester_email: row.email,
+        note: note ?? null,
+      })
+      if (error) throw error
+    },
+
+    async getMySessionRequest(): Promise<SessionRequest | null> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('session_requests')
+        .select('*').eq('profile_id', pid)
+        .order('created_at', { ascending: false }).limit(1)
+      if (error) throw error
+      const r = (data ?? [])[0] as any
+      return r ? mapSessionRequest(r) : null
+    },
+
+    async listSessionRequests(): Promise<SessionRequest[]> {
+      const { data, error } = await sb.from('session_requests')
+        .select('*').eq('status', 'open')
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []).map(mapSessionRequest)
+    },
+
+    async acceptSessionRequest(requestId: string): Promise<string> {
+      const pid = await profileId()
+      const { data: reqRows, error: rErr } = await sb.from('session_requests')
+        .select('*').eq('id', requestId).limit(1)
+      if (rErr) throw rErr
+      const req = (reqRows ?? [])[0] as any
+      if (!req || req.status !== 'open') throw new Error('Request was already accepted')
+      // create the patient LINKED to the requester's B2C profile
+      const { data: pRow, error: cErr } = await sb.from('patients')
+        .insert({ therapist_id: pid, name: req.requester_name, reason: req.note ?? null, b2c_profile_id: req.profile_id })
+        .select('id').single()
+      if (cErr) throw cErr
+      const patientId = (pRow as { id: string }).id
+      const { error: conErr } = await sb.from('patient_consents')
+        .insert({ patient_id: patientId, kind: 'therapy', granted: true })
+      if (conErr) throw conErr
+      // claim atomically: only succeeds if still open
+      const { data: claimed, error: uErr } = await sb.from('session_requests')
+        .update({ status: 'claimed', claimed_by: pid, patient_id: patientId })
+        .eq('id', requestId).eq('status', 'open').select('id')
+      if (uErr) throw uErr
+      if (!claimed || claimed.length === 0) throw new Error('Request was already accepted')
+      return patientId
     },
 
     async createPatient(name: string): Promise<string> {
@@ -364,11 +435,12 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
     async submitPsychosocialAssessment(resp: PsychosocialResponse): Promise<void> {
       const pid = await profileId()
-      const { data: prof } = await sb.from('profiles').select('company_id').eq('id', pid).single()
+      const { data: prof } = await sb.from('profiles').select('company_id, team').eq('id', pid).single()
+      const profRow = prof as { company_id: string | null; team: string | null } | null
       const { error } = await sb.from('psychosocial_responses').insert({
         profile_id: pid,
-        company_id: (prof as { company_id: string | null } | null)?.company_id ?? null,
-        team: resp.team,
+        company_id: profRow?.company_id ?? null,
+        team: profRow?.team || resp.team,
         period: resp.period || currentPeriodLabel(),
         dims: resp.dims,
         outcomes: resp.outcomes,

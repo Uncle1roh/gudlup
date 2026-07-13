@@ -82,6 +82,9 @@ create table if not exists patients (
 -- scheduling-lite: the next planned session (edited from the patient record)
 alter table patients add column if not exists next_session_at timestamptz;
 
+-- employee provisioning: which team the employee belongs to (feeds NR-1 by-team)
+alter table profiles add column if not exists team text;
+
 create table if not exists patient_consents (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,
@@ -182,6 +185,22 @@ create table if not exists audit_events (
   action    text not null,
   target    text,
   detail    text
+);
+
+-- B2C → therapist intake: an employee asks for a session; a therapist accepts,
+-- which creates the linked patient record. Requester name/email are denormalized
+-- at insert so therapists can read the queue without any grant on profiles.
+create table if not exists session_requests (
+  id              uuid primary key default gen_random_uuid(),
+  profile_id      uuid not null references profiles(id) on delete cascade,
+  company_id      text references companies(id),
+  requester_name  text not null,
+  requester_email text,
+  note            text,
+  status          text not null default 'open',   -- 'open' | 'claimed'
+  claimed_by      uuid references therapists(id),
+  patient_id      uuid references patients(id),
+  created_at      timestamptz not null default now()
 );
 
 create table if not exists psychosocial_responses (
@@ -330,6 +349,29 @@ create policy companies_admin on companies
 drop policy if exists audit_admin on audit_events;
 create policy audit_admin on audit_events
   for all using (is_admin()) with check (is_admin());
+
+-- session requests: employee creates + tracks their own; APPROVED therapists
+-- see the open queue and claim. DB enforces the approval, not just the UI.
+create or replace function is_approved_therapist() returns boolean
+  language sql stable security definer set search_path = public as
+  $$ select exists (select 1 from therapists t
+                    join profiles p on p.id = t.id
+                    where p.auth_uid = auth.uid() and t.status = 'approved') $$;
+
+alter table session_requests enable row level security;
+drop policy if exists sr_insert_own on session_requests;
+create policy sr_insert_own on session_requests
+  for insert with check (profile_id = current_profile());
+drop policy if exists sr_select_own on session_requests;
+create policy sr_select_own on session_requests
+  for select using (profile_id = current_profile());
+drop policy if exists sr_therapist_read on session_requests;
+create policy sr_therapist_read on session_requests
+  for select using (is_approved_therapist());
+drop policy if exists sr_therapist_claim on session_requests;
+create policy sr_therapist_claim on session_requests
+  for update using (is_approved_therapist())
+  with check (claimed_by = current_profile());
 
 -- psychosocial: an employee may INSERT their own response. NOBODY selects the
 -- base rows from the client — HR reaches aggregates only via nr1_report().
@@ -539,3 +581,31 @@ insert into protocols (code, family, title, blurb, phases, versions, source) val
    '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
    '[{"duration":6},{"duration":12},{"duration":24}]', 'seed')
 on conflict (code) do nothing;
+
+
+-- ---------------------------------------------------------------------------
+-- 7. Storage: the protocol-audio bucket (rendered session WAVs).
+--    Public-read so the player can stream; only admins write.
+--    Guarded so the block is a no-op outside Supabase.
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    insert into storage.buckets (id, name, public)
+    values ('protocol-audio', 'protocol-audio', true)
+    on conflict (id) do nothing;
+
+    execute 'drop policy if exists protocol_audio_admin_write on storage.objects';
+    execute $pol$
+      create policy protocol_audio_admin_write on storage.objects
+        for all using (bucket_id = 'protocol-audio' and is_admin())
+        with check (bucket_id = 'protocol-audio' and is_admin())
+    $pol$;
+
+    execute 'drop policy if exists protocol_audio_read on storage.objects';
+    execute $pol$
+      create policy protocol_audio_read on storage.objects
+        for select using (bucket_id = 'protocol-audio')
+    $pol$;
+  end if;
+end $$;

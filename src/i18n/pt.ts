@@ -302,4 +302,16 @@ export const PT: Record<string, string> = {
   'Open': 'Abrir',
   'Continue': 'Continuar',
   'Signed in': 'Conectado',
+
+  /* ---- signup provisioning + therapist request ---- */
+  'Company code (from HR, optional)': 'Código da empresa (do RH, opcional)',
+  'Team (optional)': 'Time (opcional)',
+  'Unknown company code — ask HR for the right one.': 'Código de empresa desconhecido — pergunte ao RH o código correto.',
+  'Talk to a therapist': 'Fale com um terapeuta',
+  'Request a session — a clinician will pick it up.': 'Solicite uma sessão — um clínico vai atender.',
+  'Request sent — waiting for a therapist': 'Solicitação enviada — aguardando um terapeuta',
+  "You'll be contacted to schedule.": 'Você será contatado para agendar.',
+  'A therapist accepted your request': 'Um terapeuta aceitou sua solicitação',
+  'They will schedule the session with you.': 'Ele vai agendar a sessão com você.',
+  'Request sent': 'Solicitação enviada',
 }

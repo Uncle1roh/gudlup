@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDataProvider } from './provider'
 import type { Patient, Therapist } from '../b2b/data'
+import type { SessionRequest } from './provider'
 import type { SessionRecord } from '../types/domain'
 
 interface AsyncState<T> {
@@ -45,6 +46,16 @@ export function usePatients() {
 export function usePatient(id: string) {
   const dp = useDataProvider()
   return useAsync<Patient | undefined>(() => dp.getPatient(id), [dp, id])
+}
+
+export function useMySessionRequest() {
+  const dp = useDataProvider()
+  return useAsync<SessionRequest | null>(() => dp.getMySessionRequest(), [dp])
+}
+
+export function useSessionRequests() {
+  const dp = useDataProvider()
+  return useAsync<SessionRequest[]>(() => dp.listSessionRequests(), [dp])
 }
 
 export function useTherapist() {
