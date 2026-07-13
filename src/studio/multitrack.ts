@@ -12,14 +12,17 @@
 
 import { audioBufferToWav } from '../lib/wav'
 
-export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice'
+export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral'
 export type Texture = 'lake' | 'air' | 'deep'
 
 export interface BinauralParams { carrierHz: number; beatHz: number }
 export interface SoundscapeParams { texture: Texture; warmth: number }
 export interface BreathParams { breathsPerMin: number; toneHz: number }
 export interface VoiceParams { pan: number; pulseHz: number; toneHz: number }
-export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | VoiceParams
+export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
+export interface MusicParams { chord: Chord }
+export interface BilateralParams { toneHz: number; blipMs: number; everySec: number }
+export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | VoiceParams | MusicParams | BilateralParams
 
 export const SAMPLE_RATE = 44100
 
@@ -28,6 +31,8 @@ export const TRACK_META: Record<TrackType, { label: string; icon: string; color:
   binaural: { label: 'Binaural', icon: '🧠', color: '#9B7BC4', blurb: 'L/R carrier beat' },
   breath: { label: 'Breathing', icon: '🌬️', color: '#4F86C6', blurb: 'Paced swelling tone' },
   voice: { label: 'Voice', icon: '🗣️', color: '#E0995E', blurb: 'Guided affirmation (TTS or placeholder)' },
+  music: { label: 'Music', icon: '🎹', color: '#C88FB0', blurb: 'Warm chord pad' },
+  bilateral: { label: 'Bilateral', icon: '↔️', color: '#7BA8C4', blurb: 'Alternating L/R blips (PAT-05)' },
 }
 
 export function defaultParams(type: TrackType): ClipParams {
@@ -36,7 +41,19 @@ export function defaultParams(type: TrackType): ClipParams {
     case 'soundscape': return { texture: 'lake', warmth: 640 }
     case 'breath': return { breathsPerMin: 5.5, toneHz: 300 }
     case 'voice': return { pan: 0, pulseHz: 0.2, toneHz: 420 }
+    case 'music': return { chord: 'c' }
+    case 'bilateral': return { toneHz: 400, blipMs: 120, everySec: 4 }
   }
+}
+
+/** Triads (root position, ~C3 register) for the musical pad. */
+export const CHORD_TRIADS: Record<Chord, number[]> = {
+  c: [130.81, 164.81, 196.0],
+  g: [98.0, 123.47, 146.83],
+  am: [110.0, 130.81, 164.81],
+  f: [87.31, 110.0, 130.81],
+  dm: [73.42, 87.31, 110.0],
+  em: [82.41, 98.0, 123.47],
 }
 
 /* ---- synthesis (ported from the v1 engine, one layer at a time) ----------- */
@@ -101,6 +118,32 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
     const depth = ctx.createGain(); depth.gain.value = 0.28
     lfo.connect(depth).connect(toneGain.gain)
     osc.start(0); lfo.start(0); osc.stop(dur); lfo.stop(dur)
+  } else if (type === 'music') {
+    const p = params as MusicParams
+    const g = ctx.createGain(); g.gain.value = 0.5; g.connect(dest)
+    for (const f of CHORD_TRIADS[p.chord] ?? CHORD_TRIADS.c) {
+      for (const det of [0, 0.7]) {
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f + det
+        const og = ctx.createGain(); og.gain.value = 1 / 6
+        o.connect(og).connect(g); o.start(0); o.stop(dur)
+      }
+    }
+  } else if (type === 'bilateral') {
+    const p = params as BilateralParams
+    const blip = Math.max(0.03, p.blipMs / 1000)
+    let side = -1
+    for (let t = 0.05; t < dur - blip; t += Math.max(0.5, p.everySec)) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = p.toneHz
+      const g = ctx.createGain()
+      const pan = ctx.createStereoPanner(); pan.pan.value = 0.8 * side
+      side = -side
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(1, t + 0.01)
+      g.gain.setValueAtTime(1, t + Math.max(0.02, blip - 0.03))
+      g.gain.linearRampToValueAtTime(0, t + blip)
+      o.connect(g).connect(pan).connect(dest)
+      o.start(t); o.stop(t + blip + 0.05)
+    }
   } else {
     const p = params as VoiceParams
     const panner = ctx.createStereoPanner(); panner.pan.value = p.pan
@@ -282,7 +325,7 @@ export class MultitrackPlayer {
 
 export interface MixTrack { gain: number; clips: { startSec: number; buffer: AudioBuffer | null }[] }
 
-export async function renderMixdown(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<Blob> {
+export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<AudioBuffer> {
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * lengthSec))
   const ctx = new OfflineAudioContext(2, frames, SAMPLE_RATE)
   const master = ctx.createGain()
@@ -302,6 +345,9 @@ export async function renderMixdown(tracks: MixTrack[], lengthSec: number, maste
   }
   master.gain.setValueAtTime(masterGain, Math.max(0, lengthSec - 0.4))
   master.gain.linearRampToValueAtTime(0, lengthSec)
-  const rendered = await ctx.startRendering()
-  return audioBufferToWav(rendered)
+  return ctx.startRendering()
+}
+
+export async function renderMixdown(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<Blob> {
+  return audioBufferToWav(await renderMixdownBuffer(tracks, lengthSec, masterGain))
 }

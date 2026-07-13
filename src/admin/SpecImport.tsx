@@ -9,7 +9,10 @@ import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
-import { getSupabaseClient, hasSupabaseEnv } from '../auth/supabaseClient'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
+import { attachRenderedAudio } from './attachAudio'
+import { specToStudioTracks } from './specStudio'
+import { setStudioSeed } from '../compose/handoff'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
 import { phasesFromSpec, voiceLinesForVersion, type ProtocolSpec } from './protocolDoc'
@@ -55,7 +58,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
   const [progress, setProgress] = useState<string | null>(null)
   const [renderNotes, setRenderNotes] = useState<string[]>([])
   const [renderError, setRenderError] = useState<string | null>(null)
-  const [rendered, setRendered] = useState<{ name: string; seconds: number; voice: string; blob: Blob; duration: number; preview: boolean } | null>(null)
+  const [rendered, setRendered] = useState<{ name: string; seconds: number; voice: string; blob: Blob; buffer: AudioBuffer; duration: Duration; preview: boolean } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [attached, setAttached] = useState<string | null>(null)
 
@@ -100,7 +103,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
       const name = wavFileName(spec, renderDur, preview)
       downloadBlob(name, result.blob)
       setRenderNotes(result.notes)
-      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} lines`, blob: result.blob, duration: renderDur, preview })
+      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} lines`, blob: result.blob, buffer: result.buffer, duration: renderDur, preview })
       setAttached(null)
       await dp.logAudit({ actor, action: 'protocol.audio.rendered', target: spec.code, detail: `${renderDur} min${preview ? ' (90s preview)' : ''} · voice ${result.voiceRendered}/${result.voiceLines}` })
     } catch (e) {
@@ -116,38 +119,25 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
       and in the therapist's monitored sessions (both read version.audioUrl). */
   async function uploadAndAttach() {
     if (!rendered || !published || rendered.preview) return
-    const url = import.meta.env.VITE_SUPABASE_URL as string
-    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string
     setUploading(true)
     setRenderError(null)
     try {
-      const sb = getSupabaseClient(url, anon)
-      const safeCode = published.code.replace(/[^A-Za-z0-9_-]+/g, '_')
-      const path = `${safeCode}/${rendered.duration}min-ptBR.wav`
-      const { error: upErr } = await sb.storage.from('protocol-audio')
-        .upload(path, rendered.blob, { upsert: true, contentType: 'audio/wav' })
-      if (upErr) throw upErr
-      const { data: pub } = sb.storage.from('protocol-audio').getPublicUrl(path)
-      const audioUrl = pub.publicUrl
-      const next: CatalogProtocol = {
-        ...published,
-        versions: published.versions.map((v) =>
-          v.duration === rendered.duration
-            ? { ...v, audioUrl: { ...(v.audioUrl ?? {}), 'pt-BR': audioUrl } }
-            : v),
-        audioReady: true,
-        updatedAt: Date.now(),
-      }
-      await dp.saveProtocol(next)
-      registerProtocol(next)
-      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: next.code, detail: `${rendered.duration} min · ${path}` })
-      setPublished(next)
-      setAttached(audioUrl)
+      const { url, protocol } = await attachRenderedAudio(dp, published.code, rendered.duration, rendered.buffer)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: protocol.code, detail: `${rendered.duration} min · mp3` })
+      setPublished(protocol)
+      setAttached(url)
     } catch (e) {
       setRenderError((e as Error).message)
     } finally {
       setUploading(false)
     }
+  }
+
+  /** Open this protocol version as editable tracks in the Sound Studio. */
+  function editInStudio() {
+    const seed = specToStudioTracks(spec, renderDur)
+    setStudioSeed(seed.tracks, seed.name, { code: spec.code, duration: renderDur })
+    window.location.hash = '#studio'
   }
 
   async function markReady() {
@@ -210,6 +200,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
             <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Sets audioReady on the catalog entry">
               ✓ Mark audio ready & finish
             </button>
+            <button className="b2b-btn" disabled={busy} onClick={editInStudio} title="Open every layer of this version as editable tracks">🎚 Edit in Studio</button>
             <button className="b2b-btn" disabled={busy} onClick={onDone}>Finish without audio</button>
           </div>
 
@@ -226,7 +217,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
           {rendered && !rendered.preview && hasSupabaseEnv() && !attached && (
             <div className="adm-cred__actions" style={{ marginTop: 10 }}>
               <button className="b2b-btn b2b-btn--primary" disabled={uploading} onClick={uploadAndAttach}>
-                {uploading ? 'Uploading…' : '⬆ Upload & attach to catalog'}
+                {uploading ? 'Encoding & uploading…' : '⬆ Upload & attach to catalog'}
               </button>
             </div>
           )}

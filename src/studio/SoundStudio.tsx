@@ -3,6 +3,7 @@ import {
   MultitrackPlayer,
   renderClipBuffer,
   renderMixdown,
+  renderMixdownBuffer,
   bakeVoiceBuffer,
   computePeaks,
   peakBuckets,
@@ -17,10 +18,16 @@ import {
   type Texture,
   type SchedTrack,
   type MixTrack,
+  type MusicParams,
+  type BilateralParams,
+  type Chord,
 } from './multitrack'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
-import { takeStudioSeed } from '../compose/handoff'
+import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
+import { useDataProvider } from '../data/provider'
+import { attachRenderedAudio } from '../admin/attachAudio'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
 import type { SeedTrack } from '../compose/types'
 
 /* ---- layout constants ---- */
@@ -117,13 +124,38 @@ function StudioTooSmall() {
 function StudioDesktop() {
   const handoff = useMemo(() => {
     const h = takeStudioSeed()
-    return h ? { tracks: h.tracks.map(seedTrackToTrack), name: h.name } : null
+    if (!h) return null
+    const end = Math.max(120, ...h.tracks.flatMap((t) => t.clips.map((c) => c.startSec + c.durationSec)))
+    return { tracks: h.tracks.map(seedTrackToTrack), name: h.name, attach: h.attach ?? null, lengthSec: Math.ceil(end) }
   }, [])
   const [tracks, setTracks] = useState<Track[]>(() => handoff?.tracks ?? makeSeed())
   const [projectName, setProjectName] = useState(handoff?.name ?? 'GL-ANX 1.1 — Calm and Inner Safety')
   const [masterGain, setMasterGain] = useState(0.82)
-  const [lengthSec, setLengthSec] = useState(120)
-  const [pxPerSec, setPxPerSec] = useState(7)
+  const [lengthSec, setLengthSec] = useState(handoff?.lengthSec ?? 120)
+  const [pxPerSec, setPxPerSec] = useState(() => (handoff ? Math.max(0.6, Math.min(7, 1100 / (handoff.lengthSec || 120))) : 7))
+  const attachTarget: StudioAttachTarget | null = handoff?.attach ?? null
+  const dp = useDataProvider()
+  const [attaching, setAttaching] = useState(false)
+  const [attachMsg, setAttachMsg] = useState<string | null>(null)
+
+  async function attachToCatalog() {
+    if (!attachTarget) return
+    setAttaching(true)
+    setAttachMsg(null)
+    try {
+      const mix: MixTrack[] = tracks.map((t) => ({
+        gain: t.muted ? 0 : tracks.some((x) => x.soloed) && !t.soloed ? 0 : t.volume,
+        clips: t.clips.map((c) => ({ startSec: c.startSec, buffer: c.buffer })),
+      }))
+      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain)
+      const { url } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
+      setAttachMsg(`Attached — ${attachTarget.code} · ${attachTarget.duration} min now streams this edit. (${url.split('/').pop()})`)
+    } catch (e) {
+      setAttachMsg(`Attach failed: ${(e as Error).message}`)
+    } finally {
+      setAttaching(false)
+    }
+  }
   const [playing, setPlaying] = useState(false)
   const [playhead, setPlayhead] = useState(0)
   const [selected, setSelected] = useState<{ trackId: string; clipId: string } | null>(null)
@@ -424,6 +456,11 @@ function StudioDesktop() {
           )}
         </div>
         <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Rendering…' : '⬇ Export WAV'}</button>
+        {attachTarget && hasSupabaseEnv() && (
+          <button className="mt-export" onClick={attachToCatalog} disabled={attaching} title={`Re-attach this edit to ${attachTarget.code} · ${attachTarget.duration} min`}>
+            {attaching ? 'Attaching…' : `⬆ Attach to ${attachTarget.code}`}
+          </button>
+        )}
         <a className="mt-exit" href="#" title="Exit studio">✕</a>
       </header>
 
@@ -432,6 +469,7 @@ function StudioDesktop() {
           <VoiceEnginePanel onChanged={() => setTtsTick((n) => n + 1)} />
         </div>
       )}
+      {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
 
       <div className="mt-hint">🎧 Use headphones — the binaural beat lives in the L/R difference.</div>
 
@@ -687,6 +725,22 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
         {track.type === 'breath' && (() => { const p = clip.params as BreathParams; return <>
           <Slider label="Breaths / min" value={p.breathsPerMin} min={3} max={10} step={0.1} onChange={(v) => onParam({ breathsPerMin: v })} fmt={(v) => v.toFixed(1)} />
           <Slider label="Tone" value={p.toneHz} min={120} max={520} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
+        </> })()}
+
+        {track.type === 'music' && (() => { const p = clip.params as MusicParams; return <>
+          <div className="mt-seg">
+            {(['c', 'g', 'am', 'f', 'dm', 'em'] as Chord[]).map((ch) => (
+              <button key={ch} className={p.chord === ch ? 'is-on' : ''} onClick={() => onParam({ chord: ch })}>{ch.toUpperCase()}</button>
+            ))}
+          </div>
+          <div className="mt-note">Warm triad pad — key changes follow the protocol's music transitions.</div>
+        </> })()}
+
+        {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; return <>
+          <Slider label="Tone" value={p.toneHz} min={200} max={800} step={5} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
+          <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
+          <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
+          <div className="mt-note">Alternating L(−80)/R(+80) — the doc's PAT-05 stimulation.</div>
         </> })()}
 
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); return <>

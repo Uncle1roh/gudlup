@@ -32,7 +32,9 @@ export default function App() {
     if (route === '#studio') {
       return (
         <AuthProvider>
-          <SoundStudio />
+          <DataLayerProvider>
+            <SoundStudio />
+          </DataLayerProvider>
         </AuthProvider>
       )
     }

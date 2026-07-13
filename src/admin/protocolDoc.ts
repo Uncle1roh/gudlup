@@ -45,6 +45,12 @@ export interface SpecVoiceLine {
   channel: 'C' | 'L' | 'R'
   text: string
   whisper: boolean
+  /** Explicit level vs the voice reference, parsed from the doc (e.g. "−6 dB"). */
+  gainDb?: number
+  /** Start offset vs the event time, parsed from the doc (e.g. echo "+2 s"). */
+  delaySec?: number
+  /** True for affirmation-loop lines (they get the 1 s in / 2 s out fades). */
+  loop?: boolean
 }
 
 export interface SpecEvent {
@@ -165,17 +171,28 @@ function parseChannel(c: string): SpecChannel {
   return ''
 }
 
+/** Split a dual-voice row ("L …: '…' | R …: '…'" / "… | Echo(−8 dB,+2 s): '…'")
+    at the separator that precedes the right-hand voice marker, so each side's
+    dB / delay / whisper annotations apply ONLY to its own quotes. */
+function splitDualVoice(raw: string): { l: string; r: string } | null {
+  const m = /[\u2502|]\s*(?=(?:R|Echo|Whisper)\b[^:]*:)/i.exec(raw)
+  if (!m) return null
+  const l = raw.slice(0, m.index)
+  const r = raw.slice(m.index + 1)
+  if (!/['‘"\u2018\u201C]/.test(l)) return null // left side must actually carry a quote
+  return { l, r }
+}
+
 function extractVoice(channel: SpecChannel, raw: string): SpecVoiceLine[] {
   const voice: SpecVoiceLine[] = []
   if (channel === 'SYS' || !raw || /^\[/.test(raw)) return voice
-  if (channel === 'L/R' && raw.includes('\u2502')) {
-    // dual-voice row: "L …: ‘…’ │ R …: ‘…’"
-    const [lPart, rPart] = raw.split('\u2502')
-    for (const q of quotedSpans(lPart ?? '')) voice.push({ channel: 'L', text: q, whisper: /\(whisper\)/i.test(lPart ?? '') })
-    for (const q of quotedSpans(rPart ?? '')) voice.push({ channel: 'R', text: q.replace(/^\(whisper\)\s*/i, ''), whisper: /\(whisper\)/i.test(rPart ?? '') })
+  const dual = splitDualVoice(raw)
+  if (dual) {
+    for (const q of quotedSpans(dual.l)) voice.push({ channel: 'L', text: q, whisper: /\(whisper\)/i.test(dual.l), gainDb: gainDbFrom(dual.l), delaySec: delayFrom(dual.l) })
+    for (const q of quotedSpans(dual.r)) voice.push({ channel: 'R', text: q.replace(/^\(whisper\)\s*/i, ''), whisper: /\(whisper\)/i.test(dual.r), gainDb: gainDbFrom(dual.r), delaySec: delayFrom(dual.r) })
   } else {
     const vc: 'C' | 'L' | 'R' = channel === 'L' || channel === 'R' ? channel : 'C'
-    for (const q of quotedSpans(raw)) voice.push({ channel: vc, text: q, whisper: /\(whisper\)/i.test(raw) })
+    for (const q of quotedSpans(raw)) voice.push({ channel: vc, text: q, whisper: /\(whisper\)/i.test(raw), gainDb: gainDbFrom(raw), delaySec: delayFrom(raw) })
   }
   return voice
 }
@@ -297,6 +314,7 @@ export function parseProtocolDoc(text: string): SpecParseResult {
   const affirmations: SpecAffirmation[] = []
   let cur: SpecVersion | null = null
   let curPhase: SpecPhase | null = null
+  let pendingCycles: number | null = null
   let lastEvent: SpecEvent | null = null
   let inAffDb = false
 
@@ -339,7 +357,22 @@ export function parseProtocolDoc(text: string): SpecParseResult {
 
     if (cur && curPhase) {
       const loop = parseLoop(l)
-      if (loop) { curPhase.loop = loop; lastEvent = null; continue }
+      if (loop) {
+        curPhase.loop = loop
+        // "…interval 20 s, 4" wrapped before the word "cycles" → keep the number
+        if (loop.cycles === 1) {
+          const trail = /,\s*(\d+)\s*$/.exec(l)
+          if (trail) pendingCycles = Number(trail[1])
+        }
+        lastEvent = null
+        continue
+      }
+      // continuation "cycles. …" completing a wrapped loop line
+      if (curPhase.loop && pendingCycles !== null && /^\s*(?:cycles?|passes?|pass)\b/i.test(l)) {
+        curPhase.loop.cycles = pendingCycles
+        pendingCycles = null
+        continue
+      }
       const row = splitEventRow(l)
       if (row) {
         const ev = parseEvent(row)
@@ -349,7 +382,7 @@ export function parseProtocolDoc(text: string): SpecParseResult {
       }
       // a loop line wrapped mid-way in the PDF: "… fade-out" / "2 s, 2 cycles."
       const cyc = curPhase.loop && /(\d+)\s*(?:cycles?|pass)/i.exec(l)
-      if (cyc && curPhase.loop) { curPhase.loop.cycles = Number(cyc[1]); continue }
+      if (cyc && curPhase.loop) { curPhase.loop.cycles = Number(cyc[1]); pendingCycles = null; continue }
       // continuation of a wrapped event row (PDF extraction splits long rows)
       if (lastEvent && !isNonContinuation(l)) {
         lastEvent.raw = `${lastEvent.raw} ${l}`.trim()
@@ -370,6 +403,27 @@ export function parseProtocolDoc(text: string): SpecParseResult {
   if (!affirmations.length) issues.push('No CSI affirmations database found — affirmation loops will be silent unless texts are added.')
 
   return { spec: { code, family, title, invariants, versions, affirmations, issues } }
+}
+
+/** "−6 dB" / "-8 dB" inside a fragment → explicit level vs the voice reference. */
+function gainDbFrom(fragment: string): number | undefined {
+  const m = /[−–-]\s*(\d+(?:[.,]\d+)?)\s*dB/i.exec(fragment)
+  return m ? -Number(m[1].replace(',', '.')) : undefined
+}
+
+/** "+2 s" inside a fragment (echo delay) → start offset vs the event time. */
+function delayFrom(fragment: string): number | undefined {
+  const m = /\(\s*[^)]*\+\s*(\d+(?:[.,]\d+)?)\s*s\b[^)]*\)/i.exec(fragment)
+  return m ? Number(m[1].replace(',', '.')) : undefined
+}
+
+const ECHO_STOPWORDS = new Set(['i', 'am', 'is', 'are', 'my', 'me', 'the', 'a', 'an', 'of', 'to', 'in', 'it', 'and', 'with', 'like', 'how', 'all', 'você', 'eu', 'sou', 'estou', 'meu', 'minha', 'o', 'a', 'de', 'em', 'com', 'e', 'que', 'io', 'sono', 'il', 'la', 'di', 'mi', 'un', 'una'])
+
+/** Keyword echo for an affirmation ("I am safe. I am protected." → "safe... protected..."). */
+export function echoKeywords(text: string): string {
+  const words = text.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 1 && !ECHO_STOPWORDS.has(w))
+  const picked = words.slice(-3)
+  return picked.length ? picked.map((w) => `${w}...`).join(' ') : ''
 }
 
 /* -------------------------------------------------- domain derivations */
@@ -394,6 +448,9 @@ export function voiceLinesForVersion(spec: ProtocolSpec, duration: Duration): { 
   const out: { timeSec: number; line: SpecVoiceLine }[] = []
   for (const e of v.events) for (const line of e.voice) out.push({ timeSec: e.timeSec, line })
   const byId = new Map(spec.affirmations.map((a) => [Number(a.id.replace(/\D/g, '')), a]))
+  // Affirmation loops (PAT-07): cycle 2+ at −3 dB (doc §3 phase 3); versions with
+  // stacking level ≥ 2 add the keyword echo at −8 dB, +2 s (PAT-06, doc §4 phase 4).
+  const withEcho = duration >= 12
   for (const p of v.phases) {
     if (!p.loop) continue
     const count = p.loop.toCsi - p.loop.fromCsi + 1
@@ -402,7 +459,13 @@ export function voiceLinesForVersion(spec: ProtocolSpec, duration: Duration): { 
         const t = p.startSec + (c * count + i) * p.loop.intervalSec
         if (t >= p.endSec) break
         const a = byId.get(p.loop.fromCsi + i)
-        if (a) out.push({ timeSec: t, line: { channel: 'C', text: a.text, whisper: false } })
+        if (!a) continue
+        const cycleDb = c > 0 ? -3 : undefined
+        out.push({ timeSec: t, line: { channel: 'C', text: a.text, whisper: false, gainDb: cycleDb, loop: true } })
+        if (withEcho) {
+          const kw = echoKeywords(a.text)
+          if (kw) out.push({ timeSec: t, line: { channel: 'C', text: kw, whisper: false, gainDb: (cycleDb ?? 0) - 8, delaySec: 2, loop: true } })
+        }
       }
     }
   }
