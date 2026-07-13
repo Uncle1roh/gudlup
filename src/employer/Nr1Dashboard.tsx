@@ -42,7 +42,12 @@ export function Nr1Dashboard() {
   const { data: r, loading, error } = useNr1Report()
 
   if (loading) return <div className="emp-main"><Loading label={'Loading aggregate report…'} /></div>
-  if (error || !r) return <div className="emp-main"><p className="b2b-sub">{t("Couldn't load the report.")}</p></div>
+  if (error || !r) return (
+    <div className="emp-main">
+      <p className="b2b-sub">{t("Couldn't load the report.")}</p>
+      {error && <p className="b2b-sub" style={{ marginTop: 8, color: '#b3402a' }}>{String((error as Error).message ?? error)}</p>}
+    </div>
+  )
 
   const responseRate = pct(r.respondents, r.eligible)
   const overallTotal = splitTotal(r.overall)

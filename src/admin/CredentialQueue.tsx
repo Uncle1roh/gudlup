@@ -20,10 +20,15 @@ export function CredentialQueue({ actor }: { actor: string }) {
   async function decide(r: CredentialRequest, decision: CredentialDecision) {
     const reason = reasons[r.id]?.trim() || undefined
     setBusy(r.id)
-    await dp.decideCredential(r.id, decision, reason)
-    await dp.logAudit({ actor, action: `credential.${decision}`, target: r.name, detail: r.crp + (reason ? ` — ${reason}` : '') })
-    setBusy(null)
-    refetch()
+    try {
+      await dp.decideCredential(r.id, decision, reason)
+      await dp.logAudit({ actor, action: `credential.${decision}`, target: r.name, detail: r.crp + (reason ? ` — ${reason}` : '') })
+      refetch()
+    } catch (e) {
+      window.alert(`Couldn't save the decision: ${(e as Error).message}`)
+    } finally {
+      setBusy(null)
+    }
   }
 
   const requests = data ?? []

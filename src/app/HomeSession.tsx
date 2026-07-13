@@ -31,6 +31,9 @@ export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }
       refetchRequest()
       setToast(t('Request sent'))
       setTimeout(() => setToast(null), 2200)
+    } catch (e) {
+      setToast((e as Error).message)
+      setTimeout(() => setToast(null), 6000)
     } finally {
       setRequesting(false)
     }

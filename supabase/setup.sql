@@ -85,6 +85,14 @@ alter table patients add column if not exists next_session_at timestamptz;
 -- employee provisioning: which team the employee belongs to (feeds NR-1 by-team)
 alter table profiles add column if not exists team text;
 
+-- defensive adds: databases first created from the older docs/DATA_MODEL.sql may
+-- lack these (create table if not exists doesn't add columns to existing tables)
+alter table therapists add column if not exists review_reason text;
+alter table therapists add column if not exists decided_at timestamptz;
+alter table patients   add column if not exists b2c_profile_id uuid references profiles(id);
+alter table protocols  add column if not exists spec jsonb;
+alter table protocols  add column if not exists audio_ready boolean not null default false;
+
 create table if not exists patient_consents (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,
@@ -401,75 +409,65 @@ create or replace function nr1_report()
   set search_path = public
 as $$
 declare
-  cid       text := my_company_id();
-  k         int  := 5;
-  cname     text;
-  eligible_n int;
-  cur_period text;
+  cid         text := my_company_id();
+  k           int  := 5;
+  cname       text;
+  eligible_n  int;
+  cur_period  text;
   prev_period text;
-  respondents_n int;
-  result jsonb;
+  result      jsonb;
 begin
   if cid is null then
-    raise exception 'no company for caller';
+    raise exception 'This account has no company bound. Run the HR binding statement at the bottom of supabase/seed_demo.sql.';
   end if;
 
   select name into cname from companies where id = cid;
-
-  -- eligible = active employees of the company (fallback: distinct respondents)
   select count(*) into eligible_n from profiles where company_id = cid and active;
 
-  -- consent-gated base rows for this company, one band per respondent computed once
-  create temp table _base on commit drop as
-    select
-      r.id, r.profile_id, coalesce(r.team, '—') as team, r.period, r.dims, r.outcomes,
-      (select count(*) from jsonb_each_text(r.dims) d where d.value = 'high')     as n_high,
-      (select count(*) from jsonb_each_text(r.dims) d where d.value = 'moderate') as n_mod
-    from psychosocial_responses r
-    where r.company_id = cid
-      and not exists (                      -- exclude explicitly revoked consent
-        select 1 from patients p
-        join patient_consents pc on pc.patient_id = p.id
-        where p.b2c_profile_id = r.profile_id
-          and pc.kind = 'aggregates' and pc.granted = false
-      );
-
-  alter table _base add column band text;
-  update _base set band = case
-    when n_high >= 3 then 'high'
-    when n_high >= 1 or n_mod >= 4 then 'moderate'
-    else 'low' end;
-
-  -- chronological period ordering for 'Q<n> YYYY' labels
-  create temp table _periods on commit drop as
-    select period,
-           (substring(period from 'Q([1-4])')::int - 1)
-           + (substring(period from '(\d{4})')::int * 4) as rank
-    from (select distinct period from _base) p;
-
-  select period into cur_period  from _periods order by rank desc nulls last limit 1;
-  select period into prev_period from _periods order by rank desc nulls last offset 1 limit 1;
+  -- newest two assessment cycles, ordered by 'Q<n> YYYY'
+  select max(period) filter (where rn = 1), max(period) filter (where rn = 2)
+    into cur_period, prev_period
+  from (
+    select period, row_number() over (
+      order by coalesce(substring(period from '(\d{4})')::int, 0) * 4
+             + coalesce(substring(period from 'Q([1-4])')::int, 0) desc) as rn
+    from (select distinct period from psychosocial_responses where company_id = cid) p
+  ) ranked
+  where rn <= 2;
 
   if cur_period is null then
-    -- no data yet: an empty but well-formed report
     return jsonb_build_object(
       'company', coalesce(cname, cid), 'period', '—',
-      'eligible', coalesce(nullif(eligible_n, 0), 0), 'respondents', 0,
-      'minCellSize', k,
+      'eligible', coalesce(eligible_n, 0), 'respondents', 0, 'minCellSize', k,
       'overall', jsonb_build_object('low', 0, 'moderate', 0, 'high', 0),
       'dimensions', '[]'::jsonb, 'outcomes', '[]'::jsonb,
       'teams', '[]'::jsonb, 'trend', '[]'::jsonb,
-      'generatedAt', (extract(epoch from now()) * 1000)::bigint
-    );
+      'generatedAt', (extract(epoch from now()) * 1000)::bigint);
   end if;
 
-  select count(*) into respondents_n from _base where period = cur_period;
-
+  -- one statement, CTEs only (no temp tables — safe under PostgREST/RPC)
+  with base as (
+    select r.profile_id, coalesce(r.team, '—') as team, r.period, r.dims, r.outcomes,
+           (select count(*) from jsonb_each_text(r.dims) d where d.value = 'high')     as n_high,
+           (select count(*) from jsonb_each_text(r.dims) d where d.value = 'moderate') as n_mod
+    from psychosocial_responses r
+    where r.company_id = cid
+      and not exists (
+        select 1 from patients p
+        join patient_consents pc on pc.patient_id = p.id
+        where p.b2c_profile_id = r.profile_id
+          and pc.kind = 'aggregates' and pc.granted = false)
+  ), banded as (
+    select b.*, case when n_high >= 3 then 'high'
+                     when n_high >= 1 or n_mod >= 4 then 'moderate'
+                     else 'low' end as band
+    from base b
+  )
   select jsonb_build_object(
     'company', coalesce(cname, cid),
     'period', cur_period,
-    'eligible', greatest(coalesce(eligible_n, 0), respondents_n),
-    'respondents', respondents_n,
+    'eligible', greatest(coalesce(eligible_n, 0), (select count(*) from banded where period = cur_period)),
+    'respondents', (select count(*) from banded where period = cur_period),
     'minCellSize', k,
 
     'overall', (
@@ -477,8 +475,7 @@ begin
         'low',      count(*) filter (where band = 'low'),
         'moderate', count(*) filter (where band = 'moderate'),
         'high',     count(*) filter (where band = 'high'))
-      from _base where period = cur_period
-    ),
+      from banded where period = cur_period),
 
     'dimensions', (
       select coalesce(jsonb_agg(jsonb_build_object(
@@ -488,7 +485,7 @@ begin
             'low',      count(*) filter (where b.dims ->> d.key = 'low'),
             'moderate', count(*) filter (where b.dims ->> d.key = 'moderate'),
             'high',     count(*) filter (where b.dims ->> d.key = 'high'))
-          from _base b where b.period = cur_period
+          from banded b where b.period = cur_period
         )) order by d.ord), '[]'::jsonb)
       from (values
         (1, 'demands',       'Work demands',        'Workload and cognitive/emotional load'),
@@ -499,8 +496,7 @@ begin
         (6, 'control',       'Control & autonomy',  'Influence over how work is done'),
         (7, 'role',          'Role clarity',        'Clear expectations and responsibilities'),
         (8, 'relationships', 'Relationships',       'Peer support and workplace conflict')
-      ) as d(ord, key, label, about)
-    ),
+      ) as d(ord, key, label, about)),
 
     'outcomes', (
       select coalesce(jsonb_agg(jsonb_build_object(
@@ -510,16 +506,15 @@ begin
       from (
         select v.ord, v.key, v.label,
           coalesce((select round(100.0 * count(*) filter (where (b.outcomes ->> v.key)::boolean) / nullif(count(*), 0))
-                    from _base b where b.period = cur_period), 0)::int as cur_pct,
+                    from banded b where b.period = cur_period), 0)::int as cur_pct,
           (select round(100.0 * count(*) filter (where (b.outcomes ->> v.key)::boolean) / nullif(count(*), 0))
-           from _base b where b.period = prev_period)::int as prev_pct
+           from banded b where b.period = prev_period)::int as prev_pct
         from (values
           (1, 'stress',  'Perceived stress'),
           (2, 'anxiety', 'Anxiety symptoms'),
           (3, 'burnout', 'Burnout risk')
         ) as v(ord, key, label)
-      ) o
-    ),
+      ) o),
 
     'teams', (
       select coalesce(jsonb_agg(
@@ -534,21 +529,19 @@ begin
                count(*) filter (where band = 'low')      as n_low,
                count(*) filter (where band = 'moderate') as n_mod,
                count(*) filter (where band = 'high')     as n_high
-        from _base where period = cur_period group by team
-      ) tm
-    ),
+        from banded where period = cur_period group by team
+      ) tm),
 
     'trend', (
-      select coalesce(jsonb_agg(jsonb_build_object(
-        'period', tr.period,
-        'highPct', tr.high_pct) order by tr.rank), '[]'::jsonb)
+      select coalesce(jsonb_agg(jsonb_build_object('period', tr.period, 'highPct', tr.high_pct)
+               order by tr.rank), '[]'::jsonb)
       from (
-        select p.period, p.rank,
+        select b.period,
+               coalesce(substring(b.period from '(\d{4})')::int, 0) * 4
+             + coalesce(substring(b.period from 'Q([1-4])')::int, 0) as rank,
                coalesce(round(100.0 * count(*) filter (where b.band = 'high') / nullif(count(*), 0)), 0)::int as high_pct
-        from _periods p join _base b on b.period = p.period
-        group by p.period, p.rank
-      ) tr
-    ),
+        from banded b group by b.period
+      ) tr),
 
     'generatedAt', (extract(epoch from now()) * 1000)::bigint
   ) into result;
