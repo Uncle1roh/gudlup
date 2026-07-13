@@ -98,7 +98,7 @@ function mapPatient(r: any): Patient {
     clinicalNotes: r.clinical_notes ?? '',
     prescription: r.prescription ?? undefined,
     lastSessionAt: b2b.length ? Math.max(...b2b.map((x) => x.date)) : undefined,
-    nextSessionAt: undefined, // scheduling table is a later step
+    nextSessionAt: r.next_session_at ? toMs(r.next_session_at) : undefined,
     vasTrend: vasTrendFrom(b2b),
     assessmentDue: undefined,
     unread: messages.filter((m: Message) => m.from === 'patient').length,
@@ -208,6 +208,20 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return (data ?? []).map(mapPatient)
     },
 
+    async createPatient(name: string): Promise<string> {
+      const pid = await profileId()   // therapist id === profile id in the schema
+      const { data, error } = await sb.from('patients')
+        .insert({ therapist_id: pid, name })
+        .select('id').single()
+      if (error) throw error
+      const newId = (data as { id: string }).id
+      // therapy consent is implied by intake; sharing/aggregates default to off
+      const { error: cErr } = await sb.from('patient_consents')
+        .insert({ patient_id: newId, kind: 'therapy', granted: true })
+      if (cErr) throw cErr
+      return newId
+    },
+
     async getPatient(id: string): Promise<Patient | undefined> {
       const { data, error } = await sb.from('patients').select(PATIENT_SELECT).eq('id', id).single()
       if (error) {
@@ -252,11 +266,21 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (patch.prescription !== undefined) row.prescription = patch.prescription
       if (patch.conditions !== undefined) row.conditions = patch.conditions
       if (patch.medications !== undefined) row.medications = patch.medications
-      if (patch.goals !== undefined) row.goals = patch.goals
       if (patch.nextSessionAt !== undefined) row.next_session_at = toIso(patch.nextSessionAt)
-      if (Object.keys(row).length === 0) return
-      const { error } = await sb.from('patients').update(row).eq('id', patientId)
-      if (error) throw error
+      if (Object.keys(row).length > 0) {
+        const { error } = await sb.from('patients').update(row).eq('id', patientId)
+        if (error) throw error
+      }
+      // goals live in their own table — replace the set wholesale
+      if (patch.goals !== undefined) {
+        const { error: dErr } = await sb.from('goals').delete().eq('patient_id', patientId)
+        if (dErr) throw dErr
+        if (patch.goals.length) {
+          const { error: iErr } = await sb.from('goals')
+            .insert(patch.goals.map((g) => ({ patient_id: patientId, text: g.text, status: g.status })))
+          if (iErr) throw iErr
+        }
+      }
     },
 
     // --- Protocol catalog ---

@@ -79,6 +79,9 @@ create table if not exists patients (
   created_at        timestamptz not null default now()
 );
 
+-- scheduling-lite: the next planned session (edited from the patient record)
+alter table patients add column if not exists next_session_at timestamptz;
+
 create table if not exists patient_consents (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,

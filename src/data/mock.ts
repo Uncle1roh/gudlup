@@ -157,6 +157,18 @@ export function createMockProvider(): DataProvider {
     // --- B2B ---
     getTherapist: () => delay(DEMO_THERAPIST),
     listPatients: () => delay(patients),
+    createPatient: async (name) => {
+      const id = `p-${Date.now()}`
+      patients.push({
+        id, name, age: 0, sex: 'F', reason: '',
+        conditions: [], medications: [], contraindications: [],
+        goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
+        clinicalNotes: '', vasTrend: 'stable', unread: 0,
+        consents: { therapy: true, sharing: false, aggregates: false },
+      })
+      await wait()
+      return id
+    },
     getPatient: (id) => delay(patients.find((p) => p.id === id)),
     recordB2bSession: async (patientId, session) => {
       const p = patients.find((x) => x.id === patientId)

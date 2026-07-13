@@ -24,6 +24,8 @@ export interface DataProvider {
   // --- B2B ---
   getTherapist(): Promise<Therapist>
   listPatients(): Promise<Patient[]>
+  /** Create a patient owned by the signed-in therapist; returns the new id. */
+  createPatient(name: string): Promise<string>
   getPatient(id: string): Promise<Patient | undefined>
   recordB2bSession(patientId: string, session: B2bSession): Promise<void>
   updatePatient(patientId: string, patch: Partial<Patient>): Promise<void>

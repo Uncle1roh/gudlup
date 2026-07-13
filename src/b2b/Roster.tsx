@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { relWhen, type Patient } from './data'
 import { usePatients } from '../data/hooks'
+import { useDataProvider } from '../data/provider'
 import { Loading } from '../components/Loading'
 
 interface RosterProps {
@@ -27,7 +28,24 @@ function urgencyScore(p: Patient): number {
 }
 
 export function Roster({ onOpenPatient }: RosterProps) {
-  const { data: patients = [], loading } = usePatients()
+  const dp = useDataProvider()
+  const { data: patients = [], loading, refetch } = usePatients()
+  const [creating, setCreating] = useState(false)
+
+  async function newPatient() {
+    const name = window.prompt('Patient name')?.trim()
+    if (!name) return
+    setCreating(true)
+    try {
+      const id = await dp.createPatient(name)
+      refetch()
+      onOpenPatient(id)
+    } catch (e) {
+      window.alert(`Couldn't create the patient: ${(e as Error).message}`)
+    } finally {
+      setCreating(false)
+    }
+  }
   const [sort, setSort] = useState<SortKey>('next')
   const [filter, setFilter] = useState<Filter>('all')
   const [q, setQ] = useState('')
@@ -79,7 +97,12 @@ export function Roster({ onOpenPatient }: RosterProps) {
           <h1 className="b2b-h1">Your patients</h1>
           <p className="b2b-sub">{patients.length} active · sorted by {sort === 'az' ? 'name' : sort + ' session'}</p>
         </div>
-        <input className="b2b-search" placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input className="b2b-search" placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="b2b-btn b2b-btn--primary" onClick={newPatient} disabled={creating}>
+            {creating ? 'Creating…' : '＋ New patient'}
+          </button>
+        </div>
       </div>
 
       <div className="b2b-filterbar">

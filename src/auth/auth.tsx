@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error
         const uid = data.user?.id
         if (!uid) throw new Error('Sign-up returned no user — turn off email confirmation while testing (see docs/AUTH_SETUP.md).')
+        if (!data.session) throw new Error('Email confirmation is ON in Supabase, so this sign-up has no session yet. Disable it (Authentication → Sign In / Providers → Email → "Confirm email") and sign up again.')
         const { error: pErr } = await sb.from('profiles').insert({
           auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
         })
