@@ -3,6 +3,7 @@ import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { FAMILY_LABEL } from '../compose/types'
 import { parseImport, isParseable, csvTemplate, type ParsedDraft } from './importParse'
+import { extractDocxText } from './docxText'
 import { parseProtocolDoc, looksLikeProtocolDoc, type ProtocolSpec } from './protocolDoc'
 import { SpecImport } from './SpecImport'
 import type { CatalogProtocol } from '../data/catalog'
@@ -41,16 +42,24 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     setError(null)
     const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
 
-    // Protocol DOCUMENT path (.pdf / .txt / .md): the full "Protocol for
-    // Developers" spec — parsed into a ProtocolSpec and rendered to audio.
-    if (ext === 'pdf' || ext === 'txt' || ext === 'md') {
+    // Protocol DOCUMENT path (.docx / .pdf / .txt / .md): the full "Protocol
+    // for Developers" spec — parsed into a ProtocolSpec and rendered to audio.
+    // .docx is the most reliable: it's the source document and its tables come
+    // through column-perfect; PDF text layers vary by exporter.
+    if (ext === 'docx' || ext === 'pdf' || ext === 'txt' || ext === 'md') {
       setReading(true)
       try {
-        const text = ext === 'pdf'
-          ? await (await import('./pdfText')).extractPdfText(f)
-          : await f.text()
+        const text = ext === 'docx'
+          ? await extractDocxText(f)
+          : ext === 'pdf'
+            ? await (await import('./pdfText')).extractPdfText(f)
+            : await f.text()
+        if (ext === 'pdf' && text.replace(/\s+/g, '').length < 200) {
+          setError(`"${f.name}" has little or no selectable text — it's probably a scanned/flattened PDF export. Upload the original .docx instead (now supported), or re-export the PDF with a text layer.`)
+          return
+        }
         if (!looksLikeProtocolDoc(text)) {
-          setError(`"${f.name}" doesn't look like a protocol document (no GL-code + timeline found). For bulk imports use CSV/JSON.`)
+          setError(`"${f.name}" doesn't look like a protocol document (no GL-code + timeline found). If this is a PDF export, try uploading the original .docx instead — it imports more reliably. For bulk imports use CSV/JSON.`)
           return
         }
         const res = parseProtocolDoc(text)
@@ -222,11 +231,11 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
       <div className="adm-import">
         <label className="adm-drop">
-          <input ref={fileRef} type="file" accept=".pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
+          <input ref={fileRef} type="file" accept=".docx,.pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
           <span className="adm-drop__icon" aria-hidden="true">⇪</span>
           <span className="adm-drop__cta">
-            <b>{reading ? 'Reading document…' : 'Choose a protocol PDF — or a CSV/JSON for bulk import'}</b>
-            <span className="adm-drop__meta">PDF/TXT/MD: the full "Protocol for Developers" document (timelines, affirmations, audio config) · CSV/JSON: one protocol per row</span>
+            <b>{reading ? 'Reading document…' : 'Choose a protocol document (.docx or PDF) — or a CSV/JSON for bulk import'}</b>
+            <span className="adm-drop__meta">DOCX (best) / PDF / TXT / MD: the full "Protocol for Developers" document (timelines, affirmations, audio config) · CSV/JSON: one protocol per row</span>
           </span>
           {/* NOTE: no onClick here — this span sits inside the <label>, whose
               native activation already opens the file input; a programmatic
