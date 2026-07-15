@@ -178,6 +178,11 @@ export function fetchAssetBuffer(path: string): Promise<AudioBuffer> {
   return p
 }
 
+/** Public URL for a bucket path (for sample clips in the Studio). */
+export function assetPublicUrl(path: string): string {
+  return publicUrl(client(), path)
+}
+
 /** Human file size. */
 export function fmtBytes(n: number | undefined): string {
   if (!n) return ''

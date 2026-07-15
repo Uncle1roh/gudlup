@@ -11,6 +11,7 @@ import {
   TRACK_META,
   type TrackType,
   type ClipParams,
+  type SampleParams,
   type BinauralParams,
   type SoundscapeParams,
   type BreathParams,
@@ -186,7 +187,15 @@ function StudioDesktop() {
   const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
     renderTokens.current.set(clipId, token)
-    const buf = await renderClipBuffer(type, params, dur)
+    let buf: AudioBuffer
+    try {
+      buf = await renderClipBuffer(type, params, dur)
+    } catch (e) {
+      // e.g. a sample clip whose file fetch failed — keep the clip, silent,
+      // instead of crashing the render loop
+      console.warn('clip render failed', type, (e as Error).message)
+      buf = await renderClipBuffer(type === 'sample' ? 'sample' : type, type === 'sample' ? { url: '', label: `load failed: ${(e as Error).message}` } : params, dur)
+    }
     if (renderTokens.current.get(clipId) !== token) return
     setClipBuffer(trackId, clipId, buf)
   }, [setClipBuffer])
@@ -741,6 +750,16 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
           <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
           <div className="mt-note">Alternating L(−80)/R(+80) — the doc's PAT-05 stimulation.</div>
+        </> })()}
+
+        {track.type === 'sample' && (() => { const p = clip.params as SampleParams; return <>
+          <div className="mt-note" style={{ marginBottom: 6 }}>
+            <b>Library file:</b> {p.label || '— none —'}
+          </div>
+          <div className="mt-note">
+            Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left;
+            to use a DIFFERENT file for this phase, change the mapping in the admin Asset Library and re-open Edit in Studio.
+          </div>
         </> })()}
 
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); return <>

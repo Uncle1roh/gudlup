@@ -1,6 +1,28 @@
 # Good Loop — build manifest
 
-**Fix: publish hang in the importers** (current)
+**Fix: silent music/soundscape in v3 renders + real assets in the Studio** (current)
+- `renderDatasheet.ts` — v3.1 **loudness-measured gain staging**: the PO files
+  are already normalized (music −18 LUFS, soundscapes −24 LUFS) and the fixed
+  "−18/−20 dB vs voice" gains attenuated them a second time (≈ −36/−46 dBFS —
+  inaudible). The renderer now measures the RMS of every decoded asset and of
+  the rendered voice and gains each layer to its documented offset relative to
+  the MEASURED voice loudness (binaural and file-based heartbeat/bowl too).
+  Also: spec-compliant curve automation (no events coincident with
+  setValueCurveAtTime ranges — undefined/throwing behavior across browsers).
+- `DatasheetImport.tsx` — the render (and publish) now re-reads the protocol's
+  saved assetMap right before running, so mapping assets in the Asset Library
+  AFTER importing takes effect without re-importing; publish never clobbers a
+  saved mapping with undefined.
+- **Studio real audio**: new `sample` clip type in `multitrack.ts` (plays a
+  real library file, looped to clip length, fetched+decoded once per URL, with
+  waveforms and realtime playback like any clip). `datasheetToStudioTracks`
+  in `specStudio.ts` seeds Music/Soundscape SAMPLE tracks per mapped phase
+  (synth kept only for unmapped gaps); "Edit in Studio" on a datasheet uses it
+  with the freshest mapping. Voice clips still synthesize per clip via the ♪
+  button (existing Studio behavior). A failed file fetch renders the clip
+  silent with a "load failed" label instead of crashing.
+
+**Fix: publish hang in the importers**
 - `DatasheetImport.tsx` / `SpecImport.tsx`: `publish()` and `markReady()` had
   no error handling — any `saveProtocol` failure (most commonly the database
   missing the new `protocols.datasheet` / `asset_map` columns because the

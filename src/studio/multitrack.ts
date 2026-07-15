@@ -12,7 +12,7 @@
 
 import { audioBufferToWav } from '../lib/wav'
 
-export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral'
+export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral' | 'sample'
 export type Texture = 'lake' | 'air' | 'deep'
 
 export interface BinauralParams { carrierHz: number; beatHz: number }
@@ -22,7 +22,10 @@ export interface VoiceParams { pan: number; pulseHz: number; toneHz: number }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
 export interface BilateralParams { toneHz: number; blipMs: number; everySec: number }
-export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | VoiceParams | MusicParams | BilateralParams
+/** A real audio file (PO library stem / soundscape texture), looped to fill
+    the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
+export interface SampleParams { url: string; label: string }
+export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | VoiceParams | MusicParams | BilateralParams | SampleParams
 
 export const SAMPLE_RATE = 44100
 
@@ -33,6 +36,7 @@ export const TRACK_META: Record<TrackType, { label: string; icon: string; color:
   voice: { label: 'Voice', icon: '🗣️', color: '#E0995E', blurb: 'Guided affirmation (TTS or placeholder)' },
   music: { label: 'Music', icon: '🎹', color: '#C88FB0', blurb: 'Warm chord pad' },
   bilateral: { label: 'Bilateral', icon: '↔️', color: '#7BA8C4', blurb: 'Alternating L/R blips (PAT-05)' },
+  sample: { label: 'Audio file', icon: '📼', color: '#8FA86B', blurb: 'Real library asset (looped to clip length)' },
 }
 
 export function defaultParams(type: TrackType): ClipParams {
@@ -43,6 +47,7 @@ export function defaultParams(type: TrackType): ClipParams {
     case 'voice': return { pan: 0, pulseHz: 0.2, toneHz: 420 }
     case 'music': return { chord: 'c' }
     case 'bilateral': return { toneHz: 400, blipMs: 120, everySec: 4 }
+    case 'sample': return { url: '', label: 'No file — set via the datasheet importer' }
   }
 }
 
@@ -158,10 +163,62 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
   }
 }
 
+/* ---- sample clips: fetch + decode the real file once per URL ---- */
+const sampleCache = new Map<string, Promise<AudioBuffer>>()
+
+function fetchSampleBuffer(url: string): Promise<AudioBuffer> {
+  let p = sampleCache.get(url)
+  if (!p) {
+    p = (async () => {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`Audio file HTTP ${res.status}`)
+      const bytes = await res.arrayBuffer()
+      const dec = new OfflineAudioContext(2, 1, SAMPLE_RATE)
+      return await dec.decodeAudioData(bytes)
+    })()
+    p.catch(() => sampleCache.delete(url))
+    sampleCache.set(url, p)
+  }
+  return p
+}
+
+/** Loop `source` into a clip of `dur` seconds with equal-power seam fades. */
+function buildSampleLayer(ctx: OfflineAudioContext, source: AudioBuffer, dest: AudioNode, dur: number): void {
+  const bufDur = source.duration
+  const seam = Math.min(1.5, bufDur / 4)
+  let t = 0
+  while (t < dur - 0.01) {
+    const src = ctx.createBufferSource()
+    src.buffer = source
+    const g = ctx.createGain()
+    g.gain.value = 0
+    const stopAt = Math.min(t + bufDur, dur)
+    const isFirst = t === 0
+    const isLast = t + bufDur >= dur - seam
+    const gIn = isFirst ? 0.03 : seam
+    const gOut = isLast ? 0.03 : seam
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(1, t + gIn)
+    g.gain.setValueAtTime(1, Math.max(t + gIn, stopAt - gOut))
+    g.gain.linearRampToValueAtTime(0, stopAt)
+    src.connect(g).connect(dest)
+    src.start(t)
+    src.stop(stopAt + 0.05)
+    t = t + bufDur - (isLast ? 0 : seam)
+  }
+}
+
 /** Render one clip to a stereo buffer (with short edge fades to avoid clicks). */
 export async function renderClipBuffer(type: TrackType, params: ClipParams, durationSec: number): Promise<AudioBuffer> {
   const dur = Math.max(0.1, durationSec)
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * dur))
+  // real-file clip: fetch/decode BEFORE opening the offline graph
+  let sampleSource: AudioBuffer | null = null
+  if (type === 'sample') {
+    const p = params as SampleParams
+    if (!p.url) return new OfflineAudioContext(2, frames, SAMPLE_RATE).startRendering() // silent clip
+    sampleSource = await fetchSampleBuffer(p.url)
+  }
   const ctx = new OfflineAudioContext(2, frames, SAMPLE_RATE)
   const env = ctx.createGain()
   const fade = Math.min(0.12, dur / 4)
@@ -170,7 +227,8 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
   env.gain.setValueAtTime(1, Math.max(fade, dur - fade))
   env.gain.linearRampToValueAtTime(0, dur)
   env.connect(ctx.destination)
-  buildLayer(ctx, type, params, env, dur)
+  if (type === 'sample' && sampleSource) buildSampleLayer(ctx, sampleSource, env, dur)
+  else buildLayer(ctx, type, params, env, dur)
   return ctx.startRendering()
 }
 

@@ -112,3 +112,74 @@ export function specToStudioTracks(spec: ProtocolSpec, duration: Duration): { tr
 
   return { tracks, name: `${spec.code} · ${duration} min`, totalSec }
 }
+
+/* ---------------------------------------------------------------------------
+   Datasheet → Studio project (real assets)
+   Same layer structure as specToStudioTracks, but when the protocol has an
+   Asset Library mapping, the synth Music/Soundscape tracks are replaced with
+   SAMPLE tracks — one clip per mapped phase, each playing the actual library
+   file (looped to the phase length). Unmapped phases keep the synth fallback
+   on a separate track so nothing goes silent. Voice clips carry their text:
+   hit ♪ Synthesize on a clip (or "Synthesize all") to render the real voice.
+   --------------------------------------------------------------------------- */
+
+import { assetPublicUrl, PHASE_KEYS, type AssetMap, type PhaseKey } from './assets'
+import { datasheetToProtocolSpec, type Datasheet } from './datasheet'
+
+export function datasheetToStudioTracks(
+  ds: Datasheet,
+  duration: Duration,
+  assetMap?: AssetMap,
+): { tracks: SeedTrack[]; name: string; totalSec: number } {
+  const base = specToStudioTracks(datasheetToProtocolSpec(ds), duration)
+  if (!assetMap) return base
+
+  const phases = ds.phases.filter((p) => p.duration === duration)
+  const key = (id: number): PhaseKey => PHASE_KEYS[Math.min(5, Math.max(0, id - 1))]
+  const fileName = (path: string) => path.split('/').pop() ?? path
+
+  const sampleClips = (paths: Partial<Record<PhaseKey, string>>): { clips: SeedClip[]; covered: Set<number> } => {
+    const clips: SeedClip[] = []
+    const covered = new Set<number>()
+    for (const p of phases) {
+      const path = paths[key(p.id)]
+      if (!path) continue
+      let url = ''
+      try { url = assetPublicUrl(path) } catch { continue } // no Supabase env → keep synth
+      clips.push({
+        startSec: p.startSec,
+        durationSec: Math.max(1, p.endSec - p.startSec),
+        params: { url, label: `F${p.id} · ${fileName(path)}` },
+      })
+      covered.add(p.id)
+    }
+    return { clips, covered }
+  }
+
+  const music = sampleClips(assetMap.music)
+  const scape = sampleClips(assetMap.soundscape)
+  const tracks: SeedTrack[] = []
+  for (const t of base.tracks) {
+    if (t.type === 'music' && music.clips.length) {
+      // keep synth clips only where no stem is mapped (phase coverage gaps)
+      const keep = t.clips.filter((c) => {
+        const ph = phases.find((p) => c.startSec >= p.startSec - 1 && c.startSec < p.endSec)
+        return ph ? !music.covered.has(ph.id) : true
+      })
+      if (keep.length) tracks.push({ ...t, name: 'Music (synth gaps)', volume: 0.10, clips: keep })
+      tracks.push({ type: 'sample', name: 'Music (library stems)', volume: 0.30, clips: music.clips })
+      continue
+    }
+    if (t.type === 'soundscape' && scape.clips.length) {
+      const keep = t.clips.filter((c) => {
+        const ph = phases.find((p) => c.startSec >= p.startSec - 1 && c.startSec < p.endSec)
+        return ph ? !scape.covered.has(ph.id) : true
+      })
+      if (keep.length) tracks.push({ ...t, name: 'Soundscape (synth gaps)', volume: 0.10, clips: keep })
+      tracks.push({ type: 'sample', name: 'Soundscape (library)', volume: 0.35, clips: scape.clips })
+      continue
+    }
+    tracks.push(t)
+  }
+  return { tracks, name: base.name, totalSec: base.totalSec }
+}

@@ -16,7 +16,7 @@ import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { attachRenderedAudio } from './attachAudio'
-import { specToStudioTracks } from './specStudio'
+import { datasheetToStudioTracks } from './specStudio'
 import { setStudioSeed } from '../compose/handoff'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
@@ -95,6 +95,12 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     setBusy(true)
     setPublishError(null)
     try {
+      // never clobber a mapping the Asset Library already saved for this code
+      let mapToSave = assetMap
+      try {
+        const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+        if (!mapToSave && existing?.assetMap) { mapToSave = existing.assetMap; setAssetMap(existing.assetMap) }
+      } catch { /* fall through with the in-memory value */ }
       const proto: CatalogProtocol = {
         code: ds.code,
         family: ds.family,
@@ -108,7 +114,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
         audioReady: false,
         spec,
         datasheet: ds,
-        assetMap,
+        assetMap: mapToSave,
         updatedAt: Date.now(),
       }
       await dp.saveProtocol(proto)
@@ -130,9 +136,17 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     setRendered(null)
     setRenderNotes([])
     try {
+      // ALWAYS re-read the saved mapping right before rendering: the operator
+      // typically publishes first, maps assets in the Asset Library, then
+      // comes back here — the mount-time snapshot would render synth-only.
+      let freshMap = assetMap
+      try {
+        const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+        if (existing?.assetMap) { freshMap = existing.assetMap; setAssetMap(existing.assetMap) }
+      } catch { /* keep the in-memory map */ }
       const result = await renderDatasheetWav(
         ds,
-        { duration: renderDur, withVoice: withVoice && tts.canRender, capSeconds: preview ? 90 : undefined, assetMap },
+        { duration: renderDur, withVoice: withVoice && tts.canRender, capSeconds: preview ? 90 : undefined, assetMap: freshMap },
         (stg, done, total) => setProgress(
           stg === 'voice' ? `Synthesizing voice ${done}/${total}…`
             : stg === 'assets' ? `Loading assets ${done}/${total}…`
@@ -168,8 +182,14 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     }
   }
 
-  function editInStudio() {
-    const seed = specToStudioTracks(spec, renderDur)
+  async function editInStudio() {
+    // freshest mapping → real sample clips in the Studio
+    let freshMap = assetMap
+    try {
+      const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+      if (existing?.assetMap) { freshMap = existing.assetMap; setAssetMap(existing.assetMap) }
+    } catch { /* keep in-memory */ }
+    const seed = datasheetToStudioTracks(ds, renderDur, freshMap)
     setStudioSeed(seed.tracks, seed.name, { code: ds.code, duration: renderDur })
     window.location.hash = '#studio'
   }
@@ -262,7 +282,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
             <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Sets audioReady on the catalog entry">
               ✓ Mark audio ready & finish
             </button>
-            <button className="b2b-btn" disabled={busy} onClick={editInStudio} title="Open this version's layers as editable tracks">🎚 Edit in Studio</button>
+            <button className="b2b-btn" disabled={busy} onClick={() => void editInStudio()} title="Open this version's layers as editable tracks">🎚 Edit in Studio</button>
             <button className="b2b-btn" disabled={busy} onClick={onDone}>Finish without audio</button>
           </div>
 

@@ -68,15 +68,41 @@ const VOICE_REF = 0.8
 const dB = (x: number) => Math.pow(10, x / 20)
 const LEVEL = {
   voice: VOICE_REF,
-  soundscape: VOICE_REF * dB(-20),
-  music: VOICE_REF * dB(-18),
-  binaural: VOICE_REF * dB(-16),
-  bowl: VOICE_REF * dB(-10),
-  bilateral: 0.06, // Invarianti: "5–8% (sottofondo percepibile)"
+  bilateral: 0.06, // Invarianti: "5–8% (sottofondo percepibile)" — absolute by doc
 } as const
 
 const XFADE_PHASE = 4 // s — equal-power crossfade at phase boundaries
 const XFADE_LOOP = 2  // s — equal-power crossfade at loop seams
+
+/* --------------------------------------------- loudness measurement
+   The PO library is ALREADY normalized (music −18 LUFS, soundscapes −24 LUFS),
+   and TTS voice arrives near full scale. Fixed gains derived from the doc's
+   "−18/−20 dB vs voice" therefore attenuated the files TWICE (≈ −36/−46 dBFS
+   effective — inaudible). v3.1 measures the RMS of every decoded buffer and
+   of the rendered voice, and gains each layer so it sits at its documented
+   offset relative to the MEASURED voice loudness. */
+
+/** Strided RMS of a buffer (fast enough for multi-minute stems). */
+function bufferRms(buf: AudioBuffer): number {
+  const stride = Math.max(1, Math.floor(buf.length / 200_000))
+  let sum = 0
+  let n = 0
+  for (let ch = 0; ch < Math.min(2, buf.numberOfChannels); ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < d.length; i += stride) { sum += d[i] * d[i]; n++ }
+  }
+  return n ? Math.sqrt(sum / n) : 0
+}
+
+/** Nominal voice RMS when rendering bed-only (≈ TTS at the 0.8 voice gain). */
+const NOMINAL_VOICE_RMS = 0.13
+
+/** Gain that puts `buf` at `offsetDb` below the voice reference RMS. */
+function gainForOffset(buf: AudioBuffer, voiceRefRms: number, offsetDb: number): number {
+  const rms = bufferRms(buf)
+  if (rms < 1e-4) return 1 // silent/broken file — leave as-is, the note will say so
+  return Math.min(2.5, Math.max(0.005, (voiceRefRms * dB(offsetDb)) / rms))
+}
 
 /* ------------------------------------------------- equal-power fades */
 
@@ -93,7 +119,10 @@ const fadeOutCurve = (level: number): Float32Array => {
 }
 
 /** Schedule one buffer window [at, at+dur) with equal-power in/out ramps.
-    Loops the buffer with equal-power seams when it's shorter than dur. */
+    Loops the buffer with equal-power seams when it's shorter than dur.
+    Automation is scheduled so no event ever falls INSIDE (or exactly at the
+    start of) a setValueCurveAtTime range — per spec that throws, and even
+    where tolerated the behavior is undefined across browsers. */
 function scheduleLooped(
   ctx: OfflineAudioContext, buffer: AudioBuffer, dest: AudioNode,
   at: number, dur: number, level: number, inSec: number, outSec: number,
@@ -104,24 +133,31 @@ function scheduleLooped(
   const end = at + dur
   let first = true
   while (t < end - 0.01) {
-    const remaining = end - t
-    const playDur = Math.min(bufDur, remaining + (first ? inSec : seam)) // tail may exceed; gain closes it
     const src = ctx.createBufferSource()
     src.buffer = buffer
     const g = ctx.createGain()
-    const gIn = first ? Math.min(inSec, playDur / 3) : seam
-    const isLast = t + bufDur >= end - seam
-    const gOut = isLast ? Math.min(outSec, playDur / 3) : seam
+    g.gain.value = 0 // intrinsic value before the first event
     const stopAt = Math.min(t + bufDur, end)
-    g.gain.setValueAtTime(0, Math.max(0, t))
-    if (gIn > 0.02) g.gain.setValueCurveAtTime(fadeInCurve(level), Math.max(0, t), gIn)
-    else g.gain.setValueAtTime(level, Math.max(0, t))
-    const outStart = Math.max(t + gIn + 0.01, stopAt - gOut)
-    g.gain.setValueAtTime(level, outStart)
-    if (gOut > 0.02) g.gain.setValueCurveAtTime(fadeOutCurve(level), outStart, Math.max(0.02, stopAt - outStart))
-    else g.gain.linearRampToValueAtTime(0, stopAt)
+    const playDur = stopAt - t
+    const gIn = Math.min(first ? inSec : seam, playDur / 3)
+    const isLast = t + bufDur >= end - seam
+    const gOut = Math.min(isLast ? outSec : seam, playDur / 3)
+    const t0 = Math.max(0, t)
+    if (gIn > 0.02) {
+      g.gain.setValueCurveAtTime(fadeInCurve(level), t0, gIn)
+      g.gain.setValueAtTime(level, t0 + gIn + 0.005) // hold, safely after the curve
+    } else {
+      g.gain.setValueAtTime(level, t0)
+    }
+    const outStart = Math.max(t0 + gIn + 0.02, stopAt - gOut)
+    if (gOut > 0.02 && stopAt - outStart > 0.02) {
+      g.gain.setValueCurveAtTime(fadeOutCurve(level), outStart, stopAt - outStart)
+    } else {
+      g.gain.setValueAtTime(level, Math.max(t0 + gIn + 0.03, stopAt - 0.02))
+      g.gain.linearRampToValueAtTime(0, stopAt)
+    }
     src.connect(g).connect(dest)
-    src.start(Math.max(0, t))
+    src.start(t0)
     src.stop(stopAt + 0.05)
     // next iteration starts one seam BEFORE this one ends (overlap = crossfade)
     t = t + bufDur - (isLast ? 0 : seam)
@@ -147,14 +183,15 @@ function synthPad(ctx: OfflineAudioContext, dest: AudioNode, at: number, dur: nu
         osc.type = 'triangle'
         osc.frequency.value = f + detune
         const g = ctx.createGain()
+        g.gain.value = 0
         const lvl = level / (freqs.length * 2)
         const xf = Math.min(XFADE_PHASE, segDur / 3)
-        g.gain.setValueAtTime(0, Math.max(0, segAt - 0.01))
         g.gain.setValueCurveAtTime(fadeInCurve(lvl), Math.max(0, segAt), xf)
-        g.gain.setValueAtTime(lvl, Math.max(segAt, segAt + segDur - xf))
-        g.gain.setValueCurveAtTime(fadeOutCurve(lvl), Math.max(segAt + xf + 0.01, segAt + segDur - xf), xf)
+        g.gain.setValueAtTime(lvl, Math.max(0, segAt) + xf + 0.005) // hold, after the curve
+        const outStart = Math.max(Math.max(0, segAt) + xf + 0.02, segAt + segDur - xf)
+        g.gain.setValueCurveAtTime(fadeOutCurve(lvl), outStart, Math.max(0.02, segAt + segDur - outStart + xf / 2))
         osc.connect(g).connect(dest)
-        osc.start(Math.max(0, segAt - 0.01))
+        osc.start(Math.max(0, segAt))
         osc.stop(segAt + segDur + 0.1)
       }
     }
@@ -482,7 +519,18 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   limiter.attack.value = 0.003
   limiter.release.value = 0.25
   master.connect(limiter).connect(ctx.destination)
-  notes.push(`Mix law: voice 80% ref · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · loop fades ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration}-min).`)
+
+  // measured voice reference: mean RMS of the rendered normal-level voice
+  // clips at the 0.8 voice gain (nominal fallback when rendering bed-only)
+  let voiceRefRms = NOMINAL_VOICE_RMS
+  {
+    const normal = voiceBuffers.filter(({ job }) => job.gainDb >= -1)
+    if (normal.length) {
+      const mean = normal.reduce((s, { buffer }) => s + bufferRms(buffer), 0) / normal.length
+      if (mean > 1e-3) voiceRefRms = mean * LEVEL.voice
+    }
+  }
+  notes.push(`Mix law (loudness-measured): voice ref RMS ${voiceRefRms.toFixed(3)} · music −18 dB · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · loop fades ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration}-min).`)
   notes.push('Binaural −16 dB and music −18 dB vs voice — still not PO-specified; adjust in renderDatasheet.ts if a figure lands.')
 
   let stemsUsed = 0
@@ -503,19 +551,19 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     const musicPath = map?.music[phaseKey(p.id)]
     const stem = musicPath ? assetBuffers.get(musicPath) : undefined
     if (stem) {
-      scheduleLooped(ctx, stem, master, at, dur, LEVEL.music, inSec, outSec)
+      scheduleLooped(ctx, stem, master, at, dur, gainForOffset(stem, voiceRefRms, -18), inSec, outSec)
       stemsUsed++
     } else {
-      synthPad(ctx, master, at, dur, musicByPhase.get(p.id)?.keys ?? ['Am'], LEVEL.music)
+      // synth pad — oscillators, not a buffer: scale its empirical unit RMS
+      // (~0.25 at level 1) to the same −18 dB target
+      synthPad(ctx, master, at, dur, musicByPhase.get(p.id)?.keys ?? ['Am'], Math.min(0.6, (voiceRefRms * dB(-18)) / 0.25))
     }
 
     const scapePath = map?.soundscape[phaseKey(p.id)]
     const scape = scapePath ? assetBuffers.get(scapePath) : undefined
-    if (scape) {
-      scheduleLooped(ctx, scape, master, at, dur, LEVEL.soundscape, inSec, outSec)
-    } else {
-      const fb = fallbackScapes.get(p.id)
-      if (fb) scheduleLooped(ctx, fb, master, at, dur, LEVEL.soundscape, inSec, outSec)
+    const scapeBuf = scape ?? fallbackScapes.get(p.id)
+    if (scapeBuf) {
+      scheduleLooped(ctx, scapeBuf, master, at, dur, gainForOffset(scapeBuf, voiceRefRms, -20), inSec, outSec)
     }
   }
   if (map && stemsUsed === 0) notes.push('No music stems were mapped/loaded for this version — the whole bed used the synth pad. Map phase stems in the Asset Library.')
@@ -527,11 +575,11 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     const at = Math.max(0, from?.startSec ?? 0)
     const end = Math.min(totalSec, to?.endSec ?? totalSec)
     if (end - at > 4) {
-      const level = VOICE_REF * dB(v.heartbeat.gainDb)
       const hbFile = map?.heartbeat ? assetBuffers.get(map.heartbeat) : undefined
-      if (hbFile) scheduleLooped(ctx, hbFile, master, at, end - at, level, 3, 3)
+      if (hbFile) scheduleLooped(ctx, hbFile, master, at, end - at, gainForOffset(hbFile, voiceRefRms, v.heartbeat.gainDb), 3, 3)
       else {
-        synthHeartbeat(ctx, master, at, end - at, 60, level)
+        // synth thump peaks ≈ its level → scale peak so RMS lands near target
+        synthHeartbeat(ctx, master, at, end - at, 60, Math.min(0.5, voiceRefRms * dB(v.heartbeat.gainDb) * 6))
         notes.push(`Heartbeat: synth provisional at 60 BPM, ${v.heartbeat.gainDb} dB (F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase}) — swaps to the PO file automatically once mapped.`)
       }
     }
@@ -546,12 +594,12 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         const src = ctx.createBufferSource()
         src.buffer = bowlFile
         const g = ctx.createGain()
-        g.gain.setValueAtTime(LEVEL.bowl, s.atSec)
+        g.gain.setValueAtTime(gainForOffset(bowlFile, voiceRefRms, -10), s.atSec)
         src.connect(g).connect(master)
         src.start(s.atSec)
         src.stop(Math.min(totalSec, s.atSec + bowlFile.duration) + 0.05)
       } else {
-        synthBowl(ctx, master, s.atSec, s.decaySec, LEVEL.bowl)
+        synthBowl(ctx, master, s.atSec, s.decaySec, Math.min(0.5, voiceRefRms * dB(-10) * 4))
       }
     }
     if (strikes.length && !bowlFile) notes.push(`Singing bowl: ${strikes.length} synth strikes (provisional) — swaps to the PO file automatically once mapped.`)
@@ -586,9 +634,10 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     oscL.connect(panL).connect(bg)
     oscR.connect(panR).connect(bg)
     bg.connect(master)
+    const binLevel = Math.min(0.2, voiceRefRms * dB(-16) * Math.SQRT2)
     bg.gain.setValueAtTime(0, 0)
-    bg.gain.linearRampToValueAtTime(LEVEL.binaural, Math.min(b.fadeInSec, totalSec / 3))
-    bg.gain.setValueAtTime(LEVEL.binaural, Math.max(0, totalSec - b.fadeOutSec))
+    bg.gain.linearRampToValueAtTime(binLevel, Math.min(b.fadeInSec, totalSec / 3))
+    bg.gain.setValueAtTime(binLevel, Math.max(0, totalSec - b.fadeOutSec))
     bg.gain.linearRampToValueAtTime(0, totalSec)
     oscL.start(0); oscR.start(0)
     oscL.stop(totalSec); oscR.stop(totalSec)
