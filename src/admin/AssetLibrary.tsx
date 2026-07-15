@@ -168,11 +168,18 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 return (
                   <div key={k} className="adm-asset__group">
                     <div className="adm-asset__ghead">{PHASE_LABEL[k]} <span className="adm-asset__count">{list.length}</span></div>
-                    {list.length === 0 && <div className="adm-asset__empty">No tracks in assets/music/{k}.</div>}
+                    {list.length === 0 && <div className="adm-asset__empty">No tracks in assets/music/{k} (or flat files named {k}_*.mp3).</div>}
                     {list.map(assetRow)}
                   </div>
                 )
               })}
+              {music.some((a) => !a.phase) && (
+                <div className="adm-asset__group">
+                  <div className="adm-asset__ghead">No phase prefix <span className="adm-asset__count">{music.filter((a) => !a.phase).length}</span></div>
+                  <div className="adm-asset__empty">Files under assets/music without an f1–f6 folder or name prefix — selectable for any phase below.</div>
+                  {music.filter((a) => !a.phase).map(assetRow)}
+                </div>
+              )}
             </div>
           )}
 

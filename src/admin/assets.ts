@@ -92,7 +92,8 @@ export async function listAssets(): Promise<AudioAsset[]> {
   const sb = client()
   const out: AudioAsset[] = []
 
-  // music/f1..f6
+  // music/f1..f6 folders, plus flat files whose name carries the phase
+  // ("f1_dawn.mp3", "F2-strings.mp3") directly under assets/music
   for (const phase of PHASE_KEYS) {
     const prefix = `${ASSET_ROOT}/music/${phase}`
     let entries: Entry[] = []
@@ -103,6 +104,19 @@ export async function listAssets(): Promise<AudioAsset[]> {
       out.push({ path, name: e.name, kind: 'music', phase, publicUrl: publicUrl(sb, path), sizeBytes: e.metadata?.size })
     }
   }
+  try {
+    const flat = await listDir(sb, `${ASSET_ROOT}/music`)
+    for (const e of flat) {
+      if (e.id === null || !AUDIO_EXT.test(e.name)) continue // folders handled above
+      const m = /^f([1-6])[-_. ]/i.exec(e.name)
+      const path = `${ASSET_ROOT}/music/${e.name}`
+      out.push({
+        path, name: e.name, kind: 'music',
+        phase: m ? (`f${m[1]}` as PhaseKey) : undefined, // unprefixed → listed under every phase's "Other" group
+        publicUrl: publicUrl(sb, path), sizeBytes: e.metadata?.size,
+      })
+    }
+  } catch { /* folder may not exist */ }
 
   // soundscape/<type>/* or soundscape/<type>-nn.mp3
   try {

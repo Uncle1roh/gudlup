@@ -1,6 +1,15 @@
 # Good Loop — build manifest
 
-**Fix: silent music/soundscape in v3 renders + real assets in the Studio** (current)
+**Fix: music asset listing (flat layouts)** (current)
+- `assets.ts` — the music lister accepted ONLY the `assets/music/f1..f6/`
+  folder layout, while soundscapes tolerated flat files too. Flat music files
+  (`assets/music/f1_track.mp3` or unprefixed) were invisible → unmappable →
+  synth-only music in renders AND in the Studio while soundscapes worked.
+  Music now also lists flat files (phase from the `f1_`/`f2-` name prefix;
+  unprefixed files appear in a "No phase prefix" group, selectable for any
+  phase). `AssetLibrary.tsx` shows that group and clearer empty-state hints.
+
+**Fix: silent music/soundscape in v3 renders + real assets in the Studio**
 - `renderDatasheet.ts` — v3.1 **loudness-measured gain staging**: the PO files
   are already normalized (music −18 LUFS, soundscapes −24 LUFS) and the fixed
   "−18/−20 dB vs voice" gains attenuated them a second time (≈ −36/−46 dBFS —
