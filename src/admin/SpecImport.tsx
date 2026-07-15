@@ -65,28 +65,40 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
   const totalEvents = spec.versions.reduce((n, v) => n + v.events.length, 0)
   const totalVoice = spec.versions.reduce((n, v) => n + voiceLinesForVersion(spec, v.duration).length, 0)
 
+  const [publishError, setPublishError] = useState<string | null>(null)
+
   async function publish() {
     setBusy(true)
-    const proto: CatalogProtocol = {
-      code: spec.code,
-      family: spec.family,
-      title: title.trim() || spec.title,
-      blurb: blurb.trim() || `Imported protocol — ${spec.versions.map((v) => `${v.duration} min`).join(' / ')}.`,
-      phases: phasesFromSpec(spec),
-      versions: spec.versions.map((v) => ({ duration: v.duration })),
-      enabled: true,
-      source: 'imported',
-      tenants: 'all',
-      audioReady: false,
-      spec,
-      updatedAt: Date.now(),
+    setPublishError(null)
+    try {
+      const proto: CatalogProtocol = {
+        code: spec.code,
+        family: spec.family,
+        title: title.trim() || spec.title,
+        blurb: blurb.trim() || `Imported protocol — ${spec.versions.map((v) => `${v.duration} min`).join(' / ')}.`,
+        phases: phasesFromSpec(spec),
+        versions: spec.versions.map((v) => ({ duration: v.duration })),
+        enabled: true,
+        source: 'imported',
+        tenants: 'all',
+        audioReady: false,
+        spec,
+        updatedAt: Date.now(),
+      }
+      await dp.saveProtocol(proto)
+      registerProtocol(proto)
+      await dp.logAudit({ actor, action: 'protocol.imported', target: proto.code, detail: `spec doc · ${fileName} · ${spec.versions.length} versions, ${spec.affirmations.length} affirmations` })
+        .catch(() => { /* the protocol IS saved — a failed audit write must not block the flow */ })
+      setPublished(proto)
+      setStage('render')
+    } catch (e) {
+      const msg = (e as Error)?.message ?? String(e)
+      setPublishError(/PGRST204|42703|column .* does not exist|schema cache/i.test(msg)
+        ? `${msg} — the database schema is behind the app. Run the updated supabase/setup.sql in the Supabase SQL editor (safe to re-run), then Publish again.`
+        : msg)
+    } finally {
+      setBusy(false)
     }
-    await dp.saveProtocol(proto)
-    registerProtocol(proto)
-    await dp.logAudit({ actor, action: 'protocol.imported', target: proto.code, detail: `spec doc · ${fileName} · ${spec.versions.length} versions, ${spec.affirmations.length} affirmations` })
-    setPublished(proto)
-    setBusy(false)
-    setStage('render')
   }
 
   async function runRender() {
@@ -143,10 +155,17 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
   async function markReady() {
     if (!published) return
     setBusy(true)
-    await dp.saveProtocol({ ...published, audioReady: true, updatedAt: Date.now() })
-    await dp.logAudit({ actor, action: 'protocol.audio.ready', target: published.code, detail: 'audioReady = true' })
-    setBusy(false)
-    onDone()
+    setRenderError(null)
+    try {
+      await dp.saveProtocol({ ...published, audioReady: true, updatedAt: Date.now() })
+      await dp.logAudit({ actor, action: 'protocol.audio.ready', target: published.code, detail: 'audioReady = true' })
+        .catch(() => { /* audit failure must not block */ })
+      onDone()
+    } catch (e) {
+      setRenderError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   /* ---------------------------------------------------------- render stage */
@@ -292,6 +311,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={publish}>
           {busy ? 'Publishing…' : `Publish ${spec.code} to catalog →`}
         </button>
+        {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Publish failed: {publishError}</div>}
         <p className="b2b-sub adm-import__hint">Publishing stores the full parsed configuration with the protocol; the next step renders the audio file from it.</p>
       </div>
     </div>

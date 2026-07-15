@@ -1,5 +1,32 @@
 # Good Loop — build manifest
 
+**Fix: publish hang in the importers** (current)
+- `DatasheetImport.tsx` / `SpecImport.tsx`: `publish()` and `markReady()` had
+  no error handling — any `saveProtocol` failure (most commonly the database
+  missing the new `protocols.datasheet` / `asset_map` columns because the
+  updated `supabase/setup.sql` hadn't been run) left the button stuck on
+  "Publishing…" forever. Both now catch, reset `busy`, and show the error
+  inline with an actionable hint (run setup.sql / sign in as admin). A failed
+  audit write no longer blocks the flow after a successful save.
+
+**Slice: Secondary [M] voice (Deep double-induction)**
+- `src/tts/settings.ts` — optional `voiceIdSecondary` in the saved keys
+  (backwards-compatible with existing localStorage).
+- `src/tts/types.ts` — `TtsOptions.voice: 'primary' | 'secondary'` +
+  `TtsProvider.hasSecondaryVoice`.
+- `src/tts/elevenlabs.ts` — routes `voice: 'secondary'` to the [M] Voice ID,
+  falls back to primary when unset.
+- `src/tts/index.ts` — settings-first, env fallback `VITE_ELEVENLABS_VOICE_ID_M`.
+- `src/tts/VoiceEnginePanel.tsx` — second Voice ID field (dropdown after
+  "Load voices"), "▶ Test M" button (Italian double-induction line), F+M badge.
+- `src/admin/renderDatasheet.ts` — [M] jobs (Storia B rows, `Voce = M`) render
+  with the secondary voice; per-voice TTS cache; render notes now say whether
+  the male voice was used or fell back.
+- `.env.example` — documents `VITE_ELEVENLABS_VOICE_ID_M`.
+Verified: `tsc --noEmit` + `npm run build` clean; no callers outside `src/tts`
+touch the changed signatures.
+
+
 **Slice: Asset Library · Datasheet Importer · Renderer v3** (current)
 
 ## What this slice adds

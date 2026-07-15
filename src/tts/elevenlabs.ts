@@ -6,15 +6,22 @@
    browser — fine for a closed test, NOT for production. Move this call behind a
    server proxy (e.g. a Supabase Edge Function) before any public release. */
 
-import type { TtsProvider } from './types'
+import type { TtsOptions, TtsProvider } from './types'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
 
-export function createElevenLabsTts(apiKey: string, voiceId: string): TtsProvider {
+export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSecondary?: string): TtsProvider {
   let audio: HTMLAudioElement | null = null
+  const secondary = voiceIdSecondary?.trim() || undefined
 
-  async function fetchBytes(text: string): Promise<ArrayBuffer> {
-    const res = await fetch(`${ENDPOINT}/${voiceId}`, {
+  function resolveVoice(opts?: TtsOptions): string {
+    // no secondary configured → everything speaks with the primary (callers
+    // can check hasSecondaryVoice to surface that in their notes)
+    return opts?.voice === 'secondary' && secondary ? secondary : voiceId
+  }
+
+  async function fetchBytes(text: string, opts?: TtsOptions): Promise<ArrayBuffer> {
+    const res = await fetch(`${ENDPOINT}/${resolveVoice(opts)}`, {
       method: 'POST',
       headers: {
         'xi-api-key': apiKey,
@@ -38,11 +45,12 @@ export function createElevenLabsTts(apiKey: string, voiceId: string): TtsProvide
     id: 'elevenlabs',
     label: 'ElevenLabs',
     canRender: true,
-    async render(text: string) {
-      return fetchBytes(text)
+    hasSecondaryVoice: Boolean(secondary),
+    async render(text: string, opts?: TtsOptions) {
+      return fetchBytes(text, opts)
     },
-    async speak(text: string) {
-      const bytes = await fetchBytes(text)
+    async speak(text: string, opts?: TtsOptions) {
+      const bytes = await fetchBytes(text, opts)
       const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }))
       audio?.pause()
       audio = new Audio(url)

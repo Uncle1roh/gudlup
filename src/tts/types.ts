@@ -13,6 +13,10 @@ export interface TtsOptions {
   lang?: string // BCP-47, e.g. 'pt-BR'
   rate?: number // 0.5..2 relative speed (provider-dependent)
   pitch?: number // 0..2 (provider-dependent)
+  /** Which configured voice to speak with. 'secondary' = the male archetype
+      (Deep double-induction). Providers without a secondary voice fall back
+      to the primary — check `hasSecondaryVoice` to know which will happen. */
+  voice?: 'primary' | 'secondary'
 }
 
 export interface TtsProvider {
@@ -22,6 +26,8 @@ export interface TtsProvider {
   label: string
   /** true when render() returns audio bytes that can be layered + exported */
   canRender: boolean
+  /** true when a distinct secondary (male) voice is configured */
+  hasSecondaryVoice?: boolean
   /** speak the text aloud for a quick audition */
   speak(text: string, opts?: TtsOptions): Promise<void>
   /** return encoded audio bytes (mp3/wav) — throws on preview-only providers */

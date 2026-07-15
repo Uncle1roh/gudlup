@@ -383,12 +383,16 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     } else {
       const decoder = new AudioContext({ sampleRate: SAMPLE_RATE })
       const cache = new Map<string, AudioBuffer>()
-      const renderText = async (text: string): Promise<AudioBuffer> => {
-        let buf = cache.get(text)
+      const renderText = async (text: string, voice: 'primary' | 'secondary' = 'primary'): Promise<AudioBuffer> => {
+        // secondary requests without a configured [M] voice fall back to the
+        // primary INSIDE the provider — share the cache entry in that case
+        const effective = voice === 'secondary' && tts.hasSecondaryVoice ? 'secondary' : 'primary'
+        const key = `${effective}|${text}`
+        let buf = cache.get(key)
         if (!buf) {
-          const bytes = await tts.render(text, { lang: 'it' })
+          const bytes = await tts.render(text, { lang: 'it', voice: effective })
           buf = await decoder.decodeAudioData(bytes.slice(0))
-          cache.set(text, buf)
+          cache.set(key, buf)
         }
         return buf
       }
@@ -396,7 +400,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         for (let i = 0; i < jobs.length; i++) {
           onProgress?.('voice', i, jobs.length)
           try {
-            voiceBuffers.push({ job: jobs[i], buffer: await renderText(jobs[i].text) })
+            voiceBuffers.push({ job: jobs[i], buffer: await renderText(jobs[i].text, jobs[i].secondary ? 'secondary' : 'primary') })
             voiceRendered++
           } catch (e) {
             notes.push(`Voice row at ${fmtTime(jobs[i].timeSec)} failed: ${(e as Error).message}`)
@@ -416,7 +420,11 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       }
       onProgress?.('voice', jobs.length, jobs.length)
       if (jobs.some((j) => j.secondary)) {
-        notes.push('Secondary [M] voice rows rendered with the primary voice — the engine has one voice configured; add the male voice when the PO confirms it.')
+        if (tts.hasSecondaryVoice) {
+          notes.push(`Secondary [M] voice rows rendered with the configured male voice (${jobs.filter((j) => j.secondary).length} rows).`)
+        } else {
+          notes.push('Secondary [M] voice rows rendered with the primary voice — set the [M] Voice ID in the Voice engine panel to give the double-induction its male voice.')
+        }
       }
     }
   } else if (!opts.withVoice && jobs.length) {

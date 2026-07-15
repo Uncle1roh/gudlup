@@ -77,30 +77,51 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
   const spec = useMemo(() => datasheetToProtocolSpec(ds), [ds])
   const totalRows = Object.values(ds.timelines).reduce((n, tl) => n + (tl?.length ?? 0), 0)
 
+  const [publishError, setPublishError] = useState<string | null>(null)
+
+  /** Map raw provider errors to something the operator can act on. */
+  function explainSaveError(e: unknown): string {
+    const msg = (e as Error)?.message ?? String(e)
+    if (/datasheet|asset_map|PGRST204|42703|column .* does not exist|schema cache/i.test(msg)) {
+      return `${msg} — the database is missing the new catalog columns. Run the updated supabase/setup.sql in the Supabase SQL editor (it adds protocols.datasheet and protocols.asset_map, and is safe to re-run), then press Publish again.`
+    }
+    if (/row-level security|RLS|permission|policy/i.test(msg)) {
+      return `${msg} — the signed-in account isn't an admin for the catalog write policy. Sign in as admin@goodloop.app and retry.`
+    }
+    return msg
+  }
+
   async function publish() {
     setBusy(true)
-    const proto: CatalogProtocol = {
-      code: ds.code,
-      family: ds.family,
-      title: title.trim() || ds.title,
-      blurb: blurb.trim() || `Imported protocol datasheet — ${ds.versions.map((v) => `${v.duration} min`).join(' / ')}.`,
-      phases: phasesFromSpec(spec),
-      versions: ds.versions.map((v) => ({ duration: v.duration })),
-      enabled: true,
-      source: 'imported',
-      tenants: 'all',
-      audioReady: false,
-      spec,
-      datasheet: ds,
-      assetMap,
-      updatedAt: Date.now(),
+    setPublishError(null)
+    try {
+      const proto: CatalogProtocol = {
+        code: ds.code,
+        family: ds.family,
+        title: title.trim() || ds.title,
+        blurb: blurb.trim() || `Imported protocol datasheet — ${ds.versions.map((v) => `${v.duration} min`).join(' / ')}.`,
+        phases: phasesFromSpec(spec),
+        versions: ds.versions.map((v) => ({ duration: v.duration })),
+        enabled: true,
+        source: 'imported',
+        tenants: 'all',
+        audioReady: false,
+        spec,
+        datasheet: ds,
+        assetMap,
+        updatedAt: Date.now(),
+      }
+      await dp.saveProtocol(proto)
+      registerProtocol(proto)
+      await dp.logAudit({ actor, action: 'protocol.datasheet.imported', target: proto.code, detail: `${fileName} · ${ds.versions.length} versions · ${totalRows} timeline rows · ${ds.affirmations.length} affirmations` })
+        .catch(() => { /* the protocol IS saved — a failed audit write must not block the flow */ })
+      setPublished(proto)
+      setStage('render')
+    } catch (e) {
+      setPublishError(explainSaveError(e))
+    } finally {
+      setBusy(false)
     }
-    await dp.saveProtocol(proto)
-    registerProtocol(proto)
-    await dp.logAudit({ actor, action: 'protocol.datasheet.imported', target: proto.code, detail: `${fileName} · ${ds.versions.length} versions · ${totalRows} timeline rows · ${ds.affirmations.length} affirmations` })
-    setPublished(proto)
-    setBusy(false)
-    setStage('render')
   }
 
   async function runRender() {
@@ -156,10 +177,17 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
   async function markReady() {
     if (!published) return
     setBusy(true)
-    await dp.saveProtocol({ ...published, audioReady: true, updatedAt: Date.now() })
-    await dp.logAudit({ actor, action: 'protocol.audio.ready', target: published.code, detail: 'audioReady = true' })
-    setBusy(false)
-    onDone()
+    setRenderError(null)
+    try {
+      await dp.saveProtocol({ ...published, audioReady: true, updatedAt: Date.now() })
+      await dp.logAudit({ actor, action: 'protocol.audio.ready', target: published.code, detail: 'audioReady = true' })
+        .catch(() => { /* audit failure must not block */ })
+      onDone()
+    } catch (e) {
+      setRenderError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const cov = assetMapCoverage(assetMap)
@@ -351,6 +379,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={publish}>
           {busy ? 'Publishing…' : `Publish ${ds.code} to catalog →`}
         </button>
+        {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Publish failed: {publishError}</div>}
         <p className="b2b-sub adm-import__hint">Publishing stores the full datasheet (and a derived spec for the existing surfaces); the next step renders the audio with Renderer v3.</p>
       </div>
     </div>

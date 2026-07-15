@@ -17,11 +17,11 @@ const env = import.meta.env
 
 export function getTtsProvider(): TtsProvider {
   const saved = getTtsSettings()
-  if (saved) return createElevenLabsTts(saved.apiKey, saved.voiceId)
+  if (saved) return createElevenLabsTts(saved.apiKey, saved.voiceId, saved.voiceIdSecondary)
 
   const elKey = env.VITE_ELEVENLABS_API_KEY
   const elVoice = env.VITE_ELEVENLABS_VOICE_ID
-  if (elKey && elVoice) return createElevenLabsTts(elKey, elVoice)
+  if (elKey && elVoice) return createElevenLabsTts(elKey, elVoice, env.VITE_ELEVENLABS_VOICE_ID_M as string | undefined)
 
   const azKey = env.VITE_AZURE_TTS_KEY
   const azRegion = env.VITE_AZURE_TTS_REGION
