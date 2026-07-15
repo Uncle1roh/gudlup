@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
+import { AssetLibrary } from './AssetLibrary'
 import { CredentialQueue } from './CredentialQueue'
 import { Companies } from './Companies'
 import { Users } from './Users'
 import { AuditLog } from './AuditLog'
 
-type Section = 'overview' | 'catalog' | 'credentials' | 'companies' | 'users' | 'audit'
+type Section = 'overview' | 'catalog' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: '▦' },
   { id: 'catalog', label: 'Protocol catalog', icon: '♪' },
+  { id: 'assets', label: 'Asset library', icon: '♫' },
   { id: 'credentials', label: 'Credentialing', icon: '✓' },
   { id: 'companies', label: 'Companies', icon: '◭' },
   { id: 'users', label: 'Users & roles', icon: '◑' },
@@ -54,6 +56,7 @@ export function AdminApp() {
       <main className="adm-main">
         {section === 'overview' && <Overview onGo={setSection} />}
         {section === 'catalog' && <CatalogAdmin actor={actor} />}
+        {section === 'assets' && <AssetLibrary actor={actor} />}
         {section === 'credentials' && <CredentialQueue actor={actor} />}
         {section === 'companies' && <Companies actor={actor} />}
         {section === 'users' && <Users actor={actor} />}

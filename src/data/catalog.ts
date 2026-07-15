@@ -13,6 +13,8 @@
 
 import type { Protocol } from '../types/domain'
 import type { ProtocolSpec } from '../admin/protocolDoc'
+import type { Datasheet } from '../admin/datasheet'
+import type { AssetMap } from '../admin/assets'
 import { PROTOCOLS } from './protocols'
 
 export type ProtocolSource = 'seed' | 'imported'
@@ -33,6 +35,10 @@ export interface CatalogProtocol extends Protocol {
   updatedAt: number
   /** Full parsed audio configuration (protocol-document imports only). */
   spec?: ProtocolSpec
+  /** Canonical datasheet workbook (xlsx imports) — Renderer v3 executes this. */
+  datasheet?: Datasheet
+  /** Admin's phase → storage-path asset assignments (Asset Library). */
+  assetMap?: AssetMap
 }
 
 /** Lift the seeded domain protocols into catalog entries. */

@@ -6,6 +6,8 @@ import { parseImport, isParseable, csvTemplate, type ParsedDraft } from './impor
 import { extractDocxText } from './docxText'
 import { parseProtocolDoc, looksLikeProtocolDoc, type ProtocolSpec } from './protocolDoc'
 import { SpecImport } from './SpecImport'
+import { parseDatasheet, type Datasheet } from './datasheet'
+import { DatasheetImport } from './DatasheetImport'
 import type { CatalogProtocol } from '../data/catalog'
 
 type Step = 'upload' | 'review' | 'done'
@@ -33,6 +35,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
   const [publishedCount, setPublishedCount] = useState(0)
   const [busy, setBusy] = useState(false)
   const [spec, setSpec] = useState<ProtocolSpec | null>(null)
+  const [datasheet, setDatasheet] = useState<Datasheet | null>(null)
   const [reading, setReading] = useState(false)
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -41,6 +44,26 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     if (!f) return
     setError(null)
     const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+
+    // Protocol DATASHEET path (.xlsx / .xls): the GL-ANX 1.3 workbook — the
+    // canonical structured database of a protocol's audio configuration.
+    // Parsed sheet-by-sheet and handed to the datasheet review/render screen.
+    if (ext === 'xlsx' || ext === 'xls') {
+      setReading(true)
+      try {
+        const bytes = await f.arrayBuffer()
+        const res = await parseDatasheet(bytes)
+        if (res.error || !res.datasheet) { setError(res.error ?? 'Could not parse that workbook.'); return }
+        setFileName(f.name)
+        setDatasheet(res.datasheet)
+        void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `datasheet · ${res.datasheet.code} · ${res.datasheet.versions.length} versions · ${res.datasheet.issues.length} notes` })
+      } catch (err) {
+        setError(`Could not read that workbook: ${(err as Error).message}`)
+      } finally {
+        setReading(false)
+      }
+      return
+    }
 
     // Protocol DOCUMENT path (.docx / .pdf / .txt / .md): the full "Protocol
     // for Developers" spec — parsed into a ProtocolSpec and rendered to audio.
@@ -121,6 +144,19 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     setPublishedCount(n)
     setBusy(false)
     setStep('done')
+  }
+
+  /* ---- PROTOCOL DATASHEET (parsed workbook) ---- */
+  if (datasheet && fileName) {
+    return (
+      <DatasheetImport
+        datasheet={datasheet}
+        fileName={fileName}
+        actor={actor}
+        onCancel={() => { setDatasheet(null); setFileName(null) }}
+        onDone={onBack}
+      />
+    )
   }
 
   /* ---- PROTOCOL DOCUMENT (parsed spec) ---- */
@@ -231,11 +267,11 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
       <div className="adm-import">
         <label className="adm-drop">
-          <input ref={fileRef} type="file" accept=".docx,.pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.docx,.pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
           <span className="adm-drop__icon" aria-hidden="true">⇪</span>
           <span className="adm-drop__cta">
-            <b>{reading ? 'Reading document…' : 'Choose a protocol document (.docx or PDF) — or a CSV/JSON for bulk import'}</b>
-            <span className="adm-drop__meta">DOCX (best) / PDF / TXT / MD: the full "Protocol for Developers" document (timelines, affirmations, audio config) · CSV/JSON: one protocol per row</span>
+            <b>{reading ? 'Reading file…' : 'Choose a Protocol Datasheet (.xlsx) or a protocol document (.docx / PDF) — or CSV/JSON for bulk import'}</b>
+            <span className="adm-drop__meta">XLSX (best): the Protocol Datasheet workbook — canonical, rendered with Renderer v3 · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row</span>
           </span>
           {/* NOTE: no onClick here — this span sits inside the <label>, whose
               native activation already opens the file input; a programmatic

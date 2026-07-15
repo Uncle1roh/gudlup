@@ -1,66 +1,66 @@
-# Good Loop — Step 5: employee assessment → live NR-1 aggregates
+# Good Loop — build manifest
 
-Cumulative drop-in (admin slice + import pipeline + NR-1 dashboard + WebRTC +
-this). Extract over `goodloop-app/`, merge/replace. Strict `tsc` clean; `vite
-build` clean; the loop was exercised end-to-end (below).
+**Slice: Asset Library · Datasheet Importer · Renderer v3** (current)
 
-## New in this step — the NR-1 loop is now real
+## What this slice adds
+1. **Asset Library** (admin → Asset library): browses the PO's produced audio in
+   `protocol-audio/assets` — music by phase F1–F6, soundscape loop textures by
+   type, heartbeat/bowl once delivered — with in-place preview, and a per-protocol
+   **phase → asset mapping** (music stem + soundscape texture per phase, plus
+   heartbeat and singing-bowl file pickers) saved on the catalog entry
+   (`protocols.asset_map`).
+2. **Datasheet Importer** (admin → Protocol catalog → Import → pick the .xlsx):
+   parses the Protocol Datasheet workbook (GL-ANX 1.3 format — Protocollo,
+   Invarianti, Versioni, Fasi, Timeline_6/12/24min, Affermazioni, MappaMusicale,
+   Asset, LayerEngine), validates with explicit issues, publishes the datasheet +
+   a derived legacy spec to the catalog (`protocols.datasheet`). Timelines still
+   "DA COMPILARE" import fine and are flagged **timeline pending**.
+3. **Renderer v3** (`renderDatasheet.ts`): executes the datasheet with the real
+   assets — music stems per phase per MappaMusicale with equal-power crossfades
+   at phase boundaries and loop seams; looping soundscape textures; NEW heartbeat
+   layer (60 BPM sub-audio lub-dub, −24/−20 dB, F2–F4; synth until the PO file is
+   mapped); NEW singing-bowl layer (synth inharmonic strike; timeline BOWL rows +
+   "Transizioni / F3 ogni 30 s" schedule); per-version affirmation fades
+   (1.0/2.0 · 1.5/2.5 · 1.5/3.0 s); REC sub-sets per version; 600 Hz/100 ms
+   bilateral (every 4 s Std / 3 s Deep, loop phase); Deep-only Theta 6 Hz in F4
+   and dichotic/double-induction fallback when a timeline lacks L/R rows.
+   Session streaming copies now encode at **192 kbps** MP3 (was 128).
 
-The employer dashboard no longer reads a hardcoded report. It's **computed from
-individual (anonymised, consent-gated) responses**, and completing an assessment
-actually moves the numbers.
+## New / rewritten files
+`src/admin/{assets.ts, AssetLibrary.tsx, datasheet.ts, DatasheetImport.tsx,
+renderDatasheet.ts}` (new) · `src/admin/{AdminApp.tsx, ImportProtocol.tsx,
+attachAudio.ts}` · `src/data/{catalog.ts, supabase.ts}` · `supabase/setup.sql`
+(adds `protocols.datasheet` + `protocols.asset_map`; also fixes the protocol
+column alters running before `create table protocols` on a fresh database) ·
+`src/index.css` · new dependency: `xlsx` (lazy-loaded only when a workbook is
+parsed — split into its own chunk).
 
-**Employee side (B2C):** a "Your quarterly check-in is ready" card on Home opens
-an 11-item psychosocial questionnaire (the 8 COPSOQ/HSE dimensions + stress /
-anxiety / burnout), each on a 5-point scale with correct polarity handling. It's
-anonymous by design — a banner makes that explicit — and submitting records one
-response and returns home.
+## Verified
+- `tsc --noEmit` clean; `npm run build` clean (xlsx code-split, 429 kB own chunk).
+- Parser run against the real `GL-ANX-1_3_Scheda_Dati_Protocollo_1.xlsx`:
+  all three version columns parse exactly (loop 12/20/24 s, fades 1.0/2.0 ·
+  1.5/2.5 · 1.5/3.0, REC ×8/12/20, stacking none/echo/triple, bilateral
+  600 Hz/4 s · /3 s @100 ms, heartbeat −24/−20 dB F2–F4, whisper −12 dB F4,
+  dichotic 15×4 / 12×8 / 12×16 DI, Theta 6 Hz F4); 6-min timeline → 43 rows →
+  35 voice jobs incl. 11 loop-faded + 3 repeats at −3 dB; bowl strikes at 0:02
+  and 5:55; 12/24-min correctly flagged timeline-pending.
+- `supabase/setup.sql` validated against a real Postgres 16: clean on a FRESH
+  database and idempotent on a second run; all four catalog columns present.
 
-**Aggregation:** a pure `aggregate()` derives the whole report — overall risk,
-per-dimension splits, outcome prevalence with cycle-over-cycle delta, per-team
-breakdown with **k-anonymity suppression**, and the high-risk trend. The mock
-seeds a deterministic population (~121 respondents across four cycles, two teams
-below k) so the dashboard is populated and stable; a new submission is added and
-the aggregate recomputes. `aggregate()` is also the reference for the
-`SECURITY DEFINER` SQL function of the same name, so mock and server stay in
-lockstep.
+## Renderer v3 flow (admin)
+1. Asset library → pick the protocol → assign a music stem + soundscape per
+   phase (+ heartbeat/bowl files when the PO delivers) → Save.
+2. Protocol catalog → Import → the datasheet .xlsx → review → Publish.
+3. Render stage: pick a version (pending timelines are disabled), 90 s preview
+   or full, voice on (ElevenLabs, Italian) → Render WAV (v3) → Upload & attach
+   (192 kbps MP3) → the exact file streams in the employee app + monitored
+   sessions.
 
-## Files — new in this step (3)
-- `src/employer/assessment.ts` — dimensions, questionnaire, Likert→band mapping, `PsychosocialResponse`
-- `src/employer/aggregate.ts` — pure responses → `Nr1Report` (with suppression)
-- `src/app/Assessment.tsx` — the employee questionnaire screen
-
-## Files — edited in this step (7)
-- `src/data/provider.tsx` — `submitPsychosocialAssessment()` on the interface
-- `src/data/mock.ts` — seeded response population; `getPsychosocialAggregates` now COMPUTES via `aggregate()`; submit path
-- `src/data/supabase.ts` — `submitPsychosocialAssessment` inserts a response (period stamped to the current cycle)
-- `src/app/AppShell.tsx` — routes to the assessment screen
-- `src/app/HomeSession.tsx` — the check-in prompt card
-- `src/index.css` — appended assessment + card styles
-- `docs/DATA_MODEL.sql` — `psychosocial_responses` reshaped to per-respondent jsonb (dims/outcomes)
-
-## Files — from earlier steps, included for a clean overwrite (25)
-admin console (11), employer dashboard base (4), WebRTC (3), `src/data/{catalog,protocols}`,
-`src/auth/{auth,AuthScreen}`, `src/b2b/{ClinicalWizard,MonitoredSession}`, `src/App.tsx`.
-
-## Verified end-to-end
-Ran the real mock provider: BEFORE = 121 respondents with a realistic spread
-(work demands / pace highest-risk), an improving trend, and Finance (3) + People
-(4) suppressed. After submitting a maximally high-risk check-in: respondents
-121→122, Engineering's high share moved 8→9%, every dimension ticked up — the
-report is genuinely recomputed from responses.
-
-## Demo (offline)
-1. `/#employer` → note the Aurora Tech figures.
-2. `/#` (employee app) → **Your quarterly check-in is ready** → answer all 11 → **Submit**.
-3. Back to `/#employer` → reload the dashboard → respondent count and the
-   dimension/team figures have shifted. (One response moves things slightly by
-   design; submit a few to see a larger swing.)
-
-## Roadmap — remaining (mostly provisioning/external)
-- **Supabase go-live**: provision the project, apply `docs/DATA_MODEL.sql`,
-  set `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, verify sign-in wiring.
-  Recommended next milestone — it unblocks real auth, real data, real
-  multi-device video (via the `Signaling` seam), and real NR-1 responses.
-- Real WebRTC signalling backend (Supabase Realtime) — drop-in via `Signaling`.
-- Audio rendering for imported protocols (author in Studio; wire `audioReady`).
+## Still pending after this slice
+- Timeline_12min / Timeline_24min conversion into the datasheet (workbook side).
+- PO deliverables: singing-bowl + heartbeat files (drop into
+  `assets/bowl` / `assets/heartbeat`, then map them — the synth provisionals
+  swap out automatically), music license confirmation.
+- Remaining protocol docs → datasheets.
+- Second (male) TTS voice for the Deep double-induction rows — currently
+  rendered with the primary voice and flagged in the render notes.

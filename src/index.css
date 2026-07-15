@@ -1639,3 +1639,34 @@ img, svg, video, canvas { max-width: 100%; }
 .req-queue__who { flex: 1; display: flex; flex-direction: column; }
 .req-queue__note { flex: 1.2; font-style: italic; }
 @media (max-width: 720px) { .req-queue__row { flex-wrap: wrap; } .req-queue__note { flex-basis: 100%; } }
+
+/* ----------------------------------------------------------------------------
+   Admin — Asset Library (browse the PO audio library + phase→asset mapping)
+   ---------------------------------------------------------------------------- */
+.adm-asset__groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.adm-asset__group { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.adm-asset__ghead { font-weight: 600; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; text-transform: capitalize; }
+.adm-asset__count { background: var(--ink, #14231c); color: #fff; border-radius: 99px; font-size: 11px; padding: 1px 7px; font-weight: 500; }
+.adm-asset__empty { font-size: 13px; color: #6b7a72; padding: 6px 0; }
+.adm-asset { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.adm-asset:first-of-type { border-top: 0; }
+.adm-asset__play {
+  width: 30px; height: 30px; border-radius: 99px; border: 1px solid var(--line); background: #fff;
+  cursor: pointer; font-size: 12px; line-height: 1; flex: none;
+}
+.adm-asset__play.is-on { background: var(--ink, #14231c); color: #fff; border-color: var(--ink, #14231c); }
+.adm-asset__name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-asset__meta { font-size: 12px; color: #6b7a72; }
+.adm-asset__mapper { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-top: 18px; }
+.adm-asset__sel { max-width: 420px; }
+.adm-asset__grid { display: grid; grid-template-columns: 170px 1fr 1fr; gap: 8px 12px; align-items: center; margin-top: 10px; }
+.adm-asset__gridhead { font-size: 12px; font-weight: 600; color: #6b7a72; text-transform: uppercase; letter-spacing: 0.04em; }
+.adm-asset__gridlbl { font-size: 13px; font-weight: 600; }
+@media (max-width: 860px) {
+  .adm-asset__grid { grid-template-columns: 1fr; }
+  .adm-asset__gridhead { display: none; }
+  .adm-asset__gridlbl { margin-top: 8px; }
+}
+
+/* datasheet review: timeline-pending badge */
+.adm-spec__pending { color: #a86a1f; }

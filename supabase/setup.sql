@@ -90,8 +90,8 @@ alter table profiles add column if not exists team text;
 alter table therapists add column if not exists review_reason text;
 alter table therapists add column if not exists decided_at timestamptz;
 alter table patients   add column if not exists b2c_profile_id uuid references profiles(id);
-alter table protocols  add column if not exists spec jsonb;
-alter table protocols  add column if not exists audio_ready boolean not null default false;
+-- (the protocols alters live AFTER `create table protocols` below — on a fresh
+--  database the table doesn't exist yet at this point in the script)
 
 create table if not exists patient_consents (
   id          uuid primary key default gen_random_uuid(),
@@ -183,8 +183,17 @@ create table if not exists protocols (
   tenants      jsonb not null default '"all"',
   audio_ready  boolean not null default false,
   updated_at   timestamptz not null default now(),
-  spec         jsonb
+  spec         jsonb,
+  datasheet    jsonb,   -- canonical Protocol Datasheet workbook (xlsx imports)
+  asset_map    jsonb    -- Asset Library phase → storage-path assignments
 );
+
+-- defensive adds for databases created by an older setup.sql (create table if
+-- not exists doesn't add columns to existing tables)
+alter table protocols  add column if not exists spec jsonb;
+alter table protocols  add column if not exists audio_ready boolean not null default false;
+alter table protocols  add column if not exists datasheet jsonb;
+alter table protocols  add column if not exists asset_map jsonb;
 
 create table if not exists audit_events (
   id        uuid primary key default gen_random_uuid(),

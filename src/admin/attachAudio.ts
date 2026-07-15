@@ -1,9 +1,12 @@
 /* ============================================================================
    Good Loop — attach rendered audio to a catalog protocol version
-   One shared path used by BOTH the PDF→audio importer and the Sound Studio:
-   encode the MP3 streaming copy, upload it to the protocol-audio bucket, and
-   bind the URL onto the protocol version — from then on that exact file plays
-   in the employee app and in monitored sessions.
+   One shared path used by the importers (document + datasheet) and the Sound
+   Studio: encode the MP3 streaming copy, upload it to the protocol-audio
+   bucket, and bind the URL onto the protocol version — from then on that exact
+   file plays in the employee app and in monitored sessions.
+
+   Session encode is 192 kbps (bumped from 128 with Renderer v3: real music
+   stems + soundscape textures deserve the headroom; ~35 MB for 24 min).
    ============================================================================ */
 
 import { getSupabaseClient, hasSupabaseEnv } from '../auth/supabaseClient'
@@ -13,6 +16,8 @@ import type { DataProvider } from '../data/provider'
 import type { CatalogProtocol } from '../data/catalog'
 import type { Duration } from '../types/domain'
 
+export const SESSION_MP3_KBPS = 192
+
 export interface AttachResult { url: string; protocol: CatalogProtocol }
 
 export async function attachRenderedAudio(
@@ -20,6 +25,7 @@ export async function attachRenderedAudio(
   code: string,
   duration: Duration,
   buffer: AudioBuffer,
+  kbps: number = SESSION_MP3_KBPS,
 ): Promise<AttachResult> {
   if (!hasSupabaseEnv()) {
     throw new Error('Attaching needs the Supabase env (mock mode is download-only).')
@@ -35,7 +41,7 @@ export async function attachRenderedAudio(
     throw new Error(`${code} has no ${duration}-minute version to attach to.`)
   }
 
-  const mp3 = audioBufferToMp3(buffer, 128)
+  const mp3 = audioBufferToMp3(buffer, kbps)
   const safeCode = code.replace(/[^A-Za-z0-9_-]+/g, '_')
   const path = `${safeCode}/${duration}min-ptBR.mp3`
   const { error: upErr } = await sb.storage.from('protocol-audio')
