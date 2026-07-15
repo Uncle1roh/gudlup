@@ -1,6 +1,18 @@
 # Good Loop — build manifest
 
-**Fix: music asset listing (flat layouts)** (current)
+**Fix: overall mix loudness + Studio batch voice synthesis** (current)
+- `renderDatasheet.ts` — **master makeup gain**: soft TTS voices (measured ref
+  RMS 0.060 in the field) dragged the WHOLE mix down, since every layer follows
+  the measured voice. The master now lifts the mix so the voice lands near
+  −17 dBFS; all documented layer offsets ride along unchanged (binaural bed
+  back at proper presence). New render note lists every psychoacoustic layer
+  of the version with its state ("bilateral OFF by design" for 6-min etc.) so
+  what was scheduled is auditable at a glance.
+- `SoundStudio.tsx` — **"♪ Synthesize all voices"** in the top bar: renders
+  every voice clip that has text and no voice yet, sequentially, one TTS call
+  per unique line (cached), with progress and per-clip error reporting.
+
+**Fix: music asset listing (flat layouts)**
 - `assets.ts` — the music lister accepted ONLY the `assets/music/f1..f6/`
   folder layout, while soundscapes tolerated flat files too. Flat music files
   (`assets/music/f1_track.mp3` or unprefixed) were invisible → unmappable →

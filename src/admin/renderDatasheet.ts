@@ -511,7 +511,6 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   onProgress?.('mix', 0, 1)
   const ctx = new OfflineAudioContext(2, Math.ceil(totalSec * SAMPLE_RATE), SAMPLE_RATE)
   const master = ctx.createGain()
-  master.gain.value = 0.9
   const limiter = ctx.createDynamicsCompressor()
   limiter.threshold.value = -3
   limiter.knee.value = 3
@@ -530,7 +529,16 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       if (mean > 1e-3) voiceRefRms = mean * LEVEL.voice
     }
   }
-  notes.push(`Mix law (loudness-measured): voice ref RMS ${voiceRefRms.toFixed(3)} · music −18 dB · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · loop fades ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration}-min).`)
+  // makeup: soft TTS voices previously dragged the WHOLE mix down (every
+  // layer follows the measured voice). Lift the master so the voice lands
+  // near the target session loudness; layer relationships ride along intact.
+  const TARGET_VOICE_RMS = 0.14 // ≈ −17 dBFS, comfortable session level pre-limiter
+  const makeup = Math.min(3, Math.max(1, TARGET_VOICE_RMS / voiceRefRms))
+  master.gain.value = 0.9 * makeup
+  notes.push(`Mix law (loudness-measured): voice ref RMS ${voiceRefRms.toFixed(3)} · master makeup ×${makeup.toFixed(2)} → voice ≈ −17 dBFS · music −18 dB · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · loop fades ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration}-min).`)
+  // one explicit line so it's auditable that every psychoacoustic layer of
+  // THIS version was scheduled (or is off by design in the datasheet)
+  notes.push(`Layers (${opts.duration}-min per datasheet): binaural ${v.binaural.beatHz} Hz ON${v.binaural.theta ? ` (Theta ${v.binaural.theta.beatHz} Hz in F${v.binaural.theta.phase})` : ''} · bilateral ${v.bilateral ? `${v.bilateral.toneHz} Hz/${v.bilateral.everySec}s ON` : 'OFF by design'} · heartbeat ${v.heartbeat ? `${v.heartbeat.gainDb} dB F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase} ON` : 'OFF by design'} · whisper ${v.continuousWhisper ? `${v.continuousWhisper.gainDb} dB F${v.continuousWhisper.phase} ON` : 'OFF by design'} · stacking ${v.stacking}.`)
   notes.push('Binaural −16 dB and music −18 dB vs voice — still not PO-specified; adjust in renderDatasheet.ts if a figure lands.')
 
   let stemsUsed = 0
@@ -716,7 +724,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   }
 
   // gentle master fade at the very end
-  master.gain.setValueAtTime(0.9, Math.max(0, totalSec - 0.5))
+  master.gain.setValueAtTime(0.9 * makeup, Math.max(0, totalSec - 0.5))
   master.gain.linearRampToValueAtTime(0, totalSec)
 
   const rendered = await ctx.startRendering()

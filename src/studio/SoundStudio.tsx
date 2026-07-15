@@ -259,6 +259,50 @@ function StudioDesktop() {
     }
   }, [setClipBuffer])
 
+  /** Synthesize EVERY voice clip that has text and no rendered voice yet —
+      one TTS render per unique line (cached), sequential to respect rate
+      limits. Turns a seeded protocol project into real voices in one click. */
+  const [synthAll, setSynthAll] = useState<string | null>(null)
+  const synthesizeAllVoices = useCallback(async () => {
+    const player = playerRef.current
+    if (!player) return
+    const provider = getTtsProvider()
+    if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
+    const jobs: { trackId: string; clipId: string; text: string; pan: number; startSec: number }[] = []
+    for (const t of tracksRef.current) {
+      if (t.type !== 'voice') continue
+      for (const c of t.clips) {
+        const text = (c.text ?? '').trim()
+        if (text && !c.ttsSource) jobs.push({ trackId: t.id, clipId: c.id, text, pan: (c.params as VoiceParams).pan, startSec: c.startSec })
+      }
+    }
+    if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
+    setTtsError(null)
+    const cache = new Map<string, AudioBuffer>()
+    let done = 0
+    let failed = 0
+    for (const j of jobs) {
+      setSynthAll(`Synthesizing voices ${done + 1}/${jobs.length}…`)
+      try {
+        let decoded = cache.get(j.text)
+        if (!decoded) {
+          const bytes = await provider.render(j.text, { lang: 'pt-BR' })
+          decoded = await player.decode(bytes)
+          cache.set(j.text, decoded)
+        }
+        const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
+        const buf = await bakeVoiceBuffer(decoded, j.pan, maxDur)
+        setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
+        done++
+      } catch (e) {
+        failed++
+        setTtsError(`Voice at ${fmtTime(j.startSec)}: ${(e as Error).message}`)
+      }
+    }
+    setSynthAll(null)
+    if (!failed) setTtsError(null)
+  }, [setClipBuffer])
+
   /* ---- mount / unmount ---- */
   useEffect(() => {
     playerRef.current = new MultitrackPlayer(0.82)
@@ -439,6 +483,15 @@ function StudioDesktop() {
         </div>
         <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Voice engine (TTS keys)">
           {ttsInfo.canRender ? '🎙' : '🎙!'}
+        </button>
+        <button
+          className="mt-tbtn"
+          onClick={() => void synthesizeAllVoices()}
+          disabled={!!synthAll}
+          title="Synthesize every voice clip that has text and no rendered voice yet (one TTS render per unique line)"
+          style={{ width: 'auto', padding: '0 10px', fontSize: 12 }}
+        >
+          {synthAll ?? '♪ Synthesize all voices'}
         </button>
         <div className="mt-master">
           <span className="mt-master__lbl">Master</span>
