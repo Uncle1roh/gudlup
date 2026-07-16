@@ -1,6 +1,16 @@
 # Good Loop — build manifest
 
-**Slice: Studio editing overhaul (PO feedback)** (current)
+**Fix: pitch-preserving voice speed** (current)
+- New `src/studio/timestretch.ts`: native WSOLA time-stretch (40 ms Hann
+  frames, 50% overlap-add, waveform-similarity alignment on the mono mix,
+  same offsets applied to both channels). `bakeVoiceBuffer` stretches the TTS
+  source instead of using playbackRate — the ×0.7–×1.4 voice speed slider now
+  changes speed WITHOUT changing pitch.
+- Validated numerically: output duration exact at every rate, pitch drift
+  ≤ 0.02% (zero-crossing rate), amplitude preserved; worst case (8 s line at
+  ×0.7) stretches in ~160 ms — still effectively instant in the UI.
+
+**Slice: Studio editing overhaul (PO feedback)**
 - **Live editing** — the transport now HOT-SWAPS while playing: any parameter
   re-render, drag, cut/glue, or synthesized voice landing reschedules playback
   at the current playhead, so volume/frequency/pan edits are audible

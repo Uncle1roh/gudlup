@@ -11,6 +11,7 @@
    ============================================================================ */
 
 import { audioBufferToWav } from '../lib/wav'
+import { timeStretch } from './timestretch'
 
 export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral' | 'sample'
 export type Texture = 'lake' | 'air' | 'deep'
@@ -237,13 +238,15 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
     result drives the waveform, playback and mixdown exactly like a synth clip. */
 export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDurationSec: number, speed = 1): Promise<AudioBuffer> {
   const rate = Math.max(0.5, Math.min(2, speed || 1))
-  const fullLen = Math.ceil((decoded.duration / rate) * SAMPLE_RATE)
+  // pitch-preserving: WSOLA time stretch, not playbackRate (which would also
+  // shift the pitch like slowing a tape)
+  const stretched = timeStretch(decoded, rate)
+  const fullLen = Math.ceil(stretched.duration * SAMPLE_RATE)
   const len = Math.min(fullLen, Math.max(1, Math.floor(maxDurationSec * SAMPLE_RATE)))
   const dur = len / SAMPLE_RATE
   const ctx = new OfflineAudioContext(2, len, SAMPLE_RATE)
   const src = ctx.createBufferSource()
-  src.buffer = decoded
-  src.playbackRate.value = rate
+  src.buffer = stretched
   const panner = ctx.createStereoPanner()
   panner.pan.value = Math.max(-1, Math.min(1, pan))
   const env = ctx.createGain()

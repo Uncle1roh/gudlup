@@ -978,7 +978,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           </div>
           <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
-          {rendered && <div className="mt-note">Pan and speed re-bake the rendered voice instantly — no new TTS call.</div>}
+          {rendered && <div className="mt-note">Pan and speed re-bake the rendered voice instantly — no new TTS call. Speed is pitch-preserving (time-stretch): the voice speaks faster or slower without sounding higher or deeper.</div>}
           {!rendered && <>
             <Slider label="Pulse" value={p.pulseHz} min={0.05} max={1.2} step={0.01} onChange={(v) => onParam({ pulseHz: v })} fmt={(v) => `${v.toFixed(2)} Hz`} />
             <Slider label="Tone" value={p.toneHz} min={200} max={700} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
