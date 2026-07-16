@@ -1,6 +1,28 @@
 # Good Loop — build manifest
 
-**Fix: overall mix loudness + Studio batch voice synthesis** (current)
+**Slice: Studio editing overhaul (PO feedback)** (current)
+- **Live editing** — the transport now HOT-SWAPS while playing: any parameter
+  re-render, drag, cut/glue, or synthesized voice landing reschedules playback
+  at the current playhead, so volume/frequency/pan edits are audible
+  immediately (previously sources were scheduled once at play, making every
+  edit seem broken until stop/play).
+- **Track channel L/C/R** — every track header has an L·C·R selector; the whole
+  track is stereo-positioned live and in the mixdown/attach (per-clip voice pan
+  still available on top for fine placement). New StereoPanner per track in
+  MultitrackPlayer + pan in MixTrack.
+- **✂ Cut** — splits the selected clip at the playhead into two pieces by
+  SLICING the rendered buffer (periodic layers stay phase-continuous; TTS
+  voices stay intact — no re-render). Pieces are "frozen": movable and
+  re-cuttable, param/length edits blocked with a hint.
+- **🩹 Glue** — merges the selected clip with the next clip on its track into
+  one frozen clip; any gap becomes silence inside it (guard at 60 s).
+- **Voice speed** — ×0.7–×1.4 slider; re-bakes the rendered voice instantly
+  from its TTS source (no new API call), clip length follows the voice. Pan
+  edits on rendered voices likewise re-bake instantly.
+- Player/mixdown now honor clip durationSec (start(when, offset, duration)) so
+  cut/trimmed clips can never overhang their timeline length.
+
+**Fix: overall mix loudness + Studio batch voice synthesis**
 - `renderDatasheet.ts` — **master makeup gain**: soft TTS voices (measured ref
   RMS 0.060 in the field) dragged the WHOLE mix down, since every layer follows
   the measured voice. The master now lifts the mix so the voice lands near

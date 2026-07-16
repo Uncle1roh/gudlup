@@ -18,7 +18,7 @@ export type Texture = 'lake' | 'air' | 'deep'
 export interface BinauralParams { carrierHz: number; beatHz: number }
 export interface SoundscapeParams { texture: Texture; warmth: number }
 export interface BreathParams { breathsPerMin: number; toneHz: number }
-export interface VoiceParams { pan: number; pulseHz: number; toneHz: number }
+export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
 export interface BilateralParams { toneHz: number; blipMs: number; everySec: number }
@@ -235,13 +235,15 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
 /** Turn decoded voice audio (from a TTS API) into a stereo clip buffer:
     resample to the studio rate, equal-power pan, and short edge fades. The
     result drives the waveform, playback and mixdown exactly like a synth clip. */
-export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDurationSec: number): Promise<AudioBuffer> {
-  const fullLen = Math.ceil(decoded.duration * SAMPLE_RATE)
+export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDurationSec: number, speed = 1): Promise<AudioBuffer> {
+  const rate = Math.max(0.5, Math.min(2, speed || 1))
+  const fullLen = Math.ceil((decoded.duration / rate) * SAMPLE_RATE)
   const len = Math.min(fullLen, Math.max(1, Math.floor(maxDurationSec * SAMPLE_RATE)))
   const dur = len / SAMPLE_RATE
   const ctx = new OfflineAudioContext(2, len, SAMPLE_RATE)
   const src = ctx.createBufferSource()
   src.buffer = decoded
+  src.playbackRate.value = rate
   const panner = ctx.createStereoPanner()
   panner.pan.value = Math.max(-1, Math.min(1, pan))
   const env = ctx.createGain()
@@ -253,6 +255,29 @@ export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDura
   src.connect(panner).connect(env).connect(ctx.destination)
   src.start(0)
   return ctx.startRendering()
+}
+
+/** Copy a time slice [fromSec, toSec) of a buffer (clamped to its length). */
+export function sliceBuffer(buf: AudioBuffer, fromSec: number, toSec: number): AudioBuffer {
+  const s = Math.max(0, Math.min(buf.length, Math.floor(fromSec * buf.sampleRate)))
+  const e = Math.max(s + 1, Math.min(buf.length, Math.ceil(toSec * buf.sampleRate)))
+  const out = new AudioBuffer({ numberOfChannels: 2, length: e - s, sampleRate: buf.sampleRate })
+  for (let ch = 0; ch < 2; ch++) {
+    const srcCh = buf.getChannelData(Math.min(ch, buf.numberOfChannels - 1))
+    out.copyToChannel(srcCh.subarray(s, e), ch)
+  }
+  return out
+}
+
+/** Join two buffers with `gapSec` of silence between them (for GLUE). */
+export function concatBuffers(a: AudioBuffer, b: AudioBuffer, gapSec: number): AudioBuffer {
+  const gap = Math.max(0, Math.floor(gapSec * SAMPLE_RATE))
+  const out = new AudioBuffer({ numberOfChannels: 2, length: a.length + gap + b.length, sampleRate: SAMPLE_RATE })
+  for (let ch = 0; ch < 2; ch++) {
+    out.copyToChannel(a.getChannelData(Math.min(ch, a.numberOfChannels - 1)), ch, 0)
+    out.copyToChannel(b.getChannelData(Math.min(ch, b.numberOfChannels - 1)), ch, a.length + gap)
+  }
+  return out
 }
 
 /** Down-sample a buffer to [min,max] pairs for waveform drawing. */
@@ -296,6 +321,7 @@ export class MultitrackPlayer {
   private ctx: AudioContext
   private master: GainNode
   private trackGains = new Map<string, GainNode>()
+  private trackPans = new Map<string, StereoPannerNode>()
   private sources: AudioBufferSourceNode[] = []
   private startCtxTime = 0
   private startOffset = 0
@@ -316,17 +342,26 @@ export class MultitrackPlayer {
     this.trackGains.get(id)?.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02)
   }
 
-  async play(tracks: SchedTrack[], fromSec: number, gainFor: (id: string) => number): Promise<void> {
+  /** Whole-track stereo position (−1 left · 0 center · +1 right). */
+  setTrackPan(id: string, v: number): void {
+    this.trackPans.get(id)?.pan.setTargetAtTime(Math.max(-1, Math.min(1, v)), this.ctx.currentTime, 0.02)
+  }
+
+  async play(tracks: SchedTrack[], fromSec: number, gainFor: (id: string) => number, panFor?: (id: string) => number): Promise<void> {
     if (this.ctx.state === 'suspended') await this.ctx.resume()
     this.stopSources()
     this.trackGains.clear()
+    this.trackPans.clear()
     this.startCtxTime = this.ctx.currentTime + 0.04
     this.startOffset = fromSec
     for (const t of tracks) {
       const g = this.ctx.createGain()
       g.gain.value = gainFor(t.id)
-      g.connect(this.master)
+      const pan = this.ctx.createStereoPanner()
+      pan.pan.value = Math.max(-1, Math.min(1, panFor?.(t.id) ?? 0))
+      g.connect(pan).connect(this.master)
       this.trackGains.set(t.id, g)
+      this.trackPans.set(t.id, pan)
       for (const c of t.clips) {
         if (!c.buffer) continue
         const end = c.startSec + c.durationSec
@@ -336,7 +371,9 @@ export class MultitrackPlayer {
         const src = this.ctx.createBufferSource()
         src.buffer = c.buffer
         src.connect(g)
-        src.start(when, offset)
+        // duration argument: a clip never plays past its timeline length,
+        // even when its buffer is longer (cut pieces, trimmed clips)
+        src.start(when, offset, Math.max(0.01, c.durationSec - offset))
         this.sources.push(src)
       }
     }
@@ -381,7 +418,7 @@ export class MultitrackPlayer {
 
 /* ---- offline mixdown → WAV ------------------------------------------------- */
 
-export interface MixTrack { gain: number; clips: { startSec: number; buffer: AudioBuffer | null }[] }
+export interface MixTrack { gain: number; pan?: number; clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[] }
 
 export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<AudioBuffer> {
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * lengthSec))
@@ -392,13 +429,15 @@ export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number,
   for (const t of tracks) {
     const g = ctx.createGain()
     g.gain.value = t.gain
-    g.connect(master)
+    const pan = ctx.createStereoPanner()
+    pan.pan.value = Math.max(-1, Math.min(1, t.pan ?? 0))
+    g.connect(pan).connect(master)
     for (const c of t.clips) {
       if (!c.buffer) continue
       const src = ctx.createBufferSource()
       src.buffer = c.buffer
       src.connect(g)
-      src.start(c.startSec)
+      src.start(c.startSec, 0, Math.max(0.01, c.durationSec ?? c.buffer.duration))
     }
   }
   master.gain.setValueAtTime(masterGain, Math.max(0, lengthSec - 0.4))

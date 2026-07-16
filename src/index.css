@@ -1670,3 +1670,10 @@ img, svg, video, canvas { max-width: 100%; }
 
 /* datasheet review: timeline-pending badge */
 .adm-spec__pending { color: #a86a1f; }
+
+/* Studio — track channel selector, cut/glue message */
+.mt-chan { display: inline-flex; border: 1px solid #3a4a42; border-radius: 6px; overflow: hidden; flex: none; }
+.mt-chan__b { width: 18px; height: 18px; font-size: 10px; line-height: 1; border: 0; background: transparent; color: #93a89e; cursor: pointer; padding: 0; }
+.mt-chan__b + .mt-chan__b { border-left: 1px solid #3a4a42; }
+.mt-chan__b.is-on { background: #cfe3d8; color: #12201a; font-weight: 700; }
+.mt-editmsg { background: #3d3320; color: #ffd98a; font-size: 12.5px; padding: 6px 14px; cursor: pointer; }
