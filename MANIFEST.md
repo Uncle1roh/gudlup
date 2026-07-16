@@ -1,6 +1,19 @@
 # Good Loop — build manifest
 
-**Fix: pitch-preserving voice speed** (current)
+**Fix: Studio layout + cross-track clip drag** (current)
+- **Toolbar** no longer clips off-screen: it wraps to a second row when
+  narrow; proper `.mt-tbtn--wide` class replaces the oversized ad-hoc buttons
+  ("♪ All voices", "✂ Cut", "🩹 Glue" now single-line, compact); project-name
+  field yields space; tighter master/time groups; disabled states dimmed.
+- **Track headers** widened (236→254 px) so M · S · L/C/R · volume · ＋ sit
+  comfortably in one row.
+- **Cross-track clip drag**: while moving a clip, dragging it up or down into
+  another lane of the SAME track type carries it over (e.g. a guide voice clip
+  down to "Voice — echo & whisper"); works for every type, live during
+  playback, selection follows the clip. Different-type lanes reject the hop.
+  Bottom hint documents it.
+
+**Fix: pitch-preserving voice speed**
 - New `src/studio/timestretch.ts`: native WSOLA time-stretch (40 ms Hann
   frames, 50% overlap-add, waveform-similarity alignment on the mono mix,
   same offsets applied to both channels). `bakeVoiceBuffer` stretches the TTS

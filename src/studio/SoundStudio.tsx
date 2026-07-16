@@ -36,7 +36,7 @@ import type { SeedTrack } from '../compose/types'
 /* ---- layout constants ---- */
 const LANE_H = 86
 const RULER_H = 30
-const HEADER_W = 236
+const HEADER_W = 254
 const MIN_CLIP = 1
 
 /* ---- model ---- */
@@ -183,7 +183,8 @@ function StudioDesktop() {
   const rafRef = useRef<number | null>(null)
   const renderTokens = useRef<Map<string, number>>(new Map())
   const renderTimers = useRef<Map<string, number>>(new Map())
-  const dragRef = useRef<{ mode: 'move' | 'trim-l' | 'trim-r'; trackId: string; clipId: string; startClientX: number; origStart: number; origDur: number } | null>(null)
+  const dragRef = useRef<{ mode: 'move' | 'trim-l' | 'trim-r'; trackId: string; trackType: TrackType; clipId: string; startClientX: number; origStart: number; origDur: number } | null>(null)
+  const lanesRef = useRef<HTMLDivElement | null>(null)
 
   const tracksRef = useRef(tracks); tracksRef.current = tracks
   const pxPerSecRef = useRef(pxPerSec); pxPerSecRef.current = pxPerSec
@@ -528,6 +529,28 @@ function StudioDesktop() {
   /* ---- drag / trim ---- */
   const onDragMove = useCallback((e: PointerEvent) => {
     const d = dragRef.current; if (!d) return
+    // vertical hop: while MOVING, dragging into another lane of the SAME track
+    // type carries the clip over (e.g. a guide voice clip down to echo & whisper)
+    if (d.mode === 'move' && lanesRef.current) {
+      const rect = lanesRef.current.getBoundingClientRect()
+      const idx = Math.floor((e.clientY - rect.top - RULER_H) / LANE_H)
+      const target = tracksRef.current[idx]
+      if (target && target.id !== d.trackId && target.type === d.trackType) {
+        const fromId = d.trackId
+        const clipId = d.clipId
+        setTracks((prev) => {
+          const src = prev.find((t) => t.id === fromId)
+          const cl = src?.clips.find((c) => c.id === clipId)
+          if (!src || !cl) return prev
+          return prev.map((t) =>
+            t.id === fromId ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) }
+            : t.id === target.id ? { ...t, clips: [...t.clips, cl].sort((a, b) => a.startSec - b.startSec) }
+            : t)
+        })
+        d.trackId = target.id
+        setSelected({ trackId: target.id, clipId })
+      }
+    }
     const px = pxPerSecRef.current, len = lengthSecRef.current
     const dx = (e.clientX - d.startClientX) / px
     setTracks((prev) => prev.map((t) => (t.id !== d.trackId ? t : {
@@ -548,8 +571,8 @@ function StudioDesktop() {
     if (d && d.mode !== 'move') scheduleRender(d.trackId, d.clipId)
   }, [onDragMove, scheduleRender])
   const beginDrag = useCallback((mode: 'move' | 'trim-l' | 'trim-r', trackId: string, clipId: string, e: ReactPointerEvent) => {
-    const tr = tracksRef.current.find((t) => t.id === trackId); const cl = tr?.clips.find((c) => c.id === clipId); if (!cl) return
-    dragRef.current = { mode, trackId, clipId, startClientX: e.clientX, origStart: cl.startSec, origDur: cl.durationSec }
+    const tr = tracksRef.current.find((t) => t.id === trackId); const cl = tr?.clips.find((c) => c.id === clipId); if (!tr || !cl) return
+    dragRef.current = { mode, trackId, trackType: tr.type, clipId, startClientX: e.clientX, origStart: cl.startSec, origDur: cl.durationSec }
     window.addEventListener('pointermove', onDragMove)
     window.addEventListener('pointerup', onDragEnd)
   }, [onDragMove, onDragEnd])
@@ -607,16 +630,15 @@ function StudioDesktop() {
           {ttsInfo.canRender ? '🎙' : '🎙!'}
         </button>
         <button
-          className="mt-tbtn"
+          className="mt-tbtn mt-tbtn--wide"
           onClick={() => void synthesizeAllVoices()}
           disabled={!!synthAll}
           title="Synthesize every voice clip that has text and no rendered voice yet (one TTS render per unique line)"
-          style={{ width: 'auto', padding: '0 10px', fontSize: 12 }}
         >
-          {synthAll ?? '♪ Synthesize all voices'}
+          {synthAll ?? '♪ All voices'}
         </button>
-        <button className="mt-tbtn" onClick={cutAtPlayhead} disabled={!selected} title="Cut the selected clip in two at the playhead" style={{ width: 'auto', padding: '0 10px', fontSize: 12 }}>✂ Cut</button>
-        <button className="mt-tbtn" onClick={glueWithNext} disabled={!selected} title="Glue the selected clip with the next clip on its track (gap becomes silence)" style={{ width: 'auto', padding: '0 10px', fontSize: 12 }}>🩹 Glue</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title="Cut the selected clip in two at the playhead">✂ Cut</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title="Glue the selected clip with the next clip on its track (gap becomes silence)">🩹 Glue</button>
         <div className="mt-master">
           <span className="mt-master__lbl">Master</span>
           <input type="range" min={0} max={1} step={0.01} value={masterGain} onChange={(e) => setMasterGain(+e.target.value)} />
@@ -680,7 +702,7 @@ function StudioDesktop() {
           {tracks.length === 0 && <div className="mt-empty">No tracks. Use ＋ Track.</div>}
           </div>
 
-          <div className="mt-content" style={{ width: contentWidth, height: contentHeight }}>
+          <div className="mt-content" ref={lanesRef} style={{ width: contentWidth, height: contentHeight }}>
             <Ruler lengthSec={lengthSec} pxPerSec={pxPerSec} onSeek={seek} />
             {tracks.map((t) => (
               <Lane
@@ -886,7 +908,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   if (!track || !clip) {
     return (
       <div className="mt-inspector mt-inspector--empty">
-        <span>Select a clip to edit its sound · double-click a lane to add one · drag edges to trim</span>
+        <span>Select a clip to edit its sound · double-click a lane to add one · drag edges to trim · drag a clip up/down to move it to another track of the same type</span>
       </div>
     )
   }

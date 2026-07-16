@@ -936,21 +936,23 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .mt-gate__back { color: #1FBF94; text-decoration: none; font-size: 14px; }
 
 /* top bar */
-.mt-topbar { display: flex; align-items: center; gap: 14px; padding: 9px 14px; background: var(--mt-panel); border-bottom: 1px solid var(--mt-line); flex-shrink: 0; }
+.mt-topbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 8px 12px; background: var(--mt-panel); border-bottom: 1px solid var(--mt-line); flex-shrink: 0; }
 .mt-brand { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .mt-brand__mark { color: var(--mt-accent); letter-spacing: -2px; }
 .mt-brand__sub { color: var(--mt-sub); font-weight: 600; }
-.mt-name { background: var(--mt-panel2); border: 1px solid var(--mt-line); color: var(--mt-text); border-radius: 8px; padding: 6px 10px; font-size: 13px; width: 240px; }
+.mt-name { background: var(--mt-panel2); border: 1px solid var(--mt-line); color: var(--mt-text); border-radius: 8px; padding: 6px 10px; font-size: 13px; flex: 0 1 200px; min-width: 110px; }
 .mt-name:focus { outline: none; border-color: var(--mt-accent); }
 .mt-transport { display: flex; align-items: center; gap: 6px; }
 .mt-tbtn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); font-size: 14px; cursor: pointer; display: grid; place-items: center; }
 .mt-tbtn:hover { border-color: var(--mt-accent); }
 .mt-tbtn--play { background: var(--mt-accent); color: #06241c; border-color: var(--mt-accent); font-size: 15px; }
-.mt-time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--mt-text); min-width: 92px; text-align: center; }
+.mt-tbtn--wide { width: auto; padding: 0 12px; font-size: 12.5px; white-space: nowrap; }
+.mt-tbtn:disabled { opacity: 0.5; cursor: default; }
+.mt-time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--mt-text); min-width: 84px; text-align: center; white-space: nowrap; }
 .mt-time__sep { color: var(--mt-sub); }
 .mt-master { display: flex; align-items: center; gap: 7px; }
 .mt-master__lbl, .mt-zoom span, .mt-len span { font-size: 11px; color: var(--mt-sub); text-transform: uppercase; letter-spacing: 0.04em; }
-.mt-master input { width: 86px; }
+.mt-master input { width: 68px; }
 .mt-zoom { display: flex; align-items: center; gap: 5px; }
 .mt-zoom button { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); cursor: pointer; }
 .mt-zoom button:hover { border-color: var(--mt-accent); }
@@ -983,11 +985,11 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .mt-head__name { font-size: 13px; font-weight: 600; flex: 1; }
 .mt-x { background: none; border: none; color: var(--mt-sub); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px; }
 .mt-x:hover { color: #ff7a7a; background: var(--mt-panel2); }
-.mt-head__row { display: flex; align-items: center; gap: 6px; }
+.mt-head__row { display: flex; align-items: center; gap: 5px; }
 .mt-mini { width: 24px; height: 22px; border-radius: 6px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-sub); font-size: 11px; font-weight: 700; cursor: pointer; }
 .mt-mini.is-m { background: #c25b5b; color: #fff; border-color: #c25b5b; }
 .mt-mini.is-s { background: var(--mt-play); color: #3a3300; border-color: var(--mt-play); }
-.mt-vol { flex: 1; min-width: 50px; }
+.mt-vol { flex: 1; min-width: 44px; }
 .mt-addclip { width: 24px; height: 22px; border-radius: 6px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); cursor: pointer; font-size: 12px; }
 .mt-addclip:hover { border-color: var(--mt-accent); }
 
@@ -1673,7 +1675,7 @@ img, svg, video, canvas { max-width: 100%; }
 
 /* Studio — track channel selector, cut/glue message */
 .mt-chan { display: inline-flex; border: 1px solid #3a4a42; border-radius: 6px; overflow: hidden; flex: none; }
-.mt-chan__b { width: 18px; height: 18px; font-size: 10px; line-height: 1; border: 0; background: transparent; color: #93a89e; cursor: pointer; padding: 0; }
+.mt-chan__b { width: 19px; height: 22px; font-size: 10px; line-height: 1; border: 0; background: transparent; color: #93a89e; cursor: pointer; padding: 0; }
 .mt-chan__b + .mt-chan__b { border-left: 1px solid #3a4a42; }
 .mt-chan__b.is-on { background: #cfe3d8; color: #12201a; font-weight: 700; }
 .mt-editmsg { background: #3d3320; color: #ffd98a; font-size: 12.5px; padding: 6px 14px; cursor: pointer; }
