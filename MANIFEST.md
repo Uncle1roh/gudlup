@@ -1,6 +1,26 @@
 # Good Loop — build manifest
 
-**Fix: Studio layout + cross-track clip drag** (current)
+**Slice: playback audit · voice roster · in-Studio asset picker** (current)
+- **Real audio everywhere (audit)**: confirmed by architecture — the data
+  provider hydrates the shared protocol registry from the catalog at startup
+  (provider.tsx), every picker reads that registry, and all three players
+  (B2C SessionRunner, ImmersivePlayer, therapist MonitoredSession) play
+  `version.audioUrl['pt-BR']` when attached, placeholder otherwise. Attaching
+  audio in admin makes it selectable and playable on every surface.
+- **Voice roster (9 PO voices)**: 🎙 → Load voices now SAVES the account's
+  voice roster (localStorage). Every voice clip's inspector gains a Voice
+  dropdown: Default (engine voice) + the roster. Changing a rendered clip's
+  voice clears its TTS take (a different voice = a new render — ♪ or
+  "All voices" picks it up); pan/speed keep re-baking instantly. voiceId flows
+  through TtsOptions → ElevenLabs (explicit voiceId > secondary > primary),
+  and "Synthesize all" caches per voice+line.
+- **In-Studio asset picker**: sample clips' inspector now browses the whole
+  library (music grouped by phase, soundscapes by texture) and swaps THIS
+  clip's file on pick — the protocol's per-phase default mapping stays in the
+  Asset Library, as before. ＋ Track → "Audio file" + picker = free-form
+  library clips anywhere.
+
+**Fix: Studio layout + cross-track clip drag**
 - **Toolbar** no longer clips off-screen: it wraps to a second row when
   narrow; proper `.mt-tbtn--wide` class replaces the oversized ad-hoc buttons
   ("♪ All voices", "✂ Cut", "🩹 Glue" now single-line, compact); project-name

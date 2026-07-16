@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import { getTtsProvider } from './index'
-import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource } from './settings'
+import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, saveVoiceRoster } from './settings'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
 const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
@@ -44,8 +44,9 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
       const list = (json.voices ?? []).map((v) => ({ id: v.voice_id, name: v.name }))
       if (!list.length) { setError('No voices on this account yet — add one in the ElevenLabs Voice Library.'); return }
       setVoices(list)
+      saveVoiceRoster(list) // the roster the Studio's per-clip voice picker offers
       if (!voiceId && list[0]) setVoiceId(list[0].id)
-      setStatus(`${list.length} voices loaded — pick the primary [F] and (optionally) the secondary [M], then Save keys.`)
+      setStatus(`${list.length} voices loaded (roster saved for the Studio's per-clip voice picker) — pick the primary [F] and optionally the secondary [M], then Save keys.`)
     } catch (e) {
       setError((e as Error).message)
     } finally {

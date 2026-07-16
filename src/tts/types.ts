@@ -17,6 +17,8 @@ export interface TtsOptions {
       (Deep double-induction). Providers without a secondary voice fall back
       to the primary — check `hasSecondaryVoice` to know which will happen. */
   voice?: 'primary' | 'secondary'
+  /** Explicit provider voice id (from the roster) — overrides `voice`. */
+  voiceId?: string
 }
 
 export interface TtsProvider {

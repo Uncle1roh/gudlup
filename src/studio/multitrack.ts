@@ -19,7 +19,7 @@ export type Texture = 'lake' | 'air' | 'deep'
 export interface BinauralParams { carrierHz: number; beatHz: number }
 export interface SoundscapeParams { texture: Texture; warmth: number }
 export interface BreathParams { breathsPerMin: number; toneHz: number }
-export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number }
+export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number; voiceId?: string }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
 export interface BilateralParams { toneHz: number; blipMs: number; everySec: number }

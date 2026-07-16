@@ -27,10 +27,12 @@ import {
 } from './multitrack'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
+import { getVoiceRoster } from '../tts/settings'
+import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { useDataProvider } from '../data/provider'
 import { attachRenderedAudio } from '../admin/attachAudio'
-import { hasSupabaseEnv } from '../auth/supabaseClient'
 import type { SeedTrack } from '../compose/types'
 
 /* ---- layout constants ---- */
@@ -248,6 +250,17 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, text })) })))
   }, [])
 
+  const setClipVoice = useCallback((trackId: string, clipId: string, voiceId: string) => {
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      clips: t.clips.map((c) => (c.id !== clipId ? c : {
+        ...c,
+        params: { ...(c.params as VoiceParams), voiceId: voiceId || undefined },
+        ttsSource: null, // a different voice = a new TTS render — ♪ or "All voices"
+      })),
+    })))
+  }, [])
+
   const previewVoice = useCallback(async (text: string) => {
     if (!text.trim()) return
     setTtsError(null)
@@ -264,10 +277,10 @@ function StudioDesktop() {
     setTtsError(null); setTtsBusy(clipId)
     try {
       const provider = getTtsProvider()
-      const bytes = await provider.render(text, { lang: 'pt-BR' })
+      const vp = cl.params as VoiceParams
+      const bytes = await provider.render(text, { lang: 'pt-BR', voiceId: vp.voiceId })
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
-      const vp = cl.params as VoiceParams
       const buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
     } catch (e) {
@@ -286,13 +299,13 @@ function StudioDesktop() {
     if (!player) return
     const provider = getTtsProvider()
     if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
-    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; startSec: number }[] = []
+    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number }[] = []
     for (const t of tracksRef.current) {
       if (t.type !== 'voice') continue
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, startSec: c.startSec })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec })
       }
     }
     if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
@@ -303,11 +316,12 @@ function StudioDesktop() {
     for (const j of jobs) {
       setSynthAll(`Synthesizing voices ${done + 1}/${jobs.length}…`)
       try {
-        let decoded = cache.get(j.text)
+        const key = `${j.voiceId ?? ''}|${j.text}`
+        let decoded = cache.get(key)
         if (!decoded) {
-          const bytes = await provider.render(j.text, { lang: 'pt-BR' })
+          const bytes = await provider.render(j.text, { lang: 'pt-BR', voiceId: j.voiceId })
           decoded = await player.decode(bytes)
-          cache.set(j.text, decoded)
+          cache.set(key, decoded)
         }
         const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
         const buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
@@ -736,6 +750,7 @@ function StudioDesktop() {
         onVoiceText={(text) => selected && setVoiceText(selected.trackId, selected.clipId, text)}
         onVoicePreview={() => selClip && previewVoice(selClip.text ?? '')}
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
+        onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
       />
     </div>
   )
@@ -891,7 +906,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize }: {
+function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -904,6 +919,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   onVoiceText: (text: string) => void
   onVoicePreview: () => void
   onVoiceSynthesize: () => void
+  onVoiceChange: (voiceId: string) => void
 }) {
   if (!track || !clip) {
     return (
@@ -970,9 +986,10 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           <div className="mt-note" style={{ marginBottom: 6 }}>
             <b>Library file:</b> {p.label || '— none —'}
           </div>
+          <SampleFilePicker value={p.label} onPick={(url, label) => onParam({ url, label })} />
           <div className="mt-note">
-            Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left;
-            to use a DIFFERENT file for this phase, change the mapping in the admin Asset Library and re-open Edit in Studio.
+            Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left.
+            Picking a file here changes THIS clip only — the protocol's default per-phase mapping stays in the admin Asset Library.
           </div>
         </> })()}
 
@@ -998,6 +1015,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
             {!ttsCanRender && <div className="mt-tts__hint">Preview uses the browser voice. To render &amp; layer real voice, add a TTS key (docs/TTS_SETUP.md).</div>}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
+          <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
           <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
           {rendered && <div className="mt-note">Pan and speed re-bake the rendered voice instantly — no new TTS call. Speed is pitch-preserving (time-stretch): the voice speaks faster or slower without sounding higher or deeper.</div>}
@@ -1007,6 +1025,72 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           </>}
         </> })()}
       </div>
+    </div>
+  )
+}
+
+
+/* ---- per-clip voice picker (the PO roster, saved by 🎙 → Load voices) ---- */
+function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
+  const roster = useMemo(() => getVoiceRoster(), [])
+  return (
+    <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
+      <span className="mt-tts__lbl">Voice</span>
+      <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Default (engine voice)</option>
+        {roster.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+      </select>
+      {roster.length === 0 && <span className="mt-tts__hint" style={{ margin: 0 }}>Open 🎙 → Load voices to fill the roster.</span>}
+      {rendered && value !== '' && null}
+    </div>
+  )
+}
+
+/* ---- library file picker for sample clips (music by phase, soundscapes) ---- */
+let assetListPromise: Promise<AudioAsset[]> | null = null
+function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: string, label: string) => void }) {
+  const [assets, setAssets] = useState<AudioAsset[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => {
+    if (!hasSupabaseEnv()) { setErr('Library browsing needs the Supabase env.'); setAssets([]); return }
+    if (!assetListPromise) assetListPromise = listAssets()
+    assetListPromise.then(setAssets).catch((e) => { assetListPromise = null; setErr((e as Error).message); setAssets([]) })
+  }, [])
+  if (err) return <div className="mt-note">{err}</div>
+  if (!assets) return <div className="mt-note">Loading the asset library…</div>
+  const music = assets.filter((a) => a.kind === 'music')
+  const scapes = groupSoundscapes(assets)
+  return (
+    <div className="mt-tts__row" style={{ margin: '4px 0 8px' }}>
+      <span className="mt-tts__lbl">File</span>
+      <select
+        className="mt-tts__sel"
+        value=""
+        onChange={(e) => {
+          const a = assets.find((x) => x.path === e.target.value)
+          if (a) { try { onPick(assetPublicUrl(a.path), a.name) } catch (er) { setErr((er as Error).message) } }
+        }}
+      >
+        <option value="" disabled>{value ? `Change file (now: ${value})…` : 'Pick a library file…'}</option>
+        {PHASE_KEYS.map((k) => {
+          const list = music.filter((a) => a.phase === k)
+          return list.length ? (
+            <optgroup key={k} label={`Music · ${k.toUpperCase()}`}>
+              {list.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
+            </optgroup>
+          ) : null
+        })}
+        {music.some((a) => !a.phase) && (
+          <optgroup label="Music · no phase prefix">
+            {music.filter((a) => !a.phase).map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
+          </optgroup>
+        )}
+        {[...scapes.entries()].map(([texture, list]) => (
+          <optgroup key={texture} label={`Soundscape · ${texture}`}>
+            {list.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
+          </optgroup>
+        ))}
+      </select>
     </div>
   )
 }

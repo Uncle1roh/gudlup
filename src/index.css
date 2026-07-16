@@ -1679,3 +1679,7 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-chan__b + .mt-chan__b { border-left: 1px solid #3a4a42; }
 .mt-chan__b.is-on { background: #cfe3d8; color: #12201a; font-weight: 700; }
 .mt-editmsg { background: #3d3320; color: #ffd98a; font-size: 12.5px; padding: 6px 14px; cursor: pointer; }
+
+/* Studio — inspector selects (voice roster, sample file picker) */
+.mt-tts__sel { flex: 1; min-width: 0; background: var(--mt-panel2); border: 1px solid var(--mt-line); color: var(--mt-text); border-radius: 7px; padding: 6px 8px; font-size: 12.5px; }
+.mt-tts__sel:focus { outline: none; border-color: var(--mt-accent); }

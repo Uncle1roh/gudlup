@@ -15,8 +15,10 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
   const secondary = voiceIdSecondary?.trim() || undefined
 
   function resolveVoice(opts?: TtsOptions): string {
-    // no secondary configured → everything speaks with the primary (callers
-    // can check hasSecondaryVoice to surface that in their notes)
+    // explicit roster voice beats the primary/secondary pair; no secondary
+    // configured → 'secondary' falls back to the primary (callers can check
+    // hasSecondaryVoice to surface that in their notes)
+    if (opts?.voiceId?.trim()) return opts.voiceId.trim()
     return opts?.voice === 'secondary' && secondary ? secondary : voiceId
   }
 
