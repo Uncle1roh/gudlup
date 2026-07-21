@@ -1,6 +1,21 @@
 # Good Loop — build manifest
 
-**Slice: playback audit · voice roster · in-Studio asset picker** (current)
+**Slice: PO voice catalog baked in (no more voice IDs)** (current)
+- New `src/tts/voiceCatalog.ts`: the definitive PO list — 9 archetypes
+  (Maternal, Paternal, Wise/Mentor, Neutral, Warrior, Shadow, Ritual,
+  Interior Kid, Intimate/Whispered), 17 named ElevenLabs voices with their
+  ids. Defaults: Valeria (F · Maternal) = the standard engine voice;
+  Marco Trox (M · Paternal) = the [M] Deep double-induction voice.
+- Voice Engine panel rewritten: API key + two catalog dropdowns grouped by
+  archetype — NO voice-ID fields, no "Load voices". Key alone is enough;
+  voices default from the catalog (settings/env stay backward compatible).
+- Studio per-clip Voice picker now offers the built-in catalog by archetype
+  (replaces the account-roster mechanism).
+- CORAL/MULTIPLE (Harmonizer) and EMOTIONAL ECHO are documented in the
+  catalog module as EFFECTS (roadmap; the engine's −8 dB/+2 s echo stacking
+  already covers Emotional Echo's core behavior).
+
+**Slice: playback audit · voice roster · in-Studio asset picker**
 - **Real audio everywhere (audit)**: confirmed by architecture — the data
   provider hydrates the shared protocol registry from the catalog at startup
   (provider.tsx), every picker reads that registry, and all three players

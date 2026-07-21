@@ -12,16 +12,20 @@ import { createBrowserTts } from './browser'
 import { createElevenLabsTts } from './elevenlabs'
 import { createAzureTts } from './azure'
 import { getTtsSettings } from './settings'
+import { DEFAULT_PRIMARY, DEFAULT_SECONDARY } from './voiceCatalog'
 
 const env = import.meta.env
 
 export function getTtsProvider(): TtsProvider {
   const saved = getTtsSettings()
-  if (saved) return createElevenLabsTts(saved.apiKey, saved.voiceId, saved.voiceIdSecondary)
+  if (saved) {
+    // the PO voice catalog supplies the defaults — nobody types ids anymore
+    return createElevenLabsTts(saved.apiKey, saved.voiceId || DEFAULT_PRIMARY.id, saved.voiceIdSecondary || DEFAULT_SECONDARY.id)
+  }
 
   const elKey = env.VITE_ELEVENLABS_API_KEY
   const elVoice = env.VITE_ELEVENLABS_VOICE_ID
-  if (elKey && elVoice) return createElevenLabsTts(elKey, elVoice, env.VITE_ELEVENLABS_VOICE_ID_M as string | undefined)
+  if (elKey) return createElevenLabsTts(elKey, elVoice || DEFAULT_PRIMARY.id, (env.VITE_ELEVENLABS_VOICE_ID_M as string | undefined) || DEFAULT_SECONDARY.id)
 
   const azKey = env.VITE_AZURE_TTS_KEY
   const azRegion = env.VITE_AZURE_TTS_REGION

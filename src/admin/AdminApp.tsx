@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { tr } from '../i18n'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
@@ -31,7 +30,7 @@ export function AdminApp() {
       <aside className="adm-side">
         <div className="adm-brand">
           <span className="adm-brand__mark">◠◡</span>
-          <span className="adm-brand__name">goodloop <span className="adm-brand__sub">{tr('admin')}</span></span>
+          <span className="adm-brand__name">goodloop <span className="adm-brand__sub">admin</span></span>
         </div>
         <nav className="adm-nav">
           {NAV.map((n) => (
@@ -41,7 +40,7 @@ export function AdminApp() {
               onClick={() => setSection(n.id)}
             >
               <span className="adm-nav__icon" aria-hidden="true">{n.icon}</span>
-              {tr(n.label)}
+              {n.label}
             </button>
           ))}
         </nav>

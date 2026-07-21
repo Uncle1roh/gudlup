@@ -31,27 +31,7 @@ function isLocale(v: unknown): v is Locale {
 
 function defaultLocale(): Locale {
   const env = (import.meta.env.VITE_DEFAULT_LOCALE as string | undefined)?.trim()
-  return isLocale(env) ? env : 'it' // PO testing: the app opens in Italian unless overridden
-}
-
-/* ---------------------------------------------------------------------------
-   Non-hook translate — for internal tools (admin, b2b, studio, tts) where
-   wiring the hook through every helper is impractical. Reads the same
-   dictionaries; kept in sync with the provider via `currentLocale`.
-   Components using tr() re-render on their own state changes, which is enough
-   for the back-office; the consumer app keeps using the reactive useI18n().
-   --------------------------------------------------------------------------- */
-let currentLocale: Locale = (() => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (isLocale(saved)) return saved
-  } catch { /* storage unavailable */ }
-  return defaultLocale()
-})()
-
-export function tr(key: string, vars?: Record<string, string | number>): string {
-  const dict = DICTS[currentLocale]
-  return interpolate((dict && dict[key]) ?? key, vars)
+  return isLocale(env) ? env : 'en'
 }
 
 function interpolate(s: string, vars?: Record<string, string | number>): string {
@@ -84,11 +64,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   function setLocale(l: Locale) {
     setLocaleState(l)
-    currentLocale = l
     try { localStorage.setItem(STORAGE_KEY, l) } catch { /* storage unavailable */ }
   }
-
-  useEffect(() => { currentLocale = locale }, [locale])
 
   useEffect(() => {
     document.documentElement.lang = locale

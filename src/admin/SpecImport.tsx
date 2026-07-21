@@ -5,7 +5,6 @@
    with the spoken lines synthesized when a render-capable TTS key is set. */
 
 import { useMemo, useState } from 'react'
-import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { getTtsProvider } from '../tts'
@@ -183,7 +182,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
 
         <div className="adm-spec__render">
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">{tr('Version')}</span>
+            <span className="adm-spec__lbl">Version</span>
             <div className="adm-spec__chips">
               {spec.versions.map((v) => (
                 <button key={v.duration} className={`b2b-btn${renderDur === v.duration ? ' b2b-btn--primary' : ''}`} onClick={() => setRenderDur(v.duration)}>
@@ -193,14 +192,14 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">{tr('Length')}</span>
+            <span className="adm-spec__lbl">Length</span>
             <div className="adm-spec__chips">
-              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>{tr('90 s preview')}</button>
+              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>90 s preview</button>
               <button className={`b2b-btn${!preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(false)}>Full session (~{Math.round(renderDur * 10.6)} MB)</button>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">{tr('Voice')}</span>
+            <span className="adm-spec__lbl">Voice</span>
             <div className="adm-spec__chips">
               <label className="adm-spec__check">
                 <input type="checkbox" checked={withVoice && tts.canRender} disabled={!tts.canRender} onChange={(e) => setWithVoice(e.target.checked)} />
@@ -209,7 +208,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">{tr('Engine')}</span>
+            <span className="adm-spec__lbl">Engine</span>
             <VoiceEnginePanel onChanged={() => { setTtsTick((n) => n + 1); setWithVoice(true) }} />
           </div>
 
@@ -217,11 +216,11 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
             <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={runRender}>
               {busy ? (progress ?? 'Rendering…') : '♪ Render WAV'}
             </button>
-            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title={tr('Sets audioReady on the catalog entry')}>
+            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Sets audioReady on the catalog entry">
               ✓ Mark audio ready & finish
             </button>
-            <button className="b2b-btn" disabled={busy} onClick={editInStudio} title={tr('Open every layer of this version as editable tracks')}>{tr('🎚 Edit in Studio')}</button>
-            <button className="b2b-btn" disabled={busy} onClick={onDone}>{tr('Finish without audio')}</button>
+            <button className="b2b-btn" disabled={busy} onClick={editInStudio} title="Open every layer of this version as editable tracks">🎚 Edit in Studio</button>
+            <button className="b2b-btn" disabled={busy} onClick={onDone}>Finish without audio</button>
           </div>
 
           {rendered && (
@@ -237,13 +236,13 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
           {rendered && !rendered.preview && hasSupabaseEnv() && !attached && (
             <div className="adm-cred__actions" style={{ marginTop: 10 }}>
               <button className="b2b-btn b2b-btn--primary" disabled={uploading} onClick={uploadAndAttach}>
-                {uploading ? tr('Encoding & uploading…') : tr('⬆ Upload & attach to catalog')}
+                {uploading ? 'Encoding & uploading…' : '⬆ Upload & attach to catalog'}
               </button>
             </div>
           )}
           {attached && (
             <div className="adm-note adm-note--ok" style={{ marginTop: 10 }}>
-              <b>{tr('Attached.')}</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
+              <b>Attached.</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
             </div>
           )}
           {renderError && <div className="adm-note adm-note--warn" style={{ marginTop: 12 }}>Render failed: {renderError}</div>}
@@ -262,18 +261,18 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">{tr('Review protocol document')}</h1>
-          <p className="b2b-sub">{tr('From')} <code>{fileName}</code>{tr(' — full audio configuration parsed.')}</p>
+          <h1 className="b2b-h1">Review protocol document</h1>
+          <p className="b2b-sub">From <code>{fileName}</code> — full audio configuration parsed.</p>
         </div>
-        <button className="b2b-btn" onClick={onCancel}>{tr('← Back')}</button>
+        <button className="b2b-btn" onClick={onCancel}>← Back</button>
       </header>
 
       <div className="adm-spec__card">
         <div className="adm-spec__id">
           <span className="adm-spec__code">{spec.code}</span>
-          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr('Title')} />
+          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
         </div>
-        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder={tr('Patient-facing one-liner (optional — a default is generated)')} />
+        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder="Patient-facing one-liner (optional — a default is generated)" />
 
         <div className="adm-spec__facts">
           {spec.invariants.binauralPrimary && <span>Binaural {spec.invariants.binauralPrimary.band ?? ''} {spec.invariants.binauralPrimary.beatHz} Hz (carrier {spec.invariants.binauralPrimary.carrierHz} Hz)</span>}
@@ -302,7 +301,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
 
         {spec.issues.length > 0 && (
           <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>
-            <b>{tr('Parser warnings')}</b>
+            <b>Parser warnings</b>
             <ul className="adm-spec__issues">{spec.issues.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
         )}
@@ -310,10 +309,10 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
 
       <div className="adm-import__foot" style={{ marginTop: 14 }}>
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={publish}>
-          {busy ? tr('Publishing…') : tr('Publish {code} to catalog →', { code: spec.code })}
+          {busy ? 'Publishing…' : `Publish ${spec.code} to catalog →`}
         </button>
         {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Publish failed: {publishError}</div>}
-        <p className="b2b-sub adm-import__hint">{tr('Publishing stores the full parsed configuration with the protocol; the next step renders the audio file from it.')}</p>
+        <p className="b2b-sub adm-import__hint">Publishing stores the full parsed configuration with the protocol; the next step renders the audio file from it.</p>
       </div>
     </div>
   )

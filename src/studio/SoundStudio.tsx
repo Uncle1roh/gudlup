@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { tr } from '../i18n'
 import {
   MultitrackPlayer,
   renderClipBuffer,
@@ -28,7 +27,7 @@ import {
 } from './multitrack'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
-import { getVoiceRoster } from '../tts/settings'
+import { ARCHETYPES, DEFAULT_PRIMARY, voicesByArchetype } from '../tts/voiceCatalog'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
@@ -126,9 +125,9 @@ function StudioTooSmall() {
     <div className="mt-gate">
       <div className="mt-gate__card">
         <div className="mt-gate__icon">🎛️</div>
-        <h1>{tr('Sound Studio is desktop-only')}</h1>
-        <p>{tr('The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.')}</p>
-        <a className="mt-gate__back" href="#">{tr('← Back to the app')}</a>
+        <h1>Sound Studio is desktop-only</h1>
+        <p>The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.</p>
+        <a className="mt-gate__back" href="#">← Back to the app</a>
       </div>
     </div>
   )
@@ -634,42 +633,42 @@ function StudioDesktop() {
     <div className="mt-studio">
       {/* ---- top transport bar ---- */}
       <header className="mt-topbar">
-        <div className="mt-brand"><span className="mt-brand__mark">◠◡</span>goodloop <span className="mt-brand__sub">{tr('studio')}</span></div>
+        <div className="mt-brand"><span className="mt-brand__mark">◠◡</span>goodloop <span className="mt-brand__sub">studio</span></div>
         <input className="mt-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
         <div className="mt-transport">
-          <button className="mt-tbtn" onClick={stopT} title={tr('Stop / to start')}>⏹</button>
-          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? tr('Pause') : tr('Play')}>{playing ? '⏸' : '▶'}</button>
+          <button className="mt-tbtn" onClick={stopT} title="Stop / to start">⏹</button>
+          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? 'Pause' : 'Play'}>{playing ? '⏸' : '▶'}</button>
           <span className="mt-time">{fmtTime(playhead)} <span className="mt-time__sep">/</span> {fmtTime(lengthSec)}</span>
         </div>
-        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title={tr('Voice engine (TTS keys)')}>
+        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Voice engine (TTS keys)">
           {ttsInfo.canRender ? '🎙' : '🎙!'}
         </button>
         <button
           className="mt-tbtn mt-tbtn--wide"
           onClick={() => void synthesizeAllVoices()}
           disabled={!!synthAll}
-          title={tr('Synthesize every voice clip that has text and no rendered voice yet (one TTS render per unique line)')}
+          title="Synthesize every voice clip that has text and no rendered voice yet (one TTS render per unique line)"
         >
           {synthAll ?? '♪ All voices'}
         </button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title={tr('Cut the selected clip in two at the playhead')}>✂ Cut</button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title={tr('Glue the selected clip with the next clip on its track (gap becomes silence)')}>{tr('🩹 Glue')}</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title="Cut the selected clip in two at the playhead">✂ Cut</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title="Glue the selected clip with the next clip on its track (gap becomes silence)">🩹 Glue</button>
         <div className="mt-master">
-          <span className="mt-master__lbl">{tr('Master')}</span>
+          <span className="mt-master__lbl">Master</span>
           <input type="range" min={0} max={1} step={0.01} value={masterGain} onChange={(e) => setMasterGain(+e.target.value)} />
         </div>
         <div className="mt-zoom">
           <button onClick={() => setPxPerSec((v) => clamp(+(v * 0.8).toFixed(2), 2, 60))}>−</button>
-          <span>{tr('zoom')}</span>
+          <span>zoom</span>
           <button onClick={() => setPxPerSec((v) => clamp(+(v * 1.25).toFixed(2), 2, 60))}>+</button>
         </div>
         <div className="mt-len">
-          <span>{tr('length')}</span>
+          <span>length</span>
           <input type="number" min={10} max={1800} value={lengthSec} onChange={(e) => setLengthSec(clamp(Math.round(+e.target.value || 10), 10, 1800))} />
           <span>s</span>
         </div>
         <div className="mt-addwrap">
-          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>{tr('＋ Track ▾')}</button>
+          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>＋ Track ▾</button>
           {addOpen && (
             <div className="mt-addmenu">
               {(Object.keys(TRACK_META) as TrackType[]).map((tp) => (
@@ -678,13 +677,13 @@ function StudioDesktop() {
             </div>
           )}
         </div>
-        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? tr('Rendering…') : tr('⬇ Export WAV')}</button>
+        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Rendering…' : '⬇ Export WAV'}</button>
         {attachTarget && hasSupabaseEnv() && (
           <button className="mt-export" onClick={attachToCatalog} disabled={attaching} title={`Re-attach this edit to ${attachTarget.code} · ${attachTarget.duration} min`}>
-            {attaching ? tr('Attaching…') : tr('⬆ Attach to {code}', { code: attachTarget.code })}
+            {attaching ? 'Attaching…' : `⬆ Attach to ${attachTarget.code}`}
           </button>
         )}
-        <a className="mt-exit" href="#" title={tr('Exit studio')}>✕</a>
+        <a className="mt-exit" href="#" title="Exit studio">✕</a>
       </header>
 
       {voiceSetupOpen && (
@@ -694,7 +693,7 @@ function StudioDesktop() {
       )}
       {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
 
-      <div className="mt-hint">{tr('🎧 Use headphones — the binaural beat lives in the L/R difference.')}</div>
+      <div className="mt-hint">🎧 Use headphones — the binaural beat lives in the L/R difference.</div>
 
       {/* ---- arrange view ---- */}
       {editMsg && <div className="mt-editmsg" onClick={() => setEditMsg(null)}>{editMsg} ✕</div>}
@@ -714,7 +713,7 @@ function StudioDesktop() {
               onChannel={(c) => patchTrack(t.id, { channel: c })}
             />
           ))}
-          {tracks.length === 0 && <div className="mt-empty">{tr('No tracks. Use ＋ Track.')}</div>}
+          {tracks.length === 0 && <div className="mt-empty">No tracks. Use ＋ Track.</div>}
           </div>
 
           <div className="mt-content" ref={lanesRef} style={{ width: contentWidth, height: contentHeight }}>
@@ -774,18 +773,18 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
       <div className="mt-head__top">
         <span className="mt-head__icon">{meta.icon}</span>
         <span className="mt-head__name">{track.name}</span>
-        <button className="mt-x" onClick={onDelete} title={tr('Remove track')}>✕</button>
+        <button className="mt-x" onClick={onDelete} title="Remove track">✕</button>
       </div>
       <div className="mt-head__row">
-        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title={tr('Mute')}>M</button>
-        <button className={`mt-mini${track.soloed ? ' is-s' : ''}`} onClick={onToggleSolo} title={tr('Solo')}>S</button>
-        <span className="mt-chan" title={tr('Track channel — the whole track plays left / center / right (live + in the export)')}>
+        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title="Mute">M</button>
+        <button className={`mt-mini${track.soloed ? ' is-s' : ''}`} onClick={onToggleSolo} title="Solo">S</button>
+        <span className="mt-chan" title="Track channel — the whole track plays left / center / right (live + in the export)">
           {(['L', 'C', 'R'] as TrackChannel[]).map((c) => (
             <button key={c} className={`mt-chan__b${ch === c ? ' is-on' : ''}`} onClick={() => onChannel(c)}>{c}</button>
           ))}
         </span>
         <input className="mt-vol" type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => onVolume(+e.target.value)} />
-        <button className="mt-addclip" onClick={onAddClip} title={tr('Add clip at playhead')}>＋</button>
+        <button className="mt-addclip" onClick={onAddClip} title="Add clip at playhead">＋</button>
       </div>
     </div>
   )
@@ -925,7 +924,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   if (!track || !clip) {
     return (
       <div className="mt-inspector mt-inspector--empty">
-        <span>{tr('Select a clip to edit its sound · double-click a lane to add one · drag edges to trim · drag a clip up/down to move it to another track of the same type')}</span>
+        <span>Select a clip to edit its sound · double-click a lane to add one · drag edges to trim · drag a clip up/down to move it to another track of the same type</span>
       </div>
     )
   }
@@ -935,7 +934,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
       <div className="mt-insp__head">
         <span className="mt-insp__title" style={{ color: meta.color }}>{meta.icon} {meta.label}</span>
         <span className="mt-insp__sub">{meta.blurb}</span>
-        <button className="mt-insp__del" onClick={onDelete}>{tr('Delete clip')}</button>
+        <button className="mt-insp__del" onClick={onDelete}>Delete clip</button>
       </div>
       <div className="mt-insp__grid">
         <Slider label="Start" value={clip.startSec} min={0} max={1800} step={0.25} onChange={(v) => onTiming({ startSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
@@ -973,31 +972,32 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
               <button key={ch} className={p.chord === ch ? 'is-on' : ''} onClick={() => onParam({ chord: ch })}>{ch.toUpperCase()}</button>
             ))}
           </div>
-          <div className="mt-note">{tr('Warm triad pad — key changes follow the protocol\'s music transitions.')}</div>
+          <div className="mt-note">Warm triad pad — key changes follow the protocol's music transitions.</div>
         </> })()}
 
         {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; return <>
           <Slider label="Tone" value={p.toneHz} min={200} max={800} step={5} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
           <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
           <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
-          <div className="mt-note">{tr('Alternating L(−80)/R(+80) — the doc\'s PAT-05 stimulation.')}</div>
+          <div className="mt-note">Alternating L(−80)/R(+80) — the doc's PAT-05 stimulation.</div>
         </> })()}
 
         {track.type === 'sample' && (() => { const p = clip.params as SampleParams; return <>
           <div className="mt-note" style={{ marginBottom: 6 }}>
-            <b>{tr('Library file:')}</b> {p.label || '— none —'}
+            <b>Library file:</b> {p.label || '— none —'}
           </div>
           <SampleFilePicker value={p.label} onPick={(url, label) => onParam({ url, label })} />
           <div className="mt-note">
-            {tr("Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left. Picking a file here changes THIS clip only — the protocol's default per-phase mapping stays in the admin Asset Library.")}
+            Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left.
+            Picking a file here changes THIS clip only — the protocol's default per-phase mapping stays in the admin Asset Library.
           </div>
         </> })()}
 
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
-              <span className="mt-tts__lbl">{tr('Affirmation')}</span>
-              <span className="mt-tts__eng">{rendered ? tr('voice rendered ✓') : tr('voice: {label}', { label: ttsLabel })}</span>
+              <span className="mt-tts__lbl">Affirmation</span>
+              <span className="mt-tts__eng">{rendered ? 'voice rendered ✓' : `voice: ${ttsLabel}`}</span>
             </div>
             <textarea
               className="mt-tts__text"
@@ -1007,18 +1007,18 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
               rows={2}
             />
             <div className="mt-tts__btns">
-              <button className="mt-tts__btn" onClick={onVoicePreview} disabled={ttsBusy || !hasText}>{tr('▶ Preview')}</button>
+              <button className="mt-tts__btn" onClick={onVoicePreview} disabled={ttsBusy || !hasText}>▶ Preview</button>
               <button className="mt-tts__btn mt-tts__btn--go" onClick={onVoiceSynthesize} disabled={ttsBusy || !ttsCanRender || !hasText} title={ttsCanRender ? '' : 'Set an ElevenLabs or Azure key to render real voice'}>
-                {ttsBusy ? 'Synthesizing…' : rendered ? tr('↻ Re-synthesize') : tr('✓ Synthesize into clip')}
+                {ttsBusy ? 'Synthesizing…' : rendered ? '↻ Re-synthesize' : '✓ Synthesize into clip'}
               </button>
             </div>
-            {!ttsCanRender && <div className="mt-tts__hint">{tr('Preview uses the browser voice. To render & layer real voice, add a TTS key (docs/TTS_SETUP.md).')}</div>}
+            {!ttsCanRender && <div className="mt-tts__hint">Preview uses the browser voice. To render &amp; layer real voice, add a TTS key (docs/TTS_SETUP.md).</div>}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
           <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
           <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
-          {rendered && <div className="mt-note">{tr('Pan and speed re-bake the rendered voice instantly — no new TTS call. Speed is pitch-preserving (time-stretch): the voice speaks faster or slower without sounding higher or deeper.')}</div>}
+          {rendered && <div className="mt-note">Pan and speed re-bake the rendered voice instantly — no new TTS call. Speed is pitch-preserving (time-stretch): the voice speaks faster or slower without sounding higher or deeper.</div>}
           {!rendered && <>
             <Slider label="Pulse" value={p.pulseHz} min={0.05} max={1.2} step={0.01} onChange={(v) => onParam({ pulseHz: v })} fmt={(v) => `${v.toFixed(2)} Hz`} />
             <Slider label="Tone" value={p.toneHz} min={200} max={700} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
@@ -1030,18 +1030,23 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
 }
 
 
-/* ---- per-clip voice picker (the PO roster, saved by 🎙 → Load voices) ---- */
+/* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
 function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
-  const roster = useMemo(() => getVoiceRoster(), [])
+  void rendered
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
-      <span className="mt-tts__lbl">{tr('Voice')}</span>
+      <span className="mt-tts__lbl">Voice</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{tr('Default (engine voice)')}</option>
-        {roster.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+        <option value="">Default — {DEFAULT_PRIMARY.name} (engine voice)</option>
+        {ARCHETYPES.map((a) => {
+          const list = voicesByArchetype(a.id)
+          return list.length ? (
+            <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
+              {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
+            </optgroup>
+          ) : null
+        })}
       </select>
-      {roster.length === 0 && <span className="mt-tts__hint" style={{ margin: 0 }}>{tr('Open 🎙 → Load voices to fill the roster.')}</span>}
-      {rendered && value !== '' && null}
     </div>
   )
 }
@@ -1057,12 +1062,12 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
     assetListPromise.then(setAssets).catch((e) => { assetListPromise = null; setErr((e as Error).message); setAssets([]) })
   }, [])
   if (err) return <div className="mt-note">{err}</div>
-  if (!assets) return <div className="mt-note">{tr('Loading the asset library…')}</div>
+  if (!assets) return <div className="mt-note">Loading the asset library…</div>
   const music = assets.filter((a) => a.kind === 'music')
   const scapes = groupSoundscapes(assets)
   return (
     <div className="mt-tts__row" style={{ margin: '4px 0 8px' }}>
-      <span className="mt-tts__lbl">{tr('File')}</span>
+      <span className="mt-tts__lbl">File</span>
       <select
         className="mt-tts__sel"
         value=""

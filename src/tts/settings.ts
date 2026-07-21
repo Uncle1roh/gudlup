@@ -16,6 +16,7 @@ const STORAGE_KEY = 'gl.tts.elevenlabs'
 
 export interface TtsSettings {
   apiKey: string
+  /** Selected primary voice — empty falls back to the catalog default (Valeria). */
   voiceId: string
   /** Optional second voice (male archetype) — used for the [M] rows of the
       Deep double-induction. Absent → [M] rows render with the primary voice. */
@@ -27,10 +28,9 @@ export function getTtsSettings(): TtsSettings | null {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<TtsSettings>
-    if (parsed && typeof parsed.apiKey === 'string' && typeof parsed.voiceId === 'string'
-        && parsed.apiKey.trim() && parsed.voiceId.trim()) {
+    if (parsed && typeof parsed.apiKey === 'string' && parsed.apiKey.trim()) {
       const sec = typeof parsed.voiceIdSecondary === 'string' ? parsed.voiceIdSecondary.trim() : ''
-      return { apiKey: parsed.apiKey.trim(), voiceId: parsed.voiceId.trim(), voiceIdSecondary: sec || undefined }
+      return { apiKey: parsed.apiKey.trim(), voiceId: (parsed.voiceId ?? '').trim(), voiceIdSecondary: sec || undefined }
     }
     return null
   } catch {
@@ -41,7 +41,7 @@ export function getTtsSettings(): TtsSettings | null {
 export function saveTtsSettings(s: TtsSettings): void {
   try {
     const sec = s.voiceIdSecondary?.trim()
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ apiKey: s.apiKey.trim(), voiceId: s.voiceId.trim(), ...(sec ? { voiceIdSecondary: sec } : {}) }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ apiKey: s.apiKey.trim(), voiceId: (s.voiceId ?? '').trim(), ...(sec ? { voiceIdSecondary: sec } : {}) }))
   } catch { /* storage unavailable */ }
 }
 

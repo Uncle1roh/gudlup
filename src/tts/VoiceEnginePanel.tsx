@@ -1,81 +1,71 @@
 /* ============================================================================
    Good Loop — Voice engine panel (internal tool, English on purpose)
-   Shows which TTS engine is ACTIVE right now and lets the operator paste the
-   ElevenLabs key + voice ids directly in the app (localStorage) — no .env file,
-   no rebuild, works on any deployment. Two voices:
-     • Primary [F]  — the centre guide voice (required)
-     • Secondary [M] — optional male archetype, used by the [M] rows of the
-       Deep double-induction; when absent those rows fall back to the primary
-       and the renderer notes it.
-   "Test voice" speaks a line through the real provider and surfaces the exact
-   error (401, bad voice id, quota…) instead of silently falling back to the
-   robotic browser voice.
+   Shows which TTS engine is ACTIVE and lets the operator paste the ElevenLabs
+   API key. Voice IDs are GONE from every screen: the PO-approved voice
+   catalog (9 archetypes, all ids baked in) supplies every option by name.
+     • Primary voice — defaults to Valeria (F · Maternal), the standard voice.
+     • Secondary [M] — defaults to Marco Trox (M · Paternal), the Deep
+       double-induction voice.
+   Both selectable from the full catalog, grouped by archetype. "Test voice" /
+   "Test M" speak through the real provider and surface the exact error
+   (401, quota…) instead of silently falling back to the robotic browser voice.
    ============================================================================ */
 
 import { useState } from 'react'
-import { tr } from '../i18n'
 import { getTtsProvider } from './index'
-import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, saveVoiceRoster } from './settings'
+import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource } from './settings'
+import { ARCHETYPES, DEFAULT_PRIMARY, DEFAULT_SECONDARY, VOICE_CATALOG, voiceById, voicesByArchetype } from './voiceCatalog'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
 const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
 
-interface VoiceOption { id: string; name: string }
+function VoiceSelect({ value, onChange, allowDefault }: { value: string; onChange: (v: string) => void; allowDefault?: { label: string } }) {
+  return (
+    <select className="voice-panel__input" value={value} onChange={(e) => onChange(e.target.value)}>
+      {allowDefault && <option value="">{allowDefault.label}</option>}
+      {ARCHETYPES.map((a) => {
+        const list = voicesByArchetype(a.id)
+        return list.length ? (
+          <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
+            {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
+          </optgroup>
+        ) : null
+      })}
+    </select>
+  )
+}
 
 export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [apiKey, setApiKey] = useState(() => getTtsSettings()?.apiKey ?? '')
-  const [voiceId, setVoiceId] = useState(() => getTtsSettings()?.voiceId ?? '')
-  const [voiceIdM, setVoiceIdM] = useState(() => getTtsSettings()?.voiceIdSecondary ?? '')
+  const [voiceId, setVoiceId] = useState(() => getTtsSettings()?.voiceId || DEFAULT_PRIMARY.id)
+  const [voiceIdM, setVoiceIdM] = useState(() => getTtsSettings()?.voiceIdSecondary || DEFAULT_SECONDARY.id)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [voices, setVoices] = useState<VoiceOption[] | null>(null)
-  const [loadingVoices, setLoadingVoices] = useState(false)
-
-  /** List every voice on the ElevenLabs account so the operator can pick one. */
-  async function loadVoices() {
-    setError(null); setStatus(null)
-    const key = apiKey.trim() || getTtsSettings()?.apiKey || (import.meta.env.VITE_ELEVENLABS_API_KEY as string | undefined)
-    if (!key) { setError(tr('Paste the ElevenLabs API key first, then load the voices.')); return }
-    setLoadingVoices(true)
-    try {
-      const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } })
-      if (!res.ok) throw new Error(`ElevenLabs ${res.status} — ${res.status === 401 ? 'invalid API key' : await res.text()}`)
-      const json = await res.json() as { voices?: { voice_id: string; name: string }[] }
-      const list = (json.voices ?? []).map((v) => ({ id: v.voice_id, name: v.name }))
-      if (!list.length) { setError(tr('No voices on this account yet — add one in the ElevenLabs Voice Library.')); return }
-      setVoices(list)
-      saveVoiceRoster(list) // the roster the Studio's per-clip voice picker offers
-      if (!voiceId && list[0]) setVoiceId(list[0].id)
-      setStatus(`${list.length} voices loaded (roster saved for the Studio's per-clip voice picker) — pick the primary [F] and optionally the secondary [M], then Save keys.`)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setLoadingVoices(false)
-    }
-  }
 
   const provider = getTtsProvider()
   const source = elevenLabsSource()
-  const sourceNote = source === 'settings' ? 'keys saved in this browser'
-    : source === 'env' ? 'keys from build env'
-    : 'no ElevenLabs keys — using fallback'
+  const sourceNote = source === 'settings' ? 'key saved in this browser'
+    : source === 'env' ? 'key from build env'
+    : 'no ElevenLabs key — using fallback'
+  const pName = voiceById(voiceId)?.name ?? DEFAULT_PRIMARY.name
+  const mName = voiceById(voiceIdM)?.name ?? DEFAULT_SECONDARY.name
 
   function save() {
     setError(null); setStatus(null)
-    if (!apiKey.trim() || !voiceId.trim()) { setError(tr('Both the API key and the primary Voice ID are needed (the [M] voice is optional).')); return }
-    saveTtsSettings({ apiKey, voiceId, voiceIdSecondary: voiceIdM.trim() || undefined })
-    setStatus(voiceIdM.trim()
-      ? 'Saved — ElevenLabs active with primary [F] + secondary [M] voices.'
-      : 'Saved — ElevenLabs active (primary voice only; [M] rows will use it too).')
+    if (!apiKey.trim()) { setError('Paste the ElevenLabs API key — the voices are already built in.'); return }
+    saveTtsSettings({ apiKey, voiceId, voiceIdSecondary: voiceIdM || undefined })
+    setStatus(`Saved — ElevenLabs active with ${pName} (primary) + ${mName} ([M] voice).`)
     onChanged?.()
   }
 
   function clear() {
     clearTtsSettings()
-    setApiKey(''); setVoiceId(''); setVoiceIdM('')
+    setApiKey('')
+    setVoiceId(DEFAULT_PRIMARY.id)
+    setVoiceIdM(DEFAULT_SECONDARY.id)
     setError(null)
-    setStatus('Cleared — falling back to env keys (if set) or the browser voice.')
+    setStatus('Cleared — falling back to the env key (if set) or the browser voice.')
     onChanged?.()
   }
 
@@ -84,8 +74,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     const p = getTtsProvider()
     try {
       await p.speak(which === 'secondary' ? TEST_LINE_M : TEST_LINE, { lang: which === 'secondary' ? 'it' : 'pt-BR', voice: which })
-      const fellBack = which === 'secondary' && !p.hasSecondaryVoice
-      setStatus(`Spoken with: ${p.label}${which === 'secondary' ? ` — [M] voice${fellBack ? ' NOT set, primary used' : ''}` : ''}${p.canRender ? '' : ' — preview-only (robotic). Save ElevenLabs keys above for the real voice.'}`)
+      setStatus(`Spoken with: ${p.label} — ${which === 'secondary' ? mName : pName}${p.canRender ? '' : ' — preview-only (robotic). Save the ElevenLabs key above for the real voice.'}`)
     } catch (e) {
       setError(`${p.label}: ${(e as Error).message}`)
     } finally {
@@ -97,52 +86,37 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     <div className="voice-panel">
       <div className="voice-panel__row">
         <span className={`voice-panel__badge${provider.canRender ? ' is-ok' : ''}`}>
-          {provider.canRender ? '●' : '○'} Active engine: {provider.label}{provider.hasSecondaryVoice ? ' · F+M' : ''}
+          {provider.canRender ? '●' : '○'} Active engine: {provider.label}{provider.canRender ? ` · ${pName} + ${mName}` : ''}
         </span>
         <span className="voice-panel__src">{sourceNote}</span>
       </div>
 
       <div className="voice-panel__fields">
         <input
-          className="voice-panel__input" type="password" placeholder={tr('ElevenLabs API key')}
+          className="voice-panel__input" type="password" placeholder="ElevenLabs API key"
           value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="off"
         />
-        {voices ? (
-          <select className="voice-panel__input" value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
-            {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </select>
-        ) : (
-          <input
-            className="voice-panel__input" type="text" placeholder={tr('Primary Voice ID [F] (or use Load voices →)')}
-            value={voiceId} onChange={(e) => setVoiceId(e.target.value)} autoComplete="off"
-          />
-        )}
-        {voices ? (
-          <select className="voice-panel__input" value={voiceIdM} onChange={(e) => setVoiceIdM(e.target.value)}>
-            <option value="">{tr('— no [M] voice (optional) —')}</option>
-            {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </select>
-        ) : (
-          <input
-            className="voice-panel__input" type="text" placeholder={tr('Secondary Voice ID [M] — optional (Deep double-induction)')}
-            value={voiceIdM} onChange={(e) => setVoiceIdM(e.target.value)} autoComplete="off"
-          />
-        )}
+        <VoiceSelect value={voiceId} onChange={setVoiceId} />
+        <VoiceSelect value={voiceIdM} onChange={setVoiceIdM} />
       </div>
+      <p className="voice-panel__fine" style={{ marginTop: 2 }}>
+        Left: primary voice (every [F]/unmarked line — default {DEFAULT_PRIMARY.name}, Maternal).
+        Right: [M] voice (Deep double-induction — default {DEFAULT_SECONDARY.name}, Paternal).
+        All {VOICE_CATALOG.length} PO-approved voices are built in — no IDs to paste.
+      </p>
 
       <div className="voice-panel__actions">
-        <button className="voice-panel__btn voice-panel__btn--primary" onClick={save}>{tr('Save keys')}</button>
-        <button className="voice-panel__btn" onClick={loadVoices} disabled={loadingVoices}>{loadingVoices ? tr('Loading…') : tr('♪ Load voices')}</button>
-        <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? tr('Speaking…') : tr('▶ Test voice')}</button>
-        <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title={tr('Speaks an Italian double-induction line with the [M] voice (falls back to primary if unset)')}>{tr('▶ Test M')}</button>
-        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={clear}>{tr('Clear')}</button>
+        <button className="voice-panel__btn voice-panel__btn--primary" onClick={save}>Save</button>
+        <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? 'Speaking…' : '▶ Test voice'}</button>
+        <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title="Speaks an Italian double-induction line with the [M] voice">▶ Test M</button>
+        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={clear}>Clear</button>
       </div>
 
       {status && <p className="voice-panel__ok">{status}</p>}
       {error && <p className="voice-panel__err">{error}</p>}
       <p className="voice-panel__fine">
-        {tr('Keys saved here live only in this browser (localStorage) and take effect immediately — no rebuild or redeploy. Build-time env keys still work as the fallback')}
-        (<code>{tr('VITE_ELEVENLABS_VOICE_ID_M')}</code> {tr('for the optional [M] voice')}).
+        The key saved here lives only in this browser (localStorage) and takes effect immediately — no rebuild.
+        Build-time env keys still work as the fallback.
       </p>
     </div>
   )

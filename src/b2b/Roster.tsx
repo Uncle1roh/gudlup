@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { tr } from '../i18n'
 import { relWhen, type Patient } from './data'
 import { usePatients, useSessionRequests } from '../data/hooks'
 import { useDataProvider } from '../data/provider'
@@ -111,21 +110,21 @@ export function Roster({ onOpenPatient }: RosterProps) {
     <div className="b2b-page">
       <div className="b2b-page__head">
         <div>
-          <h1 className="b2b-h1">{tr('Your patients')}</h1>
+          <h1 className="b2b-h1">Your patients</h1>
           <p className="b2b-sub">{patients.length} active · sorted by {sort === 'az' ? 'name' : sort + ' session'}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input className="b2b-search" placeholder={tr('Search by name…')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="b2b-search" placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} />
           <button className="b2b-btn b2b-btn--primary" onClick={newPatient} disabled={creating}>
-            {creating ? tr('Creating…') : tr('＋ New patient')}
+            {creating ? 'Creating…' : '＋ New patient'}
           </button>
         </div>
       </div>
 
       {requests.length > 0 && (
         <section className="req-queue">
-          <h2 className="req-queue__title">{tr('Session requests')} <span className="req-queue__count">{requests.length}</span></h2>
-          <p className="b2b-sub" style={{ marginBottom: 10 }}>{tr('Employees asking for a session from the app. Accepting creates the linked patient record.')}</p>
+          <h2 className="req-queue__title">Session requests <span className="req-queue__count">{requests.length}</span></h2>
+          <p className="b2b-sub" style={{ marginBottom: 10 }}>Employees asking for a session from the app. Accepting creates the linked patient record.</p>
           {requests.map((r) => (
             <div key={r.id} className="req-queue__row">
               <span className="req-queue__who">
@@ -134,7 +133,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
               </span>
               <span className="b2b-sub req-queue__note">{r.note ?? '—'}</span>
               <button className="b2b-btn b2b-btn--primary" disabled={accepting === r.id} onClick={() => accept(r.id)}>
-                {accepting === r.id ? tr('Accepting…') : tr('Accept')}
+                {accepting === r.id ? 'Accepting…' : 'Accept'}
               </button>
             </div>
           ))}
@@ -146,11 +145,11 @@ export function Roster({ onOpenPatient }: RosterProps) {
           <button key={id} className={`b2b-chip${filter === id ? ' is-on' : ''}`} onClick={() => setFilter(id)}>{label}</button>
         ))}
         <div className="b2b-sort">
-          <span className="b2b-sub">{tr('Sort')}</span>
+          <span className="b2b-sub">Sort</span>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-            <option value="next">{tr('Next session')}</option>
-            <option value="last">{tr('Last session')}</option>
-            <option value="urgency">{tr('Clinical urgency')}</option>
+            <option value="next">Next session</option>
+            <option value="last">Last session</option>
+            <option value="urgency">Clinical urgency</option>
             <option value="az">A–Z</option>
           </select>
         </div>
@@ -158,7 +157,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
 
       <div className="roster">
         <div className="roster__head">
-          <span>{tr('Patient')}</span><span>{tr('Last')}</span><span>{tr('Next')}</span><span>{tr('VAS')}</span><span>{tr('Flags')}</span><span></span>
+          <span>Patient</span><span>Last</span><span>Next</span><span>VAS</span><span>Flags</span><span></span>
         </div>
         {rows.map((p) => {
           const urgent = urgencyScore(p) >= 3
@@ -177,16 +176,16 @@ export function Roster({ onOpenPatient }: RosterProps) {
               </span>
               <span><TrendArrow trend={p.vasTrend} /></span>
               <span className="roster__flags">
-                {p.assessmentDue?.includes('T') && <span className="flag flag--due" title={tr('Assessment due')}>⏱ {p.assessmentDue}</span>}
-                {(p.b2cInactiveDays ?? 0) > 7 && <span className="flag flag--warn" title={tr('Inactive in B2C')}>💤 {p.b2cInactiveDays}d</span>}
-                {p.unread > 0 && <span className="flag flag--msg" title={tr('Unread messages')}>✉ {p.unread}</span>}
+                {p.assessmentDue?.includes('T') && <span className="flag flag--due" title="Assessment due">⏱ {p.assessmentDue}</span>}
+                {(p.b2cInactiveDays ?? 0) > 7 && <span className="flag flag--warn" title="Inactive in B2C">💤 {p.b2cInactiveDays}d</span>}
+                {p.unread > 0 && <span className="flag flag--msg" title="Unread messages">✉ {p.unread}</span>}
               </span>
               <span className="roster__chev">›</span>
             </button>
           )
         })}
         {loading && <div style={{ padding: 20 }}><Loading label="Loading caseload…" /></div>}
-        {!loading && rows.length === 0 && <p className="b2b-sub" style={{ padding: 20 }}>{tr('No patients match this filter.')}</p>}
+        {!loading && rows.length === 0 && <p className="b2b-sub" style={{ padding: 20 }}>No patients match this filter.</p>}
       </div>
     </div>
   )

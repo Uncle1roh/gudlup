@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -45,26 +44,26 @@ export function Companies({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">{tr('Companies')}</h1>
+          <h1 className="b2b-h1">Companies</h1>
           <p className="b2b-sub">The corporate tenants the platform is rolled out to. {companies.length} total.</p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding((v) => !v)}>{adding ? tr('Cancel') : tr('+ New company')}</button>
+        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding((v) => !v)}>{adding ? 'Cancel' : '+ New company'}</button>
       </header>
 
       {adding && (
         <div className="adm-addrow">
-          <input className="b2b-input" placeholder={tr('Company name')} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder={tr('Seats')} value={seats} onChange={(e) => setSeats(e.target.value)} />
-          <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim()} onClick={create}>{tr('Create')}</button>
+          <input className="b2b-input" placeholder="Company name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder="Seats" value={seats} onChange={(e) => setSeats(e.target.value)} />
+          <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim()} onClick={create}>Create</button>
         </div>
       )}
 
-      {loading && <p className="b2b-sub">{tr('Loading…')}</p>}
+      {loading && <p className="b2b-sub">Loading…</p>}
 
       {!loading && (
         <div className="adm-table adm-table--companies">
           <div className="adm-tr adm-tr--head">
-            <div>{tr('Company')}</div><div>{tr('Seats used')}</div><div>{tr('Created')}</div><div>{tr('Status')}</div><div className="adm-tr__right">{tr('Action')}</div>
+            <div>Company</div><div>Seats used</div><div>Created</div><div>Status</div><div className="adm-tr__right">Action</div>
           </div>
           {companies.map((c) => {
             const pct = c.seats ? Math.min(100, Math.round((c.activeUsers / c.seats) * 100)) : 0
@@ -76,9 +75,9 @@ export function Companies({ actor }: { actor: string }) {
                   <div className="adm-bar"><span style={{ width: `${pct}%` }} /></div>
                 </div>
                 <div>{fmtDate(c.createdAt)}</div>
-                <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">{tr('Active')}</span> : <span className="adm-pill adm-pill--warn">{tr('Paused')}</span>}</div>
+                <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">Active</span> : <span className="adm-pill adm-pill--warn">Paused</span>}</div>
                 <div className="adm-tr__right">
-                  <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? tr('Pause') : tr('Resume')}</button>
+                  <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? 'Pause' : 'Resume'}</button>
                 </div>
               </div>
             )

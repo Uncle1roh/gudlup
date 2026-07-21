@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
@@ -34,7 +33,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">{tr('Protocol catalog')}</h1>
+          <h1 className="b2b-h1">Protocol catalog</h1>
           <p className="b2b-sub">The single shared catalog every company draws from. {protocols.length} protocol{protocols.length === 1 ? '' : 's'}.</p>
         </div>
         <button className="b2b-btn b2b-btn--primary" onClick={() => setView('import')}>
@@ -42,12 +41,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         </button>
       </header>
 
-      {loading && <p className="b2b-sub">{tr('Loading catalog…')}</p>}
+      {loading && <p className="b2b-sub">Loading catalog…</p>}
 
       {!loading && (
         <div className="adm-table adm-table--catalog">
           <div className="adm-tr adm-tr--head">
-            <div>{tr('Code')}</div><div>{tr('Title')}</div><div>{tr('Family')}</div><div>{tr('Audio')}</div><div>{tr('Availability')}</div><div>{tr('Source')}</div><div className="adm-tr__right">{tr('Status')}</div>
+            <div>Code</div><div>Title</div><div>Family</div><div>Audio</div><div>Availability</div><div>Source</div><div className="adm-tr__right">Status</div>
           </div>
           {protocols.map((p) => (
             <div className="adm-tr" key={p.code}>
@@ -56,20 +55,20 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               <div>{FAMILY_LABEL[p.family]}</div>
               <div>
                 {p.audioReady
-                  ? <span className="adm-pill adm-pill--ok">{tr('Rendered')}</span>
-                  : <span className="adm-pill adm-pill--warn">{tr('Placeholder')}</span>}
+                  ? <span className="adm-pill adm-pill--ok">Rendered</span>
+                  : <span className="adm-pill adm-pill--warn">Placeholder</span>}
               </div>
               <div>{tenantsLabel(p)}</div>
-              <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">{tr('Imported')}</span> : <span className="adm-tag">{tr('Seed')}</span>}</div>
+              <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Imported</span> : <span className="adm-tag">Seed</span>}</div>
               <div className="adm-tr__right">
                 <button
                   className={`adm-toggle ${p.enabled ? 'is-on' : ''}`}
                   disabled={busyCode === p.code}
                   onClick={() => toggle(p)}
-                  title={p.enabled ? tr('Enabled — click to disable') : tr('Disabled — click to enable')}
+                  title={p.enabled ? 'Enabled — click to disable' : 'Disabled — click to enable'}
                 >
                   <span className="adm-toggle__knob" />
-                  <span className="adm-toggle__txt">{p.enabled ? tr('Enabled') : tr('Disabled')}</span>
+                  <span className="adm-toggle__txt">{p.enabled ? 'Enabled' : 'Disabled'}</span>
                 </button>
               </div>
             </div>

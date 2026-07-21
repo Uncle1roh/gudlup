@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { FAMILY_LABEL } from '../compose/types'
@@ -59,7 +58,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
         setDatasheet(res.datasheet)
         void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `datasheet · ${res.datasheet.code} · ${res.datasheet.versions.length} versions · ${res.datasheet.issues.length} notes` })
       } catch (err) {
-        setError(tr('Could not read that workbook: {msg}', { msg: (err as Error).message }))
+        setError(`Could not read that workbook: ${(err as Error).message}`)
       } finally {
         setReading(false)
       }
@@ -79,11 +78,11 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
             ? await (await import('./pdfText')).extractPdfText(f)
             : await f.text()
         if (ext === 'pdf' && text.replace(/\s+/g, '').length < 200) {
-          setError(tr('"{name}" has little or no selectable text — probably a scanned/flattened PDF. Upload the original .docx instead, or re-export the PDF with a text layer.', { name: f.name }))
+          setError(`"${f.name}" has little or no selectable text — it's probably a scanned/flattened PDF export. Upload the original .docx instead (now supported), or re-export the PDF with a text layer.`)
           return
         }
         if (!looksLikeProtocolDoc(text)) {
-          setError(tr('"{name}" doesn\'t look like a protocol document (no GL-code + timeline found). If this is a PDF export, try the original .docx instead. For bulk imports use CSV/JSON.', { name: f.name }))
+          setError(`"${f.name}" doesn't look like a protocol document (no GL-code + timeline found). If this is a PDF export, try uploading the original .docx instead — it imports more reliably. For bulk imports use CSV/JSON.`)
           return
         }
         const res = parseProtocolDoc(text)
@@ -104,11 +103,11 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
     // Structured path (.csv / .tsv / .json): one row per protocol.
     if (!isParseable(f.name)) {
-      setError(tr('"{name}" isn\'t a supported file. Upload a protocol PDF (the "Protocol for Developers" document), or a CSV/JSON for bulk import.', { name: f.name }))
+      setError(`"${f.name}" isn't a supported file. Upload a protocol PDF (the "Protocol for Developers" document), or a CSV/JSON for bulk import.`)
       return
     }
     let text = ''
-    try { text = await f.text() } catch { setError(tr('Could not read that file.')); return }
+    try { text = await f.text() } catch { setError('Could not read that file.'); return }
     const res = parseImport(f.name, text)
     if (res.error) { setError(res.error); return }
     setFileName(f.name)
@@ -177,18 +176,19 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
   if (step === 'done') {
     return (
       <div className="adm-page">
-        <header className="adm-page__head"><h1 className="b2b-h1">{tr('Import complete')}</h1></header>
+        <header className="adm-page__head"><h1 className="b2b-h1">Import complete</h1></header>
         <div className="adm-note adm-note--ok">
           <b>{publishedCount} protocol{publishedCount === 1 ? '' : 's'} published</b> to the shared catalog — available to every company,
-          and now selectable in the clinician session wizard. Audio still shows as <i>{tr('placeholder')}</i> until rendered.
+          and now selectable in the clinician session wizard. Audio still shows as <i>placeholder</i> until rendered.
         </div>
         <div className="adm-import__foot" style={{ marginTop: 16 }}>
           <div className="adm-cred__actions">
-            <button className="b2b-btn b2b-btn--primary" onClick={onBack}>{tr('View catalog')}</button>
-            <button className="b2b-btn" onClick={() => { window.location.hash = '#studio' }}>{tr('Open Sound Studio to render audio →')}</button>
+            <button className="b2b-btn b2b-btn--primary" onClick={onBack}>View catalog</button>
+            <button className="b2b-btn" onClick={() => { window.location.hash = '#studio' }}>Open Sound Studio to render audio →</button>
           </div>
           <p className="b2b-sub adm-import__hint">
-            {tr('Rendering the layered bed + pt-BR voice for each protocol is done in the Sound Studio (the audio authoring tool); once exported, flip')} <code>{tr('audioReady')}</code> {tr('and the player uses it instead of the synthesized placeholder.')}
+            Rendering the layered bed + pt-BR voice for each protocol is done in the Sound Studio (the audio authoring tool);
+            once exported, flip <code>audioReady</code> and the player uses it instead of the synthesized placeholder.
           </p>
         </div>
       </div>
@@ -202,10 +202,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
       <div className="adm-page">
         <header className="adm-page__head adm-page__head--row">
           <div>
-            <h1 className="b2b-h1">{tr('Review import')}</h1>
+            <h1 className="b2b-h1">Review import</h1>
             <p className="b2b-sub">From <code>{fileName}</code> — {drafts.length} parsed, {drafts.filter((d) => d.ok).length} ready. Edit titles, choose what to publish.</p>
           </div>
-          <button className="b2b-btn b2b-btn--ghost" onClick={() => { setStep('upload'); setDrafts([]) }}>{tr('← Choose another file')}</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={() => { setStep('upload'); setDrafts([]) }}>← Choose another file</button>
         </header>
 
         <div className="adm-review">
@@ -232,7 +232,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
                   />
                   <input
                     className="b2b-input adm-draft__blurb"
-                    placeholder={tr('Patient-facing description')}
+                    placeholder="Patient-facing description"
                     value={edits[i]?.blurb ?? d.protocol.blurb}
                     onChange={(e) => setEdits((m) => ({ ...m, [i]: { ...m[i], blurb: e.target.value } }))}
                   />
@@ -246,9 +246,9 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
         <div className="adm-review__foot">
           <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy || okCount === 0} onClick={publish}>
-            {busy ? tr('Publishing…') : tr('Publish {n} protocol(s) →', { n: okCount })}
+            {busy ? 'Publishing…' : `Publish ${okCount} protocol${okCount === 1 ? '' : 's'} →`}
           </button>
-          {okCount === 0 && <p className="b2b-sub">{tr('Fix the errors above (or pick a row) to publish.')}</p>}
+          {okCount === 0 && <p className="b2b-sub">Fix the errors above (or pick a row) to publish.</p>}
         </div>
       </div>
     )
@@ -259,10 +259,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">{tr('Import protocols')}</h1>
-          <p className="b2b-sub">{tr('Turn a written spec into playable, publishable Good Loop protocols.')}</p>
+          <h1 className="b2b-h1">Import protocols</h1>
+          <p className="b2b-sub">Turn a written spec into playable, publishable Good Loop protocols.</p>
         </div>
-        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>{tr('← Back to catalog')}</button>
+        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Back to catalog</button>
       </header>
 
       <div className="adm-import">
@@ -271,28 +271,28 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
           <span className="adm-drop__icon" aria-hidden="true">⇪</span>
           <span className="adm-drop__cta">
             <b>{reading ? 'Reading file…' : 'Choose a Protocol Datasheet (.xlsx) or a protocol document (.docx / PDF) — or CSV/JSON for bulk import'}</b>
-            <span className="adm-drop__meta">{tr('XLSX (best): the Protocol Datasheet workbook — canonical, rendered with Renderer v3 · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row')}</span>
+            <span className="adm-drop__meta">XLSX (best): the Protocol Datasheet workbook — canonical, rendered with Renderer v3 · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row</span>
           </span>
           {/* NOTE: no onClick here — this span sits inside the <label>, whose
               native activation already opens the file input; a programmatic
               .click() on top of that opened the dialog twice. */}
-          <span className="b2b-btn b2b-btn--primary adm-drop__btn">{tr('Browse…')}</span>
+          <span className="b2b-btn b2b-btn--primary adm-drop__btn">Browse…</span>
         </label>
 
         {error && <div className="adm-issues adm-issues--err" style={{ maxWidth: 720 }}><span>{error}</span></div>}
 
         <div className="adm-src">
           <input ref={srcRef} type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" style={{ display: 'none' }} onChange={onSource} />
-          <button className="b2b-btn b2b-btn--ghost" onClick={() => srcRef.current?.click()}>{tr('Attach source document (optional)')}</button>
-          {sourceDoc ? <span className="b2b-sub">{tr('Source of record:')} <b>{sourceDoc}</b></span> : <span className="b2b-sub">{tr('the original PDF/Excel, kept for reference')}</span>}
-          <button className="adm-link" onClick={() => download('goodloop-protocol-template.csv', csvTemplate(), 'text/csv')}>{tr('Download CSV template')}</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={() => srcRef.current?.click()}>Attach source document (optional)</button>
+          {sourceDoc ? <span className="b2b-sub">Source of record: <b>{sourceDoc}</b></span> : <span className="b2b-sub">the original PDF/Excel, kept for reference</span>}
+          <button className="adm-link" onClick={() => download('goodloop-protocol-template.csv', csvTemplate(), 'text/csv')}>Download CSV template</button>
         </div>
 
         <ol className="adm-pipe">
-          <li className="adm-pipe__step is-active"><span className="adm-pipe__num">1</span><span className="adm-pipe__body"><span className="adm-pipe__label">{tr('Upload spec')}</span><span className="adm-pipe__note">{tr('protocol PDF (full audio configuration) or CSV / JSON (bulk)')}</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">2</span><span className="adm-pipe__body"><span className="adm-pipe__label">{tr('Review & edit')}</span><span className="adm-pipe__note">{tr('validated drafts, fix titles, choose what to publish')}</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">3</span><span className="adm-pipe__body"><span className="adm-pipe__label">{tr('Publish')}</span><span className="adm-pipe__note">{tr('once → available to every company & the clinician wizard')}</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">4</span><span className="adm-pipe__body"><span className="adm-pipe__label">{tr('Render audio')}</span><span className="adm-pipe__note">{tr('WAV rendered right here from the parsed configuration (bed + pt-BR voice), or fine-tune in the Sound Studio')}</span></span></li>
+          <li className="adm-pipe__step is-active"><span className="adm-pipe__num">1</span><span className="adm-pipe__body"><span className="adm-pipe__label">Upload spec</span><span className="adm-pipe__note">protocol PDF (full audio configuration) or CSV / JSON (bulk)</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">2</span><span className="adm-pipe__body"><span className="adm-pipe__label">Review & edit</span><span className="adm-pipe__note">validated drafts, fix titles, choose what to publish</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">3</span><span className="adm-pipe__body"><span className="adm-pipe__label">Publish</span><span className="adm-pipe__note">once → available to every company &amp; the clinician wizard</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">4</span><span className="adm-pipe__body"><span className="adm-pipe__label">Render audio</span><span className="adm-pipe__note">WAV rendered right here from the parsed configuration (bed + pt-BR voice), or fine-tune in the Sound Studio</span></span></li>
         </ol>
       </div>
     </div>
