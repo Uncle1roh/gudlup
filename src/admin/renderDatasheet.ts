@@ -32,7 +32,7 @@
    music −18 dB (both still unspecified by the PO — flagged in notes).
    ============================================================================ */
 
-import { renderClipBuffer, SAMPLE_RATE, CHORD_TRIADS, type Chord, type SoundscapeParams, type Texture } from '../studio/multitrack'
+import { SAMPLE_RATE } from '../studio/multitrack'
 import { audioBufferToWav } from '../lib/wav'
 import { getTtsProvider } from '../tts'
 import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, matchVoiceFromText } from '../tts/voiceCatalog'
@@ -248,47 +248,8 @@ function scheduleLooped(
   }
 }
 
-/* ------------------------------------------------- synth fallbacks */
+/* ------------------------------------------------- synth provisionals (bowl/heartbeat stay until PO files arrive) */
 
-const KEY_TO_CHORD: Record<string, Chord> = { c: 'c', g: 'g', am: 'am', f: 'f', dm: 'dm', em: 'em' }
-
-/** Warm triad pad for one window (fallback when no stem is mapped). */
-function synthPad(ctx: OfflineAudioContext, dest: AudioNode, at: number, dur: number, keys: string[], level: number): void {
-  const chords = keys.map((k) => KEY_TO_CHORD[k.toLowerCase().replace(/\s+/g, '')]).filter(Boolean) as Chord[]
-  const use = chords.length ? chords : ['am' as Chord]
-  const segDur = dur / use.length
-  use.forEach((chord, i) => {
-    const segAt = at + i * segDur
-    const freqs = CHORD_TRIADS[chord]
-    for (const f of freqs) {
-      for (const detune of [0, 0.7]) {
-        const osc = ctx.createOscillator()
-        osc.type = 'triangle'
-        osc.frequency.value = f + detune
-        const g = ctx.createGain()
-        g.gain.value = 0
-        const lvl = level / (freqs.length * 2)
-        const xf = Math.min(XFADE_PHASE_DEFAULT, segDur / 3)
-        g.gain.setValueCurveAtTime(fadeInCurve(lvl), Math.max(0, segAt), xf)
-        g.gain.setValueAtTime(lvl, Math.max(0, segAt) + xf + 0.005) // hold, after the curve
-        const outStart = Math.max(Math.max(0, segAt) + xf + 0.02, segAt + segDur - xf)
-        g.gain.setValueCurveAtTime(fadeOutCurve(lvl), outStart, Math.max(0.02, segAt + segDur - outStart + xf / 2))
-        osc.connect(g).connect(dest)
-        osc.start(Math.max(0, segAt))
-        osc.stop(segAt + segDur + 0.1)
-      }
-    }
-  })
-}
-
-function textureFrom(label: string): Texture {
-  const s = label.toLowerCase()
-  if (/lake|water|rain|wave|sea|ocean|lago|acqua|pioggia|onde/.test(s)) return 'lake'
-  if (/wind|breeze|air|vento|brezza|forest|bosco/.test(s)) return 'air'
-  return 'deep'
-}
-
-/** Singing-bowl strike: inharmonic partials with beating pairs, long decay. */
 function synthBowl(ctx: OfflineAudioContext, dest: AudioNode, at: number, decaySec: number, level: number): void {
   const f0 = 196 // G3-region fundamental — typical mid-size bowl
   const partials = [
@@ -615,18 +576,9 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   }
 
   /* ---- 3. fallback soundscape textures (pre-rendered per phase) ---- */
-  const musicByPhase = new Map((ds.musicMap ?? []).map((m) => [m.phase, m]))
   const XFADE_PHASE = ds.mix?.phaseCrossfadeSec ?? XFADE_PHASE_DEFAULT
-  const fallbackScapes = new Map<number, AudioBuffer>()
-  for (const p of phases) {
-    if (p.startSec >= totalSec) continue
-    if (map?.soundscape[phaseKey(p.id)] && assetBuffers.has(map.soundscape[phaseKey(p.id)]!)) continue
-    const label = musicByPhase.get(p.id)?.soundscape ?? ds.invariants.find((i) => /soundscape/i.test(i.param))?.value ?? ''
-    const dur = Math.min(p.endSec, totalSec) - p.startSec + XFADE_PHASE
-    if (dur < 2) continue
-    const params: SoundscapeParams = { texture: textureFrom(label), warmth: 620 }
-    fallbackScapes.set(p.id, await renderClipBuffer('soundscape', params, dur))
-  }
+  const unmappedMusic: number[] = []
+  const unmappedScape: number[] = []
 
   /* ---- 4. offline mix ---- */
   onProgress?.('mix', 0, 1)
@@ -677,25 +629,28 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     const inSec = isFirst ? Math.min(5, dur / 4) : XFADE_PHASE
     const outSec = isLast ? Math.min(4, dur / 4) : XFADE_PHASE
 
+    // POLICY: only the REAL library files (f1–f6 mapping) play. No synth
+    // pads, no synth textures — an unmapped phase is silent, and the notes
+    // say so. The excel's MUSICA section is metadata only.
     const musicPath = map?.music[phaseKey(p.id)]
     const stem = musicPath ? assetBuffers.get(musicPath) : undefined
     if (stem) {
       scheduleLooped(ctx, stem, master, at, dur, gainForOffset(stem, voiceRefRms, ds.mix?.musicDb ?? -18), inSec, outSec)
       stemsUsed++
     } else {
-      // synth pad — oscillators, not a buffer: scale its empirical unit RMS
-      // (~0.25 at level 1) to the same −18 dB target
-      synthPad(ctx, master, at, dur, musicByPhase.get(p.id)?.keys ?? ['Am'], Math.min(0.6, (voiceRefRms * dB(ds.mix?.musicDb ?? -18)) / 0.25))
+      unmappedMusic.push(p.id)
     }
 
     const scapePath = map?.soundscape[phaseKey(p.id)]
     const scape = scapePath ? assetBuffers.get(scapePath) : undefined
-    const scapeBuf = scape ?? fallbackScapes.get(p.id)
-    if (scapeBuf) {
-      scheduleLooped(ctx, scapeBuf, master, at, dur, gainForOffset(scapeBuf, voiceRefRms, ds.mix?.soundscapeDb ?? -20), inSec, outSec)
+    if (scape) {
+      scheduleLooped(ctx, scape, master, at, dur, gainForOffset(scape, voiceRefRms, ds.mix?.soundscapeDb ?? -20), inSec, outSec)
+    } else {
+      unmappedScape.push(p.id)
     }
   }
-  if (map && stemsUsed === 0) notes.push('No music stems were mapped/loaded for this version — the whole bed used the synth pad. Map phase stems in the Asset Library.')
+  if (unmappedMusic.length) notes.push(`Music: no library file mapped for F${[...new Set(unmappedMusic)].join('/F')} — those phases have no music (map f1–f6 in the Asset Library).`)
+  if (unmappedScape.length) notes.push(`Soundscape: no library file mapped for F${[...new Set(unmappedScape)].join('/F')} — silent there (map in the Asset Library).`)
 
   // heartbeat (Layer 2)
   if (v.heartbeat) {

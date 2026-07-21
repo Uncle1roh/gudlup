@@ -8,12 +8,19 @@ import type { SeedTrack } from './types'
 import type { Duration } from '../types/domain'
 
 export interface StudioAttachTarget { code: string; duration: Duration }
-export interface StudioSeed { tracks: SeedTrack[]; name: string; attach?: StudioAttachTarget }
+export interface StudioSeed {
+  tracks: SeedTrack[]
+  name: string
+  attach?: StudioAttachTarget
+  /** Session fade in/out seconds — applied to the exported/attached mixdown. */
+  fadeInSec?: number
+  fadeOutSec?: number
+}
 
 let pending: StudioSeed | null = null
 
-export function setStudioSeed(tracks: SeedTrack[], name: string, attach?: StudioAttachTarget): void {
-  pending = { tracks, name, attach }
+export function setStudioSeed(tracks: SeedTrack[], name: string, attach?: StudioAttachTarget, fades?: { fadeInSec?: number; fadeOutSec?: number }): void {
+  pending = { tracks, name, attach, ...fades }
 }
 
 export function takeStudioSeed(): StudioSeed | null {

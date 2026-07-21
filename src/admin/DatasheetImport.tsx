@@ -190,7 +190,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
       if (existing?.assetMap) { freshMap = existing.assetMap; setAssetMap(existing.assetMap) }
     } catch { /* keep in-memory */ }
     const seed = datasheetToStudioTracks(ds, renderDur, freshMap)
-    setStudioSeed(seed.tracks, seed.name, { code: ds.code, duration: renderDur })
+    setStudioSeed(seed.tracks, seed.name, { code: ds.code, duration: renderDur }, { fadeInSec: ds.mix?.sessionFadeInSec ?? 2, fadeOutSec: ds.mix?.sessionFadeOutSec ?? 3 })
     window.location.hash = '#studio'
   }
 

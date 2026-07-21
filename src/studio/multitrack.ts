@@ -426,11 +426,22 @@ export class MultitrackPlayer {
 
 export interface MixTrack { gain: number; pan?: number; effects?: TrackEffect[]; clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[] }
 
-export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<AudioBuffer> {
+export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number, fades?: { inSec?: number; outSec?: number }): Promise<AudioBuffer> {
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * lengthSec))
   const ctx = new OfflineAudioContext(2, frames, SAMPLE_RATE)
   const master = ctx.createGain()
-  master.gain.value = masterGain
+  const fi = Math.max(0, fades?.inSec ?? 0)
+  const fo = Math.max(0, fades?.outSec ?? 0)
+  if (fi > 0.05 || fo > 0.05) {
+    master.gain.setValueAtTime(fi > 0.05 ? 0 : masterGain, 0)
+    if (fi > 0.05) master.gain.linearRampToValueAtTime(masterGain, Math.min(fi, lengthSec / 3))
+    if (fo > 0.05) {
+      master.gain.setValueAtTime(masterGain, Math.max(0, lengthSec - fo))
+      master.gain.linearRampToValueAtTime(0, lengthSec)
+    }
+  } else {
+    master.gain.value = masterGain
+  }
   master.connect(ctx.destination)
   for (const t of tracks) {
     const g = ctx.createGain()
@@ -453,6 +464,6 @@ export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number,
   return ctx.startRendering()
 }
 
-export async function renderMixdown(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<Blob> {
-  return audioBufferToWav(await renderMixdownBuffer(tracks, lengthSec, masterGain))
+export async function renderMixdown(tracks: MixTrack[], lengthSec: number, masterGain: number, fades?: { inSec?: number; outSec?: number }): Promise<Blob> {
+  return audioBufferToWav(await renderMixdownBuffer(tracks, lengthSec, masterGain, fades))
 }

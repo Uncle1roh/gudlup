@@ -98,6 +98,8 @@ function makeClip(type: TrackType, startSec: number, durationSec: number): Clip 
 function seedTrackToTrack(t: SeedTrack): Track {
   return {
     id: uid(), type: t.type, name: t.name, volume: t.volume, muted: false, soloed: false,
+    channel: t.channel,
+    effects: t.effects,
     clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text })),
   }
 }
@@ -146,7 +148,7 @@ function StudioDesktop() {
     const h = takeStudioSeed()
     if (!h) return null
     const end = Math.max(120, ...h.tracks.flatMap((t) => t.clips.map((c) => c.startSec + c.durationSec)))
-    return { tracks: h.tracks.map(seedTrackToTrack), name: h.name, attach: h.attach ?? null, lengthSec: Math.ceil(end) }
+    return { tracks: h.tracks.map(seedTrackToTrack), name: h.name, attach: h.attach ?? null, lengthSec: Math.ceil(end), fadeInSec: h.fadeInSec ?? 0, fadeOutSec: h.fadeOutSec ?? 0 }
   }, [])
   const [tracks, setTracks] = useState<Track[]>(() => handoff?.tracks ?? makeSeed())
   const [projectName, setProjectName] = useState(handoff?.name ?? 'GL-ANX 1.1 — Calm and Inner Safety')
@@ -154,6 +156,7 @@ function StudioDesktop() {
   const [lengthSec, setLengthSec] = useState(handoff?.lengthSec ?? 120)
   const [pxPerSec, setPxPerSec] = useState(() => (handoff ? Math.max(0.6, Math.min(7, 1100 / (handoff.lengthSec || 120))) : 7))
   const attachTarget: StudioAttachTarget | null = handoff?.attach ?? null
+  const sessionFades = { inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 }
   const dp = useDataProvider()
   const [attaching, setAttaching] = useState(false)
   const [attachMsg, setAttachMsg] = useState<string | null>(null)
@@ -169,7 +172,7 @@ function StudioDesktop() {
         effects: t.effects,
         clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
       }))
-      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain)
+      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
       const { url } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
       setAttachMsg(`Attached — ${attachTarget.code} · ${attachTarget.duration} min now streams this edit. (${url.split('/').pop()})`)
     } catch (e) {
@@ -683,7 +686,7 @@ function StudioDesktop() {
     try {
       const solo = tracks.some((t) => t.soloed)
       const mix: MixTrack[] = tracks.map((t) => ({ gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume, pan: CHANNEL_PAN[t.channel ?? 'C'], effects: t.effects, clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })) }))
-      const blob = await renderMixdown(mix, lengthSec, masterGain)
+      const blob = await renderMixdown(mix, lengthSec, masterGain, sessionFades)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `${projectName.replace(/[^\w.-]+/g, '_') || 'session'}.wav`; a.click()

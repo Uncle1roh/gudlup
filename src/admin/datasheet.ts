@@ -65,6 +65,8 @@ export interface DsMix {
   binauralDb?: number
   solfeggioHz?: number
   solfeggioDb?: number
+  /** The doc's raw percentage ("al 15%") — the Studio track volume uses it. */
+  solfeggioPct?: number
   beatType?: 'binaural' | 'isochronic'
   phaseCrossfadeSec?: number
   sessionFadeInSec?: number
@@ -562,6 +564,7 @@ function parseMixSection(rows: unknown[][], ds: Partial<Datasheet>): void {
       mix.solfeggioHz = numOf(v)
       const pm = /(\d+(?:[.,]\d+)?)\s*%/.exec(v)
       const dbm = /(-\d+(?:[.,]\d+)?)\s*db/i.exec(v)
+      if (pm) mix.solfeggioPct = parseFloat(pm[1].replace(',', '.'))
       if (dbm) mix.solfeggioDb = parseFloat(dbm[1].replace(',', '.'))
       else if (pm) mix.solfeggioDb = Math.round(20 * Math.log10(Math.max(0.01, parseFloat(pm[1].replace(',', '.')) / 100)))
     }
@@ -792,7 +795,7 @@ function finishValidation(ds: Datasheet, issues: string[]): DatasheetParseResult
     }
   }
   if (!(ds.affirmations ?? []).length) issues.push('AFFERMAZIONI is empty — affirmation loops will be silent.')
-  if (!(ds.musicMap ?? []).length) issues.push('MUSICA is empty — music falls back to a neutral pad.')
+  if (!(ds.musicMap ?? []).length) issues.push('MUSICA section is empty — fine: it is metadata only; the sound comes from the Asset Library f1–f6 mapping.')
   return { datasheet: ds }
 }
 

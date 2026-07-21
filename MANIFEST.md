@@ -1,6 +1,24 @@
 # Good Loop — build manifest
 
-**Slice: Studio v2 + audio polish** (current)
+**Fix: Studio v2 corrections (PO feedback)** (current)
+- **L/R visible**: dichotic rows now seed onto dedicated "Voice — LEFT" /
+  "Voice — RIGHT" tracks with the track CHANNEL set (clip pan 0 — the track
+  positions the side); fine pans (L25) stay per-clip on the guide track.
+  CORO rows get their own "Voice — CORO (refrain)" track with the Harmonizer
+  PRE-ENABLED (seed now carries channel + effects).
+- **Honest percents**: the Solfeggio track volume equals the doc's percent
+  (528 Hz al 15% → 15%), via DsMix.solfeggioPct.
+- **Session fades present**: ### MIX fade in/out (defaults 2 s/3 s) ride the
+  master in Export WAV and Attach (mixdown gain ramps); the live transport
+  stays un-faded for editing.
+- **No more synth music/soundscape ANYWHERE**: the Studio seeds only the
+  library sample tracks (empty "map files in the Asset Library" lanes when
+  unmapped), and Renderer v3 plays only mapped f1–f6 files — unmapped phases
+  are silent with an explicit note. synthPad/texture fallbacks deleted; the
+  excel's MUSICA section is metadata only (validation message softened).
+  Bowl/heartbeat synth provisionals stay until the PO files arrive.
+
+**Slice: Studio v2 + audio polish**
 - **Per-row voices reach the Studio**: datasheetToStudioTracks rebuilds the
   voice tracks straight from the datasheet rows — every clip carries its OWN
   voiceId (row Voce → catalog; [M] → protocol secondary; default otherwise),

@@ -26,7 +26,16 @@ export interface ComposeSettings {
 }
 
 export interface SeedClip { startSec: number; durationSec: number; params: ClipParams; text?: string }
-export interface SeedTrack { type: TrackType; name: string; volume: number; clips: SeedClip[] }
+export interface SeedTrack {
+  type: TrackType
+  name: string
+  volume: number
+  /** Whole-track stereo position (L/C/R) — used by the dichotic voice tracks. */
+  channel?: 'L' | 'C' | 'R'
+  /** Pre-enabled effect chain (e.g. harmonizer on a CORO track). */
+  effects?: import('../studio/effects').TrackEffect[]
+  clips: SeedClip[]
+}
 
 /** Patient-facing labels for the five families. */
 export const FAMILY_LABEL: Record<ProtocolFamily, string> = {

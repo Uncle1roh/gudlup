@@ -126,6 +126,7 @@ export function specToStudioTracks(spec: ProtocolSpec, duration: Duration): { tr
 import { assetPublicUrl, PHASE_KEYS, type AssetMap, type PhaseKey } from './assets'
 import { datasheetToProtocolSpec, speakableText, type Datasheet } from './datasheet'
 import { matchVoiceFromText } from '../tts/voiceCatalog'
+import { defaultEffects } from '../studio/effects'
 import type { VoiceParams, BinauralParams, BreathParams } from '../studio/multitrack'
 
 export function datasheetToStudioTracks(
@@ -137,16 +138,21 @@ export function datasheetToStudioTracks(
   const phases = ds.phases.filter((p) => p.duration === duration)
   const totalSec = base.totalSec
 
-  /* ---- v2: rebuild the VOICE tracks straight from the datasheet rows so
-     every clip carries ITS OWN voice (row Voce → catalog id), fine pan and
-     speed — "Synthesize all" then speaks each line with the right voice. */
+  /* ---- v2: rebuild the VOICE tracks straight from the datasheet rows —
+     every clip carries ITS OWN voice (row Voce → catalog id) and speed.
+     Dichotic L/R rows become SEPARATE tracks with the track channel set, so
+     left/right is visible at a glance and adjustable per side. CORO rows get
+     their own track with the Harmonizer pre-enabled. */
   {
     const rows = ds.timelines[duration] ?? []
     const defP = matchVoiceFromText(ds.defaultVoice)
     const defM = matchVoiceFromText(ds.defaultVoiceM)
     const affByRec = new Map(ds.affirmations.map((a) => [a.id, a]))
     const guide: SeedClip[] = []
+    const left: SeedClip[] = []
+    const right: SeedClip[] = []
     const low: SeedClip[] = []
+    const coro: SeedClip[] = []
     for (const r of rows) {
       if (r.channel === 'SYS') continue
       if (!(r.kind === 'VOCE' || r.kind === 'LOOP' || r.kind === 'ECO' || r.kind === 'SUSSURRO')) continue
@@ -155,19 +161,34 @@ export function datasheetToStudioTracks(
       const rowVoice = matchVoiceFromText(r.voiceName)
         ?? (r.kind === 'LOOP' && r.rec ? matchVoiceFromText(affByRec.get(r.rec.toUpperCase())?.voiceName) : undefined)
         ?? (r.voice === 'M' ? defM : defP)
-      const pan = r.pan ?? (r.channel === 'L' ? -1 : r.channel === 'R' ? 1 : 0)
-      const params: VoiceParams = { pan, pulseHz: 0.35, toneHz: 320, speed: r.speed, voiceId: rowVoice?.id }
+      const onSide = r.channel === 'L' || r.channel === 'R'
+      // side tracks position via the track channel — clip pan stays only for
+      // fine pans (L25) on the guide track
+      const clipPan = onSide ? 0 : (r.pan ?? 0)
+      const params: VoiceParams = { pan: clipPan, pulseHz: 0.35, toneHz: 320, speed: r.speed, voiceId: rowVoice?.id }
       const clip: SeedClip = { startSec: r.timeSec, durationSec: Math.min(9, Math.max(4, text.length / 11)), params, text }
-      if (r.kind === 'ECO' || r.kind === 'SUSSURRO') low.push(clip)
+      if (r.effect === 'CORO') coro.push(clip)
+      else if (onSide && r.channel === 'L') left.push(clip)
+      else if (onSide) right.push(clip)
+      else if (r.kind === 'ECO' || r.kind === 'SUSSURRO') low.push(clip)
       else guide.push(clip)
     }
-    if (guide.length || low.length) {
-      const keep = base.tracks.filter((t) => t.type !== 'voice')
-      if (guide.length) keep.push({ type: 'voice', name: 'Voice — guide', volume: 0.8, clips: guide })
-      if (low.length) keep.push({ type: 'voice', name: 'Voice — echo & whisper', volume: 0.32, clips: low })
-      base.tracks = keep
+    const keep = base.tracks.filter((t) => t.type !== 'voice')
+    if (guide.length) keep.push({ type: 'voice', name: 'Voice — guide', volume: 0.8, channel: 'C', clips: guide })
+    if (left.length) keep.push({ type: 'voice', name: 'Voice — LEFT', volume: 0.8, channel: 'L', clips: left })
+    if (right.length) keep.push({ type: 'voice', name: 'Voice — RIGHT', volume: 0.72, channel: 'R', clips: right })
+    if (low.length) keep.push({ type: 'voice', name: 'Voice — echo & whisper', volume: 0.32, channel: 'C', clips: low })
+    if (coro.length) {
+      const fx = defaultEffects().map((e) => (e.kind === 'harmonizer' ? { ...e, enabled: true, params: { ...e.params, voices: 3, spreadCents: 22, mix: 0.55 } } : e))
+      keep.push({ type: 'voice', name: 'Voice — CORO (refrain)', volume: 0.8, channel: 'C', effects: fx, clips: coro })
     }
+    base.tracks = keep
   }
+
+  /* ---- v3: NO synth music/soundscape — only the real f1–f6 library files.
+     The excel's MUSICA section is metadata; the sound comes from the Asset
+     Library mapping. Unmapped = an empty lane as a visible reminder. */
+  base.tracks = base.tracks.filter((t) => t.type !== 'music' && t.type !== 'soundscape')
 
   /* ---- v2: binaural CURVE as per-phase clips (visible/editable) ---- */
   {
@@ -196,7 +217,7 @@ export function datasheetToStudioTracks(
     base.tracks.push({
       type: 'binaural',
       name: `Solfeggio ${ds.mix.solfeggioHz} Hz`,
-      volume: 0.12,
+      volume: Math.min(0.4, (ds.mix.solfeggioPct ?? 12) / 100),
       clips: [{ startSec: 0, durationSec: totalSec, params: { carrierHz: ds.mix.solfeggioHz, beatHz: 0 } as BinauralParams }],
     })
   }
@@ -221,7 +242,11 @@ export function datasheetToStudioTracks(
     }
   }
 
-  if (!assetMap) return base
+  if (!assetMap) {
+    base.tracks.push({ type: 'sample', name: 'Music — map files in the Asset Library', volume: 0.30, clips: [] })
+    base.tracks.push({ type: 'sample', name: 'Soundscape — map files in the Asset Library', volume: 0.35, clips: [] })
+    return base
+  }
   const key = (id: number): PhaseKey => PHASE_KEYS[Math.min(5, Math.max(0, id - 1))]
   const fileName = (path: string) => path.split('/').pop() ?? path
 
@@ -245,28 +270,8 @@ export function datasheetToStudioTracks(
 
   const music = sampleClips(assetMap.music)
   const scape = sampleClips(assetMap.soundscape)
-  const tracks: SeedTrack[] = []
-  for (const t of base.tracks) {
-    if (t.type === 'music' && music.clips.length) {
-      // keep synth clips only where no stem is mapped (phase coverage gaps)
-      const keep = t.clips.filter((c) => {
-        const ph = phases.find((p) => c.startSec >= p.startSec - 1 && c.startSec < p.endSec)
-        return ph ? !music.covered.has(ph.id) : true
-      })
-      if (keep.length) tracks.push({ ...t, name: 'Music (synth gaps)', volume: 0.10, clips: keep })
-      tracks.push({ type: 'sample', name: 'Music (library stems)', volume: 0.30, clips: music.clips })
-      continue
-    }
-    if (t.type === 'soundscape' && scape.clips.length) {
-      const keep = t.clips.filter((c) => {
-        const ph = phases.find((p) => c.startSec >= p.startSec - 1 && c.startSec < p.endSec)
-        return ph ? !scape.covered.has(ph.id) : true
-      })
-      if (keep.length) tracks.push({ ...t, name: 'Soundscape (synth gaps)', volume: 0.10, clips: keep })
-      tracks.push({ type: 'sample', name: 'Soundscape (library)', volume: 0.35, clips: scape.clips })
-      continue
-    }
-    tracks.push(t)
-  }
+  const tracks: SeedTrack[] = [...base.tracks]
+  tracks.push({ type: 'sample', name: music.clips.length ? 'Music (library f1–f6)' : 'Music — map files in the Asset Library', volume: 0.30, clips: music.clips })
+  tracks.push({ type: 'sample', name: scape.clips.length ? 'Soundscape (library f1–f6)' : 'Soundscape — map files in the Asset Library', volume: 0.35, clips: scape.clips })
   return { tracks, name: base.name, totalSec: base.totalSec }
 }
