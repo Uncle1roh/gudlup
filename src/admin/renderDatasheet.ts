@@ -36,6 +36,8 @@ import { renderClipBuffer, SAMPLE_RATE, CHORD_TRIADS, type Chord, type Soundscap
 import { audioBufferToWav } from '../lib/wav'
 import { getTtsProvider } from '../tts'
 import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, matchVoiceFromText } from '../tts/voiceCatalog'
+import { timeStretch } from '../studio/timestretch'
+import { harmonizeBuffer } from '../studio/effects'
 import type { Duration } from '../types/domain'
 import { fetchAssetBuffer, type AssetMap, type PhaseKey } from './assets'
 import { fmtTime, speakableText, timelineReady, type Datasheet, type DsPhase, type DsRowKind, type DsTimelineRow, type DsVersionParams } from './datasheet'
@@ -72,7 +74,7 @@ const LEVEL = {
   bilateral: 0.06, // Invarianti: "5–8% (sottofondo percepibile)" — absolute by doc
 } as const
 
-const XFADE_PHASE = 4 // s — equal-power crossfade at phase boundaries
+const XFADE_PHASE_DEFAULT = 4 // s — equal-power crossfade at phase boundaries
 const XFADE_LOOP = 2  // s — equal-power crossfade at loop seams
 
 /* --------------------------------------------- loudness measurement
@@ -117,6 +119,78 @@ const fadeOutCurve = (level: number): Float32Array => {
   const c = new Float32Array(CURVE_STEPS)
   for (let i = 0; i < CURVE_STEPS; i++) c[i] = level * Math.cos((i / (CURVE_STEPS - 1)) * Math.PI / 2)
   return c
+}
+
+/* --------------------------------------------- breathing pacer (RESPIRAZIONE)
+   A soft "air" pacer the listener can entrain to: band-passed noise swells —
+   rising for the inhale, falling for the exhale, silent on holds. Pattern
+   timings from the PO catalog (Scheda 8); unknown patterns fall back to
+   coherent 5-5. Rendered inside the phase declared by the RESPIRAZIONE row. */
+
+/** [inhale, hold, exhale, hold] seconds per named pattern. */
+function breathTimings(pattern: string): number[] {
+  const p = pattern.toLowerCase()
+  const nums = (p.match(/\d+(?:[.,]\d+)?/g) ?? []).map((x) => parseFloat(x.replace(',', '.')))
+  if (/sospiro|sigh/.test(p)) return [-1, 0, 0, 0] // special-cased below
+  if (/box/.test(p)) return nums.length >= 4 ? nums.slice(0, 4) : [4, 4, 4, 4]
+  if (nums.length >= 4) return nums.slice(0, 4)
+  if (nums.length === 3) return [nums[0], nums[1], nums[2], 0] // 4-7-8, 4-4-6
+  if (nums.length === 2) return [nums[0], 0, nums[1], 0] // 5-5, 6-6, 4-6
+  return [5, 0, 5, 0] // coherent default
+}
+
+function synthBreathPacer(
+  ctx: OfflineAudioContext, dest: AudioNode,
+  at: number, pattern: string, cycles: number, level: number,
+): number {
+  const mkNoise = (dur: number): AudioBuffer => {
+    const len = Math.max(64, Math.ceil(dur * SAMPLE_RATE))
+    const b = new AudioBuffer({ numberOfChannels: 2, length: len, sampleRate: SAMPLE_RATE })
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch)
+      let last = 0
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = 0.985 * last + 0.015 * w; d[i] = last * 8 }
+    }
+    return b
+  }
+  const swell = (t0: number, dur: number, rising: boolean) => {
+    if (dur < 0.4) return
+    const src = ctx.createBufferSource()
+    src.buffer = mkNoise(dur + 0.1)
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.setValueAtTime(rising ? 420 : 620, t0)
+    bp.frequency.linearRampToValueAtTime(rising ? 780 : 320, t0 + dur) // rising vs falling air
+    bp.Q.value = 0.8
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t0)
+    if (rising) {
+      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.75)
+      g.gain.linearRampToValueAtTime(0, t0 + dur)
+    } else {
+      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.2)
+      g.gain.linearRampToValueAtTime(0, t0 + dur)
+    }
+    src.connect(bp).connect(g).connect(dest)
+    src.start(t0)
+    src.stop(t0 + dur + 0.1)
+  }
+  let t = at
+  const timings = breathTimings(pattern)
+  for (let c = 0; c < cycles; c++) {
+    if (timings[0] === -1) {
+      // Sospiro Fisiologico: double nasal inhale + long mouth exhale
+      swell(t, 1.6, true); t += 1.7
+      swell(t, 0.9, true); t += 1.0
+      swell(t, 5.0, false); t += 6.0
+    } else {
+      const [inh, h1, exh, h2] = timings
+      swell(t, inh, true); t += inh + h1
+      swell(t, exh, false); t += exh + h2
+    }
+    t += 0.4
+  }
+  return t - at
 }
 
 /** Schedule one buffer window [at, at+dur) with equal-power in/out ramps.
@@ -186,7 +260,7 @@ function synthPad(ctx: OfflineAudioContext, dest: AudioNode, at: number, dur: nu
         const g = ctx.createGain()
         g.gain.value = 0
         const lvl = level / (freqs.length * 2)
-        const xf = Math.min(XFADE_PHASE, segDur / 3)
+        const xf = Math.min(XFADE_PHASE_DEFAULT, segDur / 3)
         g.gain.setValueCurveAtTime(fadeInCurve(lvl), Math.max(0, segAt), xf)
         g.gain.setValueAtTime(lvl, Math.max(0, segAt) + xf + 0.005) // hold, after the curve
         const outStart = Math.max(Math.max(0, segAt) + xf + 0.02, segAt + segDur - xf)
@@ -269,6 +343,12 @@ interface VoiceJob {
   fadeIn: number
   fadeOut: number
   secondary: boolean // [M] voice row
+  /** Declared voice: catalog name or archetype (single-tab rows / per-aff). */
+  voiceName?: string
+  /** Row effect: CORO (harmonized chorus) or ECO (extra delayed copy). */
+  effect?: 'CORO' | 'ECO'
+  /** Pitch-preserving speed for this row (0.7–1.4). */
+  speed?: number
 }
 
 const PAN: Record<string, number> = { C: 0, L: -1, R: 1 }
@@ -287,16 +367,26 @@ export function deriveVoiceJobs(ds: Datasheet, v: DsVersionParams, rows: DsTimel
     const text = speakableText(row)
     if (!text) continue
     const isLoop = row.kind === 'LOOP'
-    const defaultDb = row.kind === 'ECO' ? -8 : row.kind === 'SUSSURRO' ? -12 : 0
+    const mix = ds.mix
+    const isDich = row.channel === 'L' || row.channel === 'R'
+    // ### MIX overrides the doc-standard echo/whisper levels per protocol
+    // (e.g. GL-STRESS: eco dicotico −6 dB/+2 s vs eco loop −8 dB/+3 s)
+    const ecoDb = isDich ? (mix?.echoDichoticGainDb ?? mix?.echoLoopGainDb ?? -8) : (mix?.echoLoopGainDb ?? -8)
+    const ecoDelay = isDich ? (mix?.echoDichoticDelaySec ?? mix?.echoLoopDelaySec ?? 2) : (mix?.echoLoopDelaySec ?? 2)
+    const defaultDb = row.kind === 'ECO' ? ecoDb : row.kind === 'SUSSURRO' ? (mix?.whisperGainDb ?? -12) : 0
+    const affVoice = isLoop && row.rec ? affByRec.get(row.rec.toUpperCase())?.voiceName : undefined
     jobs.push({
       timeSec: row.timeSec,
       text,
-      pan: PAN[row.channel] ?? 0,
+      pan: row.pan ?? PAN[row.channel] ?? 0,
       gainDb: row.gainDb ?? defaultDb,
-      delaySec: row.delaySec ?? (row.kind === 'ECO' ? 2 : 0),
+      delaySec: row.delaySec ?? (row.kind === 'ECO' ? ecoDelay : 0),
       fadeIn: isLoop ? v.affFadeInSec : 0.06,
       fadeOut: isLoop ? v.affFadeOutSec : 0.08,
       secondary: row.voice === 'M',
+      voiceName: row.voiceName ?? affVoice,
+      effect: row.effect,
+      speed: row.speed,
     })
     // Versioni-prescribed echo stacking on affirmation loops (Standard/Deep),
     // only when the timeline hasn't been compiled with explicit ECO rows.
@@ -304,8 +394,8 @@ export function deriveVoiceJobs(ds: Datasheet, v: DsVersionParams, rows: DsTimel
       const kw = row.rec ? affByRec.get(row.rec.toUpperCase())?.echoKeywords : undefined
       if (kw) {
         jobs.push({
-          timeSec: row.timeSec, text: kw, pan: PAN[row.channel] ?? 0,
-          gainDb: (row.gainDb ?? 0) - 8, delaySec: 2,
+          timeSec: row.timeSec, text: kw, pan: row.pan ?? PAN[row.channel] ?? 0,
+          gainDb: (row.gainDb ?? 0) + (mix?.echoLoopGainDb ?? -8), delaySec: mix?.echoLoopDelaySec ?? 2,
           fadeIn: v.affFadeInSec, fadeOut: v.affFadeOutSec, secondary: false,
         })
       }
@@ -421,14 +511,26 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     } else {
       const decoder = new AudioContext({ sampleRate: SAMPLE_RATE })
       const cache = new Map<string, AudioBuffer>()
-      // The DATASHEET decides the voices: "Voce primaria/secondaria" rows in
-      // Invarianti are matched to the PO catalog by name or archetype keyword.
-      // Not specified (or no match) → the engine defaults (Valeria / Marco).
-      const dsPrimary = matchVoiceFromText(ds.invariants.find((i) => /voce primaria/i.test(i.param))?.value)
-      const dsSecondary = matchVoiceFromText(ds.invariants.find((i) => /voce secondaria/i.test(i.param))?.value)
+      // The DATASHEET decides the voices, most specific wins:
+      //   1. the row's own Voce column (catalog name or archetype)
+      //   2. the affirmation's Voce (AFFERMAZIONI section)
+      //   3. protocol defaults ("Voce predefinita" / "Voce [M] predefinita")
+      //   4. Invarianti "Voce primaria/secondaria" archetype match
+      //   5. the engine defaults (Valeria / Marco)
+      const dsPrimary = matchVoiceFromText(ds.defaultVoice)
+        ?? matchVoiceFromText(ds.invariants.find((i) => /voce primaria|voce predefinita/i.test(i.param))?.value)
+      const dsSecondary = matchVoiceFromText(ds.defaultVoiceM)
+        ?? matchVoiceFromText(ds.invariants.find((i) => /voce secondaria/i.test(i.param))?.value)
       notes.push(`Voices: [F] ${dsPrimary ? `${dsPrimary.name} (from the datasheet)` : `${DEFAULT_PRIMARY.name} (default — the datasheet doesn't specify one)`} · [M] ${dsSecondary ? `${dsSecondary.name} (from the datasheet)` : `${DEFAULT_SECONDARY.name} (default)`}.`)
-      const renderText = async (text: string, voice: 'primary' | 'secondary' = 'primary'): Promise<AudioBuffer> => {
-        const voiceId = voice === 'secondary' ? dsSecondary?.id : dsPrimary?.id
+      const usedVoices = new Set<string>()
+      const resolveJobVoice = (job: VoiceJob): string | undefined => {
+        const rowMatch = matchVoiceFromText(job.voiceName)
+        const id = rowMatch?.id ?? (job.secondary ? dsSecondary?.id : dsPrimary?.id)
+        if (rowMatch) usedVoices.add(rowMatch.name)
+        if (job.voiceName && !rowMatch) notes.push(`Voice "${job.voiceName}" at ${fmtTime(job.timeSec)} is not in the PO catalog — the default was used.`)
+        return id
+      }
+      const renderText = async (text: string, voice: 'primary' | 'secondary' = 'primary', voiceId?: string): Promise<AudioBuffer> => {
         const key = `${voiceId ?? voice}|${text}`
         let buf = cache.get(key)
         if (!buf) {
@@ -442,7 +544,15 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         for (let i = 0; i < jobs.length; i++) {
           onProgress?.('voice', i, jobs.length)
           try {
-            voiceBuffers.push({ job: jobs[i], buffer: await renderText(jobs[i].text, jobs[i].secondary ? 'secondary' : 'primary') })
+            {
+              let vb = await renderText(jobs[i].text, jobs[i].secondary ? 'secondary' : 'primary', resolveJobVoice(jobs[i]))
+              const sp = jobs[i].speed
+              if (sp && Math.abs(sp - 1) > 0.02) vb = timeStretch(vb, Math.max(0.7, Math.min(1.4, sp)))
+              if (jobs[i].effect === 'CORO') {
+                vb = await harmonizeBuffer(vb, { voices: 3, spreadCents: 22, octave: 0, mix: 0.55 })
+              }
+              voiceBuffers.push({ job: jobs[i], buffer: vb })
+            }
             voiceRendered++
           } catch (e) {
             notes.push(`Voice row at ${fmtTime(jobs[i].timeSec)} failed: ${(e as Error).message}`)
@@ -464,6 +574,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       if (jobs.some((j) => j.secondary)) {
         notes.push(`Secondary [M] voice rows: ${jobs.filter((j) => j.secondary).length} (rendered with ${dsSecondary?.name ?? DEFAULT_SECONDARY.name}).`)
       }
+      if (usedVoices.size) notes.push(`Row-level voices from the datasheet: ${[...usedVoices].join(', ')}.`)
     }
   } else if (!opts.withVoice && jobs.length) {
     notes.push(`Bed-only render — ${jobs.length} spoken rows were not synthesized.`)
@@ -497,6 +608,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
 
   /* ---- 3. fallback soundscape textures (pre-rendered per phase) ---- */
   const musicByPhase = new Map((ds.musicMap ?? []).map((m) => [m.phase, m]))
+  const XFADE_PHASE = ds.mix?.phaseCrossfadeSec ?? XFADE_PHASE_DEFAULT
   const fallbackScapes = new Map<number, AudioBuffer>()
   for (const p of phases) {
     if (p.startSec >= totalSec) continue
@@ -560,19 +672,19 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     const musicPath = map?.music[phaseKey(p.id)]
     const stem = musicPath ? assetBuffers.get(musicPath) : undefined
     if (stem) {
-      scheduleLooped(ctx, stem, master, at, dur, gainForOffset(stem, voiceRefRms, -18), inSec, outSec)
+      scheduleLooped(ctx, stem, master, at, dur, gainForOffset(stem, voiceRefRms, ds.mix?.musicDb ?? -18), inSec, outSec)
       stemsUsed++
     } else {
       // synth pad — oscillators, not a buffer: scale its empirical unit RMS
       // (~0.25 at level 1) to the same −18 dB target
-      synthPad(ctx, master, at, dur, musicByPhase.get(p.id)?.keys ?? ['Am'], Math.min(0.6, (voiceRefRms * dB(-18)) / 0.25))
+      synthPad(ctx, master, at, dur, musicByPhase.get(p.id)?.keys ?? ['Am'], Math.min(0.6, (voiceRefRms * dB(ds.mix?.musicDb ?? -18)) / 0.25))
     }
 
     const scapePath = map?.soundscape[phaseKey(p.id)]
     const scape = scapePath ? assetBuffers.get(scapePath) : undefined
     const scapeBuf = scape ?? fallbackScapes.get(p.id)
     if (scapeBuf) {
-      scheduleLooped(ctx, scapeBuf, master, at, dur, gainForOffset(scapeBuf, voiceRefRms, -20), inSec, outSec)
+      scheduleLooped(ctx, scapeBuf, master, at, dur, gainForOffset(scapeBuf, voiceRefRms, ds.mix?.soundscapeDb ?? -20), inSec, outSec)
     }
   }
   if (map && stemsUsed === 0) notes.push('No music stems were mapped/loaded for this version — the whole bed used the synth pad. Map phase stems in the Asset Library.')
@@ -614,52 +726,145 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     if (strikes.length && !bowlFile) notes.push(`Singing bowl: ${strikes.length} synth strikes (provisional) — swaps to the PO file automatically once mapped.`)
   }
 
-  // binaural (invariant beat; Deep transitions to Theta in one phase)
+  // binaural / isochronic bed — per-phase curve when the FASI sheet declares
+  // one (e.g. "Theta 7 Hz (rampa 90 s)"), else the version's invariant beat
+  // (incl. the legacy Deep Theta transition). Isochronic mode (### MIX
+  // "Tipo battimento: isocronico") pulses ONE carrier on both channels —
+  // works without headphones per the Scheda 3 spec.
   {
     const b = v.binaural
-    const oscL = ctx.createOscillator()
-    const oscR = ctx.createOscillator()
-    oscL.type = 'sine'
-    oscR.type = 'sine'
-    oscL.frequency.setValueAtTime(b.carrierLowHz, 0)
-    oscR.frequency.setValueAtTime(b.carrierHighHz, 0)
-    if (b.theta) {
-      const ph = phases.find((p) => p.id === b.theta!.phase)
-      if (ph && ph.startSec < totalSec) {
-        const ramp = 10
-        const inAt = ph.startSec
-        const outAt = Math.min(totalSec, ph.endSec)
-        oscR.frequency.setValueAtTime(b.carrierHighHz, inAt)
-        oscR.frequency.linearRampToValueAtTime(b.carrierLowHz + b.theta.beatHz, Math.min(totalSec, inAt + ramp))
-        if (outAt < totalSec - 1) {
-          oscR.frequency.setValueAtTime(b.carrierLowHz + b.theta.beatHz, outAt)
-          oscR.frequency.linearRampToValueAtTime(b.carrierHighHz, Math.min(totalSec, outAt + ramp))
+    const phaseCurve = phases.filter((p) => p.binaural && p.startSec < totalSec)
+    const beatAt = (sec: number): number => {
+      const ph = phases.find((p) => sec >= p.startSec && sec < p.endSec)
+      return ph?.binaural?.beatHz ?? b.beatHz
+    }
+    const binDb = ds.mix?.binauralDb ?? -16
+    const binLevel = Math.min(0.2, voiceRefRms * dB(binDb) * Math.SQRT2)
+    const isochronic = ds.mix?.beatType === 'isochronic'
+    if (isochronic) {
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.value = (b.carrierLowHz + b.carrierHighHz) / 2
+      const pulse = ctx.createGain()
+      pulse.gain.value = 0
+      // amplitude LFO at the (possibly phase-varying) beat frequency
+      const lfo = ctx.createOscillator()
+      lfo.type = 'sine'
+      lfo.frequency.setValueAtTime(beatAt(0), 0)
+      for (const p of phaseCurve) {
+        const at = Math.min(totalSec, p.startSec)
+        lfo.frequency.setValueAtTime(lfo.frequency.value, Math.max(0, at - 0.01))
+        lfo.frequency.linearRampToValueAtTime(p.binaural!.beatHz, Math.min(totalSec, at + Math.min(p.binaural!.rampSec, (p.endSec - p.startSec) / 2)))
+        const back = Math.min(totalSec, p.endSec)
+        lfo.frequency.setValueAtTime(p.binaural!.beatHz, Math.max(0, back - 0.01))
+        lfo.frequency.linearRampToValueAtTime(beatAt(back + 1), Math.min(totalSec, back + 30))
+      }
+      const lfoGain = ctx.createGain()
+      lfoGain.gain.value = 0.5
+      const dc = ctx.createConstantSource()
+      dc.offset.value = 0.5
+      lfo.connect(lfoGain).connect(pulse.gain)
+      dc.connect(pulse.gain)
+      const bg = ctx.createGain()
+      osc.connect(pulse).connect(bg).connect(master)
+      bg.gain.setValueAtTime(0, 0)
+      bg.gain.linearRampToValueAtTime(binLevel, Math.min(ds.mix?.sessionFadeInSec ?? b.fadeInSec, totalSec / 3))
+      bg.gain.setValueAtTime(binLevel, Math.max(0, totalSec - (ds.mix?.sessionFadeOutSec ?? b.fadeOutSec)))
+      bg.gain.linearRampToValueAtTime(0, totalSec)
+      osc.start(0); lfo.start(0); dc.start(0)
+      osc.stop(totalSec); lfo.stop(totalSec); dc.stop(totalSec)
+      notes.push(`Isochronic tones ${b.beatHz} Hz on a ${Math.round((b.carrierLowHz + b.carrierHighHz) / 2)} Hz carrier (MIX: tipo battimento).`)
+    } else {
+      const oscL = ctx.createOscillator()
+      const oscR = ctx.createOscillator()
+      oscL.type = 'sine'
+      oscR.type = 'sine'
+      oscL.frequency.setValueAtTime(b.carrierLowHz, 0)
+      oscR.frequency.setValueAtTime(b.carrierHighHz, 0)
+      if (phaseCurve.length) {
+        // FASI-declared curve: ramp the RIGHT carrier so the perceived beat
+        // follows each phase's target, ramping back after the phase ends
+        for (const p of phaseCurve) {
+          const target = b.carrierLowHz + p.binaural!.beatHz
+          const at = Math.min(totalSec, p.startSec)
+          const ramp = Math.min(p.binaural!.rampSec, Math.max(5, (p.endSec - p.startSec) / 2))
+          oscR.frequency.setValueAtTime(oscR.frequency.value, Math.max(0, at - 0.01))
+          oscR.frequency.linearRampToValueAtTime(target, Math.min(totalSec, at + ramp))
+          const back = Math.min(totalSec, p.endSec)
+          const nextBeat = beatAt(back + 1)
+          if (back < totalSec - 1 && Math.abs(nextBeat - p.binaural!.beatHz) > 0.01) {
+            oscR.frequency.setValueAtTime(target, Math.max(0, back - 0.01))
+            oscR.frequency.linearRampToValueAtTime(b.carrierLowHz + nextBeat, Math.min(totalSec, back + Math.min(120, ramp)))
+          }
+        }
+        notes.push(`Binaural curve from FASI: ${phaseCurve.map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`).join(' · ')} (ramped).`)
+      } else if (b.theta) {
+        const ph = phases.find((p) => p.id === b.theta!.phase)
+        if (ph && ph.startSec < totalSec) {
+          const ramp = 10
+          const inAt = ph.startSec
+          const outAt = Math.min(totalSec, ph.endSec)
+          oscR.frequency.setValueAtTime(b.carrierHighHz, inAt)
+          oscR.frequency.linearRampToValueAtTime(b.carrierLowHz + b.theta.beatHz, Math.min(totalSec, inAt + ramp))
+          if (outAt < totalSec - 1) {
+            oscR.frequency.setValueAtTime(b.carrierLowHz + b.theta.beatHz, outAt)
+            oscR.frequency.linearRampToValueAtTime(b.carrierHighHz, Math.min(totalSec, outAt + ramp))
+          }
         }
       }
+      const panL = ctx.createStereoPanner(); panL.pan.value = -1
+      const panR = ctx.createStereoPanner(); panR.pan.value = 1
+      const bg = ctx.createGain()
+      oscL.connect(panL).connect(bg)
+      oscR.connect(panR).connect(bg)
+      bg.connect(master)
+      bg.gain.setValueAtTime(0, 0)
+      bg.gain.linearRampToValueAtTime(binLevel, Math.min(ds.mix?.sessionFadeInSec ?? b.fadeInSec, totalSec / 3))
+      bg.gain.setValueAtTime(binLevel, Math.max(0, totalSec - (ds.mix?.sessionFadeOutSec ?? b.fadeOutSec)))
+      bg.gain.linearRampToValueAtTime(0, totalSec)
+      oscL.start(0); oscR.start(0)
+      oscL.stop(totalSec); oscR.stop(totalSec)
     }
-    const panL = ctx.createStereoPanner(); panL.pan.value = -1
-    const panR = ctx.createStereoPanner(); panR.pan.value = 1
-    const bg = ctx.createGain()
-    oscL.connect(panL).connect(bg)
-    oscR.connect(panR).connect(bg)
-    bg.connect(master)
-    const binLevel = Math.min(0.2, voiceRefRms * dB(-16) * Math.SQRT2)
-    bg.gain.setValueAtTime(0, 0)
-    bg.gain.linearRampToValueAtTime(binLevel, Math.min(b.fadeInSec, totalSec / 3))
-    bg.gain.setValueAtTime(binLevel, Math.max(0, totalSec - b.fadeOutSec))
-    bg.gain.linearRampToValueAtTime(0, totalSec)
-    oscL.start(0); oscR.start(0)
-    oscL.stop(totalSec); oscR.stop(totalSec)
   }
 
-  // bilateral 600 Hz blips in the loop phase (Standard: /4 s · Deep: /3 s)
+  // Solfeggio layer — continuous tuning tone (432/528/396 Hz across the PO
+  // protocols), soft triangle at the MIX level (default −22 dB vs voice)
+  if (ds.mix?.solfeggioHz) {
+    const osc = ctx.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = ds.mix.solfeggioHz
+    const g = ctx.createGain()
+    const lvl = Math.min(0.12, voiceRefRms * dB(ds.mix.solfeggioDb ?? -22))
+    g.gain.value = 0
+    g.gain.setValueAtTime(0, 0)
+    g.gain.linearRampToValueAtTime(lvl, Math.min(20, totalSec / 4))
+    g.gain.setValueAtTime(lvl, Math.max(0, totalSec - 15))
+    g.gain.linearRampToValueAtTime(0, totalSec)
+    osc.connect(g).connect(master)
+    osc.start(0); osc.stop(totalSec)
+    notes.push(`Solfeggio layer ${ds.mix.solfeggioHz} Hz at ${ds.mix.solfeggioDb ?? -22} dB vs voice (MIX).`)
+  }
+
+  // guided breathing pacer (### RESPIRAZIONE) — one entry per declared row
+  {
+    const rows = (ds.breathing ?? []).filter((b) => b.duration === opts.duration && b.guided)
+    for (const b of rows) {
+      const ph = phases.find((p) => p.id === b.phase)
+      if (!ph || ph.startSec >= totalSec) continue
+      const lvl = Math.min(0.2, voiceRefRms * dB(-18))
+      const used = synthBreathPacer(ctx, master, Math.min(totalSec - 4, ph.startSec + 2), b.pattern, Math.max(1, b.cycles), lvl)
+      notes.push(`Breathing pacer: ${b.pattern} ×${b.cycles} in F${b.phase} (${Math.round(used)} s of guided air swells at −18 dB).`)
+    }
+  }
+
+  // bilateral blips in the loop phase (freq/blip/volume from Invarianti + MIX)
   if (v.bilateral) {
     // the phase whose Fasi note names the bilateral layer, else phase 4
     const ph = phases.find((p) => /bilat/i.test(p.notes)) ?? phases.find((p) => p.id === 4)
     if (ph && ph.startSec < totalSec) {
       const start = ph.startSec
       const end = Math.min(totalSec, ph.endSec)
-      const dur = v.bilateral.blipMs / 1000
+      const dur = (ds.mix?.bilateralBlipMs ?? v.bilateral.blipMs) / 1000
       let side = -1
       for (let t = start; t < end - dur; t += v.bilateral.everySec) {
         const osc = ctx.createOscillator()
@@ -670,8 +875,9 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         pan.pan.value = 0.8 * side
         side = -side
         g.gain.setValueAtTime(0, t)
-        g.gain.linearRampToValueAtTime(LEVEL.bilateral, t + 0.01)
-        g.gain.setValueAtTime(LEVEL.bilateral, t + Math.max(0.02, dur - 0.03))
+        const bilLvl = ds.mix?.bilateralVolPct != null ? Math.min(0.15, ds.mix.bilateralVolPct / 100) : LEVEL.bilateral
+        g.gain.linearRampToValueAtTime(bilLvl, t + 0.01)
+        g.gain.setValueAtTime(bilLvl, t + Math.max(0.02, dur - 0.03))
         g.gain.linearRampToValueAtTime(0, t + dur)
         osc.connect(g).connect(pan).connect(master)
         osc.start(t)
@@ -681,22 +887,34 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   }
 
   // voice rows
-  for (const { job, buffer } of voiceBuffers) {
-    const at = job.timeSec + job.delaySec
-    if (at >= totalSec - 0.2) continue
-    const gain = LEVEL.voice * dB(job.gainDb)
+  const scheduleVoice = (buffer: AudioBuffer, at: number, gainDb: number, panV: number, fadeIn: number, fadeOut: number) => {
+    if (at >= totalSec - 0.2) return
+    const gain = LEVEL.voice * dB(gainDb)
     const durSec = buffer.duration
     const src = ctx.createBufferSource()
     src.buffer = buffer
     const g = ctx.createGain()
     g.gain.setValueAtTime(0, at)
-    g.gain.linearRampToValueAtTime(gain, at + Math.min(job.fadeIn, durSec / 3))
-    g.gain.setValueAtTime(gain, at + Math.max(0, durSec - job.fadeOut))
+    g.gain.linearRampToValueAtTime(gain, at + Math.min(fadeIn, durSec / 3))
+    g.gain.setValueAtTime(gain, at + Math.max(0, durSec - fadeOut))
     g.gain.linearRampToValueAtTime(0, at + durSec)
     const pan = ctx.createStereoPanner()
-    pan.pan.value = job.pan
+    pan.pan.value = panV
     src.connect(g).connect(pan).connect(master)
     src.start(at)
+  }
+  for (const { job, buffer } of voiceBuffers) {
+    scheduleVoice(buffer, job.timeSec + job.delaySec, job.gainDb, job.pan, job.fadeIn, job.fadeOut)
+    if (job.effect === 'ECO') {
+      // Effetto ECO: one extra delayed, attenuated copy of the same take
+      const d = ds.mix?.echoLoopDelaySec ?? 2
+      const g2 = job.gainDb + (ds.mix?.echoLoopGainDb ?? -8)
+      scheduleVoice(buffer, job.timeSec + job.delaySec + d, g2, job.pan, job.fadeIn, Math.max(job.fadeOut, 0.4))
+    }
+  }
+  {
+    const n = voiceBuffers.filter(({ job }) => job.effect === 'CORO').length
+    if (n) notes.push(`Effetto CORO applied to ${n} row(s) (harmonized chorus).`)
   }
 
   // Deep continuous whisper (Layer 9) — looped across its phase window
@@ -706,7 +924,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       const at = ph.startSec
       const dur = Math.min(totalSec, ph.endSec) - at
       // pad each pass with a breath of silence so the loop doesn't machine-gun
-      const level = VOICE_REF * dB(v.continuousWhisper.gainDb)
+      const level = VOICE_REF * dB(ds.mix?.whisperGainDb ?? v.continuousWhisper.gainDb)
       const passDur = whisperLoopBuffer.duration + 2.5
       for (let t = at; t < at + dur - 1; t += passDur) {
         const src = ctx.createBufferSource()

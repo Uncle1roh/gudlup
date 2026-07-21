@@ -347,7 +347,18 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
           <span>{ds.affirmations.length} affirmations (REC)</span>
           <span>{ds.musicMap.length} music-map phases</span>
           <span>{ds.layers.length} engine layers</span>
+          {ds.defaultVoice && <span>Voices: {ds.defaultVoice}{ds.defaultVoiceM ? ` + ${ds.defaultVoiceM} [M]` : ''}</span>}
+          {ds.phases.some((p) => p.binaural) && <span>Binaural curve: {[...new Set(ds.phases.filter((p) => p.binaural).map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`))].join(' · ')}</span>}
+          {ds.mix?.solfeggioHz && <span>Solfeggio {ds.mix.solfeggioHz} Hz</span>}
+          {ds.mix?.beatType === 'isochronic' && <span>Isochronic tones</span>}
+          {ds.breathing?.length ? <span>Breathing pacer: {ds.breathing.length} row(s)</span> : null}
+          {ds.mix && <span>MIX overrides active</span>}
         </div>
+        {ds.docSections && (
+          <div className="adm-note" style={{ marginTop: 8 }}>
+            📎 Documentary sections preserved: {Object.entries(ds.docSections).map(([k, v]) => `${k} (${v.length} rows)`).join(' · ')} — stored with the protocol for reference; not rendered as audio.
+          </div>
+        )}
 
         {ds.versions.map((v) => {
           const ph = ds.phases.filter((p) => p.duration === v.duration)

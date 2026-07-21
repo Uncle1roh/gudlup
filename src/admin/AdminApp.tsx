@@ -49,7 +49,7 @@ export function AdminApp() {
             <span className="adm-who__dot" aria-hidden="true" />
             <span className="adm-who__email">{actor}</span>
           </div>
-          <SignOutButton className="b2b-btn b2b-btn--ghost" />
+          <SignOutButton className="b2b-btn b2b-btn--signout" />
         </div>
       </aside>
 

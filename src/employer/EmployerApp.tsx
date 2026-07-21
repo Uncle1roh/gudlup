@@ -14,7 +14,7 @@ export function EmployerApp() {
         </div>
         <div className="emp-topbar__right">
           <span className="b2b-sub">{user?.email ?? 'HR'}</span>
-          <SignOutButton className="b2b-btn b2b-btn--ghost" />
+          <SignOutButton className="b2b-btn b2b-btn--signout" />
         </div>
       </header>
       <Nr1Dashboard />

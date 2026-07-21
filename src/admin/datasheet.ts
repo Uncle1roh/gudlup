@@ -59,6 +59,34 @@ export interface DsVersionParams {
   binaural: DsBinaural
 }
 
+export interface DsMix {
+  musicDb?: number
+  soundscapeDb?: number
+  binauralDb?: number
+  solfeggioHz?: number
+  solfeggioDb?: number
+  beatType?: 'binaural' | 'isochronic'
+  phaseCrossfadeSec?: number
+  sessionFadeInSec?: number
+  sessionFadeOutSec?: number
+  echoLoopDelaySec?: number
+  echoLoopGainDb?: number
+  echoDichoticDelaySec?: number
+  echoDichoticGainDb?: number
+  whisperGainDb?: number
+  bilateralVolPct?: number
+  bilateralBlipMs?: number
+}
+
+export interface DsBreathing {
+  duration: Duration
+  phase: PhaseNo
+  pattern: string
+  cycles: number
+  guided: boolean
+  notes: string
+}
+
 export interface DsPhase {
   duration: Duration
   id: PhaseNo
@@ -66,6 +94,9 @@ export interface DsPhase {
   startSec: number
   endSec: number
   notes: string
+  /** Per-phase binaural override, e.g. "Theta 7 Hz (rampa 90 s)". Empty =
+      the protocol base. Parsed: beat Hz + optional ramp seconds. */
+  binaural?: { beatHz: number; rampSec: number; raw: string }
 }
 
 export type DsRowKind = 'VOCE' | 'LOOP' | 'ECO' | 'SUSSURRO' | 'SYS' | 'BOWL' | 'TRANS' | 'BILATERALE' | string
@@ -74,7 +105,17 @@ export interface DsTimelineRow {
   timeSec: number
   phase: PhaseNo
   channel: 'C' | 'L' | 'R' | 'SYS' | ''
+  /** Numeric pan −1..+1 when the Canale cell is e.g. "L25"/"R40" (25%/40%). */
+  pan?: number
+  /** Row effect: CORO (harmonized chorus) or ECO (extra delayed copy). */
+  effect?: 'CORO' | 'ECO'
+  /** Voice speed multiplier for this row (0.7–1.4, pitch-preserving). */
+  speed?: number
   voice: 'F' | 'M' | ''
+  /** Free-text voice from the single-tab format: a catalog voice NAME
+      ("Valeria"), an archetype word ("Sussurrata"), or F/M. Resolved against
+      the PO catalog at render time; unresolved → protocol default. */
+  voiceName?: string
   kind: DsRowKind
   gainDb?: number
   delaySec?: number
@@ -90,6 +131,8 @@ export interface DsAffirmation {
   durationSec?: number
   inVersion: Record<Duration, boolean>
   echoKeywords: string
+  /** Optional per-affirmation voice (single-tab format). */
+  voiceName?: string
 }
 
 export interface DsMusicPhase {
@@ -131,6 +174,16 @@ export interface Datasheet {
   docVersion?: string
   refrain?: string
   anchor?: string
+  /** Protocol default voices from the single-tab PROTOCOLLO block ("Voce
+      predefinita" / "Voce [M] predefinita") — names or archetypes. */
+  defaultVoice?: string
+  defaultVoiceM?: string
+  /** ### MIX — per-protocol engine offsets/timings (all optional). */
+  mix?: DsMix
+  /** ### RESPIRAZIONE — guided breathing pacer rows. */
+  breathing?: DsBreathing[]
+  /** ### TECNICHE / ### NOTE — documentary sections preserved verbatim. */
+  docSections?: Record<string, string[][]>
   /** Raw parameter → value rows of the Invarianti sheet (display + audit). */
   invariants: { param: string; value: string; rationale: string }[]
   versions: DsVersionParams[]
@@ -336,7 +389,13 @@ function parseFasi(wb: WorkBook, ds: Partial<Datasheet>, issues: string[]): void
     const end = toSec(r[4])
     if (d == null || id == null || start == null || end == null) continue
     if (!DURATIONS.includes(d as Duration)) { issues.push(`Fasi: version ${d} min ignored (supported: 6/12/24).`); continue }
-    out.push({ duration: d as Duration, id: clampPhase(id), name: cell(r, 2), startSec: start, endSec: end, notes: cell(r, 5) })
+    const binRaw2 = cell(r, 6)
+    const binM2 = binRaw2 ? /(\d+(?:[.,]\d+)?)\s*hz/i.exec(binRaw2) : null
+    const rampM2 = binRaw2 ? /ramp\w*\s*(\d+)\s*s/i.exec(binRaw2) : null
+    out.push({
+      duration: d as Duration, id: clampPhase(id), name: cell(r, 2), startSec: start, endSec: end, notes: cell(r, 5),
+      binaural: binM2 ? { beatHz: parseFloat(binM2[1].replace(',', '.')), rampSec: rampM2 ? +rampM2[1] : 120, raw: binRaw2 } : undefined,
+    })
   }
   ds.phases = out.sort((a, b) => a.duration - b.duration || a.startSec - b.startSec)
 }
@@ -355,6 +414,8 @@ function parseTimeline(ws: WorkSheet | undefined, duration: Duration, issues: st
     }
     const chRaw = cell(r, 2).toUpperCase()
     const channel: DsTimelineRow['channel'] = chRaw === 'SYS' || chRaw === 'C' || chRaw === 'L' || chRaw === 'R' ? chRaw : ''
+    // stub/noise rows (only Versione+Tempo filled) are skipped, not flagged
+    if (!chRaw && !cell(r, 4) && !cell(r, 8) && !cell(r, 9)) continue
     const vRaw = cell(r, 3).toUpperCase()
     out.push({
       timeSec: t,
@@ -437,6 +498,233 @@ function parseAssetSheet(wb: WorkBook, ds: Partial<Datasheet>): void {
 
 const REQUIRED_SHEETS = ['Protocollo', 'Versioni', 'Fasi', 'Affermazioni', 'MappaMusicale']
 
+/* ------------------------------------------- SINGLE-TAB (Scheda Unica) */
+/* One sheet, sections marked by a `### NAME` row in column A:
+   ### PROTOCOLLO · ### PARAMETRI · ### VERSIONI · ### FASI · ### TIMELINE ·
+   ### AFFERMAZIONI · ### MUSICA
+   Each section then has its own header row + data rows. The TIMELINE section
+   is unified (a Versione column instead of three sheets), carries NO Fase
+   column (derived from the FASI windows by time), and its Voce column takes a
+   catalog voice NAME, an archetype word, or F/M. */
+
+interface SingleTabSections { [name: string]: unknown[][] }
+
+function splitSingleTab(ws: WorkSheet): SingleTabSections | null {
+  if (!xlsx) return null
+  const all = xlsx.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
+  const out: SingleTabSections = {}
+  let current: string | null = null
+  let found = false
+  for (const r of all) {
+    const a = norm(r[0])
+    const m = /^###\s*([A-ZÀ-Ú ]+)/i.exec(a)
+    if (m) {
+      current = m[1].trim().toUpperCase()
+      out[current] = []
+      found = true
+      continue
+    }
+    if (!current) continue
+    if (a.startsWith('//')) continue // comment rows ('//' only — '#7' is a technique id)
+    if (r.every((c) => norm(c) === '')) continue
+    out[current].push(r)
+  }
+  return found ? out : null
+}
+
+/** Find the single-tab sheet of a workbook (any sheet containing ### markers). */
+function findSingleTab(wb: WorkBook): SingleTabSections | null {
+  for (const name of wb.SheetNames) {
+    const secs = splitSingleTab(wb.Sheets[name])
+    if (secs) return secs
+  }
+  return null
+}
+
+const VOICE_TOKEN = /^[FM]$/i
+
+const numOf = (v: string | undefined): number | undefined => {
+  if (!v) return undefined
+  const m = /-?\d+(?:[.,]\d+)?/.exec(v)
+  return m ? parseFloat(m[0].replace(',', '.')) : undefined
+}
+
+function parseMixSection(rows: unknown[][], ds: Partial<Datasheet>): void {
+  const mix: DsMix = {}
+  for (const r of rows) {
+    const k = norm(r[0]).toLowerCase()
+    const v = norm(r[1])
+    if (!k || /^parametro$/.test(k)) continue
+    if (/^musica/.test(k)) mix.musicDb = numOf(v)
+    else if (/^soundscape/.test(k)) mix.soundscapeDb = numOf(v)
+    else if (/^binaural.*(db|volume)|^volume binaural/.test(k)) mix.binauralDb = numOf(v)
+    else if (/solfeggio/.test(k)) {
+      mix.solfeggioHz = numOf(v)
+      const pm = /(\d+(?:[.,]\d+)?)\s*%/.exec(v)
+      const dbm = /(-\d+(?:[.,]\d+)?)\s*db/i.exec(v)
+      if (dbm) mix.solfeggioDb = parseFloat(dbm[1].replace(',', '.'))
+      else if (pm) mix.solfeggioDb = Math.round(20 * Math.log10(Math.max(0.01, parseFloat(pm[1].replace(',', '.')) / 100)))
+    }
+    else if (/tipo battiment|battimento/.test(k)) mix.beatType = /isocron/i.test(v) ? 'isochronic' : 'binaural'
+    else if (/crossfade/.test(k)) mix.phaseCrossfadeSec = numOf(v)
+    else if (/fade.*sessione.*in|fade[- ]?in sessione/.test(k)) mix.sessionFadeInSec = numOf(v)
+    else if (/fade.*sessione.*out|fade[- ]?out sessione/.test(k)) mix.sessionFadeOutSec = numOf(v)
+    else if (/eco loop/.test(k)) {
+      const d = /(\d+(?:[.,]\d+)?)\s*s/.exec(v); const g = /(-\d+(?:[.,]\d+)?)\s*db/i.exec(v)
+      if (d) mix.echoLoopDelaySec = parseFloat(d[1].replace(',', '.'))
+      if (g) mix.echoLoopGainDb = parseFloat(g[1].replace(',', '.'))
+    }
+    else if (/eco dicotic/.test(k)) {
+      const d = /(\d+(?:[.,]\d+)?)\s*s/.exec(v); const g = /(-\d+(?:[.,]\d+)?)\s*db/i.exec(v)
+      if (d) mix.echoDichoticDelaySec = parseFloat(d[1].replace(',', '.'))
+      if (g) mix.echoDichoticGainDb = parseFloat(g[1].replace(',', '.'))
+    }
+    else if (/sussurro/.test(k)) mix.whisperGainDb = numOf(v)
+    else if (/volume bilateral/.test(k)) mix.bilateralVolPct = numOf(v)
+    else if (/blip|impulso bilateral|durata bilateral/.test(k)) mix.bilateralBlipMs = numOf(v)
+  }
+  if (Object.keys(mix).length) ds.mix = mix
+}
+
+function parseRespirazione(rows: unknown[][], ds: Partial<Datasheet>): void {
+  const out: DsBreathing[] = []
+  for (const r of rows) {
+    const dur = num(r[0])
+    if (dur == null || !DURATIONS.includes(dur as Duration)) continue
+    const ph = num(r[1])
+    out.push({
+      duration: dur as Duration,
+      phase: (Math.min(6, Math.max(1, ph ?? 2)) as PhaseNo),
+      pattern: cell(r, 2),
+      cycles: num(r[3]) ?? 2,
+      guided: !/^no/i.test(cell(r, 4)),
+      notes: cell(r, 5),
+    })
+  }
+  if (out.length) ds.breathing = out
+}
+
+function parseUnifiedTimelines(rows: unknown[][], ds: Partial<Datasheet>, issues: string[]): void {
+  // Columns are mapped BY HEADER NAME (order-independent, new columns optional):
+  // Versione · Tempo · Canale · Voce · Tipo · Gain dB · Ritardo s · Ciclo ·
+  // REC · Testo · Effetto · Velocità
+  ds.timelines = {}
+  const byDur: Partial<Record<Duration, DsTimelineRow[]>> = {}
+  const fasi = ds.phases ?? []
+  const phaseAt = (dur: Duration, sec: number): PhaseNo => {
+    const ph = fasi.filter((p) => p.duration === dur)
+    const hit = ph.find((p) => sec >= p.startSec && sec < p.endSec)
+    return hit ? hit.id : ph.length && sec >= ph[ph.length - 1].endSec ? ph[ph.length - 1].id : 1
+  }
+  const hdr = (rows[0] ?? []).map((c) => norm(c).toLowerCase())
+  const col = (rx: RegExp, fallback: number) => {
+    const i = hdr.findIndex((h) => rx.test(h))
+    return i >= 0 ? i : fallback
+  }
+  const iVer = col(/versione/, 0), iTem = col(/tempo/, 1), iCan = col(/canale/, 2), iVoc = col(/^voce/, 3)
+  const iTip = col(/tipo/, 4), iGai = col(/gain/, 5), iRit = col(/ritardo/, 6), iCic = col(/ciclo/, 7)
+  const iRec = col(/rec/, 8), iTxt = col(/testo/, 9), iEff = col(/effetto/, -1), iVel = col(/velocit/, -1)
+  for (const r of rows.slice(1)) {
+    const dur = num(r[iVer])
+    const t = toSec(r[iTem])
+    if (dur == null || t == null || !DURATIONS.includes(dur as Duration)) continue
+    const d = dur as Duration
+    const chRaw = cell(r, iCan).toUpperCase()
+    // C/L/R/SYS or numeric pans like "L25" / "R40" (percent off-center)
+    const panM = /^([LR])\s*(\d{1,3})$/.exec(chRaw)
+    const channel: DsTimelineRow['channel'] =
+      chRaw === 'SYS' || chRaw === 'C' || chRaw === 'L' || chRaw === 'R' ? chRaw : panM ? (panM[1] as 'L' | 'R') : ''
+    const pan = panM ? (panM[1] === 'L' ? -1 : 1) * Math.min(100, +panM[2]) / 100 : undefined
+    if (!chRaw && !cell(r, iTip) && !cell(r, iRec) && !cell(r, iTxt)) continue // stub rows
+    const vRaw = cell(r, iVoc)
+    const voiceName = vRaw && !VOICE_TOKEN.test(vRaw) ? vRaw : undefined
+    const voice: DsTimelineRow['voice'] = VOICE_TOKEN.test(vRaw) ? (vRaw.toUpperCase() as 'F' | 'M') : ''
+    const effRaw = iEff >= 0 ? cell(r, iEff).toUpperCase() : ''
+    ;(byDur[d] ??= []).push({
+      timeSec: t,
+      phase: phaseAt(d, t),
+      channel,
+      pan,
+      voice,
+      voiceName,
+      kind: (cell(r, iTip).toUpperCase() || (channel === 'SYS' ? 'SYS' : 'VOCE')) as DsRowKind,
+      gainDb: num(r[iGai]),
+      delaySec: num(r[iRit]),
+      cycle: num(r[iCic]),
+      rec: cell(r, iRec) ? cell(r, iRec).toUpperCase() : undefined,
+      text: cell(r, iTxt),
+      effect: effRaw === 'CORO' || effRaw === 'ECO' ? effRaw : undefined,
+      speed: iVel >= 0 ? num(r[iVel]) : undefined,
+    })
+  }
+  for (const d of DURATIONS) {
+    const list = byDur[d]
+    if (list?.length) ds.timelines[d] = list.sort((a, b) => a.timeSec - b.timeSec)
+    else issues.push(`TIMELINE has no ${d}-min rows — that version imports but can't render until they exist.`)
+  }
+}
+
+function parseUnifiedAffirmations(rows: unknown[][], ds: Partial<Datasheet>): void {
+  // header: REC | Testo | Costrutto | Durata s | Versioni | Voce | Eco
+  const out: DsAffirmation[] = []
+  for (const r of rows.slice(1)) {
+    const id = cell(r, 0)
+    if (!/^REC-\d+/i.test(id)) continue
+    const text = cell(r, 1).replace(/^["\u201c]|["\u201d]$/g, '')
+    const vers = cell(r, 4)
+    const inV = (d: Duration) => new RegExp(`(^|[,\\s])${d}([,\\s]|$)`).test(vers) || /tutt|all/i.test(vers)
+    const vRaw = cell(r, 5)
+    out.push({
+      id: id.toUpperCase(),
+      text,
+      construct: cell(r, 2),
+      durationSec: num(r[3]),
+      inVersion: { 6: inV(6), 12: inV(12), 24: inV(24) },
+      echoKeywords: cell(r, 6) || echoKeywords(text),
+      voiceName: vRaw || undefined,
+    })
+  }
+  ds.affirmations = out
+}
+
+/** Parse the single-tab format into the same Datasheet structure. */
+function parseSingleTabSections(secs: SingleTabSections): DatasheetParseResult {
+  const issues: string[] = []
+  const ds: Partial<Datasheet> = { issues }
+  const wrap = (rows: unknown[][] | undefined): WorkSheet | undefined =>
+    rows && xlsx ? xlsx.utils.aoa_to_sheet(rows as unknown[][]) : undefined
+  const fakeWb = (name: string, rows: unknown[][] | undefined): WorkBook =>
+    ({ SheetNames: [name], Sheets: { [name]: wrap(rows ?? []) } }) as unknown as WorkBook
+
+  // PROTOCOLLO: key/value (no header requirement — tolerate one)
+  const proto = (secs['PROTOCOLLO'] ?? []).filter((r) => !/^campo$/i.test(norm(r[0])))
+  parseProtocollo(fakeWb('Protocollo', [['Campo', 'Valore'], ...proto]), ds, issues)
+  if (!ds.code) return { error: 'No protocol code in the ### PROTOCOLLO block (expected e.g. "GL-ANX 1.6").' }
+  const kv = new Map(proto.map((r) => [norm(r[0]).toLowerCase(), norm(r[1])]))
+  ds.defaultVoice = kv.get('voce predefinita') || undefined
+  ds.defaultVoiceM = kv.get('voce [m] predefinita') || kv.get('voce m predefinita') || undefined
+
+  const params = secs['PARAMETRI'] ?? secs['INVARIANTI'] ?? []
+  parseInvarianti(fakeWb('Invarianti', [['Parametro', 'Valore', 'Razionale'], ...params.filter((r) => !/^parametro$/i.test(norm(r[0])))]), ds)
+  parseVersioni(fakeWb('Versioni', secs['VERSIONI'] ?? []), ds, issues)
+  parseFasi(fakeWb('Fasi', secs['FASI'] ?? []), ds, issues)
+  parseMixSection(secs['MIX'] ?? [], ds)
+  parseRespirazione((secs['RESPIRAZIONE'] ?? []).filter((r) => !/^versione$/i.test(norm(r[0]))), ds)
+  parseUnifiedTimelines(secs['TIMELINE'] ?? [], ds, issues)
+  parseUnifiedAffirmations(secs['AFFERMAZIONI'] ?? [], ds)
+  // documentary sections preserved verbatim for the admin review
+  const docs: Record<string, string[][]> = {}
+  for (const name of ['TECNICHE', 'NOTE', 'NOTE CLINICHE']) {
+    if (secs[name]?.length) docs[name] = secs[name].map((r) => r.map((c) => norm(c)))
+  }
+  if (Object.keys(docs).length) ds.docSections = docs
+  parseMappaMusicale(fakeWb('MappaMusicale', secs['MUSICA'] ?? secs['MAPPAMUSICALE'] ?? []), ds)
+  parseLayerEngine(fakeWb('LayerEngine', []), ds)
+  parseAssetSheet(fakeWb('Asset', []), ds)
+
+  return finishValidation(ds as Datasheet, issues)
+}
+
 /** Parse the workbook bytes. Returns an error only when nothing usable exists. */
 export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParseResult> {
   let wb: WorkBook
@@ -446,9 +734,13 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
   } catch (e) {
     return { error: `Could not read the workbook: ${(e as Error).message}` }
   }
+  // SINGLE-TAB format first: any sheet with `### SECTION` markers
+  const singleTab = findSingleTab(wb)
+  if (singleTab) return parseSingleTabSections(singleTab)
+
   const missing = REQUIRED_SHEETS.filter((s) => !wb.Sheets[s])
   if (missing.length) {
-    return { error: `Not a Protocol Datasheet — missing sheet${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Expected the GL-ANX 1.3 workbook format (Protocollo, Invarianti, Versioni, Fasi, Timeline_*, Affermazioni, MappaMusicale, Asset, LayerEngine).` }
+    return { error: `Not a Protocol Datasheet — missing sheet${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Expected either the multi-sheet workbook (Protocollo, Invarianti, Versioni, Fasi, Timeline_*, Affermazioni, MappaMusicale) or the single-tab "Scheda Unica" format with ### section markers.` }
   }
 
   const issues: string[] = []
@@ -470,35 +762,38 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
     else issues.push(`Timeline_${d}min is not compiled yet — the ${d}-min version imports with phases and parameters, but can't render until its timeline rows exist.`)
   }
 
-  /* ---- validation ---- */
+  return finishValidation(ds as Datasheet, issues)
+}
+
+/** Shared validation for both workbook formats. */
+function finishValidation(ds: Datasheet, issues: string[]): DatasheetParseResult {
   const versions = ds.versions ?? []
-  if (!versions.length) return { error: 'The Versioni sheet has no 6/12/24-minute columns — nothing to import.' }
+  if (!versions.length) return { error: 'The VERSIONI section has no 6/12/24-minute columns — nothing to import.' }
   const phases = ds.phases ?? []
   const affById = new Map((ds.affirmations ?? []).map((a) => [a.id, a]))
   for (const v of versions) {
     const ph = phases.filter((p) => p.duration === v.duration)
-    if (!ph.length) issues.push(`${v.duration}-min: no phases in the Fasi sheet.`)
+    if (!ph.length) issues.push(`${v.duration}-min: no phases in the FASI section.`)
     else {
       const last = ph[ph.length - 1]
-      if (Math.abs(last.endSec - v.duration * 60) > 60) issues.push(`${v.duration}-min: last phase ends at ${Math.round(last.endSec / 60)} min — check the Fasi sheet.`)
+      if (Math.abs(last.endSec - v.duration * 60) > 60) issues.push(`${v.duration}-min: last phase ends at ${Math.round(last.endSec / 60)} min — check the FASI section.`)
     }
     for (const id of v.recSubset) {
-      if (!affById.has(id)) issues.push(`${v.duration}-min sub-set references ${id}, which is not in the Affermazioni sheet.`)
+      if (!affById.has(id)) issues.push(`${v.duration}-min sub-set references ${id}, which is not in AFFERMAZIONI.`)
     }
     const tl = ds.timelines?.[v.duration]
     if (tl) {
       for (const row of tl) {
-        if (row.rec && !affById.has(row.rec.toUpperCase())) issues.push(`Timeline_${v.duration}min at ${fmtTime(row.timeSec)}: unknown ${row.rec}.`)
-        if ((row.kind === 'VOCE' || row.kind === 'LOOP') && !row.text) issues.push(`Timeline_${v.duration}min at ${fmtTime(row.timeSec)}: ${row.kind} row without text.`)
+        if (row.rec && !affById.has(row.rec.toUpperCase())) issues.push(`Timeline ${v.duration}min at ${fmtTime(row.timeSec)}: unknown ${row.rec}.`)
+        if ((row.kind === 'VOCE' || row.kind === 'LOOP') && !row.text) issues.push(`Timeline ${v.duration}min at ${fmtTime(row.timeSec)}: ${row.kind} row without text.`)
       }
       const maxT = tl[tl.length - 1].timeSec
-      if (Math.abs(maxT - v.duration * 60) > 90) issues.push(`Timeline_${v.duration}min ends at ${fmtTime(maxT)} — expected ~${v.duration}:00.`)
+      if (Math.abs(maxT - v.duration * 60) > 90) issues.push(`Timeline ${v.duration}min ends at ${fmtTime(maxT)} — expected ~${v.duration}:00.`)
     }
   }
-  if (!(ds.affirmations ?? []).length) issues.push('Affermazioni sheet is empty — affirmation loops will be silent.')
-  if (!(ds.musicMap ?? []).length) issues.push('MappaMusicale is empty — music falls back to a neutral pad.')
-
-  return { datasheet: ds as Datasheet }
+  if (!(ds.affirmations ?? []).length) issues.push('AFFERMAZIONI is empty — affirmation loops will be silent.')
+  if (!(ds.musicMap ?? []).length) issues.push('MUSICA is empty — music falls back to a neutral pad.')
+  return { datasheet: ds }
 }
 
 export function fmtTime(sec: number): string {

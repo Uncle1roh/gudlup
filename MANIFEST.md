@@ -1,6 +1,59 @@
 # Good Loop — build manifest
 
-**Fix: type-exact values + time scrubbing** (current)
+**Slice: Scheda Unica v2 — the 7 gaps closed** (current)
+Pattern analysis across ALL 8 Italian protocols + the 9 in-depth technique
+docs ("112 techniques 9 tools") drove a format+engine upgrade:
+- **Binaural curve per phase**: FASI gains a Binaural column ("Theta 7 Hz
+  (rampa 90 s)") — the renderer ramps the beat per phase and back (curves
+  like Alpha 10→Theta 7→Alpha 10 now render as documented). Legacy Deep
+  Theta transition still works when no curve is declared.
+- **### MIX section**: per-protocol music/soundscape/binaural offsets,
+  solfeggio layer (432/528/396 Hz continuous, % or dB), tipo battimento
+  binaural/ISOCRONICO (amplitude-pulsed carrier — works without headphones),
+  phase crossfade, session fades, eco loop vs eco dicotico (delay+gain),
+  whisper gain, bilateral volume % + blip ms. All optional; engine defaults
+  otherwise.
+- **### RESPIRAZIONE**: guided breathing pacer rows (pattern catalog:
+  Sospiro Fisiologico, 4-7-8, Coerente 5-5/6-6, Box, 4-4-6[-2], Cyclic
+  Sighing, or any numeric sequence) — rendered as band-passed air swells
+  (rising inhale / falling exhale) at −18 dB in the declared phase.
+- **TIMELINE v2**: columns matched BY HEADER (order-independent); Canale
+  accepts fine pans (L25/R40); optional Effetto (CORO = harmonized chorus on
+  that row, ECO = extra delayed copy) and Velocità (pitch-preserving speed)
+  columns.
+- **### TECNICHE / ### NOTE**: documentary sections preserved verbatim on
+  the protocol and summarized in the review screen ('#' ids no longer eaten
+  by the comment rule — only '//' comments).
+- **Admin UI**: import hub explains both accepted formats (Scheda Unica
+  recommended card + legacy multi-sheet); review screen shows v2 facts
+  (voices, curve, solfeggio, isochronic, breathing, MIX) and preserved
+  sections. Sign-out buttons get a solid contrasting background
+  (b2b-btn--signout) in admin + employer.
+- Deliverables: GL_Scheda_UNICA_TEMPLATE.xlsx (v2, guided) and
+  GL-STRESS-4_3_Scheda_UNICA.xlsx (flagship example: curve, MIX per the doc,
+  8 breathing rows, CORO refrain at 10:00, Cornelio as [M] wise voice) —
+  both validated through the shipped parser with zero issues.
+
+**Slice: single-tab datasheet ("Scheda Unica") + per-row voices**
+- `datasheet.ts` — new SINGLE-TAB import format: one sheet, sections marked by
+  `### NAME` rows (PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE ·
+  AFFERMAZIONI · MUSICA), `//` comment rows ignored. The TIMELINE section is
+  unified (Versione column instead of three sheets), has NO Fase column
+  (derived from the FASI windows by time), and its Voce column accepts a
+  catalog voice NAME, an archetype word, or F/M. AFFERMAZIONI gains Versioni
+  ("6,12,24") and per-affirmation Voce columns. PROTOCOLLO block carries
+  "Voce predefinita" / "Voce [M] predefinita". Multi-sheet workbooks still
+  import unchanged (shared finishValidation). Stub rows (only Versione+Tempo
+  filled) are skipped, not flagged.
+- `renderDatasheet.ts` — per-row voice resolution, most specific wins:
+  row Voce → affirmation Voce → protocol defaults → Invarianti archetype →
+  engine defaults (Valeria/Marco). Render notes list row-level voices used
+  and warn on names that don't match the catalog.
+- Deliverables: GL_Scheda_UNICA_TEMPLATE.xlsx (guided template) and
+  GL-ANX-1_3_Scheda_UNICA.xlsx (real example, validated: 43/57/86 timeline
+  rows, defaults Valeria/Marco Trox, 8 named-voice rows, zero issues).
+
+**Fix: type-exact values + time scrubbing**
 - **Every numeric value is click-to-type**: the shown value (dashed underline)
   on Inspector sliders, track volume %, and all FX params becomes an input on
   click — type "83", "0.83", "83%", "-6 dB", comma decimals; Enter/blur

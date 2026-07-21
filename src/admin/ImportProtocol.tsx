@@ -281,6 +281,22 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
         {error && <div className="adm-issues adm-issues--err" style={{ maxWidth: 720 }}><span>{error}</span></div>}
 
+        <div className="adm-formats">
+          <div className="adm-formats__title">Accepted Excel formats</div>
+          <div className="adm-formats__grid">
+            <div className="adm-formats__card adm-formats__card--best">
+              <b>⭐ Scheda Unica (single tab) — recommended</b>
+              <p>One sheet, sections marked with <code>### NAME</code> rows: PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE · AFFERMAZIONI · MUSICA — plus optional <code>MIX</code> (per-protocol levels, echo timings, crossfades, solfeggio, isochronic mode), <code>RESPIRAZIONE</code> (guided breathing pacer) and <code>TECNICHE / NOTE</code> (preserved for reference).</p>
+              <p>The <b>Voce</b> column names the voice per row (catalog name, archetype, or F/M); the <b>Canale</b> column takes C/L/R/SYS or fine pans like <code>L25</code>; optional <b>Effetto</b> (CORO/ECO) and <b>Velocità</b> columns per row. Phases are derived from the FASI windows — no Fase column needed. The FASI <b>Binaural</b> column drives per-phase frequency curves (e.g. "Theta 7 Hz (rampa 90 s)").</p>
+            </div>
+            <div className="adm-formats__card">
+              <b>Multi-sheet workbook (legacy)</b>
+              <p>The original GL-ANX 1.3 layout — Protocollo, Invarianti, Versioni, Fasi, Timeline_6/12/24min, Affermazioni, MappaMusicale. Still fully supported; imports unchanged.</p>
+            </div>
+          </div>
+          <p className="adm-formats__foot">Columns are matched by header name, so extra columns and different orders are fine. Comment rows start with <code>//</code>. Ask the dev team for <code>GL_Scheda_UNICA_TEMPLATE.xlsx</code> — it has fill-in instructions and one example per section.</p>
+        </div>
+
         <div className="adm-src">
           <input ref={srcRef} type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" style={{ display: 'none' }} onChange={onSource} />
           <button className="b2b-btn b2b-btn--ghost" onClick={() => srcRef.current?.click()}>Attach source document (optional)</button>
