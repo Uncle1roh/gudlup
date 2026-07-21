@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { tr } from '../i18n'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
@@ -152,7 +153,7 @@ export function MonitoredSession({ patient, config, demoSeconds, onEnd }: Monito
         <span className="monitor__patient">● {patient.name}</span>
         <span className="monitor__proto">{protocol.code} · {config.goal || 'no goal set'}</span>
         <span className="monitor__clock">{mmss(elapsed)} / {mmss(total)}</span>
-        {status !== 'running' && <span className={`monitor__state monitor__state--${status}`}>{status === 'paused' ? 'PAUSED' : 'INTERVENING'}</span>}
+        {status !== 'running' && <span className={`monitor__state monitor__state--${status}`}>{status === 'paused' ? tr('PAUSED') : tr('INTERVENING')}</span>}
       </div>
 
       <div className="monitor__grid">
@@ -164,13 +165,13 @@ export function MonitoredSession({ patient, config, demoSeconds, onEnd }: Monito
             <div className={`vid-mirror__screen${showOrb ? '' : ' is-dark'}`}>
               {showOrb ? <BreathingOrb size={56} /> : <span className="vid-mirror__dot" />}
             </div>
-            <span className="b2b-sub">patient screen</span>
+            <span className="b2b-sub">{tr('patient screen')}</span>
           </div>
         </div>
 
         {/* RIGHT TOP — timeline + active parameters */}
         <div className="monitor__timeline">
-          <h3 className="monitor__h">Timeline</h3>
+          <h3 className="monitor__h">{tr('Timeline')}</h3>
           <div className="phase-bar">
             <div className="phase-bar__fill" style={{ width: `${pct}%` }} />
           </div>
@@ -184,7 +185,7 @@ export function MonitoredSession({ patient, config, demoSeconds, onEnd }: Monito
             ))}
           </ol>
 
-          <h3 className="monitor__h">Active parameters</h3>
+          <h3 className="monitor__h">{tr('Active parameters')}</h3>
           <div className="params">
             <span className="param">Binaural <b>{preset.binaural}</b></span>
             <span className="param">Breathing <b>{preset.breathing}</b></span>
@@ -196,25 +197,25 @@ export function MonitoredSession({ patient, config, demoSeconds, onEnd }: Monito
         {/* RIGHT BOTTOM — controls + rapid notes */}
         <div className="monitor__actions">
           <div className="monitor__controls">
-            <button className="ctl" onClick={togglePause}>{status === 'paused' ? '▶ Resume' : '⏸ Pause'}</button>
-            <button className="ctl ctl--stop" onClick={() => setConfirmStop(true)}>⏹ Stop</button>
+            <button className="ctl" onClick={togglePause}>{status === 'paused' ? tr('▶ Resume') : tr('⏸ Pause')}</button>
+            <button className="ctl ctl--stop" onClick={() => setConfirmStop(true)}>{tr('⏹ Stop')}</button>
             <button className={`ctl ctl--intervene${status === 'intervening' ? ' is-active' : ''}`} onClick={intervene}>
-              {status === 'intervening' ? '✓ Resume treatment' : '⚠ INTERVENE'}
+              {status === 'intervening' ? tr('✓ Resume treatment') : tr('⚠ INTERVENE')}
             </button>
           </div>
 
           <div className="notes-box">
             <div className="notes-box__input">
               <input
-                placeholder="Rapid note…"
+                placeholder={tr('Rapid note…')}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && submitNote()}
               />
-              <button onClick={submitNote}>Add</button>
+              <button onClick={submitNote}>{tr('Add')}</button>
             </div>
             <ul className="notes-list">
-              {notes.length === 0 && <li className="b2b-sub">Notes are timestamped to the current phase and feed the report.</li>}
+              {notes.length === 0 && <li className="b2b-sub">{tr('Notes are timestamped to the current phase and feed the report.')}</li>}
               {[...notes].reverse().map((n, i) => (
                 <li key={i} className="note-line">
                   <span className="note-line__ts">P{n.phase} · {mmss(n.at)}</span>
@@ -229,11 +230,11 @@ export function MonitoredSession({ patient, config, demoSeconds, onEnd }: Monito
       {confirmStop && (
         <div className="modal">
           <div className="modal__box">
-            <h3>Stop the session?</h3>
-            <p className="b2b-sub">The patient will return to the video call. This ends treatment early.</p>
+            <h3>{tr('Stop the session?')}</h3>
+            <p className="b2b-sub">{tr('The patient will return to the video call. This ends treatment early.')}</p>
             <div className="modal__actions">
-              <button className="b2b-btn" onClick={() => setConfirmStop(false)}>Keep going</button>
-              <button className="b2b-btn b2b-btn--danger" onClick={() => finish(false)}>Stop session</button>
+              <button className="b2b-btn" onClick={() => setConfirmStop(false)}>{tr('Keep going')}</button>
+              <button className="b2b-btn b2b-btn--danger" onClick={() => finish(false)}>{tr('Stop session')}</button>
             </div>
           </div>
         </div>

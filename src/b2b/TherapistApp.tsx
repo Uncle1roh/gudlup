@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tr } from '../i18n'
 import { Roster } from './Roster'
 import { PatientCard } from './PatientCard'
 import { PatientEdit } from './PatientEdit'
@@ -69,8 +70,8 @@ export function TherapistApp() {
     return (
       <div className="b2b-app"><div className="b2b-gate">
         <div className="b2b-gate__card">
-          <h1 className="b2b-h1">Not a clinician account</h1>
-          <p className="b2b-sub">This login isn't registered as a clinician. Sign out and create a clinician account (name + CRP) from the sign-in screen.</p>
+          <h1 className="b2b-h1">{tr('Not a clinician account')}</h1>
+          <p className="b2b-sub">{tr('This login isn\'t registered as a clinician. Sign out and create a clinician account (name + CRP) from the sign-in screen.')}</p>
           <SignOutButton className="b2b-btn b2b-btn--primary" />
         </div>
       </div></div>
@@ -81,14 +82,13 @@ export function TherapistApp() {
       <div className="b2b-app"><div className="b2b-gate">
         <div className="b2b-gate__card">
           <span className="b2b-gate__badge">⏳</span>
-          <h1 className="b2b-h1">Credentials under review</h1>
+          <h1 className="b2b-h1">{tr('Credentials under review')}</h1>
           <p className="b2b-sub">
             {therapist.name} · {therapist.crp}<br />
-            Your registration was received. An administrator reviews and approves clinician credentials before
-            patient access is enabled — you'll get in as soon as it's approved.
+            {tr("Your registration was received. An administrator reviews and approves clinician credentials before patient access is enabled — you'll get in as soon as it's approved.")}
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <button className="b2b-btn" onClick={refetchTherapist}>Check again</button>
+            <button className="b2b-btn" onClick={refetchTherapist}>{tr('Check again')}</button>
             <SignOutButton className="b2b-btn" />
           </div>
         </div>
@@ -117,15 +117,15 @@ export function TherapistApp() {
       <header className="b2b-topbar">
         <div className="b2b-brand">
           <span className="b2b-brand__mark">◠◡</span>
-          <span className="b2b-brand__name">goodloop <span className="b2b-brand__sub">clinic</span></span>
+          <span className="b2b-brand__name">goodloop <span className="b2b-brand__sub">{tr('clinic')}</span></span>
         </div>
         <div className="b2b-topbar__right">
           <button className="b2b-credchip" onClick={() => setScreen('credentials')}>
             <span className="b2b-credchip__badge">✓</span>
             {therapist?.name ?? '…'} · {therapist?.crp ?? ''}
           </button>
-          <button className="b2b-demobtn" onClick={() => setFullLength((v) => !v)} title="Session length for the demo">
-            {fullLength ? 'full 24 min' : 'demo ~90s'}
+          <button className="b2b-demobtn" onClick={() => setFullLength((v) => !v)} title={tr('Session length for the demo')}>
+            {fullLength ? tr('full 24 min') : tr('demo ~90s')}
           </button>
           <span className="b2b-avatar">{therapist?.avatar ?? '👤'}</span>
           <SignOutButton className="b2b-demobtn" />

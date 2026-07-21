@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tr } from '../i18n'
 import { useProtocols } from '../admin/hooks'
 import { PRESETS, type Patient } from './data'
 import type { ComposeSettings } from '../compose/types'
@@ -52,18 +53,18 @@ export function ClinicalWizard({ patient, onLaunch, onCancel }: ClinicalWizardPr
 
   return (
     <div className="b2b-page">
-      <button className="b2b-back" onClick={onCancel}>← Cancel</button>
+      <button className="b2b-back" onClick={onCancel}>{tr('← Cancel')}</button>
       <h1 className="b2b-h1">Configure session — {patient.name}</h1>
-      <p className="b2b-sub" style={{ marginBottom: 20 }}>Choose a protocol; its clinical preset maps to the audio file. Confirm the checklist to begin.</p>
+      <p className="b2b-sub" style={{ marginBottom: 20 }}>{tr('Choose a protocol; its clinical preset maps to the audio file. Confirm the checklist to begin.')}</p>
 
       <div className="wizard-grid">
         <div>
           {/* protocol picker */}
           <section className="b2b-card">
-            <h2 className="b2b-card__title">Protocol</h2>
+            <h2 className="b2b-card__title">{tr('Protocol')}</h2>
             <div className="proto-list">
-              {loading && <p className="b2b-sub">Loading protocols…</p>}
-              {!loading && protocols.length === 0 && <p className="b2b-sub">No protocols are enabled. An administrator can enable or import protocols in the admin console.</p>}
+              {loading && <p className="b2b-sub">{tr('Loading protocols…')}</p>}
+              {!loading && protocols.length === 0 && <p className="b2b-sub">{tr('No protocols are enabled. An administrator can enable or import protocols in the admin console.')}</p>}
               {protocols.map((p) => (
                 <button key={p.code} className={`proto${selectedCode === p.code ? ' is-on' : ''}`} onClick={() => setProtocolCode(p.code)}>
                   <span className="proto__radio" />
@@ -78,55 +79,55 @@ export function ClinicalWizard({ patient, onLaunch, onCancel }: ClinicalWizardPr
 
           {/* goal */}
           <section className="b2b-card">
-            <h2 className="b2b-card__title">Session goal</h2>
+            <h2 className="b2b-card__title">{tr('Session goal')}</h2>
             <div className="goal-presets">
               {GOAL_PRESETS.map((g) => (
-                <button key={g} className={`b2b-chip${goal === g ? ' is-on' : ''}`} onClick={() => setGoal(g)}>{g}</button>
+                <button key={g} className={`b2b-chip${goal === g ? ' is-on' : ''}`} onClick={() => setGoal(g)}>{tr(g)}</button>
               ))}
             </div>
-            <input className="b2b-input" placeholder="…or type a specific goal" value={goal} onChange={(e) => setGoal(e.target.value)} />
+            <input className="b2b-input" placeholder={tr('…or type a specific goal')} value={goal} onChange={(e) => setGoal(e.target.value)} />
           </section>
         </div>
 
         <div>
           {/* preset summary */}
           <section className="b2b-card b2b-card--accent">
-            <h2 className="b2b-card__title">Preset (auto)</h2>
+            <h2 className="b2b-card__title">{tr('Preset (auto)')}</h2>
             {preset ? (<>
               <dl className="kv kv--tight">
-                <dt>Binaural</dt><dd>{preset.binaural}</dd>
-                <dt>Looper</dt><dd>{preset.loop}</dd>
-                <dt>Voice morph</dt><dd>{preset.voice}</dd>
-                <dt>Breathing</dt><dd>{preset.breathing}</dd>
+                <dt>{tr('Binaural')}</dt><dd>{preset.binaural}</dd>
+                <dt>{tr('Looper')}</dt><dd>{preset.loop}</dd>
+                <dt>{tr('Voice morph')}</dt><dd>{preset.voice}</dd>
+                <dt>{tr('Breathing')}</dt><dd>{preset.breathing}</dd>
               </dl>
               <div className="audio-map">
-                <span className="b2b-sub">Audio file</span>
+                <span className="b2b-sub">{tr('Audio file')}</span>
                 <code>{preset.audioFile}</code>
               </div>
-            </>) : <p className="b2b-sub">Select a protocol to see its preset.</p>}
+            </>) : <p className="b2b-sub">{tr('Select a protocol to see its preset.')}</p>}
           </section>
 
           {/* checklist */}
           <section className="b2b-card">
-            <h2 className="b2b-card__title">Pre-launch checklist</h2>
+            <h2 className="b2b-card__title">{tr('Pre-launch checklist')}</h2>
             <ul className="checklist">
               {checklist.map((c) => (
                 <li key={c.id} className={`check${c.ok ? ' is-ok' : ''}`}>
                   <span className="check__dot">{c.ok ? '✓' : '○'}</span>
-                  <span>{c.label}</span>
+                  <span>{tr(c.label)}</span>
                   {c.id === 'stereo' && !c.ok && (
-                    <button className="check__action" onClick={runStereoCheck} disabled={checking}>{checking ? 'Checking…' : 'Run check'}</button>
+                    <button className="check__action" onClick={runStereoCheck} disabled={checking}>{checking ? tr('Checking…') : tr('Run check')}</button>
                   )}
                   {c.id === 'ready' && !c.ok && (
-                    <button className="check__action" onClick={() => setPatientReady(true)}>Confirm</button>
+                    <button className="check__action" onClick={() => setPatientReady(true)}>{tr('Confirm')}</button>
                   )}
                 </li>
               ))}
             </ul>
             <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={!allGreen || !selected} onClick={() => onLaunch({ protocolCode: selectedCode, goal })}>
-              {allGreen ? 'Compose audio →' : 'Complete checklist to continue'}
+              {allGreen ? tr('Compose audio →') : tr('Complete checklist to continue')}
             </button>
-            {!allGreen && <p className="b2b-sub" style={{ marginTop: 8, textAlign: 'center' }}>Start is blocked while any item is red.</p>}
+            {!allGreen && <p className="b2b-sub" style={{ marginTop: 8, textAlign: 'center' }}>{tr('Start is blocked while any item is red.')}</p>}
           </section>
         </div>
       </div>

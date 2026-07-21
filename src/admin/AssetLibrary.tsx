@@ -9,6 +9,7 @@
    ============================================================================ */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import type { CatalogProtocol } from '../data/catalog'
@@ -55,7 +56,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
   useEffect(() => {
     if (hasSupabaseEnv()) void refresh()
-    else { setError('The asset library reads Supabase Storage — mock mode has no bucket. Set VITE_SUPABASE_URL / _ANON_KEY.'); setAssets([]) }
+    else { setError(tr('The asset library reads Supabase Storage — mock mode has no bucket. Set VITE_SUPABASE_URL / _ANON_KEY.')); setAssets([]) }
     void dp.listProtocols().then((ps) => {
       const mappable = ps.filter((p) => p.datasheet || p.spec)
       setProtocols(mappable)
@@ -81,7 +82,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
       return
     }
     el.src = a.publicUrl
-    void el.play().catch((e) => setError(`Playback failed: ${(e as Error).message}`))
+    void el.play().catch((e) => setError(tr('Playback failed: {msg}', { msg: (e as Error).message })))
     setPlaying(a.path)
   }
 
@@ -132,7 +133,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
   const assetRow = (a: AudioAsset) => (
     <div key={a.path} className="adm-asset">
-      <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? 'Stop' : 'Preview'}>
+      <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? tr('Stop') : tr('Preview')}>
         {playing === a.path ? '■' : '▶'}
       </button>
       <span className="adm-asset__name" title={a.path}>{a.name}</span>
@@ -144,14 +145,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Asset Library</h1>
-          <p className="b2b-sub">The PO's produced audio in <code>protocol-audio/assets</code> — preview anything, then map which asset serves each protocol phase. Renderer v3 mixes exactly this mapping.</p>
+          <h1 className="b2b-h1">{tr('Asset Library')}</h1>
+          <p className="b2b-sub">{tr("The PO's produced audio in")} <code>{tr('protocol-audio/assets')}</code>{tr(' — preview anything, then map which asset serves each protocol phase. Renderer v3 mixes exactly this mapping.')}</p>
         </div>
-        <button className="b2b-btn" onClick={() => void refresh()} disabled={assets === null}>↻ Refresh</button>
+        <button className="b2b-btn" onClick={() => void refresh()} disabled={assets === null}>{tr('↻ Refresh')}</button>
       </header>
 
       {error && <div className="adm-note adm-note--warn">{error}</div>}
-      {assets === null && <div className="adm-note">Listing the bucket…</div>}
+      {assets === null && <div className="adm-note">{tr('Listing the bucket…')}</div>}
 
       {assets !== null && (
         <>
@@ -175,8 +176,8 @@ export function AssetLibrary({ actor }: { actor: string }) {
               })}
               {music.some((a) => !a.phase) && (
                 <div className="adm-asset__group">
-                  <div className="adm-asset__ghead">No phase prefix <span className="adm-asset__count">{music.filter((a) => !a.phase).length}</span></div>
-                  <div className="adm-asset__empty">Files under assets/music without an f1–f6 folder or name prefix — selectable for any phase below.</div>
+                  <div className="adm-asset__ghead">{tr('No phase prefix')} <span className="adm-asset__count">{music.filter((a) => !a.phase).length}</span></div>
+                  <div className="adm-asset__empty">{tr('Files under assets/music without an f1–f6 folder or name prefix — selectable for any phase below.')}</div>
                   {music.filter((a) => !a.phase).map(assetRow)}
                 </div>
               )}
@@ -185,7 +186,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
           {tab === 'soundscape' && (
             <div className="adm-asset__groups">
-              {scapes.size === 0 && <div className="adm-asset__empty">No soundscape textures found under assets/soundscape.</div>}
+              {scapes.size === 0 && <div className="adm-asset__empty">{tr('No soundscape textures found under assets/soundscape.')}</div>}
               {[...scapes.entries()].map(([texture, list]) => (
                 <div key={texture} className="adm-asset__group">
                   <div className="adm-asset__ghead">{texture} <span className="adm-asset__count">{list.length}</span></div>
@@ -198,11 +199,10 @@ export function AssetLibrary({ actor }: { actor: string }) {
           {tab === 'special' && (
             <div className="adm-asset__groups">
               <div className="adm-asset__group">
-                <div className="adm-asset__ghead">Heartbeat & singing bowl</div>
+                <div className="adm-asset__ghead">{tr('Heartbeat & singing bowl')}</div>
                 {special.length === 0 && (
                   <div className="adm-asset__empty">
-                    Nothing under assets/heartbeat or assets/bowl yet — these are PO deliverables. Until a file is mapped,
-                    Renderer v3 uses the synth provisional (60 BPM lub-dub · inharmonic bowl strike).
+                    {tr('Nothing under assets/heartbeat or assets/bowl yet — these are PO deliverables. Until a file is mapped, Renderer v3 uses the synth provisional (60 BPM lub-dub · inharmonic bowl strike).')}
                   </div>
                 )}
                 {special.map(assetRow)}
@@ -212,13 +212,13 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
           {/* -------- phase mapping -------- */}
           <div className="adm-asset__mapper">
-            <div className="adm-asset__ghead" style={{ marginBottom: 8 }}>Phase → asset mapping</div>
+            <div className="adm-asset__ghead" style={{ marginBottom: 8 }}>{tr('Phase → asset mapping')}</div>
             {protocols.length === 0 ? (
-              <div className="adm-asset__empty">No mappable protocols yet — import a datasheet or protocol document first.</div>
+              <div className="adm-asset__empty">{tr('No mappable protocols yet — import a datasheet or protocol document first.')}</div>
             ) : (
               <>
                 <div className="adm-spec__row">
-                  <span className="adm-spec__lbl">Protocol</span>
+                  <span className="adm-spec__lbl">{tr('Protocol')}</span>
                   <select className="b2b-input adm-asset__sel" value={selCode} onChange={(e) => setSelCode(e.target.value)}>
                     {protocols.map((p) => <option key={p.code} value={p.code}>{p.code} — {p.title}</option>)}
                   </select>
@@ -226,9 +226,9 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 </div>
 
                 <div className="adm-asset__grid">
-                  <div className="adm-asset__gridhead">Phase</div>
-                  <div className="adm-asset__gridhead">Music stem</div>
-                  <div className="adm-asset__gridhead">Soundscape texture</div>
+                  <div className="adm-asset__gridhead">{tr('Phase')}</div>
+                  <div className="adm-asset__gridhead">{tr('Music stem')}</div>
+                  <div className="adm-asset__gridhead">{tr('Soundscape texture')}</div>
                   {PHASE_KEYS.map((k) => (
                     <PhaseMapRow
                       key={k}
@@ -245,23 +245,23 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 </div>
 
                 <div className="adm-spec__row" style={{ marginTop: 8 }}>
-                  <span className="adm-spec__lbl">Heartbeat file</span>
+                  <span className="adm-spec__lbl">{tr('Heartbeat file')}</span>
                   <select className="b2b-input adm-asset__sel" value={draft.heartbeat ?? ''} onChange={(e) => setSpecial('heartbeat', e.target.value)}>
-                    <option value="">— synth provisional (60 BPM) —</option>
+                    <option value="">{tr('— synth provisional (60 BPM) —')}</option>
                     {assets.filter((a) => a.kind === 'heartbeat').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
                   </select>
                 </div>
                 <div className="adm-spec__row">
-                  <span className="adm-spec__lbl">Singing bowl file</span>
+                  <span className="adm-spec__lbl">{tr('Singing bowl file')}</span>
                   <select className="b2b-input adm-asset__sel" value={draft.bowl ?? ''} onChange={(e) => setSpecial('bowl', e.target.value)}>
-                    <option value="">— synth provisional strike —</option>
+                    <option value="">{tr('— synth provisional strike —')}</option>
                     {assets.filter((a) => a.kind === 'bowl').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
                   </select>
                 </div>
 
                 <div className="adm-cred__actions" style={{ marginTop: 12 }}>
                   <button className="b2b-btn b2b-btn--primary" disabled={!dirty || saving || !selected} onClick={() => void save()}>
-                    {saving ? 'Saving…' : `Save mapping for ${selCode}`}
+                    {saving ? tr('Saving…') : tr('Save mapping for {code}', { code: selCode })}
                   </button>
                   {saved && <span className="adm-asset__meta">✓ Saved — the next render of {selCode} uses these assets.</span>}
                 </div>
@@ -291,7 +291,7 @@ function PhaseMapRow(props: {
     <>
       <div className="adm-asset__gridlbl">{label}</div>
       <select className="b2b-input adm-asset__sel" value={musicValue} onChange={(e) => onMusic(e.target.value)}>
-        <option value="">— synth pad fallback —</option>
+        <option value="">{tr('— synth pad fallback —')}</option>
         {music.length > 0 && (
           <optgroup label="This phase's folder">
             {music.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
@@ -304,7 +304,7 @@ function PhaseMapRow(props: {
         )}
       </select>
       <select className="b2b-input adm-asset__sel" value={scapeValue} onChange={(e) => onScape(e.target.value)}>
-        <option value="">— synth texture fallback —</option>
+        <option value="">{tr('— synth texture fallback —')}</option>
         {scapes.map((a) => <option key={a.path} value={a.path}>{a.texture} · {a.name}</option>)}
       </select>
     </>

@@ -10,6 +10,7 @@
    ============================================================================ */
 
 import { useEffect, useMemo, useState } from 'react'
+import { tr } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { getTtsProvider } from '../tts'
@@ -226,7 +227,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
         <div className="adm-spec__render">
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Version</span>
+            <span className="adm-spec__lbl">{tr('Version')}</span>
             <div className="adm-spec__chips">
               {ds.versions.map((v) => {
                 const ready = timelineReady(ds, v.duration)
@@ -245,24 +246,24 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Assets</span>
+            <span className="adm-spec__lbl">{tr('Assets')}</span>
             <div className="adm-spec__chips">
               <span className="adm-asset__meta">
                 {assetMap
-                  ? `music ${cov.music}/6 · soundscape ${cov.soundscape}/6${assetMap.heartbeat ? ' · heartbeat file' : ' · heartbeat synth'}${assetMap.bowl ? ' · bowl file' : ' · bowl synth'}`
+                  ? `music ${cov.music}/6 · soundscape ${cov.soundscape}/6${assetMap.heartbeat ? tr(' · heartbeat file') : tr(' · heartbeat synth')}${assetMap.bowl ? tr(' · bowl file') : tr(' · bowl synth')}`
                   : 'No asset mapping yet — everything renders on synth fallbacks. Map stems in the Asset Library, then re-open this import.'}
               </span>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Length</span>
+            <span className="adm-spec__lbl">{tr('Length')}</span>
             <div className="adm-spec__chips">
-              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>90 s preview</button>
+              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>{tr('90 s preview')}</button>
               <button className={`b2b-btn${!preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(false)}>Full session (~{Math.round(renderDur * 10.6)} MB WAV)</button>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Voice</span>
+            <span className="adm-spec__lbl">{tr('Voice')}</span>
             <div className="adm-spec__chips">
               <label className="adm-spec__check">
                 <input type="checkbox" checked={withVoice && tts.canRender} disabled={!tts.canRender} onChange={(e) => setWithVoice(e.target.checked)} />
@@ -271,7 +272,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Engine</span>
+            <span className="adm-spec__lbl">{tr('Engine')}</span>
             <VoiceEnginePanel onChanged={() => { setTtsTick((n) => n + 1); setWithVoice(true) }} />
           </div>
 
@@ -279,11 +280,11 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
             <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={runRender}>
               {busy ? (progress ?? 'Rendering…') : '♪ Render WAV (v3)'}
             </button>
-            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Sets audioReady on the catalog entry">
+            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title={tr('Sets audioReady on the catalog entry')}>
               ✓ Mark audio ready & finish
             </button>
-            <button className="b2b-btn" disabled={busy} onClick={() => void editInStudio()} title="Open this version's layers as editable tracks">🎚 Edit in Studio</button>
-            <button className="b2b-btn" disabled={busy} onClick={onDone}>Finish without audio</button>
+            <button className="b2b-btn" disabled={busy} onClick={() => void editInStudio()} title={tr('Open this version\'s layers as editable tracks')}>{tr('🎚 Edit in Studio')}</button>
+            <button className="b2b-btn" disabled={busy} onClick={onDone}>{tr('Finish without audio')}</button>
           </div>
 
           {rendered && (
@@ -299,13 +300,13 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
           {rendered && !rendered.preview && hasSupabaseEnv() && !attached && (
             <div className="adm-cred__actions" style={{ marginTop: 10 }}>
               <button className="b2b-btn b2b-btn--primary" disabled={uploading} onClick={uploadAndAttach}>
-                {uploading ? 'Encoding & uploading…' : '⬆ Upload & attach to catalog (192k MP3)'}
+                {uploading ? tr('Encoding & uploading…') : tr('⬆ Upload & attach to catalog (192k MP3)')}
               </button>
             </div>
           )}
           {attached && (
             <div className="adm-note adm-note--ok" style={{ marginTop: 10 }}>
-              <b>Attached.</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
+              <b>{tr('Attached.')}</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
             </div>
           )}
           {renderError && <div className="adm-note adm-note--warn" style={{ marginTop: 12 }}>Render failed: {renderError}</div>}
@@ -324,18 +325,18 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Review protocol datasheet</h1>
-          <p className="b2b-sub">From <code>{fileName}</code> — the canonical workbook, parsed sheet by sheet.</p>
+          <h1 className="b2b-h1">{tr('Review protocol datasheet')}</h1>
+          <p className="b2b-sub">{tr('From')} <code>{fileName}</code>{tr(' — the canonical workbook, parsed sheet by sheet.')}</p>
         </div>
-        <button className="b2b-btn" onClick={onCancel}>← Back</button>
+        <button className="b2b-btn" onClick={onCancel}>{tr('← Back')}</button>
       </header>
 
       <div className="adm-spec__card">
         <div className="adm-spec__id">
           <span className="adm-spec__code">{ds.code}</span>
-          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr('Title')} />
         </div>
-        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder="Patient-facing one-liner (optional — a default is generated)" />
+        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder={tr('Patient-facing one-liner (optional — a default is generated)')} />
 
         <div className="adm-spec__facts">
           {ds.docVersion && <span>{ds.docVersion}</span>}
@@ -361,7 +362,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
                 {' · '}
                 {ready
                   ? <b>{ds.timelines[v.duration]!.length} timeline rows ✓</b>
-                  : <b className="adm-spec__pending">timeline pending ⏳</b>}
+                  : <b className="adm-spec__pending">{tr('timeline pending ⏳')}</b>}
               </div>
               <div className="adm-spec__phases">
                 {ph.map((p) => (
@@ -376,7 +377,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
         {ds.musicMap.length > 0 && (
           <div className="adm-spec__version">
-            <div className="adm-spec__vhead">Music map (per phase)</div>
+            <div className="adm-spec__vhead">{tr('Music map (per phase)')}</div>
             <div className="adm-spec__phases">
               {ds.musicMap.map((m) => (
                 <span key={m.phase} className="adm-spec__phase" title={`${m.arrangement[24] ?? m.arrangement[12] ?? m.arrangement[6] ?? ''} · soundscape: ${m.soundscape}`}>
@@ -389,7 +390,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
         {ds.issues.length > 0 && (
           <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>
-            <b>Validation</b>
+            <b>{tr('Validation')}</b>
             <ul className="adm-spec__issues">{ds.issues.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
         )}
@@ -397,10 +398,10 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
       <div className="adm-import__foot" style={{ marginTop: 14 }}>
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={publish}>
-          {busy ? 'Publishing…' : `Publish ${ds.code} to catalog →`}
+          {busy ? tr('Publishing…') : tr('Publish {code} to catalog →', { code: ds.code })}
         </button>
         {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Publish failed: {publishError}</div>}
-        <p className="b2b-sub adm-import__hint">Publishing stores the full datasheet (and a derived spec for the existing surfaces); the next step renders the audio with Renderer v3.</p>
+        <p className="b2b-sub adm-import__hint">{tr('Publishing stores the full datasheet (and a derived spec for the existing surfaces); the next step renders the audio with Renderer v3.')}</p>
       </div>
     </div>
   )

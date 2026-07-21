@@ -1,4 +1,5 @@
 import { useProtocols, useCredentialRequests, useCompanies, useAdminUsers } from './hooks'
+import { tr } from '../i18n'
 
 type Section = 'overview' | 'catalog' | 'credentials' | 'companies' | 'users' | 'audit'
 
@@ -23,25 +24,25 @@ export function Overview({ onGo }: { onGo: (s: Section) => void }) {
   return (
     <div className="adm-page">
       <header className="adm-page__head">
-        <h1 className="b2b-h1">Overview</h1>
-        <p className="b2b-sub">The platform back-office — catalog, credentialing, tenants and users in one place.</p>
+        <h1 className="b2b-h1">{tr('Overview')}</h1>
+        <p className="b2b-sub">{tr('The platform back-office — catalog, credentialing, tenants and users in one place.')}</p>
       </header>
 
       <div className="adm-tiles">
         {tiles.map((t) => (
-          <button key={t.label} className={`adm-tile ${t.alert ? 'is-alert' : ''}`} onClick={() => onGo(t.go)}>
+          <button key={tr(t.label)} className={`adm-tile ${t.alert ? 'is-alert' : ''}`} onClick={() => onGo(t.go)}>
             <div className="adm-tile__value">
               {t.value}
               {t.of != null && <span className="adm-tile__of"> / {t.of}</span>}
             </div>
-            <div className="adm-tile__label">{t.label}</div>
-            <div className="adm-tile__hint">{t.hint}</div>
+            <div className="adm-tile__label">{tr(t.label)}</div>
+            <div className="adm-tile__hint">{tr(t.hint)}</div>
           </button>
         ))}
       </div>
 
       <div className="adm-note">
-        <b>Next up (step 2):</b> the content-import pipeline lives inside Protocol catalog — import a PDF/Excel spec,
+        <b>{tr('Next up (step 2):')}</b> the content-import pipeline lives inside Protocol catalog — import a PDF/Excel spec,
         generate the audio, and publish once so every company can use it.
       </div>
     </div>
