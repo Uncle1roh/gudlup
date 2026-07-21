@@ -12,6 +12,7 @@
 
 import { audioBufferToWav } from '../lib/wav'
 import { timeStretch } from './timestretch'
+import { buildEffectsChain, type TrackEffect } from './effects'
 
 export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral' | 'sample'
 export type Texture = 'lake' | 'air' | 'deep'
@@ -313,7 +314,7 @@ export function peakBuckets(durationSec: number): number {
 /* ---- realtime transport --------------------------------------------------- */
 
 export interface SchedClip { startSec: number; durationSec: number; buffer: AudioBuffer | null }
-export interface SchedTrack { id: string; clips: SchedClip[] }
+export interface SchedTrack { id: string; effects?: TrackEffect[]; clips: SchedClip[] }
 
 function makeContext(): AudioContext {
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -362,7 +363,9 @@ export class MultitrackPlayer {
       g.gain.value = gainFor(t.id)
       const pan = this.ctx.createStereoPanner()
       pan.pan.value = Math.max(-1, Math.min(1, panFor?.(t.id) ?? 0))
-      g.connect(pan).connect(this.master)
+      const fx = buildEffectsChain(this.ctx, t.effects)
+      g.connect(fx.input)
+      fx.output.connect(pan).connect(this.master)
       this.trackGains.set(t.id, g)
       this.trackPans.set(t.id, pan)
       for (const c of t.clips) {
@@ -421,7 +424,7 @@ export class MultitrackPlayer {
 
 /* ---- offline mixdown → WAV ------------------------------------------------- */
 
-export interface MixTrack { gain: number; pan?: number; clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[] }
+export interface MixTrack { gain: number; pan?: number; effects?: TrackEffect[]; clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[] }
 
 export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number): Promise<AudioBuffer> {
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * lengthSec))
@@ -434,7 +437,9 @@ export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number,
     g.gain.value = t.gain
     const pan = ctx.createStereoPanner()
     pan.pan.value = Math.max(-1, Math.min(1, t.pan ?? 0))
-    g.connect(pan).connect(master)
+    const fx = buildEffectsChain(ctx, t.effects)
+    g.connect(fx.input)
+    fx.output.connect(pan).connect(master)
     for (const c of t.clips) {
       if (!c.buffer) continue
       const src = ctx.createBufferSource()

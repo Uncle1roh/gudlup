@@ -1,6 +1,25 @@
 # Good Loop — build manifest
 
-**Fix: Italian default · voice migration + datasheet voice spec · volume UX** (current)
+**Slice: track effects (FX chain)** (current)
+- New `src/studio/effects.ts` — five effects, PO list included:
+  · HARMONIZER (Coral/Multiple voice): pitch-shifted copies (resample + WSOLA
+    stretch-back, duration preserved) layered around the original with stereo
+    spread + optional octave layer → one voice reads as a chorus. Processed
+    OFFLINE per clip, cached per source+params; clips play their harmonized
+    buffer transparently (fxBuffer) in transport and mixdown.
+  · EMOTIONAL ECHO: delay + feedback with warm low-pass on repeats.
+  · REVERB: convolver with generated exponential-decay impulse (cached IRs).
+  · SATURATION: soft tanh waveshaping, warmth → distortion by drive.
+  · FILTER: low/high-pass tone shaping.
+- ONE chain builder serves the realtime player AND the offline mixdown
+  (identical nodes) — editing sound == exported sound. Chain order:
+  harmonized clips → saturation → filter → echo → reverb → gain → pan.
+- UI: FX button on every track header (active-count badge) → drawer with
+  metadata-driven cards (enable + sliders per effect). Effects apply LIVE
+  during playback via the hot-swap (signature includes the FX chain).
+- MixTrack/SchedTrack carry `effects`; Track model + attach/export wired.
+
+**Fix: Italian default · voice migration + datasheet voice spec · volume UX**
 - **Default locale = Italian** (`src/i18n`): the env override (VITE_DEFAULT_LOCALE)
   still wins; the fallback was ''en''. Users who previously picked a language
   keep their saved choice (localStorage) — switch once in the selector.

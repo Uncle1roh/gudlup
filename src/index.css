@@ -1689,3 +1689,20 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-head__vol { display: flex; align-items: center; gap: 8px; }
 .mt-head__vol .mt-vol { flex: 1; min-width: 0; accent-color: var(--mt-accent); height: 18px; }
 .mt-head__voldb { font-size: 11px; color: var(--mt-sub); font-variant-numeric: tabular-nums; width: 34px; text-align: right; flex: none; }
+
+/* Studio — per-track FX drawer */
+.mt-fxbtn { border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-sub); border-radius: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; cursor: pointer; flex: none; }
+.mt-fxbtn.is-on { background: var(--mt-accent); color: #06241c; border-color: var(--mt-accent); }
+.mt-fx { background: var(--mt-panel); border-bottom: 1px solid var(--mt-line); padding: 10px 14px; max-height: 260px; overflow: auto; flex-shrink: 0; }
+.mt-fx__head { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--mt-text); margin-bottom: 8px; }
+.mt-fx__busy { color: var(--mt-play); font-size: 12px; }
+.mt-fx__hint { color: var(--mt-sub); font-size: 11.5px; flex: 1; }
+.mt-fx__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.mt-fx__card { border: 1px solid var(--mt-line); border-radius: 10px; padding: 9px 11px; background: var(--mt-panel2); }
+.mt-fx__card.is-on { border-color: var(--mt-accent); }
+.mt-fx__title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--mt-text); cursor: pointer; }
+.mt-fx__blurb { font-size: 11px; color: var(--mt-sub); margin: 4px 0 6px; line-height: 1.35; }
+.mt-fx__param { display: flex; align-items: center; gap: 7px; margin-top: 4px; }
+.mt-fx__plbl { font-size: 11px; color: var(--mt-sub); width: 62px; flex: none; }
+.mt-fx__param input { flex: 1; min-width: 0; accent-color: var(--mt-accent); }
+.mt-fx__pval { font-size: 11px; color: var(--mt-text); width: 52px; text-align: right; font-variant-numeric: tabular-nums; flex: none; }

@@ -28,6 +28,7 @@ import {
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { ARCHETYPES, DEFAULT_PRIMARY, voicesByArchetype } from '../tts/voiceCatalog'
+import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
@@ -54,6 +55,10 @@ interface Clip {
   /** A cut/glued piece: its audio is frozen — parameter edits don't
       re-render it (glue pieces back together to re-edit parameters). */
   frozen?: boolean
+  /** Harmonized (Coral) version of `buffer` — played when present. */
+  fxBuffer?: AudioBuffer | null
+  /** Which harmonizer params produced fxBuffer (invalidation key). */
+  fxKey?: string
 }
 type TrackChannel = 'L' | 'C' | 'R'
 const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
@@ -67,6 +72,8 @@ interface Track {
   soloed: boolean
   /** Whole-track stereo position (applies live and in the mixdown). */
   channel?: TrackChannel
+  /** Per-track effect chain (harmonizer · echo · reverb · saturation · filter). */
+  effects?: TrackEffect[]
   clips: Clip[]
 }
 
@@ -159,7 +166,8 @@ function StudioDesktop() {
       const mix: MixTrack[] = tracks.map((t) => ({
         gain: t.muted ? 0 : tracks.some((x) => x.soloed) && !t.soloed ? 0 : t.volume,
         pan: CHANNEL_PAN[t.channel ?? 'C'],
-        clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.buffer })),
+        effects: t.effects,
+        clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
       }))
       const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain)
       const { url } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
@@ -361,7 +369,11 @@ function StudioDesktop() {
     return CHANNEL_PAN[t?.channel ?? 'C']
   }
   function snapshot(): SchedTrack[] {
-    return tracksRef.current.map((t) => ({ id: t.id, clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.buffer })) }))
+    return tracksRef.current.map((t) => ({
+      id: t.id,
+      effects: t.effects,
+      clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
+    }))
   }
   function startRaf() {
     const tick = () => {
@@ -424,7 +436,7 @@ function StudioDesktop() {
       if (!id) { id = ++bufferSeq.current; bufferIds.current.set(b, id) }
       return id
     }
-    const sig = tracks.map((t) => `${t.id}:` + t.clips.map((c) => `${c.id}@${c.startSec.toFixed(2)}+${c.durationSec.toFixed(2)}#${bufId(c.buffer)}`).join(',')).join('|')
+    const sig = tracks.map((t) => `${t.id}[${effectsKey(t.effects)}]:` + t.clips.map((c) => `${c.id}@${c.startSec.toFixed(2)}+${c.durationSec.toFixed(2)}#${bufId(c.fxBuffer ?? c.buffer)}`).join(',')).join('|')
     if (!playing) { lastSig.current = sig; return }
     if (sig === lastSig.current) return
     lastSig.current = sig
@@ -435,6 +447,58 @@ function StudioDesktop() {
     }, 160)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks, playing])
+
+  /* ---- track effects ---- */
+  const [fxTrackId, setFxTrackId] = useState<string | null>(null)
+  const [fxBusy, setFxBusy] = useState(false)
+
+  function patchEffect(trackId: string, kind: TrackEffect['kind'], patch: Partial<TrackEffect> | { params: Record<string, number> }) {
+    setTracks((prev) => prev.map((t) => {
+      if (t.id !== trackId) return t
+      const effects = (t.effects ?? defaultEffects()).map((e) =>
+        e.kind !== kind ? e : { ...e, ...patch, params: { ...e.params, ...('params' in patch ? patch.params : {}) } })
+      return { ...t, effects }
+    }))
+  }
+
+  // HARMONIZER (Coral): offline per-clip processing. Whenever a track's
+  // harmonizer settings change, every rendered clip gets its chorus version
+  // computed (cached by source+params) and stored as fxBuffer; disabling
+  // clears it. Playback/mixdown pick fxBuffer ?? buffer.
+  useEffect(() => {
+    let cancelled = false
+    const jobs: { trackId: string; clipId: string; source: AudioBuffer; params: Record<string, number>; key: string }[] = []
+    for (const t of tracks) {
+      const h = t.effects?.find((e) => e.kind === 'harmonizer')
+      const key = h?.enabled ? `h:${Object.entries(h.params).map(([k, v]) => `${k}=${v}`).join(',')}` : ''
+      for (const c of t.clips) {
+        if (!key) {
+          if (c.fxBuffer || c.fxKey) {
+            setTracks((prev) => prev.map((x) => (x.id !== t.id ? x : { ...x, clips: x.clips.map((y) => (y.id !== c.id ? y : { ...y, fxBuffer: null, fxKey: undefined })) })))
+          }
+          continue
+        }
+        if (c.buffer && c.fxKey !== key) jobs.push({ trackId: t.id, clipId: c.id, source: c.buffer, params: h!.params, key })
+      }
+    }
+    if (!jobs.length) return
+    setFxBusy(true)
+    void (async () => {
+      for (const j of jobs) {
+        try {
+          const out = await harmonizeBuffer(j.source, j.params)
+          if (cancelled) return
+          setTracks((prev) => prev.map((t) => (t.id !== j.trackId ? t : {
+            ...t,
+            clips: t.clips.map((c) => (c.id !== j.clipId || c.buffer !== j.source ? c : { ...c, fxBuffer: out, fxKey: j.key })),
+          })))
+        } catch { /* clip keeps its dry buffer */ }
+      }
+      if (!cancelled) setFxBusy(false)
+    })()
+    return () => { cancelled = true; setFxBusy(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks])
 
   /* ---- cut & glue ---- */
   const [editMsg, setEditMsg] = useState<string | null>(null)
@@ -613,7 +677,7 @@ function StudioDesktop() {
     setExporting(true)
     try {
       const solo = tracks.some((t) => t.soloed)
-      const mix: MixTrack[] = tracks.map((t) => ({ gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume, pan: CHANNEL_PAN[t.channel ?? 'C'], clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.buffer })) }))
+      const mix: MixTrack[] = tracks.map((t) => ({ gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume, pan: CHANNEL_PAN[t.channel ?? 'C'], effects: t.effects, clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })) }))
       const blob = await renderMixdown(mix, lengthSec, masterGain)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -697,6 +761,19 @@ function StudioDesktop() {
 
       {/* ---- arrange view ---- */}
       {editMsg && <div className="mt-editmsg" onClick={() => setEditMsg(null)}>{editMsg} ✕</div>}
+      {fxTrackId && (() => {
+        const t = tracks.find((x) => x.id === fxTrackId)
+        if (!t) return null
+        return (
+          <FxDrawer
+            track={t}
+            busy={fxBusy}
+            onClose={() => setFxTrackId(null)}
+            onToggle={(kind, enabled) => patchEffect(t.id, kind, { enabled })}
+            onParam={(kind, key, v) => patchEffect(t.id, kind, { params: { [key]: v } })}
+          />
+        )
+      })()}
       <div className="mt-body">
         <div className="mt-grid">
           <div className="mt-headers" style={{ width: HEADER_W }}>
@@ -711,6 +788,7 @@ function StudioDesktop() {
               onDelete={() => deleteTrack(t.id)}
               onAddClip={() => addClip(t.id, playhead)}
               onChannel={(c) => patchTrack(t.id, { channel: c })}
+              onFx={() => setFxTrackId((v) => (v === t.id ? null : t.id))}
             />
           ))}
           {tracks.length === 0 && <div className="mt-empty">No tracks. Use ＋ Track.</div>}
@@ -757,7 +835,7 @@ function StudioDesktop() {
 }
 
 /* ============================ track header ============================ */
-function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, onAddClip, onChannel }: {
+function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, onAddClip, onChannel, onFx }: {
   track: Track
   onVolume: (v: number) => void
   onToggleMute: () => void
@@ -765,14 +843,19 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
   onDelete: () => void
   onAddClip: () => void
   onChannel: (c: TrackChannel) => void
+  onFx: () => void
 }) {
   const meta = TRACK_META[track.type]
   const ch = track.channel ?? 'C'
+  const fxOn = (track.effects ?? []).filter((e) => e.enabled).length
   return (
     <div className="mt-head" style={{ height: LANE_H, borderLeftColor: meta.color }}>
       <div className="mt-head__top">
         <span className="mt-head__icon">{meta.icon}</span>
         <span className="mt-head__name">{track.name}</span>
+        <button className={`mt-fxbtn${fxOn ? ' is-on' : ''}`} onClick={onFx} title="Track effects (harmonizer · echo · reverb · saturation · filter)">
+          FX{fxOn ? ` ${fxOn}` : ''}
+        </button>
         <button className="mt-x" onClick={onDelete} title="Remove track">✕</button>
       </div>
       <div className="mt-head__row">
@@ -1106,6 +1189,53 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
           </optgroup>
         ))}
       </select>
+    </div>
+  )
+}
+
+
+/* ---- per-track effects drawer (metadata-driven controls) ---- */
+function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
+  track: Track
+  busy: boolean
+  onClose: () => void
+  onToggle: (kind: TrackEffect['kind'], enabled: boolean) => void
+  onParam: (kind: TrackEffect['kind'], key: string, v: number) => void
+}) {
+  const effects = track.effects ?? defaultEffects()
+  return (
+    <div className="mt-fx">
+      <div className="mt-fx__head">
+        <b>FX — {track.name}</b>
+        {busy && <span className="mt-fx__busy">processing chorus…</span>}
+        <span className="mt-fx__hint">Effects apply live and in the export. Harmonizer processes each clip (a short wait); the others are instant.</span>
+        <button className="mt-x" onClick={onClose}>✕</button>
+      </div>
+      <div className="mt-fx__grid">
+        {EFFECTS_META.map((meta) => {
+          const fx = effects.find((e) => e.kind === meta.kind)!
+          return (
+            <div key={meta.kind} className={`mt-fx__card${fx.enabled ? ' is-on' : ''}`}>
+              <label className="mt-fx__title">
+                <input type="checkbox" checked={fx.enabled} onChange={(e) => onToggle(meta.kind, e.target.checked)} />
+                <span>{meta.icon} {meta.label}</span>
+              </label>
+              <div className="mt-fx__blurb">{meta.blurb}</div>
+              {fx.enabled && meta.params.map((p) => (
+                <div key={p.key} className="mt-fx__param">
+                  <span className="mt-fx__plbl">{p.label}</span>
+                  <input
+                    type="range" min={p.min} max={p.max} step={p.step}
+                    value={fx.params[p.key] ?? p.min}
+                    onChange={(e) => onParam(meta.kind, p.key, +e.target.value)}
+                  />
+                  <span className="mt-fx__pval">{p.fmt(fx.params[p.key] ?? p.min)}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
