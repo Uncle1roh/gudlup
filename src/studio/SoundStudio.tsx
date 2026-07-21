@@ -36,7 +36,7 @@ import { attachRenderedAudio } from '../admin/attachAudio'
 import type { SeedTrack } from '../compose/types'
 
 /* ---- layout constants ---- */
-const LANE_H = 86
+const LANE_H = 104
 const RULER_H = 30
 const HEADER_W = 254
 const MIN_CLIP = 1
@@ -783,8 +783,18 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
             <button key={c} className={`mt-chan__b${ch === c ? ' is-on' : ''}`} onClick={() => onChannel(c)}>{c}</button>
           ))}
         </span>
-        <input className="mt-vol" type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => onVolume(+e.target.value)} />
+        <span style={{ flex: 1 }} />
         <button className="mt-addclip" onClick={onAddClip} title="Add clip at playhead">＋</button>
+      </div>
+      <div className="mt-head__vol" title="Track volume — scroll on the slider for ±1% fine steps">
+        <input
+          className="mt-vol"
+          type="range" min={0} max={1} step={0.005}
+          value={track.volume}
+          onChange={(e) => onVolume(+e.target.value)}
+          onWheel={(e) => { e.preventDefault(); onVolume(Math.min(1, Math.max(0, +(track.volume + (e.deltaY < 0 ? 0.01 : -0.01)).toFixed(3)))) }}
+        />
+        <span className="mt-head__voldb">{Math.round(track.volume * 100)}%</span>
       </div>
     </div>
   )

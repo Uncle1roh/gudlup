@@ -37,8 +37,8 @@ function VoiceSelect({ value, onChange, allowDefault }: { value: string; onChang
 
 export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [apiKey, setApiKey] = useState(() => getTtsSettings()?.apiKey ?? '')
-  const [voiceId, setVoiceId] = useState(() => getTtsSettings()?.voiceId || DEFAULT_PRIMARY.id)
-  const [voiceIdM, setVoiceIdM] = useState(() => getTtsSettings()?.voiceIdSecondary || DEFAULT_SECONDARY.id)
+  const [voiceId, setVoiceId] = useState(() => { const v = getTtsSettings()?.voiceId; return voiceById(v) ? v! : DEFAULT_PRIMARY.id })
+  const [voiceIdM, setVoiceIdM] = useState(() => { const v = getTtsSettings()?.voiceIdSecondary; return voiceById(v) ? v! : DEFAULT_SECONDARY.id })
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

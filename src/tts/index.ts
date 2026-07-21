@@ -12,15 +12,19 @@ import { createBrowserTts } from './browser'
 import { createElevenLabsTts } from './elevenlabs'
 import { createAzureTts } from './azure'
 import { getTtsSettings } from './settings'
-import { DEFAULT_PRIMARY, DEFAULT_SECONDARY } from './voiceCatalog'
+import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, voiceById } from './voiceCatalog'
 
 const env = import.meta.env
 
 export function getTtsProvider(): TtsProvider {
   const saved = getTtsSettings()
   if (saved) {
-    // the PO voice catalog supplies the defaults — nobody types ids anymore
-    return createElevenLabsTts(saved.apiKey, saved.voiceId || DEFAULT_PRIMARY.id, saved.voiceIdSecondary || DEFAULT_SECONDARY.id)
+    // the PO voice catalog supplies the defaults — nobody types ids anymore.
+    // Ids saved BEFORE the catalog existed (e.g. the old male primary) are
+    // not in the catalog → treated as unset, so Valeria/Marco take over.
+    const pid = voiceById(saved.voiceId) ? saved.voiceId : DEFAULT_PRIMARY.id
+    const sid = voiceById(saved.voiceIdSecondary) ? saved.voiceIdSecondary! : DEFAULT_SECONDARY.id
+    return createElevenLabsTts(saved.apiKey, pid, sid)
   }
 
   const elKey = env.VITE_ELEVENLABS_API_KEY

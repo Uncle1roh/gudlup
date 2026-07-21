@@ -86,3 +86,35 @@ export function voiceLabel(v: CatalogVoice): string {
   const arch = ARCHETYPES.find((a) => a.id === v.archetype)
   return `${v.name} (${v.gender} · ${arch?.label ?? v.archetype})`
 }
+
+
+/* ---- match a datasheet voice description to a catalog voice ----
+   Accepts either an explicit voice NAME ("Valeria", "Marco Trox") or an
+   archetype keyword in Italian/English/Portuguese ("materna", "paternal",
+   "sussurrata", "saggio/mentore", "guerriero", "ombra", "rituale",
+   "bambino interiore", "neutra"), optionally gender-filtered by [F]/[M]. */
+const ARCHETYPE_KEYWORDS: [RegExp, ArchetypeId][] = [
+  [/matern/i, 'maternal'],
+  [/patern/i, 'paternal'],
+  [/sagg|mentor|wise|sábi|sabi/i, 'wise'],
+  [/neutr|descri/i, 'neutral'],
+  [/guerr|warrior/i, 'warrior'],
+  [/ombra|shadow|sombra/i, 'shadow'],
+  [/ritual|cerimon|ceremon/i, 'ritual'],
+  [/bambin|child|kid|criança|crianca/i, 'child'],
+  [/sussurr|whisper|intim/i, 'whisper'],
+]
+
+export function matchVoiceFromText(text: string | undefined): CatalogVoice | undefined {
+  if (!text) return undefined
+  const t = text.toLowerCase()
+  // 1) explicit name wins
+  const byName = VOICE_CATALOG.find((v) => t.includes(v.name.toLowerCase()))
+  if (byName) return byName
+  // 2) archetype keyword, gender-filtered when [F]/[M] present
+  const hit = ARCHETYPE_KEYWORDS.find(([rx]) => rx.test(text))
+  if (!hit) return undefined
+  const list = voicesByArchetype(hit[1])
+  const g = /\[F\]|femmin|female|femin/i.test(text) ? 'F' : /\[M\]|maschil|male|masculin/i.test(text) ? 'M' : undefined
+  return (g ? list.find((v) => v.gender === g) : undefined) ?? list[0]
+}

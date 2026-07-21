@@ -1683,3 +1683,9 @@ img, svg, video, canvas { max-width: 100%; }
 /* Studio — inspector selects (voice roster, sample file picker) */
 .mt-tts__sel { flex: 1; min-width: 0; background: var(--mt-panel2); border: 1px solid var(--mt-line); color: var(--mt-text); border-radius: 7px; padding: 6px 8px; font-size: 12.5px; }
 .mt-tts__sel:focus { outline: none; border-color: var(--mt-accent); }
+
+
+/* Studio — full-width per-track volume row with readout */
+.mt-head__vol { display: flex; align-items: center; gap: 8px; }
+.mt-head__vol .mt-vol { flex: 1; min-width: 0; accent-color: var(--mt-accent); height: 18px; }
+.mt-head__voldb { font-size: 11px; color: var(--mt-sub); font-variant-numeric: tabular-nums; width: 34px; text-align: right; flex: none; }

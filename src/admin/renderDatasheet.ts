@@ -35,6 +35,7 @@
 import { renderClipBuffer, SAMPLE_RATE, CHORD_TRIADS, type Chord, type SoundscapeParams, type Texture } from '../studio/multitrack'
 import { audioBufferToWav } from '../lib/wav'
 import { getTtsProvider } from '../tts'
+import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, matchVoiceFromText } from '../tts/voiceCatalog'
 import type { Duration } from '../types/domain'
 import { fetchAssetBuffer, type AssetMap, type PhaseKey } from './assets'
 import { fmtTime, speakableText, timelineReady, type Datasheet, type DsPhase, type DsRowKind, type DsTimelineRow, type DsVersionParams } from './datasheet'
@@ -420,14 +421,18 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     } else {
       const decoder = new AudioContext({ sampleRate: SAMPLE_RATE })
       const cache = new Map<string, AudioBuffer>()
+      // The DATASHEET decides the voices: "Voce primaria/secondaria" rows in
+      // Invarianti are matched to the PO catalog by name or archetype keyword.
+      // Not specified (or no match) → the engine defaults (Valeria / Marco).
+      const dsPrimary = matchVoiceFromText(ds.invariants.find((i) => /voce primaria/i.test(i.param))?.value)
+      const dsSecondary = matchVoiceFromText(ds.invariants.find((i) => /voce secondaria/i.test(i.param))?.value)
+      notes.push(`Voices: [F] ${dsPrimary ? `${dsPrimary.name} (from the datasheet)` : `${DEFAULT_PRIMARY.name} (default — the datasheet doesn't specify one)`} · [M] ${dsSecondary ? `${dsSecondary.name} (from the datasheet)` : `${DEFAULT_SECONDARY.name} (default)`}.`)
       const renderText = async (text: string, voice: 'primary' | 'secondary' = 'primary'): Promise<AudioBuffer> => {
-        // secondary requests without a configured [M] voice fall back to the
-        // primary INSIDE the provider — share the cache entry in that case
-        const effective = voice === 'secondary' && tts.hasSecondaryVoice ? 'secondary' : 'primary'
-        const key = `${effective}|${text}`
+        const voiceId = voice === 'secondary' ? dsSecondary?.id : dsPrimary?.id
+        const key = `${voiceId ?? voice}|${text}`
         let buf = cache.get(key)
         if (!buf) {
-          const bytes = await tts.render(text, { lang: 'it', voice: effective })
+          const bytes = await tts.render(text, { lang: 'it', voice, voiceId })
           buf = await decoder.decodeAudioData(bytes.slice(0))
           cache.set(key, buf)
         }
@@ -457,11 +462,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       }
       onProgress?.('voice', jobs.length, jobs.length)
       if (jobs.some((j) => j.secondary)) {
-        if (tts.hasSecondaryVoice) {
-          notes.push(`Secondary [M] voice rows rendered with the configured male voice (${jobs.filter((j) => j.secondary).length} rows).`)
-        } else {
-          notes.push('Secondary [M] voice rows rendered with the primary voice — set the [M] Voice ID in the Voice engine panel to give the double-induction its male voice.')
-        }
+        notes.push(`Secondary [M] voice rows: ${jobs.filter((j) => j.secondary).length} (rendered with ${dsSecondary?.name ?? DEFAULT_SECONDARY.name}).`)
       }
     }
   } else if (!opts.withVoice && jobs.length) {

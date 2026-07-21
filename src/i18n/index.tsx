@@ -31,7 +31,8 @@ function isLocale(v: unknown): v is Locale {
 
 function defaultLocale(): Locale {
   const env = (import.meta.env.VITE_DEFAULT_LOCALE as string | undefined)?.trim()
-  return isLocale(env) ? env : 'en'
+  // Italian is the product default (pilot direction); env still overrides.
+  return isLocale(env) ? env : 'it'
 }
 
 function interpolate(s: string, vars?: Record<string, string | number>): string {

@@ -1,6 +1,23 @@
 # Good Loop — build manifest
 
-**Slice: PO voice catalog baked in (no more voice IDs)** (current)
+**Fix: Italian default · voice migration + datasheet voice spec · volume UX** (current)
+- **Default locale = Italian** (`src/i18n`): the env override (VITE_DEFAULT_LOCALE)
+  still wins; the fallback was ''en''. Users who previously picked a language
+  keep their saved choice (localStorage) — switch once in the selector.
+- **Legacy voice migration**: saved voice ids that are NOT in the PO catalog
+  (e.g. the old male primary) are treated as unset → Valeria/Marco take over
+  automatically, in the provider AND in the panel preselects. No user action.
+- **Datasheet voice specification**: the Invarianti rows "Voce primaria /
+  secondaria" now RESOLVE to catalog voices by explicit name ("Valeria") or
+  archetype keyword (materna/paterna/sussurrata/saggio/neutra/guerriero/
+  ombra/rituale/bambino, it·en·pt, [F]/[M] gender filter). Renderer v3 uses
+  them per row; unspecified → engine defaults. Render notes state which
+  voices were used and why.
+- **Track volume UX**: dedicated full-width volume row per track header
+  (lane height 86→104), 0.5% slider steps, mouse-wheel ±1% fine adjust,
+  live % readout.
+
+**Slice: PO voice catalog baked in (no more voice IDs)**
 - New `src/tts/voiceCatalog.ts`: the definitive PO list — 9 archetypes
   (Maternal, Paternal, Wise/Mentor, Neutral, Warrior, Shadow, Ritual,
   Interior Kid, Intimate/Whispered), 17 named ElevenLabs voices with their
