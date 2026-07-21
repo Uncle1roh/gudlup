@@ -156,24 +156,32 @@ function synthBreathPacer(
   const swell = (t0: number, dur: number, rising: boolean) => {
     if (dur < 0.4) return
     const src = ctx.createBufferSource()
-    src.buffer = mkNoise(dur + 0.1)
+    src.buffer = mkNoise(dur + 0.3)
+    // dark, breath-like band (double low-pass ≈ air, no hiss) with a gentle
+    // pitch drift up on the inhale, down on the exhale
     const bp = ctx.createBiquadFilter()
     bp.type = 'bandpass'
-    bp.frequency.setValueAtTime(rising ? 420 : 620, t0)
-    bp.frequency.linearRampToValueAtTime(rising ? 780 : 320, t0 + dur) // rising vs falling air
-    bp.Q.value = 0.8
+    bp.frequency.setValueAtTime(rising ? 300 : 420, t0)
+    bp.frequency.linearRampToValueAtTime(rising ? 480 : 240, t0 + dur)
+    bp.Q.value = 0.5
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 900
     const g = ctx.createGain()
     g.gain.setValueAtTime(0, t0)
+    // slow sinusoid-ish swell: ease in AND out, never abrupt
     if (rising) {
-      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.75)
-      g.gain.linearRampToValueAtTime(0, t0 + dur)
+      g.gain.linearRampToValueAtTime(level * 0.4, t0 + dur * 0.35)
+      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.8)
+      g.gain.linearRampToValueAtTime(0, t0 + dur + 0.2)
     } else {
-      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.2)
-      g.gain.linearRampToValueAtTime(0, t0 + dur)
+      g.gain.linearRampToValueAtTime(level, t0 + dur * 0.3)
+      g.gain.linearRampToValueAtTime(level * 0.35, t0 + dur * 0.8)
+      g.gain.linearRampToValueAtTime(0, t0 + dur + 0.2)
     }
-    src.connect(bp).connect(g).connect(dest)
+    src.connect(bp).connect(lp).connect(g).connect(dest)
     src.start(t0)
-    src.stop(t0 + dur + 0.1)
+    src.stop(t0 + dur + 0.3)
   }
   let t = at
   const timings = breathTimings(pattern)
@@ -565,7 +573,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
           const layer9 = ds.layers.find((l) => /sussurro continuo/i.test(l.description))
           const quoted = layer9 ? /["\u201c]([^"\u201d]+)["\u201d]/.exec(layer9.description)?.[1] : undefined
           const text = quoted ?? (ds.refrain ? ds.refrain.toLowerCase().split(/[,\s]+/).filter((w) => w.length > 3).join('… ') + '…' : 'centro… respiro… pace…')
-          try { whisperLoopBuffer = await renderText(text) } catch (e) { notes.push(`Continuous whisper failed: ${(e as Error).message}`) }
+          try { whisperLoopBuffer = await renderText(text, 'secondary', dsSecondary?.id) } catch (e) { notes.push(`Continuous whisper failed: ${(e as Error).message}`) }
         }
       } finally {
         await decoder.close()
@@ -831,10 +839,10 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   // protocols), soft triangle at the MIX level (default −22 dB vs voice)
   if (ds.mix?.solfeggioHz) {
     const osc = ctx.createOscillator()
-    osc.type = 'triangle'
+    osc.type = 'sine' // pure — a triangle's harmonics clash with the music bed
     osc.frequency.value = ds.mix.solfeggioHz
     const g = ctx.createGain()
-    const lvl = Math.min(0.12, voiceRefRms * dB(ds.mix.solfeggioDb ?? -22))
+    const lvl = Math.min(0.1, voiceRefRms * dB(Math.min(-14, ds.mix.solfeggioDb ?? -22)))
     g.gain.value = 0
     g.gain.setValueAtTime(0, 0)
     g.gain.linearRampToValueAtTime(lvl, Math.min(20, totalSec / 4))
@@ -851,9 +859,9 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     for (const b of rows) {
       const ph = phases.find((p) => p.id === b.phase)
       if (!ph || ph.startSec >= totalSec) continue
-      const lvl = Math.min(0.2, voiceRefRms * dB(-18))
+      const lvl = Math.min(0.12, voiceRefRms * dB(-24))
       const used = synthBreathPacer(ctx, master, Math.min(totalSec - 4, ph.startSec + 2), b.pattern, Math.max(1, b.cycles), lvl)
-      notes.push(`Breathing pacer: ${b.pattern} ×${b.cycles} in F${b.phase} (${Math.round(used)} s of guided air swells at −18 dB).`)
+      notes.push(`Breathing pacer: ${b.pattern} ×${b.cycles} in F${b.phase} (${Math.round(used)} s of soft air swells at −24 dB).`)
     }
   }
 

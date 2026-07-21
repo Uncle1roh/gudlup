@@ -1,6 +1,25 @@
 # Good Loop — build manifest
 
-**Slice: Scheda Unica v2 — the 7 gaps closed** (current)
+**Slice: Studio v2 + audio polish** (current)
+- **Per-row voices reach the Studio**: datasheetToStudioTracks rebuilds the
+  voice tracks straight from the datasheet rows — every clip carries its OWN
+  voiceId (row Voce → catalog; [M] → protocol secondary; default otherwise),
+  fine pan (L25 etc.) and speed. "Synthesize all" now speaks each line with
+  its right voice (this was the "all audios have the same voice" bug — the
+  old seed dropped the voice column).
+- **v2 layers visible in the Studio**: binaural CURVE seeded as per-phase
+  clips (e.g. 10 Hz → 7 Hz → 10 Hz, editable clip by clip); "Solfeggio N Hz"
+  track (binaural clip with beat 0 = pure tone both channels); "Breathing
+  pacer" track with breath clips per RESPIRAZIONE row (rate derived from the
+  pattern timings).
+- **Audio polish ("sounds weird")**: breathing pacer rebuilt — darker
+  breath-like band (300–480 Hz + low-pass 900), eased swell envelopes, level
+  −18→−24 dB (was reading as wind static); solfeggio now a pure sine (the
+  triangle's harmonics clashed with the music bed), capped at −14 dB
+  regardless of the doc percentage; continuous whisper now follows the
+  datasheet's [M] voice (was the engine secondary).
+
+**Slice: Scheda Unica v2 — the 7 gaps closed**
 Pattern analysis across ALL 8 Italian protocols + the 9 in-depth technique
 docs ("112 techniques 9 tools") drove a format+engine upgrade:
 - **Binaural curve per phase**: FASI gains a Binaural column ("Theta 7 Hz
