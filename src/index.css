@@ -1706,3 +1706,9 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-fx__plbl { font-size: 11px; color: var(--mt-sub); width: 62px; flex: none; }
 .mt-fx__param input { flex: 1; min-width: 0; accent-color: var(--mt-accent); }
 .mt-fx__pval { font-size: 11px; color: var(--mt-text); width: 52px; text-align: right; font-variant-numeric: tabular-nums; flex: none; }
+
+/* Studio — click-to-type values + scrub cursor */
+.mt-editable { cursor: text; border-bottom: 1px dashed color-mix(in srgb, currentColor 45%, transparent); }
+.mt-editable:hover { border-bottom-style: solid; }
+.mt-editable__input { width: 58px; background: var(--mt-panel2); border: 1px solid var(--mt-accent); color: var(--mt-text); border-radius: 5px; font-size: 12px; padding: 1px 4px; font-variant-numeric: tabular-nums; }
+.mt-ruler { cursor: ew-resize; }

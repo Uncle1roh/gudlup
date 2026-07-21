@@ -402,12 +402,17 @@ function StudioDesktop() {
     p.stop(); setPlaying(false); setPlayhead(0)
     if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = null
   }
+  const seekTimer = useRef<number | null>(null)
   function seek(sec: number) {
     const c = clamp(sec, 0, lengthSec)
     setPlayhead(c)
     const p = playerRef.current; if (!p) return
-    if (playing) p.play(snapshot(), c, gainForId, panForId)
-    else p.setPlayhead(c)
+    if (playing) {
+      if (seekTimer.current) window.clearTimeout(seekTimer.current)
+      seekTimer.current = window.setTimeout(() => { void p.play(snapshot(), c, gainForId, panForId) }, 90)
+    } else {
+      p.setPlayhead(c)
+    }
   }
 
   // live gain + pan + master updates while playing
@@ -702,7 +707,19 @@ function StudioDesktop() {
         <div className="mt-transport">
           <button className="mt-tbtn" onClick={stopT} title="Stop / to start">⏹</button>
           <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? 'Pause' : 'Play'}>{playing ? '⏸' : '▶'}</button>
-          <span className="mt-time">{fmtTime(playhead)} <span className="mt-time__sep">/</span> {fmtTime(lengthSec)}</span>
+          <span className="mt-time">
+            <EditableValue
+              display={fmtTime(playhead)}
+              title="Click to type a time (e.g. 3:45 or 225)"
+              commit={(raw) => {
+                const t = raw.trim()
+                const mm = /^(\d{1,3}):(\d{1,2})$/.exec(t)
+                const sec = mm ? Number(mm[1]) * 60 + Number(mm[2]) : parseFloat(t.replace(',', '.'))
+                if (Number.isFinite(sec)) seek(sec)
+              }}
+            />
+            {' '}<span className="mt-time__sep">/</span> {fmtTime(lengthSec)}
+          </span>
         </div>
         <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Voice engine (TTS keys)">
           {ttsInfo.canRender ? '🎙' : '🎙!'}
@@ -877,7 +894,13 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
           onChange={(e) => onVolume(+e.target.value)}
           onWheel={(e) => { e.preventDefault(); onVolume(Math.min(1, Math.max(0, +(track.volume + (e.deltaY < 0 ? 0.01 : -0.01)).toFixed(3)))) }}
         />
-        <span className="mt-head__voldb">{Math.round(track.volume * 100)}%</span>
+        <span className="mt-head__voldb">
+          <EditableValue
+            display={`${Math.round(track.volume * 100)}%`}
+            commit={(raw) => { const v = parseTyped(raw, 0, 1); if (v != null) onVolume(v) }}
+            title="Click to type the exact volume (e.g. 83)"
+          />
+        </span>
       </div>
     </div>
   )
@@ -892,7 +915,17 @@ function Ruler({ lengthSec, pxPerSec, onSeek }: { lengthSec: number; pxPerSec: n
     <div
       className="mt-ruler"
       style={{ height: RULER_H, width: lengthSec * pxPerSec }}
-      onPointerDown={(e) => { const r = e.currentTarget.getBoundingClientRect(); onSeek((e.clientX - r.left) / pxPerSec) }}
+      onPointerDown={(e) => {
+        const el = e.currentTarget
+        const r = el.getBoundingClientRect()
+        const at = (x: number) => Math.max(0, Math.min(lengthSec, (x - r.left) / pxPerSec))
+        onSeek(at(e.clientX))
+        el.setPointerCapture(e.pointerId)
+        const move = (ev: globalThis.PointerEvent) => onSeek(at(ev.clientX))
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+      }}
     >
       {ticks.map((s) => (
         <div key={s} className="mt-tick" style={{ left: s * pxPerSec }}><span>{fmtTime(s)}</span></div>
@@ -988,12 +1021,58 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
 }
 
 /* ============================ inspector ============================ */
+/** Click/double-click the shown value → type the exact number → Enter/blur.
+    Accepts "83", "0.83", "83%", "3:45", "-6 dB", commas as decimals. */
+function EditableValue({ display, commit, title }: { display: string; commit: (raw: string) => void; title?: string }) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState('')
+  if (!editing) {
+    return (
+      <b
+        className="mt-editable"
+        title={title ?? 'Click to type the exact value'}
+        onClick={() => { setText(display); setEditing(true) }}
+      >{display}</b>
+    )
+  }
+  const done = (apply: boolean) => { if (apply) commit(text); setEditing(false) }
+  return (
+    <input
+      className="mt-editable__input"
+      autoFocus
+      value={text}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false) }}
+      onBlur={() => done(true)}
+    />
+  )
+}
+
+/** Parse a typed value for a numeric param: unit stripping, comma decimals,
+    "%"/bare-percent shorthand for 0..1 ranges, clamped to [min, max]. */
+function parseTyped(raw: string, min: number, max: number): number | null {
+  const t = raw.replace(',', '.').trim()
+  const m = /-?\d+(?:\.\d+)?/.exec(t)
+  if (!m) return null
+  let v = parseFloat(m[0])
+  if (/%/.test(t) && max <= 1.5) v = v / 100
+  else if (max <= 1.5 && v > 1.5) v = v / 100 // typed "83" on a 0..1 param
+  return Math.min(max, Math.max(min, v))
+}
+
 function Slider({ label, value, min, max, step, onChange, fmt }: {
   label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; fmt?: (v: number) => string
 }) {
   return (
     <label className="mt-field">
-      <span className="mt-field__lbl">{label}<b>{fmt ? fmt(value) : value}</b></span>
+      <span className="mt-field__lbl">
+        {label}
+        <EditableValue
+          display={fmt ? fmt(value) : String(value)}
+          commit={(raw) => { const v = parseTyped(raw, min, max); if (v != null) onChange(v) }}
+        />
+      </span>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)} />
     </label>
   )
@@ -1229,7 +1308,12 @@ function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
                     value={fx.params[p.key] ?? p.min}
                     onChange={(e) => onParam(meta.kind, p.key, +e.target.value)}
                   />
-                  <span className="mt-fx__pval">{p.fmt(fx.params[p.key] ?? p.min)}</span>
+                  <span className="mt-fx__pval">
+                    <EditableValue
+                      display={p.fmt(fx.params[p.key] ?? p.min)}
+                      commit={(raw) => { const v = parseTyped(raw, p.min, p.max); if (v != null) onParam(meta.kind, p.key, v) }}
+                    />
+                  </span>
                 </div>
               ))}
             </div>

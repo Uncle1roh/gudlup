@@ -1,6 +1,18 @@
 # Good Loop — build manifest
 
-**Slice: track effects (FX chain)** (current)
+**Fix: type-exact values + time scrubbing** (current)
+- **Every numeric value is click-to-type**: the shown value (dashed underline)
+  on Inspector sliders, track volume %, and all FX params becomes an input on
+  click — type "83", "0.83", "83%", "-6 dB", comma decimals; Enter/blur
+  commits, Esc cancels; clamped to the param range ("%"/bare-number shorthand
+  on 0..1 params).
+- **Time**: the current-time readout in the top bar is click-to-type
+  ("3:45" or plain seconds) and the RULER now scrubs — press and DRAG to
+  slide the playhead (pointer-captured). While playing, the playhead follows
+  instantly and the transport restart is debounced (90 ms) so scrubbing
+  doesn't stutter.
+
+**Slice: track effects (FX chain)**
 - New `src/studio/effects.ts` — five effects, PO list included:
   · HARMONIZER (Coral/Multiple voice): pitch-shifted copies (resample + WSOLA
     stretch-back, duration preserved) layered around the original with stereo
