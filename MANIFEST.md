@@ -1,6 +1,14 @@
 # Good Loop — build manifest
 
-**Fix: Studio v2 corrections (PO feedback)** (current)
+**Fix: voice tracks — function first, side second** (current)
+- Regression fixed: ECO/SUSSURRO rows on L/R (e.g. GL-ANX 1.2's right-side
+  whispers) were being absorbed into the RIGHT track at 72% volume, deleting
+  the echo lane. Now the split is by FUNCTION first: "Voice — guide" and
+  "Voice — echo & whisper" (32%, side kept as clip pan) ALWAYS exist;
+  "Voice — LEFT/RIGHT" appear for the version's principal dichotic VOCE/LOOP
+  rows only. Verified via node seed test on 1.2 (6/12 min).
+
+**Fix: Studio v2 corrections (PO feedback)**
 - **L/R visible**: dichotic rows now seed onto dedicated "Voice — LEFT" /
   "Voice — RIGHT" tracks with the track CHANNEL set (clip pan 0 — the track
   positions the side); fine pans (L25) stay per-clip on the guide track.

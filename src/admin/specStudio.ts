@@ -162,22 +162,26 @@ export function datasheetToStudioTracks(
         ?? (r.kind === 'LOOP' && r.rec ? matchVoiceFromText(affByRec.get(r.rec.toUpperCase())?.voiceName) : undefined)
         ?? (r.voice === 'M' ? defM : defP)
       const onSide = r.channel === 'L' || r.channel === 'R'
-      // side tracks position via the track channel — clip pan stays only for
-      // fine pans (L25) on the guide track
-      const clipPan = onSide ? 0 : (r.pan ?? 0)
+      const isLow = r.kind === 'ECO' || r.kind === 'SUSSURRO'
+      // FUNCTION first, side second: guide vs echo/whisper are ALWAYS separate
+      // tracks. Main dichotic voices (VOCE/LOOP on L/R) get the side tracks;
+      // echo & whisper keep their side as CLIP pan on the quiet lane, so they
+      // never blast at guide volume.
+      const clipPan = isLow ? (r.pan ?? (r.channel === 'L' ? -1 : r.channel === 'R' ? 1 : 0)) : onSide ? 0 : (r.pan ?? 0)
       const params: VoiceParams = { pan: clipPan, pulseHz: 0.35, toneHz: 320, speed: r.speed, voiceId: rowVoice?.id }
       const clip: SeedClip = { startSec: r.timeSec, durationSec: Math.min(9, Math.max(4, text.length / 11)), params, text }
       if (r.effect === 'CORO') coro.push(clip)
+      else if (isLow) low.push(clip)
       else if (onSide && r.channel === 'L') left.push(clip)
       else if (onSide) right.push(clip)
-      else if (r.kind === 'ECO' || r.kind === 'SUSSURRO') low.push(clip)
       else guide.push(clip)
     }
     const keep = base.tracks.filter((t) => t.type !== 'voice')
-    if (guide.length) keep.push({ type: 'voice', name: 'Voice — guide', volume: 0.8, channel: 'C', clips: guide })
+    // guide + echo&whisper are ALWAYS present (empty lane = visible reminder)
+    keep.push({ type: 'voice', name: 'Voice — guide', volume: 0.8, channel: 'C', clips: guide })
     if (left.length) keep.push({ type: 'voice', name: 'Voice — LEFT', volume: 0.8, channel: 'L', clips: left })
     if (right.length) keep.push({ type: 'voice', name: 'Voice — RIGHT', volume: 0.72, channel: 'R', clips: right })
-    if (low.length) keep.push({ type: 'voice', name: 'Voice — echo & whisper', volume: 0.32, channel: 'C', clips: low })
+    keep.push({ type: 'voice', name: 'Voice — echo & whisper', volume: 0.32, channel: 'C', clips: low })
     if (coro.length) {
       const fx = defaultEffects().map((e) => (e.kind === 'harmonizer' ? { ...e, enabled: true, params: { ...e.params, voices: 3, spreadCents: 22, mix: 0.55 } } : e))
       keep.push({ type: 'voice', name: 'Voice — CORO (refrain)', volume: 0.8, channel: 'C', effects: fx, clips: coro })
