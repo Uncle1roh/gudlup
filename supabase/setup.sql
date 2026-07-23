@@ -629,3 +629,11 @@ begin
     $pol$;
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- PostgREST schema-cache reload. Supabase's API layer caches the table schema;
+-- after the ALTERs above (protocols.plain, asset_meta) a stale cache yields
+-- "Could not find the 'plain' column of 'protocols' in the schema cache" on
+-- the first Publish. This notify forces the reload immediately — no waiting,
+-- no project restart. Safe to re-run.
+notify pgrst, 'reload schema';

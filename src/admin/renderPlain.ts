@@ -83,8 +83,6 @@ export interface RenderPlainOptions {
   pools?: AssetPools
   /** Reproducible draws. Default: fresh randomness. */
   seed?: number
-  /** Render only the first 90 s (audition copy). */
-  preview?: boolean
   /** Synthesize the voice clips with the configured TTS. */
   withVoice?: boolean
   onProgress?: (msg: string) => void
@@ -107,8 +105,7 @@ export async function renderPlainWav(
   progress('Seeding the Studio project…')
   const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed })
   const notes = [...seed.notes]
-  const lengthSec = opts.preview ? Math.min(90, seed.totalSec) : seed.totalSec
-  if (opts.preview) notes.push(`Preview render: first ${lengthSec} s of ${secToMmss(seed.totalSec)}.`)
+  const lengthSec = seed.totalSec
   if (!opts.pools) notes.push('No asset pools available (Supabase env absent or library empty) — Music/Soundscape lanes are silent.')
 
   const tts = getTtsProvider()
@@ -192,7 +189,7 @@ export async function renderPlainWav(
   }
 }
 
-export function plainWavFileName(code: string | null, sheet: string, preview: boolean): string {
+export function plainWavFileName(code: string | null, sheet: string): string {
   const safe = (code ?? 'PLAIN').replace(/[^A-Za-z0-9_-]+/g, '_')
-  return `${safe}_${sheet}${preview ? '_preview90s' : ''}.wav`
+  return `${safe}_${sheet}.wav`
 }

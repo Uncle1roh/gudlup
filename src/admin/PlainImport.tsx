@@ -177,12 +177,11 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
 
   /* ---- render ---- */
   const [renderSheet, setRenderSheet] = useState<string>(t.versions[0]?.sheet ?? '')
-  const [preview, setPreview] = useState(true)
   const [withVoice, setWithVoice] = useState(tts.canRender)
   const [progress, setProgress] = useState<string | null>(null)
   const [renderNotes, setRenderNotes] = useState<string[]>([])
   const [renderError, setRenderError] = useState<string | null>(null)
-  const [rendered, setRendered] = useState<{ name: string; seconds: number; voiceClips: number; blob: Blob; buffer: AudioBuffer; version: PlainVersion; preview: boolean } | null>(null)
+  const [rendered, setRendered] = useState<{ name: string; seconds: number; voiceClips: number; blob: Blob; buffer: AudioBuffer; version: PlainVersion } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [attached, setAttached] = useState<string | null>(null)
 
@@ -197,19 +196,17 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
     try {
       const result = await renderPlainWav(t, v, {
         pools: pools ?? undefined,
-        preview,
         withVoice: withVoice && tts.canRender,
         onProgress: setProgress,
       })
       setRenderNotes(result.notes)
       setRendered({
-        name: plainWavFileName(t.code, v.sheet, preview),
+        name: plainWavFileName(t.code, v.sheet),
         seconds: result.seconds,
         voiceClips: result.voiceClips,
         blob: result.blob,
         buffer: result.buffer,
         version: v,
-        preview,
       })
     } catch (e) {
       setRenderError((e as Error).message)
@@ -223,7 +220,6 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
     if (!rendered || !published || !t.code) return
     const dur = rendered.version.durationMin as Duration
     if (dur !== 6 && dur !== 12 && dur !== 24) { setRenderError(`${rendered.version.durationMin} min is not a catalog duration (6/12/24).`); return }
-    if (rendered.preview) { setRenderError('Attach needs a FULL render — uncheck the 90 s preview and render again.'); return }
     setUploading(true)
     setRenderError(null)
     try {
@@ -396,7 +392,6 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
         </div>
         <div className="adm-spec__row">
           <span className="adm-spec__lbl">Options</span>
-          <label className="adm-spec__check"><input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} /> 90 s preview</label>
           <label className="adm-spec__check" title={tts.canRender ? undefined : 'Set ElevenLabs keys below first'}>
             <input type="checkbox" checked={withVoice && tts.canRender} disabled={!tts.canRender} onChange={(e) => setWithVoice(e.target.checked)} /> Voice ({tts.label})
           </label>
@@ -411,8 +406,8 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
               <button className="b2b-btn" onClick={() => downloadBlob(rendered.name, rendered.blob)}>Download WAV</button>
               <button
                 className="b2b-btn b2b-btn--primary"
-                disabled={uploading || !published || rendered.preview}
-                title={!published ? 'Publish first' : rendered.preview ? 'Attach needs a full render' : undefined}
+                disabled={uploading || !published}
+                title={!published ? 'Publish first' : undefined}
                 onClick={uploadAndAttach}
               >
                 {uploading ? 'Uploading…' : 'Upload & attach (192 kbps MP3) →'}

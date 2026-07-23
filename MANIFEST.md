@@ -1,7 +1,22 @@
 # Good Loop — build manifest
 
+**Fix: schema-cache reload + 90 s preview removed** (current)
+- Publish error "Could not find the 'plain' column of 'protocols' in the
+  schema cache": the column exists after running setup.sql, but Supabase's
+  PostgREST layer caches the schema and can serve the stale one. setup.sql
+  now ends with `notify pgrst, 'reload schema';` — running it both adds the
+  columns AND reloads the API cache in one shot. Re-run the updated
+  supabase/setup.sql in the Supabase SQL editor, then press Publish again
+  (no project restart needed). SQL re-validated on Postgres 16 (fresh +
+  idempotent).
+- 90 s preview mode REMOVED per PO decision: the render is always the full
+  session; the preview checkbox, the `_preview90s` filename suffix and the
+  attach preview-guard are gone (`renderPlain.ts`, `PlainImport.tsx`).
+- Verified: `tsc --noEmit` + `npm run build` clean; all four node proofs
+  (parser, studio seed, pools/draw/duck, clip shape) re-run: ALL PASS.
+
 **Slice: PLAIN render = Studio mixdown · tag/phase pools + random draw
-(slice 3)** (current)
+(slice 3)**
 - `src/admin/assetPools.ts`: pool model + random draw per the Rules doc
   §7.1–7.2. "Sensible migration" — NO files move: Music phase pools = the
   existing GLOBAL `assets/music/f1…f6` folders; Soundscape tag pools = the
