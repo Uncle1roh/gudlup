@@ -5,7 +5,10 @@
    from the Rules doc grouped by severity. Studio seeding and rendering follow
    in the next slices — this screen is the go/no-go gate for the workbook. */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { setStudioSeed } from '../compose/handoff'
+import type { Duration } from '../types/domain'
+import { plainToStudioTracks } from './plainStudio'
 import {
   PLAIN_TIPO_LABEL,
   secToMmss,
@@ -33,6 +36,23 @@ export function PlainImport({ timeline: t, fileName, onCancel }: Props) {
   const warnings = t.issues.filter((i) => i.level === 'warning')
   const infos = t.issues.filter((i) => i.level === 'info')
   const totalClips = useMemo(() => t.versions.reduce((n, v) => n + v.clips.length, 0), [t])
+  const [seedNotes, setSeedNotes] = useState<{ sheet: string; notes: string[] } | null>(null)
+  const [seedError, setSeedError] = useState<string | null>(null)
+
+  function openInStudio(v: PlainVersion) {
+    try {
+      const seed = plainToStudioTracks(t, v)
+      const dur = v.durationMin === 6 || v.durationMin === 12 || v.durationMin === 24 ? (v.durationMin as Duration) : undefined
+      const attach = t.code && dur ? { code: t.code, duration: dur } : undefined
+      setStudioSeed(seed.tracks, seed.name, attach)
+      setSeedError(null)
+      setSeedNotes({ sheet: v.sheet, notes: seed.notes })
+      // Navigation is the user's second click (in the notes panel), so the
+      // seeding decisions are readable before leaving this screen.
+    } catch (e) {
+      setSeedError((e as Error).message)
+    }
+  }
 
   return (
     <div className="adm-page">
@@ -59,9 +79,19 @@ export function PlainImport({ timeline: t, fileName, onCancel }: Props) {
           const counts = tipoCounts(v)
           return (
             <div key={v.sheet} className="adm-spec__version">
-              <div className="adm-spec__vhead">
-                Sheet “{v.sheet}” {v.versionKey ? `· ${v.versionKey.toUpperCase()}` : ''} · {v.durationMin} min ({secToMmss(v.durationS)})
-                {v.declaredTotal !== null && ` · declared ${v.declaredTotal} clips`}
+              <div className="adm-spec__vhead" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span>
+                  Sheet “{v.sheet}” {v.versionKey ? `· ${v.versionKey.toUpperCase()}` : ''} · {v.durationMin} min ({secToMmss(v.durationS)})
+                  {v.declaredTotal !== null && ` · declared ${v.declaredTotal} clips`}
+                </span>
+                <button
+                  className="b2b-btn b2b-btn--primary"
+                  disabled={errors.length > 0}
+                  title={errors.length ? 'Fix the errors below first' : 'Seed the Sound Studio: 1 Excel row = 1 clip'}
+                  onClick={() => openInStudio(v)}
+                >
+                  Open in Sound Studio →
+                </button>
               </div>
 
               <div className="adm-spec__phases" style={{ marginBottom: 8 }}>
@@ -130,10 +160,24 @@ export function PlainImport({ timeline: t, fileName, onCancel }: Props) {
         )}
       </div>
 
+      {seedError && <div className="adm-issues adm-issues--err" style={{ marginTop: 12 }}><span>{seedError}</span></div>}
+      {seedNotes && (
+        <div className="adm-note adm-note--ok" style={{ marginTop: 12 }}>
+          <b>Studio project prepared from “{seedNotes.sheet}”</b> — 1 Excel row = 1 clip. Seeding decisions:
+          <ul className="adm-spec__issues">
+            {seedNotes.notes.map((n, k) => <li key={k}>{n}</li>)}
+          </ul>
+          <div className="adm-cred__actions" style={{ marginTop: 8 }}>
+            <button className="b2b-btn b2b-btn--primary" onClick={() => { window.location.hash = '#studio' }}>Go to the Sound Studio →</button>
+          </div>
+        </div>
+      )}
+
       <div className="adm-import__foot" style={{ marginTop: 16 }}>
         <p className="b2b-sub adm-import__hint">
-          Next slices wire this format into the Sound Studio (1 row → 1 clip, archetype → catalog voice, eco → Emotional Echo,
-          loop expansion) and the renderer (random draw from tag / phase pools). This screen is the validation gate.
+          “Open in Sound Studio” seeds the project 1:1 — one Excel row = one clip; per-clip dB and fades are baked into the
+          clip audio; archetipo+modalità pick the catalog voice; eco rides an Emotional Echo companion lane; the loop expands
+          by rule. Music/Soundscape lanes stay silent until slice 3 wires the random draw from the tag / phase pools.
         </p>
       </div>
     </div>

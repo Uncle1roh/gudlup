@@ -7,6 +7,7 @@ import {
   sliceBuffer,
   concatBuffers,
   bakeVoiceBuffer,
+  applyClipShape,
   computePeaks,
   peakBuckets,
   defaultParams,
@@ -59,6 +60,11 @@ interface Clip {
   fxBuffer?: AudioBuffer | null
   /** Which harmonizer params produced fxBuffer (invalidation key). */
   fxKey?: string
+  /** PLAIN import: per-clip dB offset vs the track base, baked into the
+      rendered buffer (with the fades below) via applyClipShape. */
+  gainDb?: number
+  fadeInSec?: number
+  fadeOutSec?: number
 }
 type TrackChannel = 'L' | 'C' | 'R'
 const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
@@ -100,7 +106,7 @@ function seedTrackToTrack(t: SeedTrack): Track {
     id: uid(), type: t.type, name: t.name, volume: t.volume, muted: false, soloed: false,
     channel: t.channel,
     effects: t.effects,
-    clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text })),
+    clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec })),
   }
 }
 
@@ -209,7 +215,9 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, buffer: buf, peaks, ...extra })) })))
   }, [])
 
-  const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number) => {
+  type ClipShape = { gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
+
+  const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number, shape?: ClipShape) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
     renderTokens.current.set(clipId, token)
     let buf: AudioBuffer
@@ -221,17 +229,19 @@ function StudioDesktop() {
       console.warn('clip render failed', type, (e as Error).message)
       buf = await renderClipBuffer(type === 'sample' ? 'sample' : type, type === 'sample' ? { url: '', label: `load failed: ${(e as Error).message}` } : params, dur)
     }
+    if (shape) buf = applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
     if (renderTokens.current.get(clipId) !== token) return
     setClipBuffer(trackId, clipId, buf)
   }, [setClipBuffer])
 
-  const rebakeVoice = useCallback(async (trackId: string, clipId: string, source: AudioBuffer, pan: number, startSec: number, speed = 1) => {
+  const rebakeVoice = useCallback(async (trackId: string, clipId: string, source: AudioBuffer, pan: number, startSec: number, speed = 1, shape?: ClipShape) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
     renderTokens.current.set(clipId, token)
     // bake to the full available window: a slower speed lengthens the spoken
     // line, and the clip follows the voice rather than truncating it
     const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - startSec)
-    const buf = await bakeVoiceBuffer(source, pan, maxDur, speed)
+    let buf = await bakeVoiceBuffer(source, pan, maxDur, speed)
+    if (shape) buf = applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
     if (renderTokens.current.get(clipId) !== token) return
     setClipBuffer(trackId, clipId, buf, { durationSec: buf.duration })
   }, [setClipBuffer])
@@ -241,12 +251,15 @@ function StudioDesktop() {
     const cl = tr?.clips.find((c) => c.id === clipId)
     if (!tr || !cl) return
     if (cl.frozen) return // cut/glued audio is authoritative — never re-render over it
+    const shape: ClipShape | undefined = cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
+      ? { gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
+      : undefined
     if (tr.type === 'voice' && cl.ttsSource) {
       const vp = cl.params as VoiceParams
-      void rebakeVoice(trackId, clipId, cl.ttsSource, vp.pan, cl.startSec, vp.speed ?? 1)
+      void rebakeVoice(trackId, clipId, cl.ttsSource, vp.pan, cl.startSec, vp.speed ?? 1, shape)
       return
     }
-    void doRender(trackId, clipId, tr.type, cl.params, cl.durationSec)
+    void doRender(trackId, clipId, tr.type, cl.params, cl.durationSec, shape)
   }, [doRender, rebakeVoice])
 
   const scheduleRender = useCallback((trackId: string, clipId: string) => {
@@ -272,10 +285,10 @@ function StudioDesktop() {
     })))
   }, [])
 
-  const previewVoice = useCallback(async (text: string) => {
+  const previewVoice = useCallback(async (text: string, voiceId?: string) => {
     if (!text.trim()) return
     setTtsError(null)
-    try { await getTtsProvider().speak(text, { lang: 'pt-BR' }) } catch (e) { setTtsError((e as Error).message) }
+    try { await getTtsProvider().speak(text, { lang: 'pt-BR', voiceId }) } catch (e) { setTtsError((e as Error).message) }
   }, [])
 
   const synthesizeVoice = useCallback(async (trackId: string, clipId: string) => {
@@ -292,7 +305,8 @@ function StudioDesktop() {
       const bytes = await provider.render(text, { lang: 'pt-BR', voiceId: vp.voiceId })
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
-      const buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
+      let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
+      buf = applyClipShape(buf, cl.gainDb, cl.fadeInSec, cl.fadeOutSec)
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
@@ -310,13 +324,13 @@ function StudioDesktop() {
     if (!player) return
     const provider = getTtsProvider()
     if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
-    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number }[] = []
+    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number; shape?: ClipShape }[] = []
     for (const t of tracksRef.current) {
       if (t.type !== 'voice') continue
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
     if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
@@ -335,7 +349,8 @@ function StudioDesktop() {
           cache.set(key, decoded)
         }
         const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
-        const buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
+        let buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
+        if (j.shape) buf = applyClipShape(buf, j.shape.gainDb, j.shape.fadeInSec, j.shape.fadeOutSec)
         setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
         done++
       } catch (e) {
@@ -846,7 +861,7 @@ function StudioDesktop() {
         ttsBusy={!!selected && ttsBusy === selected.clipId}
         ttsError={ttsError}
         onVoiceText={(text) => selected && setVoiceText(selected.trackId, selected.clipId, text)}
-        onVoicePreview={() => selClip && previewVoice(selClip.text ?? '')}
+        onVoicePreview={() => selClip && previewVoice(selClip.text ?? '', (selClip.params as VoiceParams).voiceId)}
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
       />
@@ -1118,6 +1133,12 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           <div className="mt-note" style={{ marginTop: 6 }}>
             ✂ Cut piece — its audio is frozen: move it freely, cut it again, or glue it with its neighbor.
             Parameter and length edits don't apply to frozen pieces.
+          </div>
+        )}
+        {(clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
+          <div className="mt-note" style={{ marginTop: 6 }}>
+            📄 From the protocol Excel: {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip level ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB vs track · ` : ''}
+            fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
           </div>
         )}
 

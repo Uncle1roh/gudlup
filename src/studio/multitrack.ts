@@ -23,7 +23,7 @@ export interface BreathParams { breathsPerMin: number; toneHz: number }
 export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number; voiceId?: string }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
-export interface BilateralParams { toneHz: number; blipMs: number; everySec: number }
+export interface BilateralParams { toneHz: number; blipMs: number; everySec: number; /** Symmetric pan extent 0..1 (PLAIN pan_ampiezza/100). Default 0.8. */ panAmp?: number }
 /** A real audio file (PO library stem / soundscape texture), looped to fill
     the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
 export interface SampleParams { url: string; label: string }
@@ -142,7 +142,7 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
     for (let t = 0.05; t < dur - blip; t += Math.max(0.5, p.everySec)) {
       const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = p.toneHz
       const g = ctx.createGain()
-      const pan = ctx.createStereoPanner(); pan.pan.value = 0.8 * side
+      const pan = ctx.createStereoPanner(); pan.pan.value = (p.panAmp ?? 0.8) * side
       side = -side
       g.gain.setValueAtTime(0, t)
       g.gain.linearRampToValueAtTime(1, t + 0.01)
@@ -259,6 +259,34 @@ export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDura
   src.connect(panner).connect(env).connect(ctx.destination)
   src.start(0)
   return ctx.startRendering()
+}
+
+/** Bake a PLAIN clip's shape into its rendered buffer: linear gain from a
+    relative dB offset (vs the track base) plus fade_in/fade_out ramps. The
+    shaped buffer stays the single source of truth, so waveform, realtime
+    playback and the WAV mixdown all agree with zero scheduling changes. */
+export function applyClipShape(buf: AudioBuffer, gainDb?: number, fadeInSec?: number, fadeOutSec?: number): AudioBuffer {
+  const g = gainDb !== undefined && gainDb !== 0 ? Math.pow(10, gainDb / 20) : 1
+  const fi = Math.max(0, fadeInSec ?? 0)
+  const fo = Math.max(0, fadeOutSec ?? 0)
+  if (g === 1 && fi < 0.05 && fo < 0.05) return buf
+  const dur = buf.duration
+  const fiN = Math.min(Math.floor(fi * buf.sampleRate), buf.length)
+  const foN = Math.min(Math.floor(fo * buf.sampleRate), buf.length)
+  const foStart = Math.max(0, buf.length - foN)
+  const out = new AudioBuffer({ numberOfChannels: buf.numberOfChannels, length: buf.length, sampleRate: buf.sampleRate })
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const src = buf.getChannelData(ch)
+    const dst = out.getChannelData(ch)
+    for (let i = 0; i < buf.length; i++) {
+      let env = 1
+      if (i < fiN) env = i / fiN
+      if (i >= foStart && foN > 0) env = Math.min(env, (buf.length - i) / foN)
+      dst[i] = src[i] * g * env
+    }
+  }
+  void dur
+  return out
 }
 
 /** Copy a time slice [fromSec, toSec) of a buffer (clamped to its length). */

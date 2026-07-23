@@ -25,7 +25,17 @@ export interface ComposeSettings {
   intensity: number // 0..1 — overall presence of the active layers
 }
 
-export interface SeedClip { startSec: number; durationSec: number; params: ClipParams; text?: string }
+export interface SeedClip {
+  startSec: number
+  durationSec: number
+  params: ClipParams
+  text?: string
+  /** PLAIN per-clip dB offset vs the track base — baked into the buffer. */
+  gainDb?: number
+  /** PLAIN per-clip fades (seconds) — baked into the buffer. */
+  fadeInSec?: number
+  fadeOutSec?: number
+}
 export interface SeedTrack {
   type: TrackType
   name: string

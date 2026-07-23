@@ -1,7 +1,51 @@
 # Good Loop — build manifest
 
+**Slice: PLAIN → Sound Studio seeding, 1 row = 1 clip (slice 2)** (current)
+- `src/admin/plainStudio.ts`: `plainToStudioTracks()` seeds the Studio from a
+  parsed PLAIN version — every Excel row becomes exactly ONE clip on a track
+  named from `traccia`, in file order. Binaural → carrier (L+R)/2 + beat
+  R−L; Solfeggio → binaural clip with beat 0 (house convention); Bilateral →
+  intervallo/blip + NEW `panAmp` param (pan_ampiezza/100, engine honors it);
+  Soundscape/Music → silent SAMPLE lanes labeled with the tag / phase pool
+  (slice 3 wires the random draw). Voice: archetipo+modalità → catalog voice
+  (Dec. 6: sussurrato prefers a same-gender Whisper voice — Paterna
+  sussurrata → Thomas); riverbero_pct → track Reverb; velocità wpm → ×speed
+  (130 wpm baseline, noted); hard-L/R tracks get the track CHANNEL with clip
+  pan 0.
+- Two documented lane splits keep row↔clip 1:1 while respecting track-level
+  FX: linea clips with eco=on ride "<traccia> · eco" (Emotional Echo
+  pre-enabled, delay/mix from eco_ritardo/eco_volume); a loop clip expands
+  on "<traccia> · loop (<set>)" — one clip per affirmation per cycle at
+  `intervallo` spacing, `attenuazione_ciclo` dB per cycle, 1s/2s default
+  envelope per the Rules doc, echo/reverb inherited. Every seeding decision
+  is returned as a note and shown in the review screen.
+- Volume model: guide voice 0 dB ≙ fader 0.8; each track's fader = its
+  LOUDEST clip's nominal dB; per-clip differences ride NEW `Clip.gainDb` +
+  Excel `fade_in/fade_out`, baked into the clip's rendered buffer by
+  `applyClipShape()` (multitrack.ts) — waveform, realtime playback, cut/glue
+  and WAV mixdown all see the same shaped audio, zero scheduler changes.
+  Applied across doRender, rebakeVoice, ♪ Synthesize and "All voices";
+  Inspector shows a read-only "from the protocol Excel" line on shaped clips.
+- **Bug fix:** the Studio voice ▶ Preview now speaks with the CLIP's voice
+  (voiceId passed through to the TTS provider) instead of the default.
+- PlainImport review screen: "Open in Sound Studio →" per version (disabled
+  while errors exist) seeds the project, lists the seeding decisions, then a
+  second click navigates — nothing is hidden behind the tab switch.
+- Verified: `tsc --noEmit` + `npm run build` clean; node proofs
+  (esbuild-bundled): `tools/test-plain-studio.ts` against the real GL-ANX
+  1.1 → 13 tracks / 82 clips (70 rows + 12 loop expansions), SS-1 fader
+  −6 dB with the −14 dB coda offset, MUS-1 −6 dB with two −12 dB F1–F2
+  offsets, BIN-1 205/10 Hz + −9 dB second clip, SOL-1 432 Hz beat 0, BIL-1
+  400 Hz·4 s·panAmp 1.0, VOX-C 33 clips Valeria + Reverb 30%, loop 12 clips
+  @20 s with echo −8 dB/+2 s, VOX-L/R channels L/R, eco lane VR-009/010,
+  Dec. 6 voice matrix; `tools/test-shape.ts` → applyClipShape gain/fade math
+  numerically exact, no-op passthrough returns the original buffer; slice-1
+  parser test still ALL PASS.
+- Next slice: render = Studio mixdown; Asset Library tags + phase pools
+  (Supabase migration from f1–f6) + random draw filling the sample lanes.
+
 **Slice: PLAIN Timeline importer + validation (slice 1 of the clip-level
-format)** (current)
+format)**
 - NEW recommended import path per the "Rules for Good Loop protocols" doc
   (Dec. A–H, §5–§8): `src/admin/plainTimeline.ts` parses the README /
   per-version clip grids / Affermazioni workbook — one row = one clip, six
