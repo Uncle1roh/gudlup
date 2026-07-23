@@ -581,26 +581,12 @@ revoke all on function nr1_report() from public;
 grant execute on function nr1_report() to authenticated;
 
 -- ---------------------------------------------------------------------------
--- 6. Catalog seed — the 5 launch protocols (same as src/data/protocols.ts),
---    so the app has content on a fresh project. Idempotent.
+-- 6. Catalog cleanup — the catalog is admin-curated: ONLY imported protocols
+--    live in it. Earlier setups seeded 5 demo entries; remove them (PO
+--    decision: start clean, protocols arrive via the PLAIN import). Imported
+--    protocols (source = 'imported') are never touched. Idempotent.
 -- ---------------------------------------------------------------------------
-insert into protocols (code, family, title, blurb, phases, versions, source) values
-  ('GL-ANX 1.1',    'GL-ANX',    'Calm and Inner Safety',       'Settle a racing mind and find a steady sense of safety.',
-   '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
-   '[{"duration":6},{"duration":12},{"duration":24}]', 'seed'),
-  ('GL-STRESS 4.1', 'GL-STRESS', 'Calm and Focus',              'Quiet a crowded mind and gather your attention.',
-   '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
-   '[{"duration":6},{"duration":12},{"duration":24}]', 'seed'),
-  ('GL-DEP 2.4',    'GL-DEP',    'Vital Energy and Motivation', 'Reconnect with a gentle sense of momentum and warmth.',
-   '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
-   '[{"duration":6},{"duration":12},{"duration":24}]', 'seed'),
-  ('GL-BURN 3.1',   'GL-BURN',   'Rest and Recovery',           'Step out of overdrive and let your system recover.',
-   '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
-   '[{"duration":6},{"duration":12},{"duration":24}]', 'seed'),
-  ('GL-RESIL 5.1',  'GL-RESIL',  'Steadiness and Strength',     'Build a calm, resilient baseline you can return to.',
-   '[{"id":1,"name":"Intro + Validation","fraction":0.11},{"id":2,"name":"Breath + Body Scan","fraction":0.16,"showOrb":true},{"id":3,"name":"Exploration","fraction":0.16},{"id":4,"name":"Processing","fraction":0.38},{"id":5,"name":"Integration","fraction":0.10},{"id":6,"name":"Outro + Grounding","fraction":0.09}]',
-   '[{"duration":6},{"duration":12},{"duration":24}]', 'seed')
-on conflict (code) do nothing;
+delete from protocols where source = 'seed';
 
 
 -- ---------------------------------------------------------------------------

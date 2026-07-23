@@ -1170,24 +1170,34 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
    Admin console (#admin) — back-office shell + catalog/credentialing/tenants.
    Reuses the brand tokens and the .b2b-btn / .b2b-input primitives.
    ============================================================================ */
+/* Desktop-first shell: the admin console is an internal desktop tool. The
+   sidebar is FIXED to the left edge (always visible, never scrolls away);
+   the workspace flows beside it at full width. On small windows the console
+   keeps its desktop layout and scrolls horizontally instead of collapsing
+   into a mobile arrangement. */
 .adm {
-  display: grid;
-  grid-template-columns: 244px 1fr;
   min-height: 100vh;
+  min-width: 1024px;
+  padding-left: 244px;
   background: var(--mist);
   color: var(--ink);
   font-family: var(--sans);
 }
 .adm-side {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 244px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 18px;
   padding: 22px 16px;
   background: var(--ink);
   color: #eaf3ec;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  overflow-y: auto;
+  z-index: 40;
 }
 .adm-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .adm-brand__mark { font-size: 18px; color: var(--halo); letter-spacing: -2px; }
@@ -1209,8 +1219,8 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-who__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--halo); box-shadow: 0 0 0 3px rgba(122,198,155,0.2); }
 .adm-who__email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.adm-main { padding: 34px 40px; overflow-x: auto; }
-.adm-page { max-width: 1080px; }
+.adm-main { padding: 30px 40px 70px; overflow-x: auto; }
+.adm-page { max-width: 1400px; }
 .adm-page__head { margin-bottom: 22px; }
 .adm-page__head--row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .adm-h2 { font-family: var(--display); font-size: 18px; margin: 28px 0 12px; color: var(--ink); }
@@ -1241,7 +1251,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-tr--head { background: var(--mist-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--slate); }
 .adm-tr__right { text-align: right; display: flex; justify-content: flex-end; }
 .adm-tr.is-inactive { opacity: 0.55; }
-.adm-table--catalog .adm-tr { grid-template-columns: 92px 1.5fr 1fr 108px 1.1fr 96px 122px; }
+.adm-table--catalog .adm-tr { grid-template-columns: 92px 1.5fr 1fr 108px 1.1fr 96px 158px; }
 .adm-table--cred .adm-tr { grid-template-columns: 1.4fr 140px 130px 150px 1.6fr; }
 .adm-table--companies .adm-tr { grid-template-columns: 1.6fr 1.4fr 120px 108px 108px; }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
@@ -1732,3 +1742,15 @@ img, svg, video, canvas { max-width: 100%; }
 
 /* Asset Library — PLAIN draw-tag editor on soundscape rows */
 .adm-asset__tags { flex: 1; min-width: 160px; max-width: 320px; font-size: 12.5px; padding: 4px 8px; }
+
+/* Catalog — clickable PLAIN rows + delete action */
+.adm-tr--click { cursor: pointer; transition: background 0.12s var(--ease); }
+.adm-tr--click:hover { background: #f2f8f4; }
+.adm-tr__right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.adm-del {
+  width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line);
+  background: #fff; color: #a05252; font-size: 13px; line-height: 1; cursor: pointer;
+  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+.adm-del:hover { background: #fdf1f1; border-color: #d8a3a3; }
+.adm-del:disabled { opacity: 0.5; cursor: default; }

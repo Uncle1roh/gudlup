@@ -1,6 +1,43 @@
 # Good Loop — build manifest
 
-**Fix: schema-cache reload + 90 s preview removed** (current)
+**Slice: §9 mastering · desktop-first admin · catalog = the workspace**
+(current)
+- **Mastering (Rules §9)** — `src/studio/mastering.ts`, applied as the final
+  pass of every PLAIN render: integrated loudness measured per ITU-R
+  BS.1770-4 (K-weighting biquads computed for the real sample rate, 400 ms
+  blocks / 75 % overlap, −70 LUFS absolute + −10 LU relative gating) →
+  normalized to the −16 LUFS session target (two protocols now leave at the
+  SAME perceived volume) → true-peak limiter at −1.0 dBTP (4× oversampled
+  sinc peak detection, 5 ms lookahead, 200 ms release) + a final measured
+  verification trim so even pathological transients respect the ceiling.
+  The render note reports the whole chain (pre LUFS, gain, post LUFS, dBTP,
+  limiter depth). The <70 dB SPL ceiling is a device-volume property and is
+  documented in the note; −16 LUFS sits comfortably under it at normal
+  settings. Node-proven: mono FS 997 Hz sine −3.05 LUFS (canonical −3.01),
+  K-weighting shape (100 Hz reads low, 8 kHz ~+4 LU), 0.5-amp sine −6.02
+  dBTP, quiet session +18 dB → −16.00 LUFS, hot session −15 dB → −16.00
+  LUFS, injected square spike limited to exactly −1.00 dBTP.
+- **Desktop-first admin** — the console is an internal desktop tool: the
+  sidebar is now position:fixed to the left edge (always visible, its own
+  scroll), the workspace flows beside it (max-width 1400 px), and on small
+  windows the console KEEPS the desktop layout (min-width 1024 px,
+  horizontal scroll) instead of collapsing into a mobile arrangement. The
+  B2C app stays mobile-first — untouched.
+- **Catalog = the workspace, no re-imports** — a protocol imported in the
+  PLAIN format reopens its FULL workscreen (review → Studio → render →
+  attach) by clicking its catalog row; the timeline lives on the catalog
+  entry (`protocols.plain`). PlainImport now detects an already-published
+  code on mount, so nothing asks to be published twice. Every row gains a
+  ✕ Delete (confirm dialog; audio files in storage are kept), backed by the
+  NEW `deleteProtocol` provider method (Supabase + mock).
+- **Catalog cleaned** — setup.sql no longer seeds the 5 demo protocols and
+  now DELETES any existing `source='seed'` rows (imported protocols are
+  never touched). The catalog is admin-curated: only what you import lives
+  in it. SQL re-validated (fresh + idempotent; 0 rows after cleanup).
+- Verified: `tsc --noEmit` + `npm run build` clean; ALL FIVE node proofs
+  pass (parser, studio seed, pools/draw/duck, clip shape, mastering).
+
+**Fix: schema-cache reload + 90 s preview removed**
 - Publish error "Could not find the 'plain' column of 'protocols' in the
   schema cache": the column exists after running setup.sql, but Supabase's
   PostgREST layer caches the schema and can serve the stale one. setup.sql

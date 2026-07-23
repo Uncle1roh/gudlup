@@ -3,6 +3,7 @@ import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
 import { ImportProtocol } from './ImportProtocol'
+import { PlainImport } from './PlainImport'
 import type { CatalogProtocol } from '../data/catalog'
 
 function tenantsLabel(p: CatalogProtocol): string {
@@ -13,6 +14,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   const dp = useDataProvider()
   const { data, loading, refetch } = useProtocols()
   const [view, setView] = useState<'list' | 'import'>('list')
+  const [opened, setOpened] = useState<CatalogProtocol | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
 
   async function toggle(p: CatalogProtocol) {
@@ -23,8 +25,36 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     refetch()
   }
 
+  async function remove(p: CatalogProtocol) {
+    const ok = window.confirm(`Delete ${p.code} — "${p.title}" from the catalog?\n\nThis removes the protocol for every company. Rendered audio files in storage are kept.`)
+    if (!ok) return
+    setBusyCode(p.code)
+    try {
+      await dp.deleteProtocol(p.code)
+      await dp.logAudit({ actor, action: 'protocol.deleted', target: p.code }).catch(() => { /* non-blocking */ })
+    } finally {
+      setBusyCode(null)
+      refetch()
+    }
+  }
+
   if (view === 'import') {
     return <ImportProtocol actor={actor} onBack={() => { setView('list'); refetch() }} />
+  }
+
+  /* A protocol imported in the PLAIN format reopens its full workscreen
+     (review → Studio → render → attach) straight from the catalog row — the
+     timeline lives on the catalog entry, no re-import needed. */
+  if (opened?.plain) {
+    return (
+      <PlainImport
+        timeline={opened.plain}
+        fileName={`catalog · ${opened.code}`}
+        actor={actor}
+        onCancel={() => { setOpened(null); refetch() }}
+        onDone={() => { setOpened(null); refetch() }}
+      />
+    )
   }
 
   const protocols = data ?? []
@@ -49,7 +79,10 @@ export function CatalogAdmin({ actor }: { actor: string }) {
             <div>Code</div><div>Title</div><div>Family</div><div>Audio</div><div>Availability</div><div>Source</div><div className="adm-tr__right">Status</div>
           </div>
           {protocols.map((p) => (
-            <div className="adm-tr" key={p.code}>
+            <div className={`adm-tr${p.plain ? ' adm-tr--click' : ''}`} key={p.code}
+              onClick={p.plain ? () => setOpened(p) : undefined}
+              title={p.plain ? 'Open — review, Studio, render & attach (no re-import)' : undefined}
+            >
               <div className="adm-mono">{p.code}</div>
               <div>{p.title}</div>
               <div>{FAMILY_LABEL[p.family]}</div>
@@ -60,7 +93,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Imported</span> : <span className="adm-tag">Seed</span>}</div>
-              <div className="adm-tr__right">
+              <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
                 <button
                   className={`adm-toggle ${p.enabled ? 'is-on' : ''}`}
                   disabled={busyCode === p.code}
@@ -69,6 +102,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 >
                   <span className="adm-toggle__knob" />
                   <span className="adm-toggle__txt">{p.enabled ? 'Enabled' : 'Disabled'}</span>
+                </button>
+                <button
+                  className="adm-del"
+                  disabled={busyCode === p.code}
+                  onClick={() => void remove(p)}
+                  title="Delete from the catalog"
+                >
+                  ✕
                 </button>
               </div>
             </div>

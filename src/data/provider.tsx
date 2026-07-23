@@ -52,6 +52,8 @@ export interface DataProvider {
   /** Upsert a protocol by code (used by admin edits and the import pipeline). */
   saveProtocol(p: CatalogProtocol): Promise<void>
   setProtocolEnabled(code: string, enabled: boolean): Promise<void>
+  /** Permanently remove a protocol from the catalog (admin cleanup). */
+  deleteProtocol(code: string): Promise<void>
 
   // --- Admin: therapist credentialing queue ---
   listCredentialRequests(): Promise<CredentialRequest[]>

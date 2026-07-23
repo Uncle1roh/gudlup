@@ -222,6 +222,10 @@ export function createMockProvider(): DataProvider {
       catalog = catalog.map((p) => (p.code === code ? { ...p, enabled, updatedAt: Date.now() } : p))
       await wait()
     },
+    deleteProtocol: async (code) => {
+      catalog = catalog.filter((p) => p.code !== code)
+      await wait()
+    },
 
     // --- Credentialing queue ---
     listCredentialRequests: () => delay(credentialRequests.map((r) => ({ ...r }))),

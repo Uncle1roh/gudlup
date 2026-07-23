@@ -30,6 +30,7 @@ import {
   type VoiceParams,
 } from '../studio/multitrack'
 import { audioBufferToWav } from '../lib/wav'
+import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from '../studio/mastering'
 import type { SeedTrack } from '../compose/types'
 import type { AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
@@ -182,6 +183,15 @@ export async function renderPlainWav(
 
     progress('Mixing down…')
     const buffer = await renderMixdownBuffer(mix, lengthSec, 0.85)
+    progress('Mastering (§9): loudness + true-peak…')
+    const m = masterizeBuffer(buffer)
+    notes.push(
+      `Mastering (§9): measured ${Number.isFinite(m.preLufs) ? m.preLufs.toFixed(1) : '−∞'} LUFS → ` +
+      `${m.gainDb >= 0 ? '+' : ''}${m.gainDb.toFixed(1)} dB to the ${SESSION_TARGET_LUFS} LUFS session target · ` +
+      `final ${Number.isFinite(m.postLufs) ? m.postLufs.toFixed(1) : '−∞'} LUFS, true peak ${m.truePeakDb.toFixed(1)} dBTP (ceiling ${SESSION_CEILING_DBTP} dBTP` +
+      `${m.limiterDb < -0.1 ? `, limiter up to ${m.limiterDb.toFixed(1)} dB` : ', limiter untouched'}). ` +
+      `The <70 dB SPL ceiling depends on the listener's device volume — at this normalization a normal phone/headset setting sits under it.`,
+    )
     const blob = audioBufferToWav(buffer)
     return { blob, buffer, seconds: lengthSec, voiceClips, notes }
   } finally {

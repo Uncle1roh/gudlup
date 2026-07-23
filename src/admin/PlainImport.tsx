@@ -125,6 +125,22 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
   const [publishError, setPublishError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  /* If this code is already in the catalog (opened FROM the catalog, or a
+     re-import of a published protocol), start in the published state — no
+     second Publish needed before attaching audio. */
+  useEffect(() => {
+    if (!t.code) return
+    let alive = true
+    void dp.listProtocols()
+      .then((ps) => {
+        const existing = ps.find((p) => p.code === t.code)
+        if (alive && existing?.plain) setPublished(existing)
+      })
+      .catch(() => { /* mock/offline — publish manually */ })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t.code])
+
   function explainSaveError(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
     if (/plain|datasheet|asset_map|PGRST204|42703|column .* does not exist|schema cache/i.test(msg)) {

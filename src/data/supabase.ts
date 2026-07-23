@@ -380,6 +380,10 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       const { error } = await sb.from('protocols').update({ enabled, updated_at: toIso(Date.now()) }).eq('code', code)
       if (error) throw error
     },
+    async deleteProtocol(code: string): Promise<void> {
+      const { error } = await sb.from('protocols').delete().eq('code', code)
+      if (error) throw error
+    },
 
     // --- Credentialing queue (therapists joined to their profile) ---
     async listCredentialRequests(): Promise<CredentialRequest[]> {
