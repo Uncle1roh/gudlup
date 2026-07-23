@@ -261,6 +261,56 @@ export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDura
   return ctx.startRendering()
 }
 
+/** House reference: the RMS a normal guide-voice clip lands at (same figure
+    Renderer v3 uses). The PLAIN dB ladder hangs off this anchor. */
+export const VOICE_REF_RMS = 0.13
+
+/** Gated RMS: mean square of the samples that actually carry signal (above
+    −60 dBFS), so pauses inside a voice line or a faded soundscape don't
+    drag the measurement down and cause over-boosting. */
+export function gatedRms(buf: AudioBuffer): number {
+  const GATE = 0.001
+  let sum = 0
+  let n = 0
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < d.length; i += 4) { // strided — plenty for level work
+      const a = Math.abs(d[i])
+      if (a > GATE) { sum += d[i] * d[i]; n++ }
+    }
+  }
+  return n ? Math.sqrt(sum / n) : 0
+}
+
+/** Calibrate a clip buffer to the PLAIN loudness ladder: scale it so its
+    gated RMS lands exactly `targetDb` below (or above) the guide-voice
+    reference. THIS is what makes the Excel's volume_db a real layer
+    selector — a −18 dB music clip is measurably 18 dB under the voice no
+    matter how hot or quiet the source file / synth / TTS take was.
+    Returns the applied gain (1 = untouched silent/broken source). */
+export function calibrateBufferToDb(buf: AudioBuffer, targetDb: number): number {
+  const rms = gatedRms(buf)
+  if (rms < 1e-4) return 1 // silence — leave it, the seed note says why
+  const target = VOICE_REF_RMS * Math.pow(10, targetDb / 20)
+  const g = Math.min(8, Math.max(0.002, target / rms))
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < d.length; i++) d[i] *= g
+  }
+  return g
+}
+
+/** Full PLAIN clip conditioning: loudness calibration (when `calibrateDb`
+    is set) + legacy relative gain + fades. One call, shared by the Studio's
+    buffer pipeline and the offline renderer — both hear the same clip. */
+export function shapeClipBuffer(
+  buf: AudioBuffer,
+  shape: { calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number },
+): AudioBuffer {
+  if (shape.calibrateDb !== undefined) calibrateBufferToDb(buf, shape.calibrateDb)
+  return applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
+}
+
 /** Bake a PLAIN clip's shape into its rendered buffer: linear gain from a
     relative dB offset (vs the track base) plus fade_in/fade_out ramps. The
     shaped buffer stays the single source of truth, so waveform, realtime

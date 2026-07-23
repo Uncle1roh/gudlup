@@ -7,7 +7,7 @@ import {
   sliceBuffer,
   concatBuffers,
   bakeVoiceBuffer,
-  applyClipShape,
+  shapeClipBuffer,
   computePeaks,
   peakBuckets,
   defaultParams,
@@ -65,9 +65,35 @@ interface Clip {
   gainDb?: number
   fadeInSec?: number
   fadeOutSec?: number
+  /** PLAIN loudness ladder: calibrate the rendered buffer's gated RMS to
+      exactly this many dB vs the guide-voice reference — the Excel's
+      volume_db as a real, measured layer selector. */
+  calibrateDb?: number
 }
 type TrackChannel = 'L' | 'C' | 'R'
 const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
+
+/* Audio-taper fader: the slider runs in dB (−40 … +6), not linear gain —
+   a centimeter of travel is the same audible step anywhere on the range.
+   `track.volume` stays LINEAR (engine + seeds unchanged); only the slider
+   position and the readout speak dB. */
+const FADER_MIN_DB = -40
+const FADER_MAX_DB = 6
+function gainToFaderPos(gain: number): number {
+  if (gain <= 0) return 0
+  const db = 20 * Math.log10(gain)
+  return Math.min(1, Math.max(0, (db - FADER_MIN_DB) / (FADER_MAX_DB - FADER_MIN_DB)))
+}
+function faderPosToGain(pos: number): number {
+  if (pos <= 0) return 0
+  const db = FADER_MIN_DB + pos * (FADER_MAX_DB - FADER_MIN_DB)
+  return Math.pow(10, db / 20)
+}
+function gainToDbLabel(gain: number): string {
+  if (gain <= 0) return '−∞ dB'
+  const db = 20 * Math.log10(gain)
+  return `${db > 0 ? '+' : ''}${db.toFixed(1)} dB`
+}
 
 interface Track {
   id: string
@@ -106,7 +132,7 @@ function seedTrackToTrack(t: SeedTrack): Track {
     id: uid(), type: t.type, name: t.name, volume: t.volume, muted: false, soloed: false,
     channel: t.channel,
     effects: t.effects,
-    clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec })),
+    clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec, calibrateDb: c.calibrateDb })),
   }
 }
 
@@ -215,7 +241,7 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, buffer: buf, peaks, ...extra })) })))
   }, [])
 
-  type ClipShape = { gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
+  type ClipShape = { calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
 
   const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number, shape?: ClipShape) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
@@ -229,7 +255,7 @@ function StudioDesktop() {
       console.warn('clip render failed', type, (e as Error).message)
       buf = await renderClipBuffer(type === 'sample' ? 'sample' : type, type === 'sample' ? { url: '', label: `load failed: ${(e as Error).message}` } : params, dur)
     }
-    if (shape) buf = applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
+    if (shape) buf = shapeClipBuffer(buf, shape)
     if (renderTokens.current.get(clipId) !== token) return
     setClipBuffer(trackId, clipId, buf)
   }, [setClipBuffer])
@@ -241,7 +267,7 @@ function StudioDesktop() {
     // line, and the clip follows the voice rather than truncating it
     const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - startSec)
     let buf = await bakeVoiceBuffer(source, pan, maxDur, speed)
-    if (shape) buf = applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
+    if (shape) buf = shapeClipBuffer(buf, shape)
     if (renderTokens.current.get(clipId) !== token) return
     setClipBuffer(trackId, clipId, buf, { durationSec: buf.duration })
   }, [setClipBuffer])
@@ -251,8 +277,8 @@ function StudioDesktop() {
     const cl = tr?.clips.find((c) => c.id === clipId)
     if (!tr || !cl) return
     if (cl.frozen) return // cut/glued audio is authoritative — never re-render over it
-    const shape: ClipShape | undefined = cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
-      ? { gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
+    const shape: ClipShape | undefined = cl.calibrateDb !== undefined || cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
+      ? { calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
       : undefined
     if (tr.type === 'voice' && cl.ttsSource) {
       const vp = cl.params as VoiceParams
@@ -306,7 +332,7 @@ function StudioDesktop() {
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
-      buf = applyClipShape(buf, cl.gainDb, cl.fadeInSec, cl.fadeOutSec)
+      buf = shapeClipBuffer(buf, { calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
@@ -330,7 +356,7 @@ function StudioDesktop() {
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
     if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
@@ -350,7 +376,7 @@ function StudioDesktop() {
         }
         const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
         let buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
-        if (j.shape) buf = applyClipShape(buf, j.shape.gainDb, j.shape.fadeInSec, j.shape.fadeOutSec)
+        if (j.shape) buf = shapeClipBuffer(buf, j.shape)
         setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
         done++
       } catch (e) {
@@ -904,19 +930,27 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
         <span style={{ flex: 1 }} />
         <button className="mt-addclip" onClick={onAddClip} title="Add clip at playhead">＋</button>
       </div>
-      <div className="mt-head__vol" title="Track volume — scroll on the slider for ±1% fine steps">
+      <div className="mt-head__vol" title="Track level in dB vs the mix — scroll for ±0.5 dB fine steps">
         <input
           className="mt-vol"
-          type="range" min={0} max={1} step={0.005}
-          value={track.volume}
-          onChange={(e) => onVolume(+e.target.value)}
-          onWheel={(e) => { e.preventDefault(); onVolume(Math.min(1, Math.max(0, +(track.volume + (e.deltaY < 0 ? 0.01 : -0.01)).toFixed(3)))) }}
+          type="range" min={0} max={1} step={0.002}
+          value={gainToFaderPos(track.volume)}
+          onChange={(e) => onVolume(faderPosToGain(+e.target.value))}
+          onWheel={(e) => {
+            e.preventDefault()
+            if (track.volume <= 0) { onVolume(faderPosToGain(0.02)); return }
+            const db = 20 * Math.log10(track.volume) + (e.deltaY < 0 ? 0.5 : -0.5)
+            onVolume(db < FADER_MIN_DB ? 0 : Math.pow(10, Math.min(FADER_MAX_DB, db) / 20))
+          }}
         />
         <span className="mt-head__voldb">
           <EditableValue
-            display={`${Math.round(track.volume * 100)}%`}
-            commit={(raw) => { const v = parseTyped(raw, 0, 1); if (v != null) onVolume(v) }}
-            title="Click to type the exact volume (e.g. 83)"
+            display={gainToDbLabel(track.volume)}
+            commit={(raw) => {
+              const v = parseTyped(raw, FADER_MIN_DB, FADER_MAX_DB)
+              if (v != null) onVolume(Math.pow(10, v / 20))
+            }}
+            title="Click to type the level in dB (e.g. -12)"
           />
         </span>
       </div>
@@ -1135,9 +1169,10 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
             Parameter and length edits don't apply to frozen pieces.
           </div>
         )}
-        {(clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
+        {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            📄 From the protocol Excel: {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip level ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB vs track · ` : ''}
+            📄 From the protocol Excel: {clip.calibrateDb !== undefined ? `layer level ${clip.calibrateDb > 0 ? '+' : ''}${clip.calibrateDb} dB vs the guide voice (loudness-calibrated) · ` : ''}
+            {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip offset ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB · ` : ''}
             fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
           </div>
         )}

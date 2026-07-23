@@ -42,3 +42,46 @@ assert(close(gOnly.getChannelData(0)[0], Math.pow(10, -14 / 20)), `gain-only: fi
 
 if (process.exitCode) { console.error('\nTEST FAILED'); process.exit(1) }
 console.log('\nALL PASS')
+
+/* --- loudness calibration (the PLAIN layer selector) --- */
+import { gatedRms, calibrateBufferToDb, shapeClipBuffer, VOICE_REF_RMS } from '../src/studio/multitrack'
+{
+  // a "hot synth" at amplitude 0.7 (sine RMS ≈ 0.495) calibrated to −9 dB
+  const sr2 = 1000
+  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 2, length: 10 * sr2, sampleRate: sr2 })
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = 0.7 * Math.sin((2 * Math.PI * 50 * i) / sr2) }
+  calibrateBufferToDb(b as any, -9)
+  const want = VOICE_REF_RMS * Math.pow(10, -9 / 20)
+  const got = gatedRms(b as any)
+  assert(close(got, want, want * 0.03), `hot synth calibrated to −9 dB vs voice ref (rms ${got.toFixed(4)} ≈ ${want.toFixed(4)})`)
+}
+{
+  // a quiet source comes UP to its ladder position (−18 dB)
+  const sr2 = 1000
+  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 2, length: 10 * sr2, sampleRate: sr2 })
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = 0.01 * Math.sin((2 * Math.PI * 50 * i) / sr2) }
+  const g = calibrateBufferToDb(b as any, -18)
+  assert(g > 1, `quiet source boosted (×${g.toFixed(2)})`)
+  const want = VOICE_REF_RMS * Math.pow(10, -18 / 20)
+  assert(close(gatedRms(b as any), want, want * 0.03), `lands exactly at −18 dB`)
+}
+{
+  // gated RMS ignores silence: half-signal half-silence measures the SIGNAL
+  const sr2 = 1000
+  const full = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: 10 * sr2, sampleRate: sr2 })
+  const half = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: 10 * sr2, sampleRate: sr2 })
+  const df = full.getChannelData(0); const dh = half.getChannelData(0)
+  for (let i = 0; i < df.length; i++) df[i] = 0.3 * Math.sin((2 * Math.PI * 50 * i) / sr2)
+  for (let i = 0; i < dh.length / 2; i++) dh[i] = 0.3 * Math.sin((2 * Math.PI * 50 * i) / sr2)
+  assert(close(gatedRms(full as any), gatedRms(half as any), 0.01), `gated RMS is silence-proof (voice pauses don't cause over-boost)`)
+}
+{
+  // shapeClipBuffer = calibration THEN fades
+  const sr2 = 1000
+  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: 10 * sr2, sampleRate: sr2 })
+  const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = 0.5 * Math.sin((2 * Math.PI * 50 * i) / sr2)
+  const out = shapeClipBuffer(b as any, { calibrateDb: 0, fadeInSec: 2, fadeOutSec: 0 }) as any
+  const mid = Math.abs(out.getChannelData(0)[5 * sr2 + 5])
+  assert(mid > 0.05 && Math.abs(out.getChannelData(0)[10]) < mid / 5, `calibrate + fade compose (mid ${mid.toFixed(3)}, head faded)`)
+}
+console.log('calibration checks done')

@@ -35,6 +35,9 @@ export interface SeedClip {
   /** PLAIN per-clip fades (seconds) — baked into the buffer. */
   fadeInSec?: number
   fadeOutSec?: number
+  /** PLAIN loudness ladder: calibrate the rendered buffer's gated RMS to
+      exactly this many dB vs the guide-voice reference. */
+  calibrateDb?: number
 }
 export interface SeedTrack {
   type: TrackType

@@ -1,5 +1,40 @@
 # Good Loop — build manifest
 
+**Slice: audible layer separation — loudness-calibrated ladder + dB faders**
+(current)
+- Root cause of "moving a fader changes nothing / everything is mashed":
+  (1) the Excel's volume_db was applied as FADER gain while the sources
+  have wildly different intrinsic loudness (full-scale synth binaural vs
+  −18 LUFS library music vs TTS voice), so the ladder never actually
+  existed in the audio; (2) the fader itself was a LINEAR 0–1 slider, where
+  most of the audible range lives crushed in the bottom millimeters.
+- **Loudness-calibrated ladder** (`multitrack.ts`: `gatedRms`,
+  `calibrateBufferToDb`, `shapeClipBuffer`, `VOICE_REF_RMS = 0.13`): every
+  PLAIN clip buffer is now MEASURED after render and scaled so its gated
+  RMS (silence-proof — voice pauses and faded beds don't skew it) lands at
+  exactly its volume_db below the guide-voice reference. A −18 dB music
+  clip is measurably 18 dB under the voice regardless of how hot the source
+  file, synth or TTS take was — the Excel column is a real layer selector
+  now. New `calibrateDb` rides SeedClip → Studio Clip through every buffer
+  path (doRender, rebakeVoice, ♪ Synthesize, All voices) and the offline
+  renderer (same shared call — Studio and WAV hear the same clip). Loop
+  cycle attenuation folds into calibrateDb. Inspector shows "layer level
+  −18 dB vs the guide voice (loudness-calibrated)".
+- **Faders at house unity** — the ladder lives in the clips, so every lane
+  seeds at 0.8 and any fader movement is a pure dB offset on a correct mix.
+  Seed notes list each lane's layer level.
+- **dB audio-taper faders** — the track volume slider now runs in dB
+  (−40…+6, 0 = −∞): equal slider travel = equal audible change anywhere on
+  the range; readout and click-to-type are in dB (e.g. "-12"); scroll =
+  ±0.5 dB. `track.volume` stays linear internally — engine, seeds and
+  mixdown untouched. (Live gain updates during playback were already wired
+  via setTargetAtTime and now have a taper worth hearing.)
+- Verified: `tsc --noEmit` + `npm run build` clean; all five node proofs
+  pass, including new numeric calibration checks (hot synth → −9 dB lands
+  at 0.0461 RMS exactly; quiet source ×2.07 up to −18 dB; gated RMS
+  silence-proof; calibrate+fade compose) and updated seed expectations
+  (unity faders, calibrateDb ladder −6/−20, −18×2+−6×4, −9/−18, guide 0).
+
 **Slice: §9 mastering · desktop-first admin · catalog = the workspace**
 (current)
 - **Mastering (Rules §9)** — `src/studio/mastering.ts`, applied as the final

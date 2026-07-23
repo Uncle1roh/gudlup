@@ -21,10 +21,10 @@ import { getTtsProvider } from '../tts'
 import { voiceById, DEFAULT_PRIMARY } from '../tts/voiceCatalog'
 import {
   SAMPLE_RATE,
-  applyClipShape,
   bakeVoiceBuffer,
   renderClipBuffer,
   renderMixdownBuffer,
+  shapeClipBuffer,
   type MixTrack,
   type SampleParams,
   type VoiceParams,
@@ -141,7 +141,7 @@ export async function renderPlainWav(
             ttsCache.set(key, decoded)
           }
           let baked = await bakeVoiceBuffer(decoded, vp.pan, dur, vp.speed ?? 1)
-          baked = applyClipShape(baked, c.gainDb, c.fadeInSec, c.fadeOutSec)
+          baked = shapeClipBuffer(baked, c)
           buffer = baked
           voiceClips++
         } else {
@@ -149,7 +149,7 @@ export async function renderPlainWav(
           if (sp && !sp.url) continue // undrawn lane — silent by design
           progress(`Rendering ${t.name} @ ${secToMmss(c.startSec)}…`)
           let buf = await renderClipBuffer(t.type, c.params, dur)
-          buf = applyClipShape(buf, c.gainDb, c.fadeInSec, c.fadeOutSec)
+          buf = shapeClipBuffer(buf, c)
           buffer = buf
         }
         clips.push({ startSec: c.startSec, durationSec: dur, buffer })

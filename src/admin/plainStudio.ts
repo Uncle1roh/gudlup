@@ -50,8 +50,10 @@ export interface PlainSeedOptions {
   seed?: number
 }
 
-/** House reference: guide voice 0 dB ≙ linear 0.8 on the track fader. */
-const REF_LINEAR = 0.8
+/** House unity for every fader: the ladder itself lives IN the clips now
+    (loudness-calibrated buffers), so faders start equal and any movement is
+    a pure, audible dB offset on top of a correct mix. */
+const FADER_UNITY = 0.8
 
 /** §8.4 default nominal levels when a clip leaves volume_db empty. */
 const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
@@ -62,8 +64,6 @@ const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
   solfeggio: -14,
   bilateral: -12,
 }
-
-const dbToLinear = (db: number) => Math.min(1, Math.max(0.02, REF_LINEAR * Math.pow(10, db / 20)))
 
 function clipDb(c: PlainClip): number {
   return c.volumeDb ?? DEFAULT_DB[c.tipo]
@@ -190,7 +190,7 @@ export function plainToStudioTracks(
         startSec: c.startS,
         durationSec: c.endS - c.startS,
         params: { url, label } as SampleParams,
-        gainDb: 0, // rewritten below once the track base is known
+        calibrateDb: nominalDb, // loudness-anchored: gated RMS lands AT this dB vs voice
         fadeInSec: c.fadeInS,
         fadeOutSec: c.fadeOutS,
       }
@@ -204,7 +204,7 @@ export function plainToStudioTracks(
       const params: BinauralParams = c.tipo === 'binaural'
         ? { carrierHz: ((c.carrierLHz ?? 200) + (c.carrierRHz ?? 210)) / 2, beatHz: (c.carrierRHz ?? 210) - (c.carrierLHz ?? 200) }
         : { carrierHz: c.frequenzaHz ?? 432, beatHz: 0 }
-      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, gainDb: 0, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
+      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, calibrateDb: nominalDb, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue
     }
@@ -217,7 +217,7 @@ export function plainToStudioTracks(
         everySec: c.intervalloAlternanzaS ?? 4,
         panAmp: Math.min(1, Math.max(0, (c.panAmpiezza ?? 100) / 100)),
       }
-      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, gainDb: 0, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
+      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, calibrateDb: nominalDb, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue
     }
@@ -256,7 +256,7 @@ export function plainToStudioTracks(
             durationSec: dur,
             params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, voiceId: voice.id } as VoiceParams,
             text: aff.testo,
-            gainDb: cy * att, // rebased below; cycle attenuation stays relative
+            calibrateDb: nominalDb + cy * att, // ladder + cycle attenuation, measured
             fadeInSec: 1, // Rules doc: per-affirmation envelope is an app default
             fadeOutSec: 2,
           })
@@ -293,25 +293,24 @@ export function plainToStudioTracks(
       durationSec: c.endS - c.startS,
       params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, voiceId: voice.id } as VoiceParams,
       text: c.testo,
-      gainDb: 0,
+      calibrateDb: nominalDb,
       fadeInSec: c.fadeInS,
       fadeOutSec: c.fadeOutS,
     })
     l.clipDbs.push(nominalDb)
   }
 
-  /* ---------------- per-lane volume: fader = loudest clip's nominal dB;
-     each clip's gainDb = its nominal − the track base (≤ 0, no clipping). */
+  /* ---------------- per-lane volume: every fader starts at house unity —
+     the Excel ladder is loudness-CALIBRATED into each clip buffer (gated RMS
+     lands exactly at its dB vs the guide voice, whatever the source file /
+     synth / TTS take measured). Moving a fader is now a pure dB offset the
+     ear can immediately place. */
   for (const l of lanes) {
+    l.track.volume = FADER_UNITY
     if (!l.clipDbs.length) continue
-    const baseDb = Math.max(...l.clipDbs)
-    l.track.volume = +dbToLinear(baseDb).toFixed(3)
-    l.track.clips.forEach((clip, i) => {
-      const rel = +(l.clipDbs[i] - baseDb).toFixed(2)
-      clip.gainDb = rel === 0 ? undefined : rel
-    })
-    const spread = Math.max(...l.clipDbs) - Math.min(...l.clipDbs)
-    if (spread > 0.01) notes.push(`"${l.track.name}": fader at ${baseDb} dB (rel. voice); per-clip offsets down to −${spread.toFixed(0)} dB baked into the clips.`)
+    const lo = Math.min(...l.clipDbs)
+    const hi = Math.max(...l.clipDbs)
+    notes.push(`"${l.track.name}": layer level ${hi === lo ? `${hi} dB` : `${hi}…${lo} dB`} vs voice — loudness-calibrated into the clips; fader at unity.`)
   }
 
   /* Reverb note (once per reverb'd lane). */
