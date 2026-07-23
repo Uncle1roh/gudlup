@@ -1,6 +1,43 @@
 # Good Loop — build manifest
 
-**Fix: voice tracks — function first, side second** (current)
+**Slice: PLAIN Timeline importer + validation (slice 1 of the clip-level
+format)** (current)
+- NEW recommended import path per the "Rules for Good Loop protocols" doc
+  (Dec. A–H, §5–§8): `src/admin/plainTimeline.ts` parses the README /
+  per-version clip grids / Affermazioni workbook — one row = one clip, six
+  track types (Soundscape · Music · Binaural · Bilateral · Solfeggio ·
+  Voice), all 36 columns typed. Numeric `start_s`/`end_s` are authoritative;
+  `m:ss` cells are cross-checked only. Banner + TOTALE/DURATA footer rows
+  skipped; Binaural beat derived (carrier_R − carrier_L); loop sets
+  (`CSI-01..12`) resolved against the Affermazioni sheet in `ordine_loop`
+  order. The 3 extra Affermazioni columns (`ordine_loop`, `bilaterale_lato`,
+  `eco_keyword`) are kept and flagged to POs via an info issue.
+- Validation per the Rules doc: required fields per type, pan −100..+100,
+  `crossfade_prec_s` only on Soundscape/Music, same-track overlaps beyond
+  their crossfade, Binaural XOR Solfeggio (error, binding §8.5 r.5), §8.0
+  phase-window warnings (Binaural in F3–F4, Solfeggio in F4, Bilateral
+  outside F4), loop-fits-window check, declared TOTALE/DURATA cross-checks,
+  8 ⊂ 12 ⊂ 20 subset sanity. Retired concepts (breathing pacer, key/BPM
+  metadata, synth beds) simply don't exist in the vocabulary; heartbeat is a
+  Soundscape clip with an "heartbeat" ambiente (Dec. H, info note).
+- Import hub: `.xlsx` files are probed for the PLAIN shape FIRST (header row
+  with clip_id/traccia/tipo/start_s/end_s — legacy Scheda Dati/Unica can't
+  match it) and routed to the new `PlainImport.tsx` review screen: identity,
+  per-version phase map + duration, tracks with clip counts per type, the
+  affirmation database, and all issues by severity. The formats panel now
+  shows PLAIN as the ⭐ recommended card (full-width); Scheda Unica and the
+  multi-sheet workbook remain fully supported and unchanged.
+- Verified: `tsc --noEmit` + `npm run build` clean; node proof
+  (`tools/test-plain.ts`, esbuild-bundled) against the real
+  `GL-ANX_1_1_Standard_12min_Timeline_PLAIN.xlsx`: 71 clips (7 SS · 6 MU ·
+  2 BI · 1 BIL · 1 SOL · 54 VC) on 11 tracks, 6 README phases (F4 =
+  5:30–9:30), BI-001 200/210 → 10 Hz, VC-019 loop → 12 ordered CSI IDs,
+  12 affirmations with the extra columns, 0 errors/warnings, garbage bytes
+  rejected.
+- Next slices: Studio seeding 1:1 (+ clip-voice Preview fix), render =
+  Studio mixdown, Asset Library tags + phase pools with random draw.
+
+**Fix: voice tracks — function first, side second**
 - Regression fixed: ECO/SUSSURRO rows on L/R (e.g. GL-ANX 1.2's right-side
   whispers) were being absorbed into the RIGHT track at 72% volume, deleting
   the echo lane. Now the split is by FUNCTION first: "Voice — guide" and

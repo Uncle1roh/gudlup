@@ -1717,6 +1717,7 @@ img, svg, video, canvas { max-width: 100%; }
 .adm-formats { max-width: 860px; margin-top: 18px; }
 .adm-formats__title { font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 8px; }
 .adm-formats__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.adm-formats__grid .adm-formats__card--best { grid-column: 1 / -1; }
 @media (max-width: 860px) { .adm-formats__grid { grid-template-columns: 1fr; } }
 .adm-formats__card { border: 1px solid var(--mist-3); border-radius: 12px; padding: 12px 14px; background: #fff; font-size: 12.5px; color: var(--slate-2); }
 .adm-formats__card p { margin: 6px 0 0; line-height: 1.45; }

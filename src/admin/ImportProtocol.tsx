@@ -8,6 +8,8 @@ import { parseProtocolDoc, looksLikeProtocolDoc, type ProtocolSpec } from './pro
 import { SpecImport } from './SpecImport'
 import { parseDatasheet, type Datasheet } from './datasheet'
 import { DatasheetImport } from './DatasheetImport'
+import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
+import { PlainImport } from './PlainImport'
 import type { CatalogProtocol } from '../data/catalog'
 
 type Step = 'upload' | 'review' | 'done'
@@ -36,6 +38,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
   const [busy, setBusy] = useState(false)
   const [spec, setSpec] = useState<ProtocolSpec | null>(null)
   const [datasheet, setDatasheet] = useState<Datasheet | null>(null)
+  const [plain, setPlain] = useState<PlainTimeline | null>(null)
   const [reading, setReading] = useState(false)
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -52,6 +55,18 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
       setReading(true)
       try {
         const bytes = await f.arrayBuffer()
+        // NEW recommended path: PLAIN clip-level Timeline (README / version
+        // sheets with a clip_id grid / Affermazioni). Probed first; legacy
+        // Scheda Dati / Scheda Unica workbooks fall through unchanged.
+        if (await probePlainTimeline(bytes)) {
+          const pres = await parsePlainTimeline(bytes)
+          if (pres.error || !pres.timeline) { setError(pres.error ?? 'Could not parse that PLAIN Timeline workbook.'); return }
+          setFileName(f.name)
+          setPlain(pres.timeline)
+          const nClips = pres.timeline.versions.reduce((n, v) => n + v.clips.length, 0)
+          void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `plain timeline · ${pres.timeline.code ?? '?'} · ${pres.timeline.versions.length} versions · ${nClips} clips · ${pres.timeline.issues.length} issues` })
+          return
+        }
         const res = await parseDatasheet(bytes)
         if (res.error || !res.datasheet) { setError(res.error ?? 'Could not parse that workbook.'); return }
         setFileName(f.name)
@@ -144,6 +159,17 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     setPublishedCount(n)
     setBusy(false)
     setStep('done')
+  }
+
+  /* ---- PLAIN TIMELINE (parsed clip-level workbook) ---- */
+  if (plain && fileName) {
+    return (
+      <PlainImport
+        timeline={plain}
+        fileName={fileName}
+        onCancel={() => { setPlain(null); setFileName(null) }}
+      />
+    )
   }
 
   /* ---- PROTOCOL DATASHEET (parsed workbook) ---- */
@@ -270,8 +296,8 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.docx,.pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
           <span className="adm-drop__icon" aria-hidden="true">⇪</span>
           <span className="adm-drop__cta">
-            <b>{reading ? 'Reading file…' : 'Choose a Protocol Datasheet (.xlsx) or a protocol document (.docx / PDF) — or CSV/JSON for bulk import'}</b>
-            <span className="adm-drop__meta">XLSX (best): the Protocol Datasheet workbook — canonical, rendered with Renderer v3 · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row</span>
+            <b>{reading ? 'Reading file…' : 'Choose a PLAIN Timeline or Protocol Datasheet (.xlsx), or a protocol document (.docx / PDF) — or CSV/JSON for bulk import'}</b>
+            <span className="adm-drop__meta">XLSX (best): the PLAIN clip-level Timeline (recommended) or a legacy Datasheet workbook · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row</span>
           </span>
           {/* NOTE: no onClick here — this span sits inside the <label>, whose
               native activation already opens the file input; a programmatic
@@ -285,9 +311,13 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
           <div className="adm-formats__title">Accepted Excel formats</div>
           <div className="adm-formats__grid">
             <div className="adm-formats__card adm-formats__card--best">
-              <b>⭐ Scheda Unica (single tab) — recommended</b>
-              <p>One sheet, sections marked with <code>### NAME</code> rows: PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE · AFFERMAZIONI · MUSICA — plus optional <code>MIX</code> (per-protocol levels, echo timings, crossfades, solfeggio, isochronic mode), <code>RESPIRAZIONE</code> (guided breathing pacer) and <code>TECNICHE / NOTE</code> (preserved for reference).</p>
-              <p>The <b>Voce</b> column names the voice per row (catalog name, archetype, or F/M); the <b>Canale</b> column takes C/L/R/SYS or fine pans like <code>L25</code>; optional <b>Effetto</b> (CORO/ECO) and <b>Velocità</b> columns per row. Phases are derived from the FASI windows — no Fase column needed. The FASI <b>Binaural</b> column drives per-phase frequency curves (e.g. "Theta 7 Hz (rampa 90 s)").</p>
+              <b>⭐ PLAIN Timeline (clip-level) — recommended</b>
+              <p>Sheets <code>README</code> · one per version (Quick/Standard/Deep) · <code>Affermazioni</code>. <b>One row = one clip</b> on a named track (<code>traccia</code>), six types: Soundscape, Music, Binaural, Bilateral, Solfeggio, Voice. Times via numeric <code>start_s</code>/<code>end_s</code>; volumes in dB relative to the guide voice (0 dB).</p>
+              <p>Voice absorbs dichotic / whisper / echo-stacking / looper through parameters (archetipo, pan, modalità, eco, set_affermazioni <code>CSI-01..12</code>). Soundscape carries only an <code>ambiente</code> tag and Music only its <code>fase</code> — the app draws the file at random from the pool. Binaural beat = carrier_R − carrier_L. Validated against the Rules doc (§8.0 windows, Binaural XOR Solfeggio).</p>
+            </div>
+            <div className="adm-formats__card">
+              <b>Scheda Unica (single tab)</b>
+              <p>One sheet with <code>### NAME</code> sections: PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE · AFFERMAZIONI · MUSICA (+ MIX, RESPIRAZIONE, TECNICHE/NOTE). Per-row Voce/Canale/Effetto/Velocità columns. Still fully supported.</p>
             </div>
             <div className="adm-formats__card">
               <b>Multi-sheet workbook (legacy)</b>
