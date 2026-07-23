@@ -132,6 +132,7 @@ function mapCatalog(r: any): CatalogProtocol {
     tenants, audioReady: !!r.audio_ready, updatedAt: toMs(r.updated_at),
     spec: r.spec ?? undefined,
     datasheet: r.datasheet ?? undefined,
+    plain: r.plain ?? undefined,
     assetMap: r.asset_map ?? undefined,
   }
 }
@@ -369,6 +370,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         source: p.source, tenants: p.tenants, audio_ready: p.audioReady, updated_at: toIso(Date.now()),
         spec: p.spec ?? null,
         datasheet: p.datasheet ?? null,
+        plain: p.plain ?? null,
         asset_map: p.assetMap ?? null,
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })

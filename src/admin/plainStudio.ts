@@ -39,7 +39,16 @@ import type { SeedClip, SeedTrack } from '../compose/types'
 import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, DEFAULT_PRIMARY, type CatalogVoice } from '../tts/voiceCatalog'
+import { drawMusic, drawSoundscape, mulberry32, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
+
+export interface PlainSeedOptions {
+  /** Asset pools for the random draw (Rules §7.1–7.2). Absent = the sample
+      lanes stay silent with a note (mock mode / library unreachable). */
+  pools?: AssetPools
+  /** RNG seed for reproducible draws. Default: fresh randomness per seed. */
+  seed?: number
+}
 
 /** House reference: guide voice 0 dB ≙ linear 0.8 on the track fader. */
 const REF_LINEAR = 0.8
@@ -83,10 +92,13 @@ interface Lane {
 export function plainToStudioTracks(
   timeline: PlainTimeline,
   version: PlainVersion,
+  opts: PlainSeedOptions = {},
 ): { tracks: SeedTrack[]; name: string; totalSec: number; notes: string[] } {
   const notes: string[] = []
   const totalSec = version.durationS
   const affById = new Map(timeline.affirmations.map((a) => [a.id, a]))
+  const rnd = mulberry32(opts.seed ?? Math.floor(Math.random() * 0xffffffff))
+  const pools = opts.pools
 
   /* Lanes keyed by final track name, created in file order so the Studio
      shows the same top-to-bottom structure as the Excel. */
@@ -147,14 +159,37 @@ export function plainToStudioTracks(
     const nominalDb = clipDb(c)
 
     if (c.tipo === 'soundscape' || c.tipo === 'music') {
-      const l = lane(c.traccia, () => ({ type: 'sample', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }))
-      const label = c.tipo === 'soundscape'
-        ? `tag "${c.ambiente ?? '?'}" — drawn at import/render (slice 3)`
-        : `F${c.faseFrom ?? '?'} pool — drawn at import/render (slice 3)`
+      const isHeartbeat = c.tipo === 'soundscape' && /heartbeat|battito|bpm/i.test(c.ambiente ?? '')
+      const l = lane(c.traccia, () => ({
+        type: 'sample',
+        name: c.traccia,
+        volume: 0.3,
+        channel: 'C',
+        duck: isHeartbeat ? 'none' : c.tipo === 'music' ? 'music' : 'soundscape',
+        clips: [],
+      }))
+      // random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
+      // pool for music — one draw per clip, every draw reported
+      let url = ''
+      let label = c.tipo === 'soundscape'
+        ? `tag "${c.ambiente ?? '?'}" — no pool available`
+        : `F${c.faseFrom ?? '?'} pool — no pool available`
+      if (pools) {
+        const drawn = c.tipo === 'soundscape'
+          ? drawSoundscape(pools, c.ambiente ?? '', rnd)
+          : drawMusic(pools, c.faseFrom ?? 1, rnd)
+        if (drawn) {
+          url = drawn.asset.publicUrl
+          label = `${drawn.asset.name} · ${c.tipo === 'soundscape' ? `tag "${c.ambiente}"` : `F${c.faseFrom} pool`}`
+          notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
+        } else {
+          notes.push(`${c.clipId} (${c.traccia}): NO file for ${c.tipo === 'soundscape' ? `tag "${c.ambiente}"` : `phase pool F${c.faseFrom}`} — clip stays silent${isHeartbeat ? ' (PO heartbeat file pending)' : ''}.`)
+        }
+      }
       const clip: SeedClip = {
         startSec: c.startS,
         durationSec: c.endS - c.startS,
-        params: { url: '', label } as SampleParams,
+        params: { url, label } as SampleParams,
         gainDb: 0, // rewritten below once the track base is known
         fadeInSec: c.fadeInS,
         fadeOutSec: c.fadeOutS,

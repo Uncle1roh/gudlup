@@ -16,6 +16,7 @@ import {
   assetMapCoverage, emptyAssetMap, fmtBytes, groupSoundscapes, listAssets,
   PHASE_KEYS, type AssetMap, type AudioAsset, type PhaseKey,
 } from './assets'
+import { loadAssetMeta, saveAssetTags } from './assetPools'
 
 type Tab = 'music' | 'soundscape' | 'special'
 
@@ -130,12 +131,44 @@ export function AssetLibrary({ actor }: { actor: string }) {
   const selected = protocols.find((x) => x.code === selCode)
   const cov = assetMapCoverage(draft)
 
+  /* PLAIN random-draw tags (asset_meta): extra tags per file beyond the
+     folder/filename ones. Edited inline on soundscape rows. */
+  const [metaTags, setMetaTags] = useState<Record<string, string>>({})
+  const [tagBusy, setTagBusy] = useState<string | null>(null)
+  const [tagErr, setTagErr] = useState<string | null>(null)
+  useEffect(() => {
+    if (!hasSupabaseEnv()) return
+    void loadAssetMeta().then((rows) => setMetaTags(Object.fromEntries(rows.map((r) => [r.path, r.tags.join(', ')]))))
+  }, [])
+  async function commitTags(path: string) {
+    setTagBusy(path)
+    setTagErr(null)
+    try {
+      await saveAssetTags(path, (metaTags[path] ?? '').split(',').map((x) => x.trim()).filter(Boolean))
+    } catch (e) {
+      setTagErr((e as Error).message)
+    } finally {
+      setTagBusy(null)
+    }
+  }
+
   const assetRow = (a: AudioAsset) => (
     <div key={a.path} className="adm-asset">
       <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? 'Stop' : 'Preview'}>
         {playing === a.path ? '■' : '▶'}
       </button>
       <span className="adm-asset__name" title={a.path}>{a.name}</span>
+      {a.kind === 'soundscape' && (
+        <input
+          className="b2b-input adm-asset__tags"
+          placeholder="extra draw tags (lago, fabbrica…)"
+          title="PLAIN random-draw tags for this file — the folder + filename already count; add synonyms/extra ambienti here. Saved on blur."
+          value={metaTags[a.path] ?? ''}
+          disabled={tagBusy === a.path}
+          onChange={(e) => setMetaTags((m) => ({ ...m, [a.path]: e.target.value }))}
+          onBlur={() => void commitTags(a.path)}
+        />
+      )}
       <span className="adm-asset__meta">{fmtBytes(a.sizeBytes)}</span>
     </div>
   )
@@ -151,6 +184,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
       </header>
 
       {error && <div className="adm-note adm-note--warn">{error}</div>}
+      {tagErr && <div className="adm-note adm-note--warn">Tags: {tagErr} — run the updated supabase/setup.sql (adds asset_meta) if the table is missing.</div>}
       {assets === null && <div className="adm-note">Listing the bucket…</div>}
 
       {assets !== null && (

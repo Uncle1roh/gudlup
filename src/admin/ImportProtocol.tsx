@@ -167,7 +167,9 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
       <PlainImport
         timeline={plain}
         fileName={fileName}
+        actor={actor}
         onCancel={() => { setPlain(null); setFileName(null) }}
+        onDone={onBack}
       />
     )
   }

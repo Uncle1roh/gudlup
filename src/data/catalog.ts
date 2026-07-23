@@ -14,6 +14,7 @@
 import type { Protocol } from '../types/domain'
 import type { ProtocolSpec } from '../admin/protocolDoc'
 import type { Datasheet } from '../admin/datasheet'
+import type { PlainTimeline } from '../admin/plainTimeline'
 import type { AssetMap } from '../admin/assets'
 import { PROTOCOLS } from './protocols'
 
@@ -37,6 +38,9 @@ export interface CatalogProtocol extends Protocol {
   spec?: ProtocolSpec
   /** Canonical datasheet workbook (xlsx imports) — Renderer v3 executes this. */
   datasheet?: Datasheet
+  /** PLAIN clip-level Timeline (the new recommended format) — the offline
+      renderer re-executes this (with fresh or seeded draws). */
+  plain?: PlainTimeline
   /** Admin's phase → storage-path asset assignments (Asset Library). */
   assetMap?: AssetMap
 }

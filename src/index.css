@@ -1729,3 +1729,6 @@ img, svg, video, canvas { max-width: 100%; }
 /* Sign-out: solid contrasting background (was ghost text-on-transparent) */
 .b2b-btn--signout { background: var(--ink); color: #fff; border-color: var(--ink); }
 .b2b-btn--signout:hover { background: #3c4a44; border-color: #3c4a44; color: #fff; }
+
+/* Asset Library — PLAIN draw-tag editor on soundscape rows */
+.adm-asset__tags { flex: 1; min-width: 160px; max-width: 320px; font-size: 12.5px; padding: 4px 8px; }

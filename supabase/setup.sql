@@ -185,6 +185,7 @@ create table if not exists protocols (
   updated_at   timestamptz not null default now(),
   spec         jsonb,
   datasheet    jsonb,   -- canonical Protocol Datasheet workbook (xlsx imports)
+  plain        jsonb,   -- PLAIN clip-level Timeline (new recommended format)
   asset_map    jsonb    -- Asset Library phase → storage-path assignments
 );
 
@@ -193,6 +194,7 @@ create table if not exists protocols (
 alter table protocols  add column if not exists spec jsonb;
 alter table protocols  add column if not exists audio_ready boolean not null default false;
 alter table protocols  add column if not exists datasheet jsonb;
+alter table protocols  add column if not exists plain jsonb;
 alter table protocols  add column if not exists asset_map jsonb;
 
 create table if not exists audit_events (
@@ -357,6 +359,22 @@ create policy protocols_read_all on protocols
   for select using (auth.uid() is not null);
 drop policy if exists protocols_admin_write on protocols;
 create policy protocols_admin_write on protocols
+  for all using (is_admin()) with check (is_admin());
+
+-- asset_meta: PO tag extensions per library file (PLAIN random-draw pools) ---
+-- path = storage path in protocol-audio (e.g. assets/soundscape/lake/calm-01.mp3)
+-- tags = extra draw tags beyond the folder/filename ones ('lago','fabbrica',…)
+create table if not exists asset_meta (
+  path        text primary key,
+  tags        text[] not null default '{}',
+  updated_at  timestamptz not null default now()
+);
+alter table asset_meta enable row level security;
+drop policy if exists asset_meta_read_all on asset_meta;
+create policy asset_meta_read_all on asset_meta
+  for select using (auth.uid() is not null);
+drop policy if exists asset_meta_admin_write on asset_meta;
+create policy asset_meta_admin_write on asset_meta
   for all using (is_admin()) with check (is_admin());
 
 -- companies + audit: admins only ---------------------------------------------

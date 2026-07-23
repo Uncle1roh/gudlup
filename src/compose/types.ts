@@ -44,6 +44,10 @@ export interface SeedTrack {
   channel?: 'L' | 'C' | 'R'
   /** Pre-enabled effect chain (e.g. harmonizer on a CORO track). */
   effects?: import('../studio/effects').TrackEffect[]
+  /** Ducking family for the offline PLAIN render (Rules §8.3): 'music' −10 dB
+      / 'soundscape' −6 dB under active voice; 'none' = never duck (voice,
+      entrainment, heartbeat). Ignored by the live Studio transport. */
+  duck?: 'music' | 'soundscape' | 'none'
   clips: SeedClip[]
 }
 

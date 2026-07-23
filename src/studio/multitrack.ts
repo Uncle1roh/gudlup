@@ -452,7 +452,16 @@ export class MultitrackPlayer {
 
 /* ---- offline mixdown → WAV ------------------------------------------------- */
 
-export interface MixTrack { gain: number; pan?: number; effects?: TrackEffect[]; clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[] }
+export interface MixTrack {
+  gain: number
+  pan?: number
+  effects?: TrackEffect[]
+  /** Optional gain-multiplier automation (PLAIN ducking): piecewise-linear
+      points, value 1 = the track's nominal `gain`. Applied via a second gain
+      node so `gain` semantics stay untouched. */
+  gainAutomation?: { timeSec: number; mul: number }[]
+  clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[]
+}
 
 export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number, fades?: { inSec?: number; outSec?: number }): Promise<AudioBuffer> {
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * lengthSec))
@@ -477,7 +486,19 @@ export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number,
     const pan = ctx.createStereoPanner()
     pan.pan.value = Math.max(-1, Math.min(1, t.pan ?? 0))
     const fx = buildEffectsChain(ctx, t.effects)
-    g.connect(fx.input)
+    let head: AudioNode = g
+    if (t.gainAutomation?.length) {
+      const duck = ctx.createGain()
+      const pts = [...t.gainAutomation].sort((a, b) => a.timeSec - b.timeSec)
+      duck.gain.setValueAtTime(pts[0].timeSec <= 0 ? pts[0].mul : 1, 0)
+      for (const p of pts) {
+        if (p.timeSec <= 0) continue
+        duck.gain.linearRampToValueAtTime(p.mul, Math.min(lengthSec, p.timeSec))
+      }
+      g.connect(duck)
+      head = duck
+    }
+    head.connect(fx.input)
     fx.output.connect(pan).connect(master)
     for (const c of t.clips) {
       if (!c.buffer) continue

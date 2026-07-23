@@ -1,6 +1,61 @@
 # Good Loop — build manifest
 
-**Slice: PLAIN → Sound Studio seeding, 1 row = 1 clip (slice 2)** (current)
+**Slice: PLAIN render = Studio mixdown · tag/phase pools + random draw
+(slice 3)** (current)
+- `src/admin/assetPools.ts`: pool model + random draw per the Rules doc
+  §7.1–7.2. "Sensible migration" — NO files move: Music phase pools = the
+  existing GLOBAL `assets/music/f1…f6` folders; Soundscape tag pools = the
+  `assets/soundscape/<texture>` folders + filename tokens, matched to the
+  Italian `ambiente` text by an it/en/pt synonym dictionary ("lago calmo" →
+  lake, "vento leggero" → wind, "pioggia dolce" → rain); heartbeat ambiente
+  → the `assets/heartbeat` pool (Dec. H). POs can add extra draw tags per
+  file WITHOUT moving it via the NEW `asset_meta` table (path → tags[]),
+  edited inline on soundscape rows in the Asset Library (saved on blur).
+  Draws use a seeded RNG (mulberry32): reproducible when the seed is fixed,
+  fresh per render otherwise; every draw is reported ("SS-001 drew
+  calm-01.mp3 — tag "lago calmo" → 2 candidates").
+- `plainToStudioTracks` now takes `{ pools, seed }`: sample clips get the
+  drawn file's URL + label (empty pool → silent + note), so "Open in Sound
+  Studio" plays the real files; lanes carry a NEW `duck` family marker
+  (music / soundscape / none — heartbeat = none).
+- `src/admin/renderPlain.ts`: the WAV IS the Studio mixdown — the render
+  seeds the SAME project the Studio opens and mixes it through the SAME
+  `renderClipBuffer` + `renderMixdownBuffer` + shared FX chain; voice clips
+  are ElevenLabs-rendered per clip voiceId (cached per voice+text), baked
+  with `bakeVoiceBuffer` + `applyClipShape`. On top, the app-side §8.3
+  DUCKING: Music −10 dB / Soundscape −6 dB under active voice, attack
+  200 ms / release 500 ms, computed from the voice-clip WINDOWS (no
+  detector needed — we know the timeline); voice, entrainment and heartbeat
+  never duck. Implemented as a NEW optional `gainAutomation` on `MixTrack`
+  (a second gain node — the Studio's own export path is untouched). 90 s
+  preview supported.
+- PlainImport is now the full vertical: review → seed Studio → Publish
+  (CatalogProtocol with the full timeline in the NEW `protocols.plain`
+  jsonb column — re-renderable from catalog data; existing
+  spec/datasheet/assetMap on the same code are preserved) → Render WAV
+  (version chips, preview + voice toggles, VoiceEnginePanel, live progress,
+  draw + ducking notes) → Download / Upload & attach (192 kbps MP3 via the
+  shared attach path — the exact file that streams in the employee app).
+  Attach requires a published protocol and a FULL render.
+- `supabase/setup.sql`: adds `protocols.plain` (+ defensive alter) and the
+  `asset_meta` table with RLS (read: signed-in; write: admins). Validated
+  against a real Postgres 16 (auth schema + roles stubbed): clean on a
+  FRESH database and idempotent on a second run; columns + policies
+  verified present.
+- Verified: `tsc --noEmit` + `npm run build` clean; node proof
+  `tools/test-plain-pools.ts` (esbuild-bundled) → synonym mapping, pools
+  (f1×2/f3×1, 5 soundscapes, 1 heartbeat), draws ("lago calmo"→lake,
+  heartbeat→heartbeat pool, asset_meta tag "fabbrica" reaches its file,
+  empty pool→null), seeded reproducibility, duck envelope math (attack
+  10.0→10.2 s to −10 dB, release 20.0→20.5 s back to 1, window merging),
+  and the pools-integrated seed on the real GL-ANX 1.1 (SS-1 lake URLs,
+  MUS F1/F3 drawn + 4 silent phases, duck families, identical draws for
+  identical seeds). Slice-1 and slice-2 proofs re-run: ALL PASS.
+- Notes: a re-render draws fresh files BY DESIGN (the Rules doc's session
+  variability); fix the seed for reproducibility. Loudness normalization /
+  true-peak / <70 dB SPL ceiling (§9) stay on the Renderer-v3 backlog.
+
+**Slice: PLAIN → Sound Studio seeding, 1 row = 1 clip (slice 2)**
 - `src/admin/plainStudio.ts`: `plainToStudioTracks()` seeds the Studio from a
   parsed PLAIN version — every Excel row becomes exactly ONE clip on a track
   named from `traccia`, in file order. Binaural → carrier (L+R)/2 + beat
