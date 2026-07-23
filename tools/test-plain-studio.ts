@@ -37,20 +37,28 @@ async function main() {
   const ss1 = seed.tracks.find((x) => x.name === 'SS-1 Lago')!
   assert(ss1.type === 'sample' && ss1.clips.length === 3, `SS-1 Lago: sample × 3 clips`)
   assert(ss1.clips.every((c) => (c.params as { url: string }).url === ''), `SS-1 clips have no URL yet (slice 3 draw)`)
-  // loudness-calibrated ladder: fader at unity, clips carry their exact dB
-  assert(close(ss1.volume, 0.8, 0.002), `SS-1 fader at unity 0.8 — got ${ss1.volume}`)
-  assert(ss1.clips.filter((c) => c.calibrateDb === -6).length === 2 && ss1.clips.some((c) => c.calibrateDb === -20), `SS-1 calibrateDb ladder −6/−6/−20`)
+  // the Excel ladder ON the fader: SS-1 base −6 dB → gain 0.501; clips are
+  // calibrated to lane offsets (0/0/−14 for the −20 dB coda)
+  assert(close(ss1.volume, 0.501, 0.002), `SS-1 fader −6 dB (0.501) — got ${ss1.volume}`)
+  assert(ss1.clips.filter((c) => c.calibrateDb === 0).length === 2 && ss1.clips.some((c) => c.calibrateDb === -14), `SS-1 clip offsets 0/0/−14`)
+  // crossfade_prec_s became REAL overlaps: clip 2 starts 6 s early with a
+  // 6 s equal-power fade-in; clip 1 got the matching 6 s fade-out
+  const ss1Sorted = [...ss1.clips].sort((a, b) => a.startSec - b.startSec)
+  assert(ss1Sorted[1].fadeInSec === 6 && (ss1Sorted[0].fadeOutSec ?? 0) >= 6, `SS-1 crossfade: 6 s fade-in on clip 2 + 6 s fade-out on clip 1`)
+  assert(ss1Sorted[1].startSec + 6 - Math.round(ss1Sorted[1].startSec + 6) === 0 && ss1Sorted[0].startSec + ss1Sorted[0].durationSec - ss1Sorted[1].startSec >= 5.99, `SS-1 clips now OVERLAP by the crossfade`)
 
   const mus = seed.tracks.find((x) => x.name === 'MUS-1 Musica')!
   assert(mus.clips.length === 6, `MUS-1: 6 clips (one per phase)`)
-  // F1–F2 at −18, F3–F6 at −6 — exact per-clip calibration
-  assert(close(mus.volume, 0.8, 0.002) && mus.clips.filter((c) => c.calibrateDb === -18).length === 2 && mus.clips.filter((c) => c.calibrateDb === -6).length === 4, `MUS-1 unity fader, calibrateDb −18×2 + −6×4`)
+  // MUS-1 base −6 → fader 0.501; F1–F2 clips at offset −12, F3–F6 at 0
+  assert(close(mus.volume, 0.501, 0.002) && mus.clips.filter((c) => c.calibrateDb === -12).length === 2 && mus.clips.filter((c) => c.calibrateDb === 0).length === 4, `MUS-1 fader −6 dB, offsets −12×2 + 0×4`)
+  const musSorted = [...mus.clips].sort((a, b) => a.startSec - b.startSec)
+  assert(musSorted.slice(1).every((c, i) => musSorted[i].startSec + musSorted[i].durationSec > c.startSec), `MUS-1: every phase boundary crossfades (real overlaps)`)
 
   // binaural: BI-001 carriers 200/210 → carrier 205, beat 10; BI-002 −18 vs −9 base
   const bin = seed.tracks.find((x) => x.name === 'BIN-1 Binaurale')!
   const bp = bin.clips[0].params as BinauralParams
   assert(bin.type === 'binaural' && close(bp.carrierHz, 205) && close(bp.beatHz, 10), `BIN-1 clip 1: carrier 205 / beat 10`)
-  assert(close(bin.volume, 0.8, 0.002) && bin.clips[0].calibrateDb === -9 && bin.clips[1].calibrateDb === -18, `BIN-1 unity fader, calibrateDb −9 then −18`)
+  assert(close(bin.volume, 0.355, 0.002) && bin.clips[0].calibrateDb === 0 && bin.clips[1].calibrateDb === -9, `BIN-1 fader −9 dB, clip offsets 0 / −9`)
 
   // solfeggio → binaural beat 0 @ 432
   const sol = seed.tracks.find((x) => x.name === 'SOL-1 Solfeggio')!
@@ -65,7 +73,7 @@ async function main() {
   // voice lanes
   const guide = seed.tracks.find((x) => x.name === 'VOX-C Materna')!
   assert(guide.type === 'voice' && guide.clips.length === 33 && guide.channel === 'C', `VOX-C Materna: 33 linea clips, channel C`)
-  assert(close(guide.volume, 0.8, 0.002) && guide.clips.every((c) => c.calibrateDb === 0), `VOX-C fader unity, every clip calibrated to 0 dB (guide anchor)`)
+  assert(close(guide.volume, 1.0, 0.002) && guide.clips.every((c) => c.calibrateDb === 0), `VOX-C fader 0.0 dB (gain 1.0), clips at offset 0 — the guide anchor`)
   const rv = guide.effects?.find((e) => e.kind === 'reverb')
   assert(!!rv?.enabled && close(rv!.params.mix, 0.3), `VOX-C Reverb 30% enabled (riverbero_pct)`)
   assert(guide.clips.every((c) => (c.params as VoiceParams).voiceId === 'DrXMEEZ3ZiRzhi81CK7I'), `VOX-C clips carry Valeria's voiceId`)
@@ -85,7 +93,7 @@ async function main() {
 
   const right = seed.tracks.find((x) => x.name === 'VOX-R Paterna DX')!
   assert(right.channel === 'R' && right.clips.length === 8, `VOX-R main: channel R, 8 clips (2 moved to the eco lane)`)
-  assert(close(right.volume, 0.8, 0.002) && right.clips.every((c) => c.calibrateDb === -6), `VOX-R fader unity, clips calibrated −6 dB`)
+  assert(close(right.volume, 0.501, 0.002) && right.clips.every((c) => c.calibrateDb === 0), `VOX-R fader −6 dB, clips at offset 0`)
   // sussurrato Paterna → same-gender Whisper voice (Thomas, M)
   const rvoice = (right.clips[0].params as VoiceParams).voiceId
   assert(rvoice === 'crip8a67H5HFGlukcx1h', `VOX-R sussurrato Paterna → Thomas (M · Whisper) — got ${rvoice}`)

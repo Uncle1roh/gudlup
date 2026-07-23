@@ -325,13 +325,16 @@ export function applyClipShape(buf: AudioBuffer, gainDb?: number, fadeInSec?: nu
   const foN = Math.min(Math.floor(fo * buf.sampleRate), buf.length)
   const foStart = Math.max(0, buf.length - foN)
   const out = new AudioBuffer({ numberOfChannels: buf.numberOfChannels, length: buf.length, sampleRate: buf.sampleRate })
+  const HALF_PI = Math.PI / 2
   for (let ch = 0; ch < buf.numberOfChannels; ch++) {
     const src = buf.getChannelData(ch)
     const dst = out.getChannelData(ch)
     for (let i = 0; i < buf.length; i++) {
       let env = 1
-      if (i < fiN) env = i / fiN
-      if (i >= foStart && foN > 0) env = Math.min(env, (buf.length - i) / foN)
+      // equal-power (sin/cos) ramps: crossfading two beds keeps constant
+      // perceived level instead of the −3 dB dip linear ramps produce
+      if (i < fiN) env = Math.sin(HALF_PI * (i / fiN))
+      if (i >= foStart && foN > 0) env = Math.min(env, Math.sin(HALF_PI * ((buf.length - i) / foN)))
       dst[i] = src[i] * g * env
     }
   }

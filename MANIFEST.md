@@ -1,5 +1,31 @@
 # Good Loop — build manifest
 
+**Slice: real crossfades + the Excel ladder ON the faders** (current)
+- **Crossfades existed only on paper**: the PLAIN workbook writes ABUTTING
+  clip times and hands the transition to `crossfade_prec_s` (6–8 s on the
+  GL-ANX 1.1 beds) — which was parsed but never applied, so every
+  soundscape/music handover was a hard cut. Now a sample clip with
+  crossfade X starts X s EARLY (duration extended, same end) with an X-s
+  fade-in while its predecessor gains the matching X-s fade-out — real
+  overlapping handovers on the same lane, reported per lane in the seed
+  notes. Node-proven on the real file: SS-1 clip 2 starts 6 s early
+  overlapping clip 1, every MUS-1 phase boundary overlaps (5 crossfades).
+- **Equal-power fades everywhere**: `applyClipShape` ramps are now sin/cos
+  (equal-power) instead of linear — crossfading two beds keeps constant
+  perceived level instead of the −3 dB mid-dip, and every fade_in/fade_out
+  from the Excel sounds smoother. (Numeric proof updated: half-fade point =
+  0.707 × gain.)
+- **The mixer now READS the protocol**: lane base dB moved from inside the
+  clips onto the FADER — voice sits at 0.0 dB, VOX-R at −6, BIN-1 at −9,
+  music at −6, Pioggia at −20 … exactly the Excel layer selector, visible
+  and absolute. Clips stay loudness-calibrated to their lane base (offset 0
+  for most; a −20 dB coda on a −6 dB lane carries −14), so fader dB ×
+  calibrated clip = the Excel's volume_db, measured. Guide fader gain 1.0;
+  all previous behavior for manual/legacy tracks unchanged.
+- Verified: `tsc --noEmit` + `npm run build` clean; all five node proofs
+  pass with updated expectations (fader −6 = 0.501, BIN 0.355, guide 1.0;
+  offsets 0/0/−14, −12×2; overlap + fade assertions).
+
 **Slice: audible layer separation — loudness-calibrated ladder + dB faders**
 (current)
 - Root cause of "moving a fader changes nothing / everything is mashed":

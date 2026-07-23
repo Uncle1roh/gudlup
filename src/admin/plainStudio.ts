@@ -50,10 +50,11 @@ export interface PlainSeedOptions {
   seed?: number
 }
 
-/** House unity for every fader: the ladder itself lives IN the clips now
-    (loudness-calibrated buffers), so faders start equal and any movement is
-    a pure, audible dB offset on top of a correct mix. */
-const FADER_UNITY = 0.8
+/* Level model: the LANE's Excel dB sits on the FADER (so the mixer reads
+   like the protocol — voice 0 dB, music −18 dB, a visible layer selector),
+   while each clip buffer is loudness-CALIBRATED to the lane base (offset 0
+   for most clips; quieter codas carry their negative offset). Fader dB ×
+   calibrated clip = exactly the Excel's volume_db, measured. */
 
 /** §8.4 default nominal levels when a clip leaves volume_db empty. */
 const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
@@ -87,6 +88,8 @@ interface Lane {
   key: string
   track: SeedTrack
   clipDbs: number[]
+  /** crossfade_prec_s per clip (sample lanes) — applied as real overlaps. */
+  xfades: number[]
 }
 
 export function plainToStudioTracks(
@@ -107,7 +110,7 @@ export function plainToStudioTracks(
   const lane = (key: string, make: () => SeedTrack): Lane => {
     let l = laneByKey.get(key)
     if (!l) {
-      l = { key, track: make(), clipDbs: [] }
+      l = { key, track: make(), clipDbs: [], xfades: [] }
       laneByKey.set(key, l)
       lanes.push(l)
     }
@@ -196,6 +199,7 @@ export function plainToStudioTracks(
       }
       l.track.clips.push(clip)
       l.clipDbs.push(nominalDb)
+      l.xfades.push(c.crossfadePrecS ?? 0)
       continue
     }
 
@@ -300,17 +304,42 @@ export function plainToStudioTracks(
     l.clipDbs.push(nominalDb)
   }
 
-  /* ---------------- per-lane volume: every fader starts at house unity —
-     the Excel ladder is loudness-CALIBRATED into each clip buffer (gated RMS
-     lands exactly at its dB vs the guide voice, whatever the source file /
-     synth / TTS take measured). Moving a fader is now a pure dB offset the
-     ear can immediately place. */
+  /* ---------------- per-lane levels: the Excel ladder ON the fader.
+     Lane base = the loudest clip's dB → fader gain 10^(base/20), so the
+     mixer READS the protocol (voice 0.0 dB, music −18.0 dB…). Each clip is
+     loudness-calibrated to (its dB − base): offset 0 for most, negative for
+     quieter codas. fader × calibrated buffer = the Excel dB, measured —
+     whatever the source file / synth / TTS take was. */
   for (const l of lanes) {
-    l.track.volume = FADER_UNITY
-    if (!l.clipDbs.length) continue
+    if (!l.clipDbs.length) { l.track.volume = 1; continue }
+    const base = Math.min(6, Math.max(-40, Math.max(...l.clipDbs)))
+    l.track.volume = +Math.pow(10, base / 20).toFixed(4)
+    l.track.clips.forEach((clip, i) => { clip.calibrateDb = +(l.clipDbs[i] - base).toFixed(2) })
     const lo = Math.min(...l.clipDbs)
-    const hi = Math.max(...l.clipDbs)
-    notes.push(`"${l.track.name}": layer level ${hi === lo ? `${hi} dB` : `${hi}…${lo} dB`} vs voice — loudness-calibrated into the clips; fader at unity.`)
+    notes.push(`"${l.track.name}": fader at ${base} dB (the Excel layer level)${lo < base ? `; quieter clips carry offsets down to ${(lo - base).toFixed(0)} dB` : ''}.`)
+  }
+
+  /* ---------------- crossfade_prec_s → real overlaps (Rules §7): a sample
+     clip with crossfade X starts X s EARLY with an equal-power fade-in of X
+     while its predecessor gets an equal-power fade-out of X — the beds hand
+     over instead of hard-cutting. (The Excel writes abutting times; the
+     overlap is created here.) */
+  for (const l of lanes) {
+    if (l.track.type !== 'sample') continue
+    let applied = 0
+    for (let i = 0; i < l.track.clips.length; i++) {
+      const xf = l.xfades[i] ?? 0
+      if (xf <= 0) continue
+      const clip = l.track.clips[i]
+      const prev = i > 0 ? l.track.clips[i - 1] : null
+      const shift = Math.min(xf, clip.startSec)
+      clip.startSec = +(clip.startSec - shift).toFixed(3)
+      clip.durationSec = +(clip.durationSec + shift).toFixed(3)
+      clip.fadeInSec = Math.max(clip.fadeInSec ?? 0, xf)
+      if (prev) prev.fadeOutSec = Math.max(prev.fadeOutSec ?? 0, xf)
+      applied++
+    }
+    if (applied) notes.push(`"${l.track.name}": ${applied} crossfade${applied === 1 ? '' : 's'} (crossfade_prec_s) applied as real equal-power overlaps.`)
   }
 
   /* Reverb note (once per reverb'd lane). */

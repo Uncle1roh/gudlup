@@ -26,9 +26,10 @@ for (let ch = 0; ch < 2; ch++) buf.getChannelData(ch).fill(1)
 const out = applyClipShape(buf as any, -6, 2, 4) as any
 const g = Math.pow(10, -6 / 20)
 const d = out.getChannelData(0)
+const EP = Math.SQRT1_2 // equal-power midpoint sin(π/4)
 assert(close(d[5 * sr], g), `mid-sample = −6 dB linear (${d[5 * sr].toFixed(3)} vs ${g.toFixed(3)})`)
-assert(close(d[1 * sr], g * 0.5), `1 s in (half of 2 s fade) = 0.5 × gain`)
-assert(close(d[8 * sr], g * 0.5), `8 s (half of 4 s fade-out) = 0.5 × gain`)
+assert(close(d[1 * sr], g * EP), `1 s in (half of 2 s fade) = 0.707 × gain (equal-power)`)
+assert(close(d[8 * sr], g * EP), `8 s (half of 4 s fade-out) = 0.707 × gain (equal-power)`)
 assert(d[0] === 0 && close(d[out.length - 1], 0, 5e-3), `edges at ~0`)
 assert(close(out.getChannelData(1)[5 * sr], g), `both channels shaped`)
 
