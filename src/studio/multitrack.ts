@@ -261,6 +261,128 @@ export async function bakeVoiceBuffer(decoded: AudioBuffer, pan: number, maxDura
   return ctx.startRendering()
 }
 
+/* ------------------------------------------------------------ clip EQ ---- */
+
+/** Per-clip parametric equalizer (the standard studio 6-band layout: low
+    cut · low shelf · two mid bells · high shelf · high cut). Applied OFFLINE
+    to the clip's rendered buffer BEFORE loudness calibration — so shaping
+    the spectrum never moves the clip off its protocol layer level. */
+export type EqBandType = 'highpass' | 'lowshelf' | 'peaking' | 'highshelf' | 'lowpass'
+export interface EqBand { type: EqBandType; enabled: boolean; freqHz: number; gainDb: number; q: number }
+export interface ClipEq { enabled: boolean; bands: EqBand[] }
+
+export function defaultClipEq(): ClipEq {
+  return {
+    enabled: true,
+    bands: [
+      { type: 'highpass', enabled: false, freqHz: 80, gainDb: 0, q: 0.71 },
+      { type: 'lowshelf', enabled: true, freqHz: 200, gainDb: 0, q: 0.71 },
+      { type: 'peaking', enabled: true, freqHz: 700, gainDb: 0, q: 1.0 },
+      { type: 'peaking', enabled: true, freqHz: 2500, gainDb: 0, q: 1.0 },
+      { type: 'highshelf', enabled: true, freqHz: 8000, gainDb: 0, q: 0.71 },
+      { type: 'lowpass', enabled: false, freqHz: 12000, gainDb: 0, q: 0.71 },
+    ],
+  }
+}
+
+/** True when the EQ would not audibly change the signal (skip processing). */
+export function eqIsTransparent(eq: ClipEq | undefined): boolean {
+  if (!eq || !eq.enabled) return true
+  return eq.bands.every((b) => !b.enabled || (b.type !== 'highpass' && b.type !== 'lowpass' && Math.abs(b.gainDb) < 0.1))
+}
+
+interface BiquadCoef { b0: number; b1: number; b2: number; a1: number; a2: number }
+
+/** RBJ audio-EQ-cookbook biquad coefficients. */
+function eqBandCoef(band: EqBand, fs: number): BiquadCoef {
+  const f0 = Math.min(fs * 0.45, Math.max(10, band.freqHz))
+  const w0 = 2 * Math.PI * (f0 / fs)
+  const cw = Math.cos(w0)
+  const sw = Math.sin(w0)
+  const Q = Math.max(0.1, band.q)
+  const A = Math.pow(10, band.gainDb / 40)
+  const alpha = sw / (2 * Q)
+  let b0 = 1, b1 = 0, b2 = 0, a0 = 1, a1 = 0, a2 = 0
+  switch (band.type) {
+    case 'highpass':
+      b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = (1 + cw) / 2
+      a0 = 1 + alpha; a1 = -2 * cw; a2 = 1 - alpha
+      break
+    case 'lowpass':
+      b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = (1 - cw) / 2
+      a0 = 1 + alpha; a1 = -2 * cw; a2 = 1 - alpha
+      break
+    case 'peaking':
+      b0 = 1 + alpha * A; b1 = -2 * cw; b2 = 1 - alpha * A
+      a0 = 1 + alpha / A; a1 = -2 * cw; a2 = 1 - alpha / A
+      break
+    case 'lowshelf': {
+      const s = 2 * Math.sqrt(A) * alpha
+      b0 = A * ((A + 1) - (A - 1) * cw + s)
+      b1 = 2 * A * ((A - 1) - (A + 1) * cw)
+      b2 = A * ((A + 1) - (A - 1) * cw - s)
+      a0 = (A + 1) + (A - 1) * cw + s
+      a1 = -2 * ((A - 1) + (A + 1) * cw)
+      a2 = (A + 1) + (A - 1) * cw - s
+      break
+    }
+    case 'highshelf': {
+      const s = 2 * Math.sqrt(A) * alpha
+      b0 = A * ((A + 1) + (A - 1) * cw + s)
+      b1 = -2 * A * ((A - 1) + (A + 1) * cw)
+      b2 = A * ((A + 1) + (A - 1) * cw - s)
+      a0 = (A + 1) - (A - 1) * cw + s
+      a1 = 2 * ((A - 1) - (A + 1) * cw)
+      a2 = (A + 1) - (A - 1) * cw - s
+      break
+    }
+  }
+  return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 }
+}
+
+/** Apply the EQ chain to a buffer in place. */
+export function applyEqToBuffer(buf: AudioBuffer, eq: ClipEq): void {
+  if (eqIsTransparent(eq)) return
+  const coefs = eq.bands
+    .filter((b) => b.enabled && (b.type === 'highpass' || b.type === 'lowpass' || Math.abs(b.gainDb) >= 0.1))
+    .map((b) => eqBandCoef(b, buf.sampleRate))
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch)
+    for (const c of coefs) {
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0
+      for (let i = 0; i < d.length; i++) {
+        const x0 = d[i]
+        const y0 = c.b0 * x0 + c.b1 * x1 + c.b2 * x2 - c.a1 * y1 - c.a2 * y2
+        x2 = x1; x1 = x0; y2 = y1; y1 = y0
+        d[i] = y0
+      }
+    }
+  }
+}
+
+/** Combined EQ magnitude (dB) at the given frequencies — for the response
+    curve in the Inspector. */
+export function eqMagnitudeDb(eq: ClipEq, freqs: number[], fs = SAMPLE_RATE): number[] {
+  const coefs = eq.enabled
+    ? eq.bands.filter((b) => b.enabled && (b.type === 'highpass' || b.type === 'lowpass' || Math.abs(b.gainDb) >= 0.05)).map((b) => eqBandCoef(b, fs))
+    : []
+  return freqs.map((f) => {
+    const w = 2 * Math.PI * (f / fs)
+    const cos1 = Math.cos(w), sin1 = Math.sin(w)
+    const cos2 = Math.cos(2 * w), sin2 = Math.sin(2 * w)
+    let db = 0
+    for (const c of coefs) {
+      const nr = c.b0 + c.b1 * cos1 + c.b2 * cos2
+      const ni = -(c.b1 * sin1 + c.b2 * sin2)
+      const dr = 1 + c.a1 * cos1 + c.a2 * cos2
+      const di = -(c.a1 * sin1 + c.a2 * sin2)
+      const mag = Math.sqrt((nr * nr + ni * ni) / Math.max(1e-12, dr * dr + di * di))
+      db += 20 * Math.log10(Math.max(1e-6, mag))
+    }
+    return db
+  })
+}
+
 /** House reference: the RMS a normal guide-voice clip lands at (same figure
     Renderer v3 uses). The PLAIN dB ladder hangs off this anchor. */
 export const VOICE_REF_RMS = 0.13
@@ -300,13 +422,16 @@ export function calibrateBufferToDb(buf: AudioBuffer, targetDb: number): number 
   return g
 }
 
-/** Full PLAIN clip conditioning: loudness calibration (when `calibrateDb`
-    is set) + legacy relative gain + fades. One call, shared by the Studio's
-    buffer pipeline and the offline renderer — both hear the same clip. */
+/** Full PLAIN clip conditioning: parametric EQ (spectral shaping) →
+    loudness calibration (when `calibrateDb` is set — AFTER the EQ, so
+    equalizing never moves a clip off its protocol layer level) → legacy
+    relative gain + fades. One call, shared by the Studio's buffer pipeline
+    and the offline renderer — both hear the same clip. */
 export function shapeClipBuffer(
   buf: AudioBuffer,
-  shape: { calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number },
+  shape: { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number },
 ): AudioBuffer {
+  if (shape.eq && !eqIsTransparent(shape.eq)) applyEqToBuffer(buf, shape.eq)
   if (shape.calibrateDb !== undefined) calibrateBufferToDb(buf, shape.calibrateDb)
   return applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
 }

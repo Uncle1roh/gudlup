@@ -8,6 +8,11 @@ import {
   concatBuffers,
   bakeVoiceBuffer,
   shapeClipBuffer,
+  defaultClipEq,
+  eqIsTransparent,
+  eqMagnitudeDb,
+  type ClipEq,
+  type EqBand,
   computePeaks,
   peakBuckets,
   defaultParams,
@@ -69,6 +74,9 @@ interface Clip {
       exactly this many dB vs the guide-voice reference — the Excel's
       volume_db as a real, measured layer selector. */
   calibrateDb?: number
+  /** Per-clip parametric EQ (Studio tool) — baked into the buffer before
+      the loudness calibration, so EQ never moves the layer level. */
+  eq?: ClipEq
 }
 type TrackChannel = 'L' | 'C' | 'R'
 const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
@@ -241,7 +249,7 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, buffer: buf, peaks, ...extra })) })))
   }, [])
 
-  type ClipShape = { calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
+  type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
 
   const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number, shape?: ClipShape) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
@@ -277,8 +285,9 @@ function StudioDesktop() {
     const cl = tr?.clips.find((c) => c.id === clipId)
     if (!tr || !cl) return
     if (cl.frozen) return // cut/glued audio is authoritative — never re-render over it
-    const shape: ClipShape | undefined = cl.calibrateDb !== undefined || cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
-      ? { calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
+    const hasEq = cl.eq && !eqIsTransparent(cl.eq)
+    const shape: ClipShape | undefined = hasEq || cl.calibrateDb !== undefined || cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
+      ? { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
       : undefined
     if (tr.type === 'voice' && cl.ttsSource) {
       const vp = cl.params as VoiceParams
@@ -294,6 +303,12 @@ function StudioDesktop() {
     const id = window.setTimeout(() => { m.delete(clipId); renderClip(trackId, clipId) }, 170)
     m.set(clipId, id)
   }, [renderClip])
+
+  /* ---- clip EQ ---- */
+  const setClipEq = useCallback((trackId: string, clipId: string, eq: ClipEq) => {
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, eq })) })))
+    scheduleRender(trackId, clipId)
+  }, [scheduleRender])
 
   /* ---- voice (TTS) ---- */
   const setVoiceText = useCallback((trackId: string, clipId: string, text: string) => {
@@ -332,7 +347,7 @@ function StudioDesktop() {
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
-      buf = shapeClipBuffer(buf, { calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
+      buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
@@ -356,7 +371,7 @@ function StudioDesktop() {
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
     if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
@@ -890,6 +905,7 @@ function StudioDesktop() {
         onVoicePreview={() => selClip && previewVoice(selClip.text ?? '', (selClip.params as VoiceParams).voiceId)}
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
+        onEq={(eq) => selected && setClipEq(selected.trackId, selected.clipId, eq)}
       />
     </div>
   )
@@ -1101,6 +1117,139 @@ function EditableValue({ display, commit, title }: { display: string; commit: (r
   )
 }
 
+/* ------------------------------------------------------------- clip EQ UI */
+
+const EQ_BAND_LABEL: Record<EqBand['type'], string> = {
+  highpass: 'Low cut',
+  lowshelf: 'Low shelf',
+  peaking: 'Bell',
+  highshelf: 'High shelf',
+  lowpass: 'High cut',
+}
+
+const EQ_CURVE_FREQS = (() => {
+  const out: number[] = []
+  for (let i = 0; i <= 72; i++) out.push(20 * Math.pow(10, (i / 72) * 3)) // 20 Hz → 20 kHz log
+  return out
+})()
+
+function EqCurve({ eq }: { eq: ClipEq }) {
+  const W = 252
+  const H = 76
+  const RANGE = 18 // ±18 dB vertical
+  const mags = eqMagnitudeDb(eq, EQ_CURVE_FREQS)
+  const pts = mags.map((db, i) => {
+    const x = (i / (EQ_CURVE_FREQS.length - 1)) * W
+    const y = H / 2 - (Math.max(-RANGE, Math.min(RANGE, db)) / RANGE) * (H / 2 - 4)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  return (
+    <svg className="mt-eq__curve" viewBox={`0 0 ${W} ${H}`} width="100%" height={H} aria-hidden="true">
+      <line x1="0" y1={H / 2} x2={W} y2={H / 2} className="mt-eq__zero" />
+      {[100, 1000, 10000].map((f) => {
+        const x = (Math.log10(f / 20) / 3) * W
+        return <line key={f} x1={x} y1="0" x2={x} y2={H} className="mt-eq__grid" />
+      })}
+      <polyline points={pts.join(' ')} className="mt-eq__line" fill="none" />
+    </svg>
+  )
+}
+
+function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void }) {
+  const eq = clip.eq ?? defaultClipEq()
+  const active = clip.eq !== undefined && !eqIsTransparent(clip.eq)
+  const [open, setOpen] = useState(active)
+
+  function patchBand(i: number, patch: Partial<EqBand>) {
+    onEq({ ...eq, bands: eq.bands.map((b, k) => (k === i ? { ...b, ...patch } : b)) })
+  }
+
+  return (
+    <div className="mt-eq">
+      <div className="mt-eq__head">
+        <button className="mt-eq__toggle" onClick={() => setOpen((o) => !o)}>
+          {open ? '▾' : '▸'} Equalizer{active ? ' · on' : ''}
+        </button>
+        {clip.eq && (
+          <button
+            className="mt-eq__reset"
+            title="Reset all bands to flat"
+            onClick={() => onEq(defaultClipEq())}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      {open && (
+        <>
+          <EqCurve eq={eq} />
+          {eq.bands.map((b, i) => (
+            <div key={i} className={`mt-eq__band${b.enabled ? '' : ' is-off'}`}>
+              <button
+                className={`mt-eq__on${b.enabled ? ' is-on' : ''}`}
+                title={b.enabled ? 'Band on — click to bypass' : 'Band off — click to enable'}
+                onClick={() => patchBand(i, { enabled: !b.enabled })}
+              >
+                {EQ_BAND_LABEL[b.type]}
+              </button>
+              <label className="mt-eq__f" title="Frequency (click number to type)">
+                <input
+                  type="range" min={0} max={1} step={0.002}
+                  value={Math.log10(b.freqHz / 20) / 3}
+                  onChange={(e) => patchBand(i, { freqHz: Math.round(20 * Math.pow(10, +e.target.value * 3)) })}
+                />
+                <EditableValue
+                  display={b.freqHz >= 1000 ? `${(b.freqHz / 1000).toFixed(1)}k` : `${b.freqHz}`}
+                  commit={(raw) => {
+                    const t = raw.trim().toLowerCase()
+                    const n = parseFloat(t.replace(',', '.'))
+                    if (!Number.isFinite(n)) return
+                    const hz = /k/.test(t) ? n * 1000 : n
+                    patchBand(i, { freqHz: Math.round(Math.min(20000, Math.max(20, hz))) })
+                  }}
+                  title="Frequency in Hz (e.g. 250 or 2.5k)"
+                />
+              </label>
+              {b.type !== 'highpass' && b.type !== 'lowpass' && (
+                <label className="mt-eq__g" title="Gain (click number to type)">
+                  <input
+                    type="range" min={-18} max={18} step={0.5}
+                    value={b.gainDb}
+                    onChange={(e) => patchBand(i, { gainDb: +e.target.value })}
+                  />
+                  <EditableValue
+                    display={`${b.gainDb > 0 ? '+' : ''}${b.gainDb.toFixed(1)}`}
+                    commit={(raw) => { const v = parseTyped(raw, -18, 18); if (v != null) patchBand(i, { gainDb: v }) }}
+                    title="Gain in dB"
+                  />
+                </label>
+              )}
+              {b.type === 'peaking' && (
+                <label className="mt-eq__q" title="Q — width of the bell (higher = narrower)">
+                  <input
+                    type="range" min={0.3} max={8} step={0.1}
+                    value={b.q}
+                    onChange={(e) => patchBand(i, { q: +e.target.value })}
+                  />
+                  <EditableValue
+                    display={`Q${b.q.toFixed(1)}`}
+                    commit={(raw) => { const v = parseTyped(raw, 0.3, 8); if (v != null) patchBand(i, { q: v }) }}
+                    title="Q (0.3–8)"
+                  />
+                </label>
+              )}
+            </div>
+          ))}
+          <div className="mt-note" style={{ marginTop: 4 }}>
+            EQ is baked into the clip before its loudness calibration — shaping the tone never moves the clip off its
+            protocol layer level, and playback, waveform and the WAV export all hear it.
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** Parse a typed value for a numeric param: unit stripping, comma decimals,
     "%"/bare-percent shorthand for 0..1 ranges, clamped to [min, max]. */
 function parseTyped(raw: string, min: number, max: number): number | null {
@@ -1130,7 +1279,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange }: {
+function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -1144,6 +1293,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   onVoicePreview: () => void
   onVoiceSynthesize: () => void
   onVoiceChange: (voiceId: string) => void
+  onEq: (eq: ClipEq) => void
 }) {
   if (!track || !clip) {
     return (
@@ -1175,6 +1325,10 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
             {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip offset ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB · ` : ''}
             fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
           </div>
+        )}
+        {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}
+        {clip.frozen && clip.eq && (
+          <div className="mt-note" style={{ marginTop: 6 }}>EQ is locked on cut pieces — the audio is frozen.</div>
         )}
 
         {track.type === 'binaural' && (() => { const p = clip.params as BinauralParams; return <>

@@ -86,3 +86,49 @@ import { gatedRms, calibrateBufferToDb, shapeClipBuffer, VOICE_REF_RMS } from '.
   assert(mid > 0.05 && Math.abs(out.getChannelData(0)[10]) < mid / 5, `calibrate + fade compose (mid ${mid.toFixed(3)}, head faded)`)
 }
 console.log('calibration checks done')
+
+/* --- clip EQ (RBJ biquads, offline) --- */
+import { defaultClipEq, applyEqToBuffer, eqMagnitudeDb, eqIsTransparent } from '../src/studio/multitrack'
+{
+  const flat = defaultClipEq()
+  assert(eqIsTransparent(flat), `default EQ is transparent (0 dB everywhere)`)
+
+  // +12 dB bell at 1 kHz boosts a 1 kHz tone by ≈12 dB and leaves 100 Hz alone
+  const eq = defaultClipEq()
+  eq.bands[2] = { type: 'peaking', enabled: true, freqHz: 1000, gainDb: 12, q: 1.4 }
+  const sr3 = 44100
+  const mk = (hz: number) => {
+    const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: 2 * sr3, sampleRate: sr3 })
+    const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = 0.1 * Math.sin((2 * Math.PI * hz * i) / sr3)
+    return b
+  }
+  const t1k = mk(1000); const t100 = mk(100)
+  const pre1k = gatedRms(t1k as any); const pre100 = gatedRms(t100 as any)
+  applyEqToBuffer(t1k as any, eq); applyEqToBuffer(t100 as any, eq)
+  const d1k = 20 * Math.log10(gatedRms(t1k as any) / pre1k)
+  const d100 = 20 * Math.log10(gatedRms(t100 as any) / pre100)
+  assert(close(d1k, 12, 0.6), `+12 dB bell @1 kHz boosts a 1 kHz tone by ${d1k.toFixed(1)} dB`)
+  assert(Math.abs(d100) < 1, `…and leaves 100 Hz nearly untouched (${d100.toFixed(2)} dB)`)
+
+  // low cut at 200 Hz kills an 50 Hz tone, spares 2 kHz
+  const eq2 = defaultClipEq()
+  eq2.bands[0] = { type: 'highpass', enabled: true, freqHz: 200, gainDb: 0, q: 0.71 }
+  const t50 = mk(50); const t2k = mk(2000)
+  const p50 = gatedRms(t50 as any); const p2k = gatedRms(t2k as any)
+  applyEqToBuffer(t50 as any, eq2); applyEqToBuffer(t2k as any, eq2)
+  const cut = 20 * Math.log10(Math.max(1e-6, gatedRms(t50 as any)) / p50)
+  const keep = 20 * Math.log10(gatedRms(t2k as any) / p2k)
+  assert(cut < -18, `200 Hz low cut drops a 50 Hz tone by ${cut.toFixed(0)} dB`)
+  assert(Math.abs(keep) < 0.5, `…and passes 2 kHz (${keep.toFixed(2)} dB)`)
+
+  // response-curve math agrees with the actual processing
+  const [mag1k] = eqMagnitudeDb(eq, [1000], sr3)
+  assert(close(mag1k, 12, 0.5), `eqMagnitudeDb @1 kHz reads ${mag1k.toFixed(1)} dB (curve = audio)`)
+
+  // shapeClipBuffer order: EQ then calibration — layer level survives the boost
+  const t = mk(1000)
+  const out2 = shapeClipBuffer(t as any, { eq, calibrateDb: -9 }) as any
+  const want2 = VOICE_REF_RMS * Math.pow(10, -9 / 20)
+  assert(close(gatedRms(out2), want2, want2 * 0.03), `EQ'd clip still lands at −9 dB layer level (calibration after EQ)`)
+}
+console.log('eq checks done')

@@ -1,5 +1,35 @@
 # Good Loop — build manifest
 
+**Slice: clip equalizer + audio-delivery revalidation** (current)
+- **Per-clip parametric EQ** (`multitrack.ts` engine + Inspector panel):
+  the standard studio 6-band layout — Low cut (HPF) · Low shelf · two Bells
+  · High shelf · High cut (LPF) — RBJ-cookbook biquads applied OFFLINE to
+  the clip's rendered buffer. Every band: on/off, log frequency slider with
+  type-in ("250", "2.5k"), ±18 dB gain, Q 0.3–8 on the bells; live
+  frequency-response curve (the curve math is proven equal to the audio
+  path); Reset. Processing order is EQ → loudness calibration → fades, so
+  shaping a clip's tone NEVER moves it off its protocol layer level — carve
+  mud out of a bed and it still sits at exactly its Excel dB. Baked into
+  the buffer: playback, waveform, cut/glue and the WAV export all hear it;
+  changes re-render debounced (170 ms, existing pipeline). Frozen (cut)
+  pieces show a lock note. Node-proven: +12 dB bell @1 kHz boosts a 1 kHz
+  tone 12.0 dB and leaves 100 Hz at 0.08 dB; a 200 Hz low cut drops 50 Hz
+  by −24 dB and passes 2 kHz at 0.00 dB; curve = audio (12.0 dB @1 kHz);
+  EQ'd clip still lands at −9 dB layer level.
+- **Audio delivery revalidated end-to-end** (render → DB → B2C/therapist):
+  the chain was already sound — attach uploads the 192 kbps MP3, writes
+  `versions.audioUrl['pt-BR']` + `audio_ready` on the protocol row; every
+  surface hydrates the runtime registry from the DB on load
+  (DataLayerProvider → listProtocols → registerProtocols), and both the
+  B2C SessionRunner/Onboarding and the therapist MonitoredSession resolve
+  `version.audioUrl['pt-BR']`; RLS lets any signed-in user read protocols
+  and the audio bucket. ONE real bug found and fixed: re-publishing (e.g.
+  after re-importing a revised Excel) rebuilt `versions` from the workbook
+  and DROPPED the attached audioUrl, silently detaching the streaming file
+  — publish now carries existing audioUrls over per duration. Known
+  cosmetic limit: hydration is async, so a deep link opened in the very
+  first second of a fresh session may briefly resolve the static entry.
+
 **Slice: real crossfades + the Excel ladder ON the faders** (current)
 - **Crossfades existed only on paper**: the PLAIN workbook writes ABUTTING
   clip times and hands the transition to `crossfade_prec_s` (6–8 s on the

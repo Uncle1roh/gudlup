@@ -1754,3 +1754,22 @@ img, svg, video, canvas { max-width: 100%; }
 }
 .adm-del:hover { background: #fdf1f1; border-color: #d8a3a3; }
 .adm-del:disabled { opacity: 0.5; cursor: default; }
+
+/* Sound Studio — clip equalizer panel */
+.mt-eq { margin-top: 10px; border-top: 1px solid var(--mt-line, #2a3a31); padding-top: 8px; }
+.mt-eq__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mt-eq__toggle { background: none; border: none; color: inherit; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 2px 0; }
+.mt-eq__reset { background: none; border: 1px solid var(--mt-line, #2a3a31); border-radius: 6px; color: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer; opacity: 0.8; }
+.mt-eq__reset:hover { opacity: 1; }
+.mt-eq__curve { display: block; margin: 6px 0; background: rgba(0,0,0,0.18); border-radius: 8px; }
+.mt-eq__zero { stroke: rgba(255,255,255,0.25); stroke-width: 1; stroke-dasharray: 3 3; }
+.mt-eq__grid { stroke: rgba(255,255,255,0.08); stroke-width: 1; }
+.mt-eq__line { stroke: var(--mt-accent, #7fd4a5); stroke-width: 2; }
+.mt-eq__band { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.mt-eq__band.is-off { opacity: 0.45; }
+.mt-eq__on { flex: none; width: 74px; text-align: left; background: none; border: 1px solid var(--mt-line, #2a3a31); border-radius: 6px; color: inherit; font-size: 11px; padding: 3px 7px; cursor: pointer; }
+.mt-eq__on.is-on { border-color: var(--mt-accent, #7fd4a5); color: var(--mt-accent, #7fd4a5); }
+.mt-eq__f, .mt-eq__g, .mt-eq__q { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.mt-eq__f { flex: 1.2; } .mt-eq__g { flex: 1; } .mt-eq__q { flex: 0.9; }
+.mt-eq__f input[type="range"], .mt-eq__g input[type="range"], .mt-eq__q input[type="range"] { flex: 1; min-width: 30px; accent-color: var(--mt-accent, #7fd4a5); }
+.mt-eq__f .mt-editable, .mt-eq__g .mt-editable, .mt-eq__q .mt-editable { font-size: 10.5px; min-width: 32px; text-align: right; }

@@ -162,13 +162,20 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
         .filter((d): d is Duration => d === 6 || d === 12 || d === 24)
       const phasedVersion = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
       const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
+      // versions: rebuilt from the workbook, but attached audio SURVIVES —
+      // re-publishing (or re-importing a revised Excel) must never detach the
+      // streaming file the B2C app and monitored sessions already use
+      const versions = (durations.length ? durations : [12 as Duration]).map((d) => {
+        const prev = existing?.versions.find((v) => v.duration === d)
+        return prev?.audioUrl ? { duration: d, audioUrl: prev.audioUrl } : { duration: d }
+      })
       const proto: CatalogProtocol = {
         code: t.code,
         family: familyFromCode(t.code),
         title: title.trim() || t.code,
         blurb: blurb.trim() || `Imported PLAIN timeline — ${t.versions.map((v) => `${v.durationMin} min`).join(' / ')}.`,
         phases: phasesForCatalog(phasedVersion),
-        versions: durations.length ? durations.map((d) => ({ duration: d })) : [{ duration: 12 }],
+        versions,
         enabled: true,
         source: 'imported',
         tenants: 'all',
