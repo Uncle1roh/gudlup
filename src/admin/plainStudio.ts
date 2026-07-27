@@ -50,11 +50,13 @@ export interface PlainSeedOptions {
   seed?: number
 }
 
-/* Level model: the LANE's Excel dB sits on the FADER (so the mixer reads
-   like the protocol — voice 0 dB, music −18 dB, a visible layer selector),
-   while each clip buffer is loudness-CALIBRATED to the lane base (offset 0
-   for most clips; quieter codas carry their negative offset). Fader dB ×
-   calibrated clip = exactly the Excel's volume_db, measured. */
+/* Level model (PO decision, rev. 2): volume_db in the Excel is a REAL dB
+   value applied directly as gain — no loudness measurement, no calibration
+   to a voice reference. The POs author their source files at known levels
+   upstream (music −18 LUFS, soundscapes −24, TTS is consistent), so the
+   numbers in the sheet ARE the mix. Lane fader = the lane's dB (its loudest
+   clip); quieter clips on the same lane carry the difference as a plain
+   baked gain offset. */
 
 /** §8.4 default nominal levels when a clip leaves volume_db empty. */
 const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
@@ -192,8 +194,12 @@ export function plainToStudioTracks(
       const clip: SeedClip = {
         startSec: c.startS,
         durationSec: c.endS - c.startS,
-        params: { url, label } as SampleParams,
-        calibrateDb: nominalDb, // loudness-anchored: gated RMS lands AT this dB vs voice
+        params: {
+          url,
+          label,
+          drawTag: c.tipo === 'soundscape' ? (c.ambiente ?? undefined) : undefined,
+          drawPhase: c.tipo === 'music' ? (c.faseFrom ?? 1) : undefined,
+        } as SampleParams,
         fadeInSec: c.fadeInS,
         fadeOutSec: c.fadeOutS,
       }
@@ -208,7 +214,7 @@ export function plainToStudioTracks(
       const params: BinauralParams = c.tipo === 'binaural'
         ? { carrierHz: ((c.carrierLHz ?? 200) + (c.carrierRHz ?? 210)) / 2, beatHz: (c.carrierRHz ?? 210) - (c.carrierLHz ?? 200) }
         : { carrierHz: c.frequenzaHz ?? 432, beatHz: 0 }
-      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, calibrateDb: nominalDb, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
+      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue
     }
@@ -221,7 +227,7 @@ export function plainToStudioTracks(
         everySec: c.intervalloAlternanzaS ?? 4,
         panAmp: Math.min(1, Math.max(0, (c.panAmpiezza ?? 100) / 100)),
       }
-      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, calibrateDb: nominalDb, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
+      l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue
     }
@@ -260,7 +266,6 @@ export function plainToStudioTracks(
             durationSec: dur,
             params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, voiceId: voice.id } as VoiceParams,
             text: aff.testo,
-            calibrateDb: nominalDb + cy * att, // ladder + cycle attenuation, measured
             fadeInSec: 1, // Rules doc: per-affirmation envelope is an app default
             fadeOutSec: 2,
           })
@@ -297,26 +302,27 @@ export function plainToStudioTracks(
       durationSec: c.endS - c.startS,
       params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, voiceId: voice.id } as VoiceParams,
       text: c.testo,
-      calibrateDb: nominalDb,
       fadeInSec: c.fadeInS,
       fadeOutSec: c.fadeOutS,
     })
     l.clipDbs.push(nominalDb)
   }
 
-  /* ---------------- per-lane levels: the Excel ladder ON the fader.
-     Lane base = the loudest clip's dB → fader gain 10^(base/20), so the
-     mixer READS the protocol (voice 0.0 dB, music −18.0 dB…). Each clip is
-     loudness-calibrated to (its dB − base): offset 0 for most, negative for
-     quieter codas. fader × calibrated buffer = the Excel dB, measured —
-     whatever the source file / synth / TTS take was. */
+  /* ---------------- per-lane levels: REAL dB, applied directly.
+     Lane fader = the lane's loudest clip's volume_db → gain 10^(dB/20);
+     quieter clips on the lane carry (their dB − base) as a plain baked
+     gain offset. No measurement, no reference — the sheet is the mix. */
   for (const l of lanes) {
     if (!l.clipDbs.length) { l.track.volume = 1; continue }
-    const base = Math.min(6, Math.max(-40, Math.max(...l.clipDbs)))
+    const base = Math.min(12, Math.max(-60, Math.max(...l.clipDbs)))
     l.track.volume = +Math.pow(10, base / 20).toFixed(4)
-    l.track.clips.forEach((clip, i) => { clip.calibrateDb = +(l.clipDbs[i] - base).toFixed(2) })
+    l.track.clips.forEach((clip, i) => {
+      const off = +(l.clipDbs[i] - base).toFixed(2)
+      clip.gainDb = off === 0 ? undefined : off
+      clip.calibrateDb = undefined
+    })
     const lo = Math.min(...l.clipDbs)
-    notes.push(`"${l.track.name}": fader at ${base} dB (the Excel layer level)${lo < base ? `; quieter clips carry offsets down to ${(lo - base).toFixed(0)} dB` : ''}.`)
+    notes.push(`"${l.track.name}": fader at ${base} dB (real value from the Excel)${lo < base ? `; quieter clips baked at down to ${(lo - base).toFixed(0)} dB` : ''}.`)
   }
 
   /* ---------------- crossfade_prec_s → real overlaps (Rules §7): a sample

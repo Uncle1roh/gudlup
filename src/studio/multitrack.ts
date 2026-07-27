@@ -26,7 +26,16 @@ export interface MusicParams { chord: Chord }
 export interface BilateralParams { toneHz: number; blipMs: number; everySec: number; /** Symmetric pan extent 0..1 (PLAIN pan_ampiezza/100). Default 0.8. */ panAmp?: number }
 /** A real audio file (PO library stem / soundscape texture), looped to fill
     the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
-export interface SampleParams { url: string; label: string }
+export interface SampleParams {
+  url: string
+  label: string
+  /** PLAIN draw intent (soundscape `ambiente` tag) — lets the Studio (re)draw
+      a file from the tag pool after seeding, e.g. when the library wasn't
+      reachable at import time. */
+  drawTag?: string
+  /** PLAIN draw intent (music phase 1–6) — same, from the global phase pool. */
+  drawPhase?: number
+}
 export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | VoiceParams | MusicParams | BilateralParams | SampleParams
 
 export const SAMPLE_RATE = 44100

@@ -78,12 +78,19 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
   const infos = t.issues.filter((i) => i.level === 'info')
   const totalClips = useMemo(() => t.versions.reduce((n, v) => n + v.clips.length, 0), [t])
 
-  /* ---- asset pools for the random draw (loaded once; mock mode = none) ---- */
+  /* ---- asset pools for the random draw. The draw happens at SEED time, so
+     seeding/rendering is GATED until this resolves — clicking fast must never
+     produce a silent "no pool available" project again. Mock mode and a
+     failed load stay usable (with the silent-lanes note + a Retry). ---- */
   const [pools, setPools] = useState<AssetPools | null>(null)
+  const [poolsState, setPoolsState] = useState<'loading' | 'ready' | 'failed' | 'mock'>(hasSupabaseEnv() ? 'loading' : 'mock')
   const [poolsMsg, setPoolsMsg] = useState<string>(hasSupabaseEnv() ? 'Loading the asset library…' : 'No Supabase env — Music/Soundscape lanes stay silent (mock mode).')
+  const [poolsTick, setPoolsTick] = useState(0)
   useEffect(() => {
     if (!hasSupabaseEnv()) return
     let alive = true
+    setPoolsState('loading')
+    setPoolsMsg('Loading the asset library…')
     void (async () => {
       try {
         const [assets, meta] = await Promise.all([listAssets(), loadAssetMeta()])
@@ -91,13 +98,17 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
         const p = buildAssetPools(assets, meta)
         setPools(p)
         const music = Object.values(p.musicByPhase).reduce((n, arr) => n + (arr?.length ?? 0), 0)
+        setPoolsState('ready')
         setPoolsMsg(`Pools ready: ${music} music files across ${Object.keys(p.musicByPhase).length} phase pools · ${p.soundscapes.length} soundscapes / ${p.soundscapeByTag.size} tags · ${p.heartbeat.length} heartbeat.`)
       } catch (e) {
-        if (alive) setPoolsMsg(`Asset library unreachable (${(e as Error).message}) — lanes will be silent.`)
+        if (!alive) return
+        setPoolsState('failed')
+        setPoolsMsg(`Asset library unreachable (${(e as Error).message}) — lanes would be silent.`)
       }
     })()
     return () => { alive = false }
-  }, [])
+  }, [poolsTick])
+  const poolsLoading = poolsState === 'loading'
 
   /* ---- Studio hand-off ---- */
   const [seedNotes, setSeedNotes] = useState<{ sheet: string; notes: string[] } | null>(null)
@@ -275,7 +286,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
           {t.title && <span>{t.title}</span>}
           {t.methodology && <span>{t.methodology}</span>}
           {t.source && <span>src: {t.source}</span>}
-          <span>{poolsMsg}</span>
+          <span>{poolsMsg}{poolsState === 'failed' && <> <button className="b2b-btn" style={{ marginLeft: 6 }} onClick={() => setPoolsTick((n) => n + 1)}>Retry</button></>}</span>
         </div>
 
         {t.versions.map((v) => {
@@ -289,11 +300,11 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
                 </span>
                 <button
                   className="b2b-btn"
-                  disabled={errors.length > 0}
-                  title={errors.length ? 'Fix the errors below first' : 'Seed the Sound Studio: 1 Excel row = 1 clip'}
+                  disabled={errors.length > 0 || poolsLoading}
+                  title={errors.length ? 'Fix the errors below first' : poolsLoading ? 'Waiting for the asset library (the file draw happens at seed time)' : 'Seed the Sound Studio: 1 Excel row = 1 clip'}
                   onClick={() => openInStudio(v)}
                 >
-                  Open in Sound Studio →
+                  {poolsLoading ? 'Loading library…' : 'Open in Sound Studio →'}
                 </button>
               </div>
 
@@ -445,8 +456,13 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
           </ul>
         )}
         <div className="adm-cred__actions">
-          <button className="b2b-btn b2b-btn--primary" disabled={busy || errors.length > 0} onClick={runRender}>
-            {busy && progress ? 'Rendering…' : 'Render WAV →'}
+          <button
+            className="b2b-btn b2b-btn--primary"
+            disabled={busy || errors.length > 0 || poolsLoading}
+            title={poolsLoading ? 'Waiting for the asset library (the file draw happens at render time)' : undefined}
+            onClick={runRender}
+          >
+            {busy && progress ? 'Rendering…' : poolsLoading ? 'Loading library…' : 'Render WAV →'}
           </button>
           {attached && <button className="b2b-btn" onClick={onDone}>Done — back to catalog</button>}
         </div>

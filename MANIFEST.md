@@ -1,5 +1,43 @@
 # Good Loop — build manifest
 
+**Slice: real-dB level model (PO decision, rev. 2)** (current)
+- The loudness-calibration relationship is REMOVED from the PLAIN path:
+  `volume_db` in the Excel is now a REAL dB value applied directly as gain
+  (10^(dB/20)) — no RMS measurement, no voice-reference anchoring. The POs
+  author their source files at known levels upstream, so the sheet IS the
+  mix. Lane fader = the lane's loudest clip's dB; quieter clips on the same
+  lane carry the difference as a plain baked gain offset (applyClipShape).
+  `calibrateDb` stays in the engine (unused by the seeder) — nothing else
+  changed: fades, crossfades, EQ, ducking, §9 mastering, draw pools and the
+  pool-draw gate/late-draw fix from the previous slice all stay as they are.
+- Fader range widened for real-dB work: −60 … +12 dB (was −40 … +6), same
+  dB taper, readout/typing/scroll unchanged.
+- Inspector's "from the protocol Excel" note reworded (clip level vs the
+  track fader; no calibration wording).
+- Verified: `tsc --noEmit` + `npm run build` clean; all five node proofs
+  pass with the updated real-dB expectations (SS-1 fader −6 dB with the
+  −14 dB baked coda, MUS −12×2, BIN clip 2 −9, guide gain 1.0, clips
+  untouched, zero calibrateDb anywhere in the seed).
+
+**Fix: silent "no pool available" clips — gate + late draw** (current)
+- Root cause: the tag/phase file DRAW happens at seed/render time, but
+  "Open in Sound Studio" and "Render WAV" were clickable while the asset
+  library was still LOADING (or after it failed) — clicking fast produced a
+  fully seeded project whose Music/Soundscape clips all said "no pool
+  available" and stayed silent.
+- Gate: both buttons now disable with a "Loading library…" label until the
+  pools resolve; a failed load shows the error inline with a Retry button;
+  mock mode keeps its explicit silent-lanes note.
+- Rescue for already-seeded projects: sample clips now carry their DRAW
+  INTENT (`drawTag` / `drawPhase` on SampleParams, set by the seeder), and
+  the Studio's sample Inspector gains "🎲 Draw from pool" (per clip — also
+  usable as a deliberate re-roll on a drawn clip) and "Draw ALL missing"
+  (fills every silent sample clip in the project in one click, reporting
+  how many were filled and which pools are genuinely empty). Pools are
+  fetched lazily and shared with the existing file-picker cache.
+- Verified: `tsc --noEmit` + `npm run build` clean; all five node proofs
+  pass.
+
 **Slice: clip equalizer + audio-delivery revalidation** (current)
 - **Per-clip parametric EQ** (`multitrack.ts` engine + Inspector panel):
   the standard studio 6-band layout — Low cut (HPF) · Low shelf · two Bells

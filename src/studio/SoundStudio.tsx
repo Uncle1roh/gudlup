@@ -36,6 +36,7 @@ import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { ARCHETYPES, DEFAULT_PRIMARY, voicesByArchetype } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
+import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, type AssetPools } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { useDataProvider } from '../data/provider'
@@ -85,8 +86,8 @@ const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
    a centimeter of travel is the same audible step anywhere on the range.
    `track.volume` stays LINEAR (engine + seeds unchanged); only the slider
    position and the readout speak dB. */
-const FADER_MIN_DB = -40
-const FADER_MAX_DB = 6
+const FADER_MIN_DB = -60
+const FADER_MAX_DB = 12
 function gainToFaderPos(gain: number): number {
   if (gain <= 0) return 0
   const db = 20 * Math.log10(gain)
@@ -309,6 +310,65 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, eq })) })))
     scheduleRender(trackId, clipId)
   }, [scheduleRender])
+
+  /* ---- late pool draws (sample clips seeded without a reachable library,
+     or a deliberate re-roll) ---- */
+  const [drawBusy, setDrawBusy] = useState(false)
+  const [drawMsg, setDrawMsg] = useState<string | null>(null)
+
+  const drawForClip = useCallback(async (trackId: string, clipId: string) => {
+    const tr = tracksRef.current.find((t) => t.id === trackId)
+    const cl = tr?.clips.find((c) => c.id === clipId)
+    if (!tr || !cl || tr.type !== 'sample') return
+    const p = cl.params as SampleParams
+    if (p.drawTag === undefined && p.drawPhase === undefined) return
+    setDrawBusy(true)
+    setDrawMsg(null)
+    try {
+      const pools = await getStudioPools()
+      const rnd = mulberry32(Math.floor(Math.random() * 0xffffffff))
+      const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd) : drawMusic(pools, p.drawPhase ?? 1, rnd)
+      if (!drawn) {
+        setDrawMsg(p.drawTag !== undefined
+          ? `No library file matches the tag "${p.drawTag}" — upload one in the Asset Library (or add the tag to an existing file there).`
+          : `The F${p.drawPhase} music pool is empty — upload files to assets/music/f${p.drawPhase} in the Asset Library.`)
+        return
+      }
+      patchClipParams(trackId, clipId, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · ${p.drawTag !== undefined ? `tag "${p.drawTag}"` : `F${p.drawPhase} pool`}` })
+      setDrawMsg(`Drew "${drawn.asset.name}" — ${drawn.how}.`)
+    } catch (e) {
+      setDrawMsg(`Library unreachable: ${(e as Error).message}`)
+    } finally {
+      setDrawBusy(false)
+    }
+  }, [patchClipParams])
+
+  const drawAllMissing = useCallback(async () => {
+    setDrawBusy(true)
+    setDrawMsg(null)
+    try {
+      const pools = await getStudioPools()
+      const rnd = mulberry32(Math.floor(Math.random() * 0xffffffff))
+      let filled = 0
+      let empty = 0
+      for (const t of tracksRef.current) {
+        if (t.type !== 'sample') continue
+        for (const c of t.clips) {
+          const p = c.params as SampleParams
+          if (p.url || (p.drawTag === undefined && p.drawPhase === undefined)) continue
+          const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd) : drawMusic(pools, p.drawPhase ?? 1, rnd)
+          if (!drawn) { empty++; continue }
+          patchClipParams(t.id, c.id, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · ${p.drawTag !== undefined ? `tag "${p.drawTag}"` : `F${p.drawPhase} pool`}` })
+          filled++
+        }
+      }
+      setDrawMsg(`Drew files for ${filled} clip${filled === 1 ? '' : 's'}${empty ? ` · ${empty} still empty (their pools have no files — check the Asset Library folders/tags)` : ''}.`)
+    } catch (e) {
+      setDrawMsg(`Library unreachable: ${(e as Error).message}`)
+    } finally {
+      setDrawBusy(false)
+    }
+  }, [patchClipParams])
 
   /* ---- voice (TTS) ---- */
   const setVoiceText = useCallback((trackId: string, clipId: string, text: string) => {
@@ -906,6 +966,10 @@ function StudioDesktop() {
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
         onEq={(eq) => selected && setClipEq(selected.trackId, selected.clipId, eq)}
+        onDrawClip={() => selected && void drawForClip(selected.trackId, selected.clipId)}
+        onDrawAllMissing={() => void drawAllMissing()}
+        drawBusy={drawBusy}
+        drawMsg={drawMsg}
       />
     </div>
   )
@@ -1279,7 +1343,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq }: {
+function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -1294,6 +1358,10 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   onVoiceSynthesize: () => void
   onVoiceChange: (voiceId: string) => void
   onEq: (eq: ClipEq) => void
+  onDrawClip: () => void
+  onDrawAllMissing: () => void
+  drawBusy: boolean
+  drawMsg: string | null
 }) {
   if (!track || !clip) {
     return (
@@ -1319,10 +1387,9 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
             Parameter and length edits don't apply to frozen pieces.
           </div>
         )}
-        {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
+        {(clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            📄 From the protocol Excel: {clip.calibrateDb !== undefined ? `layer level ${clip.calibrateDb > 0 ? '+' : ''}${clip.calibrateDb} dB vs the guide voice (loudness-calibrated) · ` : ''}
-            {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip offset ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB · ` : ''}
+            📄 From the protocol Excel: {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip level ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB vs the track fader · ` : ''}
             fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
           </div>
         )}
@@ -1371,6 +1438,17 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           <div className="mt-note" style={{ marginBottom: 6 }}>
             <b>Library file:</b> {p.label || '— none —'}
           </div>
+          {(p.drawTag !== undefined || p.drawPhase !== undefined) && (
+            <div className="mt-tts__row" style={{ margin: '4px 0' }}>
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawClip} title="Random draw from this clip's pool (tag / phase)">
+                🎲 {p.url ? 'Redraw from pool' : 'Draw from pool'}
+              </button>
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawAllMissing} title="Fill every silent sample clip in this project from its pool">
+                Draw ALL missing
+              </button>
+            </div>
+          )}
+          {drawMsg && <div className="mt-note" style={{ marginBottom: 6 }}>{drawMsg}</div>}
           <SampleFilePicker value={p.label} onPick={(url, label) => onParam({ url, label })} />
           <div className="mt-note">
             Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left.
@@ -1438,6 +1516,19 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
 
 /* ---- library file picker for sample clips (music by phase, soundscapes) ---- */
 let assetListPromise: Promise<AudioAsset[]> | null = null
+
+/** Lazy shared pools for late draws (a seeded project whose library wasn't
+    reachable at import time — or a deliberate re-roll). */
+let poolsPromise: Promise<AssetPools> | null = null
+function getStudioPools(): Promise<AssetPools> {
+  if (!poolsPromise) {
+    if (!assetListPromise) assetListPromise = listAssets()
+    poolsPromise = Promise.all([assetListPromise, loadAssetMeta()])
+      .then(([assets, meta]) => buildAssetPools(assets, meta))
+    poolsPromise.catch(() => { poolsPromise = null; assetListPromise = null })
+  }
+  return poolsPromise
+}
 function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: string, label: string) => void }) {
   const [assets, setAssets] = useState<AudioAsset[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
