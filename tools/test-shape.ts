@@ -44,27 +44,38 @@ assert(close(gOnly.getChannelData(0)[0], Math.pow(10, -14 / 20)), `gain-only: fi
 if (process.exitCode) { console.error('\nTEST FAILED'); process.exit(1) }
 console.log('\nALL PASS')
 
-/* --- loudness calibration (the PLAIN layer selector) --- */
-import { gatedRms, calibrateBufferToDb, shapeClipBuffer, VOICE_REF_RMS } from '../src/studio/multitrack'
-{
-  // a "hot synth" at amplitude 0.7 (sine RMS ≈ 0.495) calibrated to −9 dB
-  const sr2 = 1000
-  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 2, length: 10 * sr2, sampleRate: sr2 })
-  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = 0.7 * Math.sin((2 * Math.PI * 50 * i) / sr2) }
-  calibrateBufferToDb(b as any, -9)
-  const want = VOICE_REF_RMS * Math.pow(10, -9 / 20)
-  const got = gatedRms(b as any)
-  assert(close(got, want, want * 0.03), `hot synth calibrated to −9 dB vs voice ref (rms ${got.toFixed(4)} ≈ ${want.toFixed(4)})`)
+/* --- LUFS input normalization (PO pipeline steps 2+3) --- */
+import { gatedRms, calibrateBufferToDb, shapeClipBuffer, ANCHOR_LUFS } from '../src/studio/multitrack'
+import { measureLufs } from '../src/studio/mastering'
+const SRX = 44100
+const tone = (amp: number, hz: number, seconds = 8) => {
+  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 2, length: Math.round(seconds * SRX), sampleRate: SRX })
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = amp * Math.sin((2 * Math.PI * hz * i) / SRX) }
+  return b
 }
 {
-  // a quiet source comes UP to its ladder position (−18 dB)
-  const sr2 = 1000
-  const b = new (globalThis as any).AudioBuffer({ numberOfChannels: 2, length: 10 * sr2, sampleRate: sr2 })
-  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = 0.01 * Math.sin((2 * Math.PI * 50 * i) / sr2) }
+  // a "hot synth" (0.7 amp ≈ −0.4 LUFS stereo) normalized to anchor −9
+  const b = tone(0.7, 997)
+  calibrateBufferToDb(b as any, -9)
+  const got = measureLufs(b as any)
+  assert(close(got, ANCHOR_LUFS - 9, 0.5), `hot synth lands at ${(ANCHOR_LUFS - 9)} LUFS (got ${got.toFixed(1)})`)
+}
+{
+  // a quiet source comes UP to anchor −18
+  const b = tone(0.005, 997)
   const g = calibrateBufferToDb(b as any, -18)
   assert(g > 1, `quiet source boosted (×${g.toFixed(2)})`)
-  const want = VOICE_REF_RMS * Math.pow(10, -18 / 20)
-  assert(close(gatedRms(b as any), want, want * 0.03), `lands exactly at −18 dB`)
+  const got = measureLufs(b as any)
+  assert(close(got, ANCHOR_LUFS - 18, 0.5), `lands at ${(ANCHOR_LUFS - 18)} LUFS (got ${got.toFixed(1)})`)
+}
+{
+  // two sources with wildly different intrinsic loudness end 12 LU apart —
+  // the sheet's relationship, whatever the files measured before
+  const hot = tone(0.9, 997); const quiet = tone(0.02, 997)
+  calibrateBufferToDb(hot as any, -6)
+  calibrateBufferToDb(quiet as any, -18)
+  const diff = measureLufs(hot as any) - measureLufs(quiet as any)
+  assert(close(diff, 12, 0.6), `−6 vs −18 offsets → exactly 12 LU apart (got ${diff.toFixed(1)})`)
 }
 {
   // gated RMS ignores silence: half-signal half-silence measures the SIGNAL

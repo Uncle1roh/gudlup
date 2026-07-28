@@ -39,6 +39,7 @@ import type { SeedClip, SeedTrack } from '../compose/types'
 import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, DEFAULT_PRIMARY, type CatalogVoice } from '../tts/voiceCatalog'
+import { ANCHOR_LUFS } from '../studio/multitrack'
 import { drawMusic, drawSoundscape, mulberry32, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
@@ -50,15 +51,17 @@ export interface PlainSeedOptions {
   seed?: number
 }
 
-/* Level model (PO decision, rev. 2): volume_db in the Excel is a REAL dB
-   value applied directly as gain — no loudness measurement, no calibration
-   to a voice reference. The POs author their source files at known levels
-   upstream (music −18 LUFS, soundscapes −24, TTS is consistent), so the
-   numbers in the sheet ARE the mix. Lane fader = the lane's dB (its loudest
-   clip); quieter clips on the same lane carry the difference as a plain
-   baked gain offset. */
+/* Level model (PO pipeline, rev. 3): the Excel's volume_db is an OFFSET vs
+   the pinned anchor (voice 0 dB = ANCHOR_LUFS integrated). Every source
+   clip is INPUT-NORMALIZED in LUFS and lands at anchor + offset — the
+   number in the sheet produces the intended relationship whatever the
+   source file's intrinsic loudness. The lane's dB sits on the FADER (the
+   mixer reads the protocol); each clip is normalized to (its dB − lane
+   base), so fader × clip = anchor + the Excel dB. Output normalization
+   happens ONCE on the final mix (§9), ratios intact. */
 
-/** §8.4 default nominal levels when a clip leaves volume_db empty. */
+/** §8.4 default levels when a clip leaves the volume column empty —
+    offset encoding (dB vs voice) and LUFS encoding (absolute, README §6). */
 const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
   voice: 0,
   soundscape: -6,
@@ -67,9 +70,27 @@ const DEFAULT_DB: Record<PlainClip['tipo'], number> = {
   solfeggio: -14,
   bilateral: -12,
 }
+const DEFAULT_LUFS: Record<PlainClip['tipo'], number> = {
+  voice: -16,
+  soundscape: -28,
+  music: -34,
+  binaural: -34,
+  solfeggio: -30,
+  bilateral: -28,
+}
 
-function clipDb(c: PlainClip): number {
+/** The clip's level expressed as the engine's normalization offset
+    (calibrateBufferToDb targets ANCHOR_LUFS + offset):
+    · LUFS sheets: absolute target → offset = lufs − ANCHOR_LUFS
+    · legacy offset sheets: the dB value itself. */
+function clipLevel(c: PlainClip, mode: 'lufs' | 'offset'): number {
+  if (mode === 'lufs') return (c.volumeLufs ?? DEFAULT_LUFS[c.tipo]) - ANCHOR_LUFS
   return c.volumeDb ?? DEFAULT_DB[c.tipo]
+}
+
+/** Human display of a level for notes. */
+function levelLabel(v: number, mode: 'lufs' | 'offset'): string {
+  return mode === 'lufs' ? `${(v + ANCHOR_LUFS).toFixed(0)} LUFS` : `${v} dB`
 }
 
 /** Dec. 6 (developer's mapping): archetype+modalità → catalog voice.
@@ -160,8 +181,9 @@ export function plainToStudioTracks(
       : e))
 
   /* ---------------- clip placement (1 row = 1 clip; loops expand by rule) */
+  const mode = version.levelMode
   for (const c of version.clips) {
-    const nominalDb = clipDb(c)
+    const nominalDb = clipLevel(c, mode)
 
     if (c.tipo === 'soundscape' || c.tipo === 'music') {
       const isHeartbeat = c.tipo === 'soundscape' && /heartbeat|battito|bpm/i.test(c.ambiente ?? '')
@@ -308,21 +330,33 @@ export function plainToStudioTracks(
     l.clipDbs.push(nominalDb)
   }
 
-  /* ---------------- per-lane levels: REAL dB, applied directly.
-     Lane fader = the lane's loudest clip's volume_db → gain 10^(dB/20);
-     quieter clips on the lane carry (their dB − base) as a plain baked
-     gain offset. No measurement, no reference — the sheet is the mix. */
+  /* ---------------- per-lane levels.
+     LUFS sheets (current): every clip is input-normalized to its ABSOLUTE
+     volume_lufs target — the sheet IS the mix — and every fader sits at
+     neutral 0.0 dB (pure user offset on top of an authored mix).
+     Legacy offset sheets: the lane's dB sits on the fader; clips are
+     normalized to (their dB − lane base). */
   for (const l of lanes) {
     if (!l.clipDbs.length) { l.track.volume = 1; continue }
-    const base = Math.min(12, Math.max(-60, Math.max(...l.clipDbs)))
-    l.track.volume = +Math.pow(10, base / 20).toFixed(4)
-    l.track.clips.forEach((clip, i) => {
-      const off = +(l.clipDbs[i] - base).toFixed(2)
-      clip.gainDb = off === 0 ? undefined : off
-      clip.calibrateDb = undefined
-    })
-    const lo = Math.min(...l.clipDbs)
-    notes.push(`"${l.track.name}": fader at ${base} dB (real value from the Excel)${lo < base ? `; quieter clips baked at down to ${(lo - base).toFixed(0)} dB` : ''}.`)
+    if (mode === 'lufs') {
+      l.track.volume = 1
+      l.track.clips.forEach((clip, i) => {
+        clip.calibrateDb = +l.clipDbs[i].toFixed(2)
+        clip.gainDb = undefined
+      })
+      const hi = Math.max(...l.clipDbs)
+      const lo = Math.min(...l.clipDbs)
+      notes.push(`"${l.track.name}": clips input-normalized to ${hi === lo ? levelLabel(hi, 'lufs') : `${levelLabel(hi, 'lufs')}…${levelLabel(lo, 'lufs')}`} (from the Excel); fader neutral.`)
+    } else {
+      const base = Math.min(12, Math.max(-60, Math.max(...l.clipDbs)))
+      l.track.volume = +Math.pow(10, base / 20).toFixed(4)
+      l.track.clips.forEach((clip, i) => {
+        clip.calibrateDb = +(l.clipDbs[i] - base).toFixed(2)
+        clip.gainDb = undefined
+      })
+      const lo = Math.min(...l.clipDbs)
+      notes.push(`"${l.track.name}": fader at ${base} dB (the Excel value); clips input-normalized in LUFS${lo < base ? `, quieter ones down to ${(lo - base).toFixed(0)} dB vs the fader` : ''}.`)
+    }
   }
 
   /* ---------------- crossfade_prec_s → real overlaps (Rules §7): a sample

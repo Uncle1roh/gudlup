@@ -1,5 +1,70 @@
 # Good Loop — build manifest
 
+**Slice: volume_lufs — absolute per-clip LUFS targets (PO's new Excel)**
+(current)
+- The PO re-encoded the level column exactly as the loudness doc's
+  "absolute" alternative: `volume_db` → `volume_lufs`, an ABSOLUTE
+  per-clip integrated-LUFS target (voice guide −16 = mix anchor, never
+  ducked; VOX-R −22; soundscapes −22/−28/−36; music −34 under the bed /
+  −22 foreground; binaural −25 solo / −34 layered; solfeggio −30;
+  bilateral −28 — README §6/§8 of the workbook).
+- Parser: per-sheet `levelMode` detection ('lufs' when the volume_lufs
+  header is present, 'offset' for legacy volume_db sheets — BOTH keep
+  working). LUFS validation: positive value = error (targets live below
+  0), > −6 warning (hot vs the −16 anchor), < −60 warning. Type defaults
+  for empty cells follow the README §6 map. `eco_volume_db` and
+  `attenuazione_ciclo_db` stay RELATIVE dB (FX), per the workbook's own
+  note.
+- Seeder: in LUFS mode every clip is input-normalized to its ABSOLUTE
+  target (engine unchanged — calibrate offset = lufs − ANCHOR_LUFS) and
+  every fader sits at neutral 0.0 dB: the sheet IS the mix, the fader is a
+  pure user offset. Legacy offset sheets keep the fader-ladder behavior.
+  Inspector now shows the absolute target ("input-normalized to −34.0
+  LUFS"). Ducking, crossfades, EQ, draw pools, §9 output mastering all
+  unchanged.
+- Proven on the PO's real file (tools/test-plain-lufs.ts): mode detected,
+  71 clips, 0 errors, all faders 1.0, VOX-C −16 / VOX-R −22 / MUS −34×2 +
+  −22×4 / SS-1 −22/−22/−36 coda / BIN −25 & −34 / loop 12×−16, crossfades
+  and duck families intact. Legacy PLAIN file still passes all five
+  existing proofs (offset mode untouched). `tsc` + `npm run build` clean.
+
+**Slice: PO loudness pipeline (rev. 3) — LUFS input normalization**
+(current)
+- Implements the PO's specified pipeline verbatim, in order:
+  (1) pinned metric: integrated LUFS (BS.1770), voice = 0 dB = the
+  ANCHOR_LUFS (−23) — every volume_db in the Excel is an offset vs it;
+  (2+3) INPUT normalization per source: every clip buffer is measured in
+  integrated LUFS (K-weighted, gated — voice pauses / faded beds don't skew
+  it) and scaled with ONE uniform gain to anchor + its Excel offset, so the
+  sheet's number produces the intended relationship whatever the source
+  file / synth / TTS take measured (this was the missing step the PO's doc
+  identified); (4) §8.3 ducking on Music/Soundscape under active voice
+  (already in place); (5) mix-bus sum (unchanged); (6) OUTPUT normalization
+  ONCE on the final mix to −16 LUFS (§9 mastering, already in place —
+  uniform gain, ratios intact; explicitly NOT per clip, which is the
+  classic bug the doc warns about — our per-clip step is
+  normalize-to-anchor-plus-offset, never normalize-to-equal); (7) true-peak
+  limiter at −1 dBTP on the final mix (already in place).
+- Mechanics: `calibrateBufferToDb` reimplemented on integrated LUFS
+  (measureLufs shared with the mastering module), ±30 dB sanity clamp,
+  gated-RMS fallback only for clips shorter than a BS.1770 block (0.4 s).
+  Processing order per clip stays EQ → input normalization → fades. The
+  mixer keeps reading the protocol: lane fader = the lane's Excel dB, clip
+  normalized to (its dB − lane base) → fader × clip = anchor + Excel dB.
+  Fader range stays −60…+12 dB. The Studio and the offline render share the
+  same call — identical loudness.
+- Excel encoding note (flagged to the POs): current sheets keep working
+  as-is — the column reads as an OFFSET vs the anchor (voice 0), exactly
+  the doc's steps 1–3. If the POs later re-encode the column as absolute
+  per-track LUFS targets (the doc's alternative), it's a one-line change
+  (target = value instead of anchor + value).
+- Node-proven: a hot synth (−0.4 LUFS) lands at −32.0 LUFS for a −9
+  offset; a quiet source is boosted to −41.0 for −18; two sources with
+  wildly different intrinsic loudness end EXACTLY 12.0 LU apart for −6 vs
+  −18; an EQ'd clip still lands on target (normalization after EQ); seed
+  expectations updated (targets 0/0/−14, −12×2, 0/−9, guide anchored).
+  `tsc` + `npm run build` clean; all five proofs pass.
+
 **Slice: real-dB level model (PO decision, rev. 2)** (current)
 - The loudness-calibration relationship is REMOVED from the PLAIN path:
   `volume_db` in the Excel is now a REAL dB value applied directly as gain

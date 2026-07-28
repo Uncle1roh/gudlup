@@ -8,6 +8,7 @@ import {
   concatBuffers,
   bakeVoiceBuffer,
   shapeClipBuffer,
+  ANCHOR_LUFS,
   defaultClipEq,
   eqIsTransparent,
   eqMagnitudeDb,
@@ -1387,9 +1388,10 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
             Parameter and length edits don't apply to frozen pieces.
           </div>
         )}
-        {(clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
+        {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            📄 From the protocol Excel: {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip level ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB vs the track fader · ` : ''}
+            📄 From the protocol Excel: {clip.calibrateDb !== undefined ? `input-normalized to ${(ANCHOR_LUFS + clip.calibrateDb).toFixed(1)} LUFS · ` : ''}
+            {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip gain ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB · ` : ''}
             fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
           </div>
         )}

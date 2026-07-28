@@ -13,6 +13,7 @@
 import { audioBufferToWav } from '../lib/wav'
 import { timeStretch } from './timestretch'
 import { buildEffectsChain, type TrackEffect } from './effects'
+import { measureLufs } from './mastering'
 
 export type TrackType = 'soundscape' | 'binaural' | 'breath' | 'voice' | 'music' | 'bilateral' | 'sample'
 export type Texture = 'lake' | 'air' | 'deep'
@@ -393,8 +394,16 @@ export function eqMagnitudeDb(eq: ClipEq, freqs: number[], fs = SAMPLE_RATE): nu
 }
 
 /** House reference: the RMS a normal guide-voice clip lands at (same figure
-    Renderer v3 uses). The PLAIN dB ladder hangs off this anchor. */
+    Renderer v3 uses). Kept for legacy paths and as the short-clip fallback. */
 export const VOICE_REF_RMS = 0.13
+
+/** PO pipeline (rev. 3), step 1 — the pinned loudness metric: integrated
+    LUFS (BS.1770), voice = 0 dB = this anchor. Every volume_db in the Excel
+    is an offset with respect to it. */
+export const ANCHOR_LUFS = -23
+/** Per-channel RMS roughly equivalent to the anchor for clips too short to
+    measure in LUFS (<0.4 s — the BS.1770 block size). */
+const ANCHOR_RMS_FALLBACK = 0.05
 
 /** Gated RMS: mean square of the samples that actually carry signal (above
     −60 dBFS), so pauses inside a voice line or a faded soundscape don't
@@ -413,17 +422,28 @@ export function gatedRms(buf: AudioBuffer): number {
   return n ? Math.sqrt(sum / n) : 0
 }
 
-/** Calibrate a clip buffer to the PLAIN loudness ladder: scale it so its
-    gated RMS lands exactly `targetDb` below (or above) the guide-voice
-    reference. THIS is what makes the Excel's volume_db a real layer
-    selector — a −18 dB music clip is measurably 18 dB under the voice no
-    matter how hot or quiet the source file / synth / TTS take was.
-    Returns the applied gain (1 = untouched silent/broken source). */
+/** PO pipeline (rev. 3), steps 2 + 3 in one: INPUT normalization per source
+    + the Excel offset. The clip's INTEGRATED LUFS (BS.1770 — K-weighted,
+    gated, so voice pauses and faded beds don't skew it) is measured and the
+    buffer is scaled with ONE uniform gain so it lands at
+    ANCHOR_LUFS + targetDb. A −18 dB music clip therefore sits measurably
+    18 LU under the voice anchor no matter how hot or quiet the source file,
+    synth or TTS take was — the number in the sheet produces the intended
+    relationship. Output normalization happens ONCE, on the final mix
+    (§9 mastering), so the ratios set here stay intact.
+    Returns the applied linear gain (1 = untouched silent/broken source). */
 export function calibrateBufferToDb(buf: AudioBuffer, targetDb: number): number {
-  const rms = gatedRms(buf)
-  if (rms < 1e-4) return 1 // silence — leave it, the seed note says why
-  const target = VOICE_REF_RMS * Math.pow(10, targetDb / 20)
-  const g = Math.min(8, Math.max(0.002, target / rms))
+  const lufs = measureLufs(buf)
+  let gainDb: number
+  if (Number.isFinite(lufs)) {
+    gainDb = ANCHOR_LUFS + targetDb - lufs
+  } else {
+    // clip shorter than a BS.1770 block (or gated to nothing): RMS fallback
+    const rms = gatedRms(buf)
+    if (rms < 1e-4) return 1 // silence — leave it, the seed note says why
+    gainDb = 20 * Math.log10((ANCHOR_RMS_FALLBACK * Math.pow(10, targetDb / 20)) / rms)
+  }
+  const g = Math.min(31.6, Math.max(0.0316, Math.pow(10, gainDb / 20))) // ±30 dB sanity
   for (let ch = 0; ch < buf.numberOfChannels; ch++) {
     const d = buf.getChannelData(ch)
     for (let i = 0; i < d.length; i++) d[i] *= g

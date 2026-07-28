@@ -67,8 +67,13 @@ export interface PlainClip {
   startS: number
   endS: number
   durataS: number
-  /** dB RELATIVE to the guide voice (0 dB anchor, §8.1). null = archetype/app default. */
+  /** Level, legacy encoding: dB RELATIVE to the guide voice (0 dB anchor).
+      null when absent or when the sheet uses the LUFS encoding. */
   volumeDb: number | null
+  /** Level, current encoding (README §8): ABSOLUTE per-clip loudness target
+      in integrated LUFS ("volume_lufs" column). Voice guide = −16 LUFS is
+      the mix anchor. null when absent or on legacy volume_db sheets. */
+  volumeLufs: number | null
   fadeInS: number
   fadeOutS: number
   /** Only meaningful on Soundscape/Music (Rules §7). */
@@ -141,6 +146,9 @@ export type PlainVersionKey = 'quick' | 'standard' | 'deep'
 export interface PlainVersion {
   sheet: string
   versionKey: PlainVersionKey | null
+  /** Which level encoding this sheet uses: 'lufs' = absolute volume_lufs
+      targets (current); 'offset' = legacy volume_db relative to the voice. */
+  levelMode: 'lufs' | 'offset'
   /** Session length in seconds — declared footer if present, else max end_s. */
   durationS: number
   durationMin: number
@@ -376,7 +384,7 @@ function parseClipSheet(
   ws: WorkSheet,
   X: XlsxModule,
   issues: PlainIssue[],
-): { clips: PlainClip[]; declaredTotal: number | null; declaredDurationS: number | null } | null {
+): { clips: PlainClip[]; declaredTotal: number | null; declaredDurationS: number | null; levelMode: 'lufs' | 'offset' } | null {
   const hdrRow = findClipHeaderRow(ws, X)
   if (hdrRow < 0) return null
   const range = X.utils.decode_range(ws['!ref']!)
@@ -386,6 +394,7 @@ function parseClipSheet(
     if (h) col[h] = c
   }
   const get = (r: number, key: string): unknown => (key in col ? cellAt(ws, r, col[key], X) : undefined)
+  const levelMode: 'lufs' | 'offset' = 'volume_lufs' in col ? 'lufs' : 'offset'
 
   const clips: PlainClip[] = []
   let declaredTotal: number | null = null
@@ -440,6 +449,7 @@ function parseClipSheet(
       endS,
       durataS: num(get(r, 'durata_s')) ?? endS - startS,
       volumeDb: num(get(r, 'volume_db')),
+      volumeLufs: num(get(r, 'volume_lufs')),
       fadeInS: num(get(r, 'fade_in_s')) ?? 0,
       fadeOutS: num(get(r, 'fade_out_s')) ?? 0,
       crossfadePrecS: num(get(r, 'crossfade_prec_s')),
@@ -507,18 +517,28 @@ function parseClipSheet(
       if (clip.eco && clip.ecoVolumeDb === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `eco=on without eco_volume_db — app default (−8 dB) will be used.` })
     }
 
+    if (levelMode === 'lufs' && clip.volumeLufs !== null) {
+      if (clip.volumeLufs > 0) {
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is positive — LUFS targets live below 0 (voice anchor −16). Clip level ignored.` })
+        clip.volumeLufs = null
+      } else if (clip.volumeLufs > -6) {
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is extremely hot (voice anchor is −16 LUFS).` })
+      } else if (clip.volumeLufs < -60) {
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is near-inaudible.` })
+      }
+    }
     if (clip.crossfadePrecS !== null && tipo !== 'soundscape' && tipo !== 'music') {
       issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `crossfade_prec_s is only defined for Soundscape/Music (Rules §7) — ignored on ${PLAIN_TIPO_LABEL[tipo]}; use fade_out/fade_in.` })
       clip.crossfadePrecS = null
     }
-    if (clip.volumeDb === null && tipo !== 'voice') {
-      issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `No volume_db — the §8.4 default gain map value for ${PLAIN_TIPO_LABEL[tipo]} will be used.` })
+    if (clip.volumeDb === null && clip.volumeLufs === null && tipo !== 'voice') {
+      issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `No ${levelMode === 'lufs' ? 'volume_lufs' : 'volume_db'} — the default level for ${PLAIN_TIPO_LABEL[tipo]} will be used.` })
     }
 
     clips.push(clip)
   }
 
-  return { clips, declaredTotal, declaredDurationS }
+  return { clips, declaredTotal, declaredDurationS, levelMode }
 }
 
 /* --------------------------------------------------------------- validation */
@@ -680,7 +700,7 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     if (!ws) continue
     const parsed = parseClipSheet(name, ws, X, issues)
     if (!parsed) continue
-    const { clips, declaredTotal, declaredDurationS } = parsed
+    const { clips, declaredTotal, declaredDurationS, levelMode } = parsed
     if (!clips.length) { issues.push({ level: 'warning', sheet: name, message: 'Clip grid header found but no valid clip rows.' }); continue }
 
     const maxEnd = Math.max(...clips.map((c) => c.endS))
@@ -699,6 +719,7 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     const v: PlainVersion = {
       sheet: name,
       versionKey: versionKeyFromSheet(name),
+      levelMode,
       durationS,
       durationMin: Math.round(durationS / 60),
       clips,
