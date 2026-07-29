@@ -1,5 +1,21 @@
 # Good Loop — build manifest
 
+**Fix: onboarding uses the new wizard** (current)
+- The screenshot'd emoji screen was the OLD MicroIntake inside the
+  first-run onboarding — the main app already opened the new wizard, but a
+  first-time user never saw it. Onboarding now runs: Welcome → LGPD
+  consent (kept as its own explicit step, RN-LGPD-02 — it used to live
+  inside MicroIntake) → the SAME 3–4 question SessionWizard → stereo check
+  → the chosen protocol at the chosen duration (the fixed 6-min WOW
+  constraint is gone — the wizard's duration answer is respected) →
+  post-session VAS.
+- The wizard's 1–10 intensity doubles as the hidden pre-session VAS
+  (high intensity = low mood face; maintenance reads as feeling well), so
+  the post-session delta keeps working without the emoji question.
+- The wizard's alternative is stored from onboarding too ("didn't
+  resonate?" card appears on the home right after the first session).
+- `tsc` + build clean; wizard routing proof still ALL PASS.
+
 **Slice: B2C session wizard (3–4 questions, PO spec)** (current)
 - New `src/data/wizard.ts` (routing data, verbatim from the spec, pure +
   node-tested) and `src/screens/SessionWizard.tsx`:

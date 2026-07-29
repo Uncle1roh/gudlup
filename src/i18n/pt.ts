@@ -373,4 +373,6 @@ export const PT: Record<string, string> = {
   'Didn’t resonate?': 'Não ressoou?',
   'The alternative to your last choice': 'A alternativa à sua última escolha',
   'Cancel': 'Cancelar',
+  'Before we start': 'Antes de começar',
+  'full session': 'sessão inteira',
 }

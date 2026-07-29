@@ -373,4 +373,6 @@ export const IT: Record<string, string> = {
   'Didn’t resonate?': 'Non ha risuonato?',
   'The alternative to your last choice': 'L’alternativa alla tua ultima scelta',
   'Cancel': 'Annulla',
+  'Before we start': 'Prima di iniziare',
+  'full session': 'sessione intera',
 }

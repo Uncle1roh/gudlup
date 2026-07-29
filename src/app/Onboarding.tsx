@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Welcome } from '../screens/Welcome'
-import { MicroIntake } from '../screens/MicroIntake'
+import { SessionWizard } from '../screens/SessionWizard'
 import { StereoCheck } from '../screens/StereoCheck'
 import { ImmersivePlayer } from '../screens/ImmersivePlayer'
 import { PostSession } from '../screens/PostSession'
-import { pickFirstProtocol, versionLengthSeconds } from '../data/protocols'
+import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { useI18n } from '../i18n'
-import type { MicroIntakeResult, MoodCheck, Protocol } from '../types/domain'
+import type { WizardResult } from '../data/wizard'
+import type { MoodCheck, Protocol } from '../types/domain'
 
-type Step = 'welcome' | 'intake' | 'stereo' | 'player' | 'post'
+type Step = 'welcome' | 'consent' | 'wizard' | 'stereo' | 'player' | 'post'
 
 interface ActiveSession {
   protocol: Protocol
@@ -18,7 +19,14 @@ interface ActiveSession {
   vasPre: MoodCheck
 }
 
-const FIRST_SESSION_DURATION = 6 // the WOW session is always Quick
+/** The wizard's 1–10 intensity doubles as the hidden pre-session VAS
+    (RN-UX-04: derived, never shown as a clinical number). High intensity =
+    low mood face. Maintenance (no scale) reads as feeling well. */
+function moodFromIntensity(intensity: number | null): MoodCheck {
+  const vas = intensity ?? 2
+  const emoji = Math.max(1, Math.min(5, Math.round(5.5 - vas / 2)))
+  return { emoji, vas, at: Date.now() }
+}
 
 interface OnboardingProps {
   demoSeconds: number | null
@@ -30,38 +38,67 @@ interface OnboardingProps {
 export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: OnboardingProps) {
   const { t } = useI18n()
   const [step, setStep] = useState<Step>('welcome')
-  const [intake, setIntake] = useState<MicroIntakeResult | null>(null)
+  const [consent, setConsent] = useState(false)
+  const [wizardResult, setWizardResult] = useState<WizardResult | null>(null)
   const [session, setSession] = useState<ActiveSession | null>(null)
 
-  function handleIntakeDone(result: MicroIntakeResult) {
-    setIntake(result)
+  function handleWizardDone(r: WizardResult) {
+    setWizardResult(r)
+    // remember the ALTERNATIVE for the "didn't resonate?" card on the home
+    try {
+      localStorage.setItem('gl.wizard.last', JSON.stringify({
+        primaryCode: r.protocolCode,
+        alternativeCode: r.alternativeCode,
+        alternativeTitle: r.alternativeTitle,
+        intensity: r.intensity,
+        cluster: r.cluster,
+        at: Date.now(),
+      }))
+    } catch { /* private mode — fine */ }
     setStep('stereo')
   }
 
   function startSession() {
-    if (!intake) return
-    const protocol = pickFirstProtocol(intake.intent)
-    const version = protocol.versions.find((v) => v.duration === FIRST_SESSION_DURATION)
+    if (!wizardResult) return
+    const protocol = getProtocol(wizardResult.protocolCode) ?? getProtocol('GL-ANX 1.1')!
+    const version = protocol.versions.find((v) => v.duration === wizardResult.duration)
     const audioUrl = version?.audioUrl?.['pt-BR']
-    const fullLength = versionLengthSeconds(protocol, FIRST_SESSION_DURATION)
+    const fullLength = versionLengthSeconds(protocol, wizardResult.duration)
     setSession({
       protocol,
       totalSeconds: demoSeconds ?? fullLength,
       audioUrl,
       isPlaceholder: !audioUrl,
-      vasPre: intake.mood,
+      vasPre: moodFromIntensity(wizardResult.intensity),
     })
     setStep('player')
   }
 
-  const showDevBar = step === 'welcome' || step === 'stereo'
+  const showDevBar = step === 'welcome' || step === 'consent' || step === 'stereo'
 
   function renderStep() {
     switch (step) {
       case 'welcome':
-        return <Welcome onContinue={() => setStep('intake')} />
-      case 'intake':
-        return <MicroIntake onDone={handleIntakeDone} />
+        return <Welcome onContinue={() => setStep('consent')} />
+      case 'consent':
+        // LGPD consent (RN-LGPD-02) — kept as its own explicit moment before
+        // any personal question is asked
+        return (
+          <div className="screen wizard">
+            <div className="wizard__body" style={{ marginTop: 40 }}>
+              <h1 className="wizard__q">{t('Before we start')}</h1>
+              <div className="consent">
+                <input id="consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <label htmlFor="consent">
+                  {t('I agree to how my data is handled.')} <a href="#privacy" onClick={(e) => e.preventDefault()}>{t('Read the privacy terms')}</a>.
+                </label>
+              </div>
+              <button className="btn btn--primary" disabled={!consent} onClick={() => setStep('wizard')}>{t('Continue')}</button>
+            </div>
+          </div>
+        )
+      case 'wizard':
+        return <SessionWizard onDone={handleWizardDone} onCancel={() => setStep('consent')} />
       case 'stereo':
         return <StereoCheck onContinue={startSession} />
       case 'player':
@@ -86,7 +123,7 @@ export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: On
       {showDevBar && (
         <div className="dev-bar">
           <button className="dev-toggle" onClick={onDemoToggle}>
-            {demoSeconds === null ? t('full · 6 min') : t('demo · 1 min')}
+            {demoSeconds === null ? t('full session') : t('demo · 1 min')}
           </button>
           <button className="dev-toggle" onClick={onSkip}>{t('skip →')}</button>
         </div>
