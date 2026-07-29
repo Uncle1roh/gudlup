@@ -10,13 +10,28 @@ import type { SessionRecord, Duration } from '../types/domain'
 interface HomeSessionProps {
   history: SessionRecord[]
   onStart: (launch: { protocolCode: string; duration: Duration }) => void
+  onWizard: () => void
   onExplore: () => void
   onCompose: () => void
   onAssess: () => void
 }
 
-/** B9: one large CTA, one recommendation card, no catalog scrolling. */
-export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }: HomeSessionProps) {
+/** The wizard's remembered ALTERNATIVE — the spec's fallback "if the primary
+    does not resonate after listening", surfaced as the recommendation card. */
+function lastWizardAlternative(): { code: string; title: string; primaryCode: string } | null {
+  try {
+    const raw = localStorage.getItem('gl.wizard.last')
+    if (!raw) return null
+    const v = JSON.parse(raw) as { primaryCode?: string; alternativeCode?: string; alternativeTitle?: string }
+    if (!v.alternativeCode) return null
+    return { code: v.alternativeCode, title: v.alternativeTitle ?? v.alternativeCode, primaryCode: v.primaryCode ?? '' }
+  } catch {
+    return null
+  }
+}
+
+/** B9: one large CTA (the 3–4 question wizard), one recommendation card. */
+export function HomeSession({ history, onStart, onWizard, onExplore, onCompose, onAssess }: HomeSessionProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const { data: myRequest, refetch: refetchRequest } = useMySessionRequest()
@@ -40,6 +55,8 @@ export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }
   }
   const last = lastSession(history)
   const lastProtocol = getProtocol(last.protocolCode)
+  const wizardAlt = lastWizardAlternative()
+  const altProtocol = wizardAlt ? getProtocol(wizardAlt.code) : null
   const rec = todayRecommendation()
   const recProtocol = getProtocol(rec.code)
 
@@ -53,14 +70,28 @@ export function HomeSession({ history, onStart, onExplore, onCompose, onAssess }
         <BreathingOrb size={64} rings={false} />
       </header>
 
-      <button className="start-cta" onClick={() => onStart(last)}>
+      <button className="start-cta" onClick={onWizard}>
         <span className="start-cta__label">{t('Start session')}</span>
-        <span className="start-cta__sub">
-          {lastProtocol ? t('Same as last time · {title} · {min} min', { title: lastProtocol.title, min: last.duration }) : t('Begin')}
-        </span>
+        <span className="start-cta__sub">{t('A few quick questions find the right session for now')}</span>
       </button>
 
-      {recProtocol && (
+      {lastProtocol && (
+        <button className="rec-card" onClick={() => onStart(last)}>
+          <span className="rec-card__eyebrow">{t('Repeat')}</span>
+          <span className="rec-card__title">{lastProtocol.title}</span>
+          <span className="rec-card__reason">{t('Same as last time')} · {last.duration} {t('min')}</span>
+        </button>
+      )}
+
+      {altProtocol && (
+        <button className="rec-card" onClick={() => onStart({ protocolCode: altProtocol.code, duration: 12 })}>
+          <span className="rec-card__eyebrow">{t('Didn’t resonate?')}</span>
+          <span className="rec-card__title">{altProtocol.title}</span>
+          <span className="rec-card__reason">{t('The alternative to your last choice')} · 12 {t('min')}</span>
+        </button>
+      )}
+
+      {recProtocol && !altProtocol && (
         <button className="rec-card" onClick={() => onStart({ protocolCode: rec.code, duration: 6 })}>
           <span className="rec-card__eyebrow">{t('For you today')}</span>
           <span className="rec-card__title">{recProtocol.title}</span>

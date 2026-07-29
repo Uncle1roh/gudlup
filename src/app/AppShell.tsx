@@ -6,6 +6,8 @@ import { Profile } from './Profile'
 import { SessionRunner } from './SessionRunner'
 import { Assessment } from './Assessment'
 import { SessionComposer } from '../compose/SessionComposer'
+import { SessionWizard } from '../screens/SessionWizard'
+import type { WizardResult } from '../data/wizard'
 import { useSessions } from '../data/hooks'
 import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
@@ -32,6 +34,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   const { data: history = [], refetch } = useSessions()
   const [tab, setTab] = useState<Tab>('session')
   const [launch, setLaunch] = useState<Launch | null>(null)
+  const [wizard, setWizard] = useState(false)
   const [composing, setComposing] = useState(false)
   const [assessing, setAssessing] = useState(false)
 
@@ -40,6 +43,31 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
     refetch()
     setLaunch(null)
     setTab('session')
+  }
+
+  if (wizard) {
+    return (
+      <SessionWizard
+        onCancel={() => setWizard(false)}
+        onDone={(r: WizardResult) => {
+          // the ALTERNATIVE fallback ("if the primary does not resonate after
+          // listening") is remembered and surfaced on the home screen after
+          // the session
+          try {
+            localStorage.setItem('gl.wizard.last', JSON.stringify({
+              primaryCode: r.protocolCode,
+              alternativeCode: r.alternativeCode,
+              alternativeTitle: r.alternativeTitle,
+              intensity: r.intensity,
+              cluster: r.cluster,
+              at: Date.now(),
+            }))
+          } catch { /* private mode — fine */ }
+          setWizard(false)
+          setLaunch({ protocolCode: r.protocolCode, duration: r.duration })
+        }}
+      />
+    )
   }
 
   if (launch) {
@@ -71,7 +99,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   return (
     <div className="app-frame app-frame--tabs">
       <div className="tabview">
-        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onExplore={() => setTab('explore')} onCompose={() => setComposing(true)} onAssess={() => setAssessing(true)} />}
+        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onWizard={() => setWizard(true)} onExplore={() => setTab('explore')} onCompose={() => setComposing(true)} onAssess={() => setAssessing(true)} />}
         {tab === 'progress' && <Progress history={history} />}
         {tab === 'explore' && <Explore onStart={setLaunch} />}
         {tab === 'profile' && <Profile demoSeconds={demoSeconds} onDemoToggle={onDemoToggle} />}

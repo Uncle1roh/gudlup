@@ -1773,3 +1773,32 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-eq__f { flex: 1.2; } .mt-eq__g { flex: 1; } .mt-eq__q { flex: 0.9; }
 .mt-eq__f input[type="range"], .mt-eq__g input[type="range"], .mt-eq__q input[type="range"] { flex: 1; min-width: 30px; accent-color: var(--mt-accent, #7fd4a5); }
 .mt-eq__f .mt-editable, .mt-eq__g .mt-editable, .mt-eq__q .mt-editable { font-size: 10.5px; min-width: 32px; text-align: right; }
+
+/* B2C session wizard (3–4 questions) */
+.wizard { display: flex; flex-direction: column; gap: 14px; }
+.wizard__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wizard__back { background: none; border: none; font-size: 20px; color: inherit; cursor: pointer; padding: 4px 8px; }
+.wizard__skip { background: none; border: none; font-size: 13px; color: var(--muted, #7a8a80); cursor: pointer; }
+.wizard__dots { display: flex; gap: 6px; }
+.wizard__dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(0,0,0,0.15); }
+.wizard__dot.is-on { background: var(--accent, #2e7d5b); }
+.wizard__body { display: flex; flex-direction: column; gap: 12px; }
+.wizard__q { font-size: 22px; line-height: 1.25; margin: 6px 0 0; }
+.wizard__sub { font-size: 14px; color: var(--muted, #7a8a80); margin: 0; }
+.wizard__opts { display: flex; flex-direction: column; gap: 10px; }
+.wizard__opt {
+  text-align: left; font-size: 15px; line-height: 1.35; padding: 14px 16px;
+  border: 1px solid var(--line, #dfe7e2); border-radius: 14px; background: #fff;
+  cursor: pointer; transition: border-color 0.12s, background 0.12s;
+}
+.wizard__opt:hover { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.wizard__opt--dur { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.wizard__opt--dur.is-std { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.wizard__dur { font-size: 13px; color: var(--muted, #7a8a80); white-space: nowrap; }
+.wizard__scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.wizard__num {
+  padding: 14px 0; font-size: 17px; border: 1px solid var(--line, #dfe7e2);
+  border-radius: 12px; background: #fff; cursor: pointer;
+}
+.wizard__num:hover, .wizard__num.is-on { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.wizard__scale-legend { display: flex; justify-content: space-between; }

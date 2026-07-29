@@ -1,5 +1,37 @@
 # Good Loop — build manifest
 
+**Slice: B2C session wizard (3–4 questions, PO spec)** (current)
+- New `src/data/wizard.ts` (routing data, verbatim from the spec, pure +
+  node-tested) and `src/screens/SessionWizard.tsx`:
+  Q1 PINPOINT — 7 feeling clusters; "I'm tired" opens the dedicated
+  clarification (Burnout / Depression / Stress); MAINTENANCE skips the
+  scale AND the clarify and goes straight to duration.
+  Q2 SCALE — 1–10 tap grid (skipped for maintenance).
+  Q3 CLARIFY — the five per-cluster tables with PRIMARY + ALTERNATIVE
+  protocol per row, including the spec's cross-family fallbacks
+  (RESIL 5.3 → DEP 2.2, RESIL 5.4 → DEP 2.3).
+  Q4 DURATION — 6 / 12 (highlighted "recommended") / 24.
+  Back navigation + progress dots throughout.
+- Home screen: the big "Start session" CTA now opens the wizard; "same as
+  last time" became a Repeat card underneath. The wizard's ALTERNATIVE
+  ("if the primary does not resonate after listening") is remembered and
+  surfaced as a "Didn't resonate?" card after the session, replacing the
+  generic daily recommendation while present.
+- Static protocol registry expanded from 6 to ALL 25 protocols with the
+  spec's titles (published imports still override at runtime); GL-ANX 1.1
+  title aligned to the spec ("Calm and Inner Security"). Unpublished
+  protocols play the placeholder bed with the existing note — honest until
+  their audio is attached.
+- MAINTENANCE assumption flagged to the POs: the spec defines no
+  maintenance protocol; routed to GL-RESIL 5.5 (Vision and Continuous
+  Growth) with 5.3 as alternative — one-line change when they decide.
+- Wizard fully translated (it + pt dictionaries, ~55 strings each);
+  protocol titles remain the catalog's clinical names.
+- Node proof `tools/test-wizard.ts`: all 25 registry codes, every spec
+  table row (primary + alternative) byte-exact, tired → burnout/
+  depression/stress, maintenance resolves, cross-family links present.
+  `tsc` + `npm run build` clean; all seven audio/parser proofs still pass.
+
 **Fix: Studio faders read LUFS** (current)
 - PLAIN lanes now carry their authored loudness target (`baseLufs` on the
   seed → track), and the Studio fader reads/edits in LUFS — the protocol's
