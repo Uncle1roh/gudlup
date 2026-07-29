@@ -1,5 +1,22 @@
 # Good Loop — build manifest
 
+**Slice: profile pictures for every user** (current)
+- New shared `src/components/AvatarUpload.tsx`, placed on all four
+  surfaces: B2C Profile (52 px, replaces the 🙂), therapist topbar (34 px,
+  replaces the emoji avatar), employer topbar (32 px) and the admin
+  sidebar footer (30 px). Clicking the picture opens the OS image picker;
+  the photo is CENTER-CROPPED square and resized to 512 px JPEG in the
+  browser (canvas, quality 0.86) before upload — a 12 MB phone photo
+  becomes a ~60 kB avatar. Busy state, inline error, ✎ badge affordance;
+  `readOnly` mode available for future display-only spots.
+- Storage & data: new public `avatars` bucket with OWN-FOLDER RLS — every
+  signed-in user may write only `<their auth uid>/…`, everyone may read;
+  `profiles.avatar_url` column (defensive alter) updated on upload with a
+  cache-busted public URL. Provider gains `getMyAvatarUrl` / `setMyAvatar`
+  (Supabase + mock — mock keeps a local data-URL so demo mode works
+  offline). setup.sql re-validated on Postgres 16, fresh + idempotent.
+- `tsc` + `npm run build` clean; all proofs pass.
+
 **Slice: B2C composer removed + the protocol project (auto progression)**
 (current)
 - "Compose your own" is GONE from the B2C app: the home card, the composer

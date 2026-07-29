@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SignOutButton, useAuth } from '../auth/auth'
+import { AvatarUpload } from '../components/AvatarUpload'
 import { useI18n, LOCALES } from '../i18n'
 
 interface ProfileProps {
@@ -32,7 +33,7 @@ export function Profile({ demoSeconds, onDemoToggle }: ProfileProps) {
       <h1 className="display" style={{ marginBottom: 18 }}>{t('Profile')}</h1>
 
       <div className="profile__id">
-        <div className="profile__avatar">🙂</div>
+        <AvatarUpload size={52} fallback="🙂" />
         <div>
           <div className="history__title">{t('You')}</div>
           <div className="muted small">{user?.email ?? t('Signed in')}</div>

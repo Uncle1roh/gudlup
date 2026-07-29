@@ -138,6 +138,19 @@ const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 export function createMockProvider(): DataProvider {
   return {
     // --- B2C ---
+    getMyAvatarUrl: async () => {
+      try { return localStorage.getItem('gl.mock.avatar') } catch { return null }
+    },
+    setMyAvatar: async (blob: Blob) => {
+      const url: string = await new Promise((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res(r.result as string)
+        r.onerror = () => rej(new Error('read failed'))
+        r.readAsDataURL(blob)
+      })
+      try { localStorage.setItem('gl.mock.avatar', url) } catch { /* private mode */ }
+      return url
+    },
     listSessions: () => delay([...sessions]),
     recordSession: async (rec) => {
       sessions = [...sessions, rec]

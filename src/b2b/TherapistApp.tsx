@@ -13,6 +13,7 @@ import { useDataProvider } from '../data/provider'
 import { usePatient, useTherapist } from '../data/hooks'
 import { getProtocol } from '../data/protocols'
 import { SessionComposer } from '../compose/SessionComposer'
+import { AvatarUpload } from '../components/AvatarUpload'
 import type { B2bSession } from './data'
 
 type Screen = 'roster' | 'card' | 'edit' | 'wizard' | 'compose' | 'session' | 'debrief' | 'report' | 'credentials'
@@ -127,7 +128,7 @@ export function TherapistApp() {
           <button className="b2b-demobtn" onClick={() => setFullLength((v) => !v)} title="Session length for the demo">
             {fullLength ? 'full 24 min' : 'demo ~90s'}
           </button>
-          <span className="b2b-avatar">{therapist?.avatar ?? '👤'}</span>
+          <AvatarUpload size={34} fallback={therapist?.avatar ?? '👤'} className="avatarup--bar" />
           <SignOutButton className="b2b-demobtn" />
         </div>
       </header>

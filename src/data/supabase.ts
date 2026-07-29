@@ -165,7 +165,35 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     return cachedProfileId
   }
 
+  async function authUid(): Promise<string> {
+    const { data: auth } = await sb.auth.getUser()
+    const uid = auth.user?.id
+    if (!uid) throw new Error('Not signed in')
+    return uid
+  }
+
   return {
+    async getMyAvatarUrl(): Promise<string | null> {
+      try {
+        const uid = await authUid()
+        const { data, error } = await sb.from('profiles').select('avatar_url').eq('auth_uid', uid).single()
+        if (error) return null
+        return (data as { avatar_url: string | null }).avatar_url ?? null
+      } catch {
+        return null
+      }
+    },
+    async setMyAvatar(blob: Blob): Promise<string> {
+      const uid = await authUid()
+      const path = `${uid}/avatar.jpg`
+      const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '60' })
+      if (upErr) throw new Error(`Avatar upload failed: ${upErr.message}`)
+      const { data: pub } = sb.storage.from('avatars').getPublicUrl(path)
+      const url = `${pub.publicUrl}?v=${Date.now()}` // cache-bust replacements
+      const { error } = await sb.from('profiles').update({ avatar_url: url }).eq('auth_uid', uid)
+      if (error) throw new Error(`Could not save the avatar: ${error.message}`)
+      return url
+    },
     async listSessions(): Promise<SessionRecord[]> {
       // RLS limits rows to the signed-in B2C user's own sessions
       const { data, error } = await sb.from('sessions').select('*').eq('kind', 'b2c').order('started_at', { ascending: true })

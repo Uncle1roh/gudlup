@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
+import { AvatarUpload } from '../components/AvatarUpload'
 import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
 import { AssetLibrary } from './AssetLibrary'
@@ -46,7 +47,7 @@ export function AdminApp() {
         </nav>
         <div className="adm-side__foot">
           <div className="adm-who">
-            <span className="adm-who__dot" aria-hidden="true" />
+            <AvatarUpload size={30} fallback="⚙️" className="avatarup--bar" />
             <span className="adm-who__email">{actor}</span>
           </div>
           <SignOutButton className="b2b-btn b2b-btn--signout" />

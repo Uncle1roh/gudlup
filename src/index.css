@@ -1802,3 +1802,24 @@ img, svg, video, canvas { max-width: 100%; }
 }
 .wizard__num:hover, .wizard__num.is-on { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
 .wizard__scale-legend { display: flex; justify-content: space-between; }
+
+/* Profile picture upload (all surfaces) */
+.avatarup { position: relative; display: inline-flex; align-items: center; }
+.avatarup__btn {
+  position: relative; padding: 0; border: none; border-radius: 50%; overflow: hidden;
+  background: var(--mist-2, #e8efe9); display: grid; place-items: center; cursor: pointer;
+  flex: none; transition: filter 0.12s;
+}
+.avatarup__btn:disabled { cursor: default; }
+.avatarup__btn.is-busy { filter: grayscale(0.6) brightness(0.9); }
+.avatarup__btn:not(:disabled):hover { filter: brightness(0.95); }
+.avatarup__img { object-fit: cover; display: block; border-radius: 50%; }
+.avatarup__fallback { line-height: 1; }
+.avatarup__badge {
+  position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--accent, #2e7d5b); color: #fff;
+  font-size: 9px; line-height: 16px; text-align: center; pointer-events: none;
+}
+.avatarup--bar .avatarup__badge { width: 13px; height: 13px; font-size: 8px; line-height: 13px; }
+.avatarup__err { position: absolute; top: 100%; right: 0; font-size: 11px; color: #a04545; white-space: nowrap; background: #fff; border: 1px solid #e4c9c9; border-radius: 6px; padding: 2px 6px; margin-top: 4px; z-index: 30; }
+.adm-who .avatarup__btn { background: rgba(255,255,255,0.12); }

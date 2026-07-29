@@ -52,6 +52,8 @@ create table if not exists profiles (
   created_at  timestamptz not null default now()
 );
 
+alter table profiles add column if not exists avatar_url text;
+
 create table if not exists therapists (
   id            uuid primary key references profiles(id) on delete cascade,
   crp           text not null,
@@ -612,6 +614,25 @@ begin
     execute $pol$
       create policy protocol_audio_read on storage.objects
         for select using (bucket_id = 'protocol-audio')
+    $pol$;
+
+    -- avatars: every signed-in user may manage ONLY their own folder
+    -- (path = <auth_uid>/avatar.jpg); everyone can read (public bucket)
+    insert into storage.buckets (id, name, public)
+    values ('avatars', 'avatars', true)
+    on conflict (id) do nothing;
+
+    execute 'drop policy if exists avatars_own_write on storage.objects';
+    execute $pol$
+      create policy avatars_own_write on storage.objects
+        for all using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+        with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+    $pol$;
+
+    execute 'drop policy if exists avatars_read on storage.objects';
+    execute $pol$
+      create policy avatars_read on storage.objects
+        for select using (bucket_id = 'avatars')
     $pol$;
   end if;
 end $$;

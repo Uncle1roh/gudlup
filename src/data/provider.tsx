@@ -63,6 +63,13 @@ export interface DataProvider {
   listCompanies(): Promise<Company[]>
   saveCompany(company: Company): Promise<void>
 
+  // --- My profile picture (all roles) ---
+  /** Public URL of the signed-in user's avatar, or null when unset. */
+  getMyAvatarUrl(): Promise<string | null>
+  /** Upload/replace the signed-in user's avatar (pre-cropped JPEG blob).
+      Returns the new public URL. */
+  setMyAvatar(blob: Blob): Promise<string>
+
   // --- Admin: users & roles ---
   listAdminUsers(): Promise<AdminUser[]>
   setUserRole(id: string, role: UserRole): Promise<void>
