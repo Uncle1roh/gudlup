@@ -138,6 +138,80 @@ const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 export function createMockProvider(): DataProvider {
   return {
     // --- B2C ---
+    /* ---- scheduling (localStorage-backed demo) ---- */
+    listAvailableTherapists: async () => [
+      { id: 'th-demo', name: 'Dra. Ana Fontes', avatarUrl: null },
+      { id: 'th-demo-2', name: 'Dr. Rafael Lima', avatarUrl: null },
+    ],
+    getTherapistAvailability: async (therapistId: string) => {
+      try {
+        const raw = localStorage.getItem(`gl.mock.avail.${therapistId}`)
+        if (raw) return JSON.parse(raw)
+      } catch { /* fine */ }
+      // demo default: Mon–Fri 09:00 / 14:00 / 16:00
+      return [1, 2, 3, 4, 5].flatMap((weekday) => ['09:00', '14:00', '16:00'].map((hhmm) => ({ weekday, hhmm })))
+    },
+    listBookedTimes: async (therapistId: string) => {
+      try { return JSON.parse(localStorage.getItem(`gl.mock.booked.${therapistId}`) ?? '[]') } catch { return [] }
+    },
+    bookAppointment: async (therapistId: string, startsAtMs: number) => {
+      const key = `gl.mock.booked.${therapistId}`
+      let booked: number[] = []
+      try { booked = JSON.parse(localStorage.getItem(key) ?? '[]') } catch { /* fine */ }
+      if (booked.includes(startsAtMs)) throw new Error('That time was just taken — pick another slot.')
+      booked.push(startsAtMs)
+      const appt = { id: `ap-${Date.now()}`, therapistId, therapistName: therapistId === 'th-demo' ? 'Dra. Ana Fontes' : 'Dr. Rafael Lima', patientName: 'You', profileId: 'me', startsAtMs, durationMin: 50, status: 'booked' as const }
+      try {
+        localStorage.setItem(key, JSON.stringify(booked))
+        localStorage.setItem('gl.mock.myappt', JSON.stringify(appt))
+        const mine = JSON.parse(localStorage.getItem('gl.mock.thappts') ?? '[]')
+        mine.push(appt)
+        localStorage.setItem('gl.mock.thappts', JSON.stringify(mine))
+      } catch { /* fine */ }
+      await wait()
+      return appt
+    },
+    getMyAppointment: async () => {
+      try {
+        const raw = localStorage.getItem('gl.mock.myappt')
+        if (!raw) return null
+        const a = JSON.parse(raw)
+        if (a.status !== 'booked' || Date.now() > a.startsAtMs + a.durationMin * 60000) return null
+        return a
+      } catch { return null }
+    },
+    cancelAppointment: async (id: string) => {
+      try {
+        const raw = localStorage.getItem('gl.mock.myappt')
+        if (raw) {
+          const a = JSON.parse(raw)
+          if (a.id === id) localStorage.removeItem('gl.mock.myappt')
+        }
+        const mine = (JSON.parse(localStorage.getItem('gl.mock.thappts') ?? '[]') as { id: string }[]).filter((x) => x.id !== id)
+        localStorage.setItem('gl.mock.thappts', JSON.stringify(mine))
+      } catch { /* fine */ }
+    },
+    getMyAvailability: async () => {
+      try { return JSON.parse(localStorage.getItem('gl.mock.avail.me') ?? '[]') } catch { return [] }
+    },
+    setMyAvailability: async (slots) => {
+      try { localStorage.setItem('gl.mock.avail.me', JSON.stringify(slots)); localStorage.setItem('gl.mock.avail.th-demo', JSON.stringify(slots)) } catch { /* fine */ }
+    },
+    listMyAppointments: async () => {
+      try {
+        return (JSON.parse(localStorage.getItem('gl.mock.thappts') ?? '[]') as any[])
+          .filter((a) => a.status === 'booked' && Date.now() < a.startsAtMs + a.durationMin * 60000)
+          .sort((a, b) => a.startsAtMs - b.startsAtMs)
+      } catch { return [] }
+    },
+    patientForAppointment: async (a) => {
+      const existing = patients.find((p) => p.name === (a.patientName ?? 'You'))
+      if (existing) return existing.id
+      const id = `pt-${Date.now()}`
+      patients.push({ ...patients[0], id, name: a.patientName ?? 'You' })
+      return id
+    },
+
     getMyAvatarUrl: async () => {
       try { return localStorage.getItem('gl.mock.avatar') } catch { return null }
     },

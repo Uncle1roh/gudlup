@@ -1,5 +1,41 @@
 # Good Loop — build manifest
 
+**Slice: patient ↔ therapist scheduling** (current)
+- **Patient journey** (PO spec, verbatim): the home's therapist card became
+  "Schedule a session" → popup listing the company's APPROVED therapists
+  (same-company first; pilot fallback to all approved) with their profile
+  pictures → picking one shows their OPEN times (weekly agenda expanded to
+  the next 14 days, minus booked slots, minus the past) grouped per day →
+  picking a time books it (double-booking rejected by a DB unique
+  constraint with a friendly "just taken" message + refreshed slots) →
+  confirmation screen. The home then shows the appointment card (with
+  Cancel booking); from 5 MINUTES BEFORE the start until the end, it turns
+  into a big "Enter session" button that launches the ordinary session
+  flow (the person's current program protocol) — "o fluxo de sessão
+  prevalece".
+- **Therapist journey**: new 🗓 Agenda screen (topbar) — a weekly grid
+  (Mon–Sun × 07:00–19:00) where the therapist toggles the hours they are
+  available; each toggle saves immediately and those are EXACTLY the hours
+  patients can book. Booked visits list underneath and never re-open.
+  5 minutes before a session, a banner appears above the roster ("Session
+  with <name> at HH:MM — the patient sees their Enter button now") with
+  "Start session →", which finds-or-creates the roster patient linked to
+  the booker's B2C profile (consent row included, same as the request
+  queue) and opens the patient card — the existing clinical session flow
+  takes over from there.
+- **Data**: `therapist_availability` (weekly template jsonb) +
+  `appointments` (unique therapist+time; status booked/cancelled/done)
+  with RLS — availability readable by the signed-in, writable by its
+  owner; appointments visible to the two involved, insert by the patient,
+  update by either. Provider (Supabase + mock) gains ten scheduling
+  methods; 30-second polling keeps both sides fresh (no realtime infra
+  needed).
+- Node-proven slot math: template → concrete openings (weekday+hour only,
+  4 openings for 2 slots × 2 weeks, same-day future kept, booked and past
+  excluded); the join window opens exactly 5 min before and closes at the
+  end. SQL fresh + idempotent on Postgres 16 (both tables present). `tsc`
+  + build clean; all proofs pass; B2C strings translated (it + pt).
+
 **Slice: simplified protocol workscreen (admin)** (current)
 - The PLAIN screen after the catalog list is now MINIMAL, per PO feedback:
   one identity line (code · title · duration/clips · published/live badge)

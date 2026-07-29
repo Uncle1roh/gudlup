@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { useDataProvider } from '../data/provider'
-import { useMySessionRequest } from '../data/hooks'
 import { greeting, lastSession } from '../data/seed'
 import { getProtocol } from '../data/protocols'
 import { currentProgramStep, programComplete, switchProgramTo } from '../data/program'
+import { ScheduleModal } from './ScheduleModal'
+import { fmtDay, fmtTime, isUpcoming, joinWindowOpen, type Appointment } from '../data/scheduling'
 import { useI18n } from '../i18n'
 import type { SessionRecord, Duration } from '../types/domain'
 
@@ -33,27 +34,22 @@ function lastWizardAlternative(): { code: string; title: string; primaryCode: st
 /** B9: one large CTA — the protocol project when one is running (next
     sub-protocol of the family pathway), the 3–4 question wizard otherwise. */
 export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }: HomeSessionProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const dp = useDataProvider()
-  const { data: myRequest, refetch: refetchRequest } = useMySessionRequest()
-  const [requesting, setRequesting] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast] = useState<string | null>(null)
 
-  async function requestTherapist() {
-    if (myRequest || requesting) return
-    setRequesting(true)
-    try {
-      await dp.requestSession()
-      refetchRequest()
-      setToast(t('Request sent'))
-      setTimeout(() => setToast(null), 2200)
-    } catch (e) {
-      setToast((e as Error).message)
-      setTimeout(() => setToast(null), 6000)
-    } finally {
-      setRequesting(false)
-    }
-  }
+  /* scheduling: the upcoming appointment + a minute tick so the "enter"
+     window opens by itself */
+  const [scheduling, setScheduling] = useState(false)
+  const [appointment, setAppointment] = useState<Appointment | null>(null)
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    let alive = true
+    const load = () => void dp.getMyAppointment().then((a) => { if (alive) setAppointment(a) }).catch(() => undefined)
+    load()
+    const id = window.setInterval(() => { setTick((n) => n + 1); load() }, 30_000)
+    return () => { alive = false; window.clearInterval(id) }
+  }, [dp])
   const last = lastSession(history)
   const lastProtocol = getProtocol(last.protocolCode)
   const step = currentProgramStep()
@@ -117,22 +113,45 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }:
         </button>
       )}
 
-      <button className="assess-card" onClick={requestTherapist} disabled={!!myRequest || requesting} style={myRequest ? { opacity: 0.75 } : undefined}>
-        <span className="assess-card__icon">🩺</span>
-        <span className="assess-card__text">
-          <strong>{myRequest
-            ? (myRequest.status === 'claimed'
-              ? t('A therapist accepted your request')
-              : t('Request sent — waiting for a therapist'))
-            : t('Talk to a therapist')}</strong>
-          <span>{myRequest
-            ? (myRequest.status === 'claimed'
-              ? t('They will schedule the session with you.')
-              : t("You'll be contacted to schedule."))
-            : t('Request a session — a clinician will pick it up.')}</span>
-        </span>
-        {!myRequest && <span className="assess-card__arrow">→</span>}
-      </button>
+      {appointment && isUpcoming(appointment, Date.now()) ? (
+        joinWindowOpen(appointment, Date.now()) ? (
+          <button
+            className="start-cta start-cta--join"
+            onClick={() => onStart({ protocolCode: currentProgramStep()?.code ?? last.protocolCode, duration: currentProgramStep()?.duration ?? last.duration })}
+          >
+            <span className="start-cta__label">{t('Enter session')}</span>
+            <span className="start-cta__sub">{t('Your therapist is waiting — {name}', { name: appointment.therapistName ?? '' })}</span>
+          </button>
+        ) : (
+          <div className="assess-card" style={{ cursor: 'default' }}>
+            <span className="assess-card__icon">🩺</span>
+            <span className="assess-card__text">
+              <strong>{t('Session with {name}', { name: appointment.therapistName ?? '' })}</strong>
+              <span>
+                {fmtDay(appointment.startsAtMs, locale)} · {fmtTime(appointment.startsAtMs, locale)} — {t('the button to enter appears here at the time')}
+                {'  '}
+                <a href="#cancel" onClick={(e) => { e.preventDefault(); void dp.cancelAppointment(appointment.id).then(() => setAppointment(null)) }}>{t('Cancel booking')}</a>
+              </span>
+            </span>
+          </div>
+        )
+      ) : (
+        <button className="assess-card" onClick={() => setScheduling(true)}>
+          <span className="assess-card__icon">🩺</span>
+          <span className="assess-card__text">
+            <strong>{t('Schedule a session')}</strong>
+            <span>{t('Pick a therapist and a time that works for you.')}</span>
+          </span>
+          <span className="assess-card__arrow">→</span>
+        </button>
+      )}
+
+      {scheduling && (
+        <ScheduleModal
+          onClose={() => setScheduling(false)}
+          onBooked={(a) => setAppointment(a)}
+        />
+      )}
 
       <button className="assess-card" onClick={onAssess}>
         <span className="assess-card__icon">🗒️</span>

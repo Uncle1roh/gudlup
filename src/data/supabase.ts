@@ -165,6 +165,8 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     return cachedProfileId
   }
 
+  const toMs2 = (iso: string) => new Date(iso).getTime()
+
   async function authUid(): Promise<string> {
     const { data: auth } = await sb.auth.getUser()
     const uid = auth.user?.id
@@ -173,6 +175,127 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
   }
 
   return {
+    /* ---- scheduling ---- */
+    async listAvailableTherapists() {
+      const uid = await authUid()
+      const { data: me } = await sb.from('profiles').select('company_id').eq('auth_uid', uid).single()
+      const myCompany = (me as { company_id: string | null } | null)?.company_id ?? null
+      const { data, error } = await sb
+        .from('therapists')
+        .select('id, profiles!inner(name, avatar_url, company_id)')
+        .eq('status', 'approved')
+      if (error) throw error
+      const rows = (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        name: r.profiles?.name as string,
+        avatarUrl: (r.profiles?.avatar_url as string | null) ?? null,
+        companyId: (r.profiles?.company_id as string | null) ?? null,
+      }))
+      const sameCompany = myCompany ? rows.filter((r) => r.companyId === myCompany) : []
+      // pilot fallback: with no company-linked clinician, every approved one shows
+      return (sameCompany.length ? sameCompany : rows).map(({ id, name, avatarUrl }) => ({ id, name, avatarUrl }))
+    },
+    async getTherapistAvailability(therapistId: string) {
+      const { data, error } = await sb.from('therapist_availability').select('slots').eq('therapist_id', therapistId).maybeSingle()
+      if (error) return []
+      return ((data as { slots: unknown } | null)?.slots as import('./scheduling').WeeklySlot[] | undefined) ?? []
+    },
+    async listBookedTimes(therapistId: string, fromMs: number, toMs: number) {
+      const { data, error } = await sb.from('appointments')
+        .select('starts_at')
+        .eq('therapist_id', therapistId)
+        .eq('status', 'booked')
+        .gte('starts_at', toIso(fromMs))
+        .lt('starts_at', toIso(toMs))
+      if (error) return []
+      return (data ?? []).map((r: { starts_at: string }) => toMs2(r.starts_at))
+    },
+    async bookAppointment(therapistId: string, startsAtMs: number) {
+      const uid = await authUid()
+      const { data: me, error: pErr } = await sb.from('profiles').select('id, name, company_id').eq('auth_uid', uid).single()
+      if (pErr) throw pErr
+      const meRow = me as { id: string; name: string; company_id: string | null }
+      const { data, error } = await sb.from('appointments')
+        .insert({ therapist_id: therapistId, profile_id: meRow.id, patient_name: meRow.name, company_id: meRow.company_id, starts_at: toIso(startsAtMs) })
+        .select('id, duration_min')
+        .single()
+      if (error) {
+        if (/duplicate|unique/i.test(error.message)) throw new Error('That time was just taken — pick another slot.')
+        throw error
+      }
+      return { id: (data as any).id as string, therapistId, startsAtMs, durationMin: (data as any).duration_min ?? 50, status: 'booked' as const }
+    },
+    async getMyAppointment() {
+      const uid = await authUid()
+      const { data: me } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
+      const pid = (me as { id: string } | null)?.id
+      if (!pid) return null
+      const { data, error } = await sb.from('appointments')
+        .select('id, therapist_id, starts_at, duration_min, status, therapists!inner(profiles!inner(name))')
+        .eq('profile_id', pid)
+        .eq('status', 'booked')
+        .gte('starts_at', toIso(Date.now() - 2 * 3600_000))
+        .order('starts_at', { ascending: true })
+        .limit(1)
+      if (error || !data?.length) return null
+      const r = data[0] as any
+      return {
+        id: r.id as string,
+        therapistId: r.therapist_id as string,
+        therapistName: r.therapists?.profiles?.name as string | undefined,
+        startsAtMs: toMs2(r.starts_at),
+        durationMin: r.duration_min ?? 50,
+        status: 'booked' as const,
+      }
+    },
+    async cancelAppointment(id: string) {
+      const { error } = await sb.from('appointments').update({ status: 'cancelled' }).eq('id', id)
+      if (error) throw error
+    },
+    async getMyAvailability() {
+      const pid = await profileId()
+      const { data, error } = await sb.from('therapist_availability').select('slots').eq('therapist_id', pid).maybeSingle()
+      if (error) return []
+      return ((data as { slots: unknown } | null)?.slots as import('./scheduling').WeeklySlot[] | undefined) ?? []
+    },
+    async setMyAvailability(slots) {
+      const pid = await profileId()
+      const { error } = await sb.from('therapist_availability').upsert({ therapist_id: pid, slots, updated_at: toIso(Date.now()) }, { onConflict: 'therapist_id' })
+      if (error) throw error
+    },
+    async listMyAppointments() {
+      const pid = await profileId()
+      const { data, error } = await sb.from('appointments')
+        .select('id, profile_id, patient_name, starts_at, duration_min, status')
+        .eq('therapist_id', pid)
+        .eq('status', 'booked')
+        .gte('starts_at', toIso(Date.now() - 2 * 3600_000))
+        .order('starts_at', { ascending: true })
+      if (error) return []
+      return (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        therapistId: pid,
+        profileId: r.profile_id as string,
+        patientName: r.patient_name as string,
+        startsAtMs: toMs2(r.starts_at),
+        durationMin: r.duration_min ?? 50,
+        status: 'booked' as const,
+      }))
+    },
+    async patientForAppointment(a) {
+      const pid = await profileId()
+      const { data: found } = await sb.from('patients')
+        .select('id').eq('therapist_id', pid).eq('b2c_profile_id', a.profileId ?? '').limit(1)
+      if (found?.length) return (found[0] as { id: string }).id
+      const { data: created, error } = await sb.from('patients')
+        .insert({ therapist_id: pid, name: a.patientName ?? 'Patient', b2c_profile_id: a.profileId ?? null, reason: 'Scheduled session' })
+        .select('id').single()
+      if (error) throw error
+      const patientId = (created as { id: string }).id
+      await sb.from('patient_consents').insert({ patient_id: patientId, kind: 'therapy', granted: true })
+      return patientId
+    },
+
     async getMyAvatarUrl(): Promise<string | null> {
       try {
         const uid = await authUid()

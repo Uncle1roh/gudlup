@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Roster } from './Roster'
 import { PatientCard } from './PatientCard'
 import { PatientEdit } from './PatientEdit'
@@ -14,9 +14,11 @@ import { usePatient, useTherapist } from '../data/hooks'
 import { getProtocol } from '../data/protocols'
 import { SessionComposer } from '../compose/SessionComposer'
 import { AvatarUpload } from '../components/AvatarUpload'
+import { Agenda } from './Agenda'
+import { joinWindowOpen, fmtTime, type Appointment } from '../data/scheduling'
 import type { B2bSession } from './data'
 
-type Screen = 'roster' | 'card' | 'edit' | 'wizard' | 'compose' | 'session' | 'debrief' | 'report' | 'credentials'
+type Screen = 'agenda' | 'roster' | 'card' | 'edit' | 'wizard' | 'compose' | 'session' | 'debrief' | 'report' | 'credentials'
 
 const DEMO_SESSION_SECONDS = 96 // compress the 24-min Deep session for the demo
 
@@ -36,6 +38,27 @@ export function TherapistApp() {
   const dp = useDataProvider()
   const { data: therapist, loading: thLoading, error: thError, refetch: refetchTherapist } = useTherapist()
   const [screen, setScreen] = useState<Screen>('roster')
+
+  /* 5-minute pre-session notice (PO spec): poll upcoming appointments and
+     surface a banner above the roster when one is about to start. */
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [, setClock] = useState(0)
+  useEffect(() => {
+    let alive = true
+    const load = () => void dp.listMyAppointments().then((a) => { if (alive) setAppointments(a) }).catch(() => undefined)
+    load()
+    const id = window.setInterval(() => { setClock((n) => n + 1); load() }, 30_000)
+    return () => { alive = false; window.clearInterval(id) }
+  }, [dp])
+  const dueNow = appointments.find((a) => joinWindowOpen(a, Date.now()))
+
+  async function startScheduledSession(a: Appointment) {
+    try {
+      const patientId = await dp.patientForAppointment(a)
+      setSelectedId(patientId)
+      setScreen('card') // the ordinary session flow prevails from the card
+    } catch { /* patient lookup failed — the roster is still usable */ }
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: patient, refetch: refetchPatient } = usePatient(selectedId ?? '')
   const [config, setConfig] = useState<LaunchConfig | null>(null)
@@ -121,6 +144,7 @@ export function TherapistApp() {
           <span className="b2b-brand__name">goodloop <span className="b2b-brand__sub">clinic</span></span>
         </div>
         <div className="b2b-topbar__right">
+          <button className="b2b-demobtn" onClick={() => setScreen('agenda')}>🗓 Agenda</button>
           <button className="b2b-credchip" onClick={() => setScreen('credentials')}>
             <span className="b2b-credchip__badge">✓</span>
             {therapist?.name ?? '…'} · {therapist?.crp ?? ''}
@@ -134,6 +158,18 @@ export function TherapistApp() {
       </header>
 
       <main className="b2b-main">
+        {dueNow && screen !== 'session' && (
+          <div className="b2b-duebar">
+            <span>
+              <b>Session with {dueNow.patientName}</b> at {fmtTime(dueNow.startsAtMs)} — the patient sees their
+              &ldquo;Enter session&rdquo; button now.
+            </span>
+            <button className="b2b-btn b2b-btn--primary" onClick={() => void startScheduledSession(dueNow)}>
+              Start session →
+            </button>
+          </div>
+        )}
+        {screen === 'agenda' && <Agenda onBack={() => setScreen('roster')} />}
         {screen === 'roster' && <Roster onOpenPatient={(id) => { setSelectedId(id); setScreen('card') }} />}
 
         {screen === 'card' && (patient ? (

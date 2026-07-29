@@ -224,6 +224,26 @@ create table if not exists session_requests (
   created_at      timestamptz not null default now()
 );
 
+-- scheduling: the therapist's weekly availability template + booked visits
+create table if not exists therapist_availability (
+  therapist_id uuid primary key references therapists(id) on delete cascade,
+  slots        jsonb not null default '[]',  -- [{"weekday":1,"hhmm":"09:00"}] 0=Sun
+  updated_at   timestamptz not null default now()
+);
+
+create table if not exists appointments (
+  id            uuid primary key default gen_random_uuid(),
+  therapist_id  uuid not null references therapists(id) on delete cascade,
+  profile_id    uuid not null references profiles(id) on delete cascade,
+  patient_name  text not null,
+  company_id    text references companies(id),
+  starts_at     timestamptz not null,
+  duration_min  int not null default 50,
+  status        text not null default 'booked',  -- 'booked' | 'cancelled' | 'done'
+  created_at    timestamptz not null default now(),
+  unique (therapist_id, starts_at)
+);
+
 create table if not exists psychosocial_responses (
   id          uuid primary key default gen_random_uuid(),
   profile_id  uuid not null references profiles(id) on delete cascade,
@@ -399,6 +419,31 @@ alter table session_requests enable row level security;
 drop policy if exists sr_insert_own on session_requests;
 create policy sr_insert_own on session_requests
   for insert with check (profile_id = current_profile());
+
+-- scheduling policies -----------------------------------------------------
+alter table therapist_availability enable row level security;
+drop policy if exists ta_read_all on therapist_availability;
+create policy ta_read_all on therapist_availability
+  for select using (auth.uid() is not null);
+drop policy if exists ta_own_write on therapist_availability;
+create policy ta_own_write on therapist_availability
+  for all using (therapist_id = current_profile())
+  with check (therapist_id = current_profile());
+
+alter table appointments enable row level security;
+drop policy if exists ap_patient_own on appointments;
+create policy ap_patient_own on appointments
+  for select using (profile_id = current_profile());
+drop policy if exists ap_therapist_own on appointments;
+create policy ap_therapist_own on appointments
+  for select using (therapist_id = current_profile());
+drop policy if exists ap_patient_book on appointments;
+create policy ap_patient_book on appointments
+  for insert with check (profile_id = current_profile());
+drop policy if exists ap_update_involved on appointments;
+create policy ap_update_involved on appointments
+  for update using (profile_id = current_profile() or therapist_id = current_profile())
+  with check (profile_id = current_profile() or therapist_id = current_profile());
 drop policy if exists sr_select_own on session_requests;
 create policy sr_select_own on session_requests
   for select using (profile_id = current_profile());

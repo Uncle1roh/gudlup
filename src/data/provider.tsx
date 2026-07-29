@@ -63,6 +63,29 @@ export interface DataProvider {
   listCompanies(): Promise<Company[]>
   saveCompany(company: Company): Promise<void>
 
+  // --- Scheduling (patient ↔ therapist) ---
+  /** Approved therapists the signed-in employee can book (same company
+      first; falls back to all approved in the pilot). */
+  listAvailableTherapists(): Promise<import('./scheduling').TherapistListing[]>
+  /** A therapist's weekly availability template. */
+  getTherapistAvailability(therapistId: string): Promise<import('./scheduling').WeeklySlot[]>
+  /** Booked start times (ms) for a therapist in [fromMs, toMs). */
+  listBookedTimes(therapistId: string, fromMs: number, toMs: number): Promise<number[]>
+  /** Book a concrete slot; rejects when it was just taken. */
+  bookAppointment(therapistId: string, startsAtMs: number): Promise<import('./scheduling').Appointment>
+  /** The signed-in patient's upcoming appointment (or null). */
+  getMyAppointment(): Promise<import('./scheduling').Appointment | null>
+  cancelAppointment(id: string): Promise<void>
+  // --- Scheduling (therapist side) ---
+  getMyAvailability(): Promise<import('./scheduling').WeeklySlot[]>
+  setMyAvailability(slots: import('./scheduling').WeeklySlot[]): Promise<void>
+  /** The signed-in therapist's upcoming appointments (soonest first). */
+  listMyAppointments(): Promise<import('./scheduling').Appointment[]>
+  /** Find (or create) the roster patient linked to an appointment's B2C
+      profile — used by the "start session" notice; the session flow itself
+      is the existing one. */
+  patientForAppointment(a: import('./scheduling').Appointment): Promise<string>
+
   // --- My profile picture (all roles) ---
   /** Public URL of the signed-in user's avatar, or null when unset. */
   getMyAvatarUrl(): Promise<string | null>

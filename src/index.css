@@ -1847,3 +1847,39 @@ img, svg, video, canvas { max-width: 100%; }
 .adm-plain__details { margin-top: 26px; }
 .adm-plain__toggle { background: none; border: none; font-size: 13px; color: var(--muted, #7a8a80); cursor: pointer; padding: 0; }
 .adm-plain__detailbody { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
+
+/* Scheduling — patient modal */
+.modal-scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: grid; place-items: center; z-index: 80; padding: 16px; }
+.sched { width: min(440px, 96vw); max-height: 86vh; overflow-y: auto; background: #fff; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.sched__head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+.sched__close { background: none; border: none; font-size: 15px; cursor: pointer; color: var(--muted, #7a8a80); }
+.sched__err { font-size: 13px; color: #a04545; }
+.sched__list { display: flex; flex-direction: column; gap: 8px; }
+.sched__item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line, #dfe7e2); border-radius: 12px; background: #fff; cursor: pointer; font-size: 15px; }
+.sched__item:hover { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.sched__avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--mist-2, #e8efe9); display: grid; place-items: center; overflow: hidden; flex: none; }
+.sched__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sched__arrow { margin-left: auto; color: var(--muted, #7a8a80); }
+.sched__backlink { background: none; border: none; color: var(--accent, #2e7d5b); cursor: pointer; text-align: left; padding: 0; font-size: 13px; }
+.sched__day { margin-top: 4px; }
+.sched__dayname { font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: capitalize; }
+.sched__times { display: flex; flex-wrap: wrap; gap: 8px; }
+.sched__time { padding: 8px 14px; border: 1px solid var(--line, #dfe7e2); border-radius: 10px; background: #fff; cursor: pointer; font-size: 14px; }
+.sched__time:hover:not(:disabled) { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.sched__done { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; padding: 8px 0; }
+.sched__check { width: 46px; height: 46px; border-radius: 50%; background: var(--accent, #2e7d5b); color: #fff; display: grid; place-items: center; font-size: 22px; }
+.start-cta--join { background: var(--accent, #2e7d5b); }
+
+/* Therapist agenda */
+.b2b-duebar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; margin-bottom: 14px; border-radius: 12px; background: #fdf6e7; border: 1px solid #ecd9a8; font-size: 14px; }
+.agenda__grid { display: grid; grid-template-columns: 56px repeat(7, 1fr); gap: 4px; max-width: 720px; margin-top: 14px; }
+.agenda__corner { }
+.agenda__col { font-size: 12px; text-align: center; color: var(--muted, #7a8a80); padding-bottom: 2px; }
+.agenda__hour { font-size: 11.5px; color: var(--muted, #7a8a80); display: flex; align-items: center; }
+.agenda__cell { height: 26px; border-radius: 6px; border: 1px solid var(--line, #dfe7e2); background: #fff; cursor: pointer; padding: 0; }
+.agenda__cell:hover { border-color: var(--accent, #2e7d5b); }
+.agenda__cell.is-on { background: var(--accent, #2e7d5b); border-color: var(--accent, #2e7d5b); }
+.agenda__appts { display: flex; flex-direction: column; gap: 8px; max-width: 560px; }
+.agenda__appt { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border: 1px solid var(--line, #dfe7e2); border-radius: 10px; background: #fff; font-size: 14px; }
+.agenda__appt-when { font-weight: 600; min-width: 150px; }
+.agenda__appt-who { flex: 1; }
