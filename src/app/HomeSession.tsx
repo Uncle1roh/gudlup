@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { useDataProvider } from '../data/provider'
 import { useMySessionRequest } from '../data/hooks'
-import { greeting, lastSession, todayRecommendation } from '../data/seed'
+import { greeting, lastSession } from '../data/seed'
 import { getProtocol } from '../data/protocols'
+import { currentProgramStep, programComplete, switchProgramTo } from '../data/program'
 import { useI18n } from '../i18n'
 import type { SessionRecord, Duration } from '../types/domain'
 
@@ -12,7 +13,6 @@ interface HomeSessionProps {
   onStart: (launch: { protocolCode: string; duration: Duration }) => void
   onWizard: () => void
   onExplore: () => void
-  onCompose: () => void
   onAssess: () => void
 }
 
@@ -30,8 +30,9 @@ function lastWizardAlternative(): { code: string; title: string; primaryCode: st
   }
 }
 
-/** B9: one large CTA (the 3–4 question wizard), one recommendation card. */
-export function HomeSession({ history, onStart, onWizard, onExplore, onCompose, onAssess }: HomeSessionProps) {
+/** B9: one large CTA — the protocol project when one is running (next
+    sub-protocol of the family pathway), the 3–4 question wizard otherwise. */
+export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }: HomeSessionProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const { data: myRequest, refetch: refetchRequest } = useMySessionRequest()
@@ -55,10 +56,10 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onCompose, 
   }
   const last = lastSession(history)
   const lastProtocol = getProtocol(last.protocolCode)
+  const step = currentProgramStep()
+  const complete = programComplete()
   const wizardAlt = lastWizardAlternative()
-  const altProtocol = wizardAlt ? getProtocol(wizardAlt.code) : null
-  const rec = todayRecommendation()
-  const recProtocol = getProtocol(rec.code)
+  const altProtocol = wizardAlt && step && step.step === 1 ? getProtocol(wizardAlt.code) : null
 
   return (
     <div className="screen home">
@@ -70,43 +71,51 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onCompose, 
         <BreathingOrb size={64} rings={false} />
       </header>
 
-      <button className="start-cta" onClick={onWizard}>
-        <span className="start-cta__label">{t('Start session')}</span>
-        <span className="start-cta__sub">{t('A few quick questions find the right session for now')}</span>
-      </button>
+      {step ? (
+        <button className="start-cta" onClick={() => onStart({ protocolCode: step.code, duration: step.duration })}>
+          <span className="start-cta__label">{t('Continue your path')}</span>
+          <span className="start-cta__sub">
+            {step.protocol?.title ?? step.code} · {t('session {n} of {total}', { n: step.step, total: step.total })} · {step.duration} {t('min')}
+          </span>
+        </button>
+      ) : (
+        <button className="start-cta" onClick={onWizard}>
+          <span className="start-cta__label">{t('Start session')}</span>
+          <span className="start-cta__sub">{complete ? t('Path complete — check in to begin the next one') : t('A few quick questions find the right session for now')}</span>
+        </button>
+      )}
 
-      {lastProtocol && (
+      {step && (
+        <button className="rec-card" onClick={onWizard}>
+          <span className="rec-card__eyebrow">{t('Feeling different?')}</span>
+          <span className="rec-card__title">{t('Check in again')}</span>
+          <span className="rec-card__reason">{t('A new check-in restarts your path from today’s answers')}</span>
+        </button>
+      )}
+
+      {altProtocol && wizardAlt && (
+        <button
+          className="rec-card"
+          onClick={() => {
+            // the spec's fallback: the primary didn't resonate — the path
+            // restarts from the ALTERNATIVE protocol
+            switchProgramTo(altProtocol.code)
+            onStart({ protocolCode: altProtocol.code, duration: step?.duration ?? 12 })
+          }}
+        >
+          <span className="rec-card__eyebrow">{t('Didn’t resonate?')}</span>
+          <span className="rec-card__title">{altProtocol.title}</span>
+          <span className="rec-card__reason">{t('The alternative to your last choice')}</span>
+        </button>
+      )}
+
+      {!step && lastProtocol && (
         <button className="rec-card" onClick={() => onStart(last)}>
           <span className="rec-card__eyebrow">{t('Repeat')}</span>
           <span className="rec-card__title">{lastProtocol.title}</span>
           <span className="rec-card__reason">{t('Same as last time')} · {last.duration} {t('min')}</span>
         </button>
       )}
-
-      {altProtocol && (
-        <button className="rec-card" onClick={() => onStart({ protocolCode: altProtocol.code, duration: 12 })}>
-          <span className="rec-card__eyebrow">{t('Didn’t resonate?')}</span>
-          <span className="rec-card__title">{altProtocol.title}</span>
-          <span className="rec-card__reason">{t('The alternative to your last choice')} · 12 {t('min')}</span>
-        </button>
-      )}
-
-      {recProtocol && !altProtocol && (
-        <button className="rec-card" onClick={() => onStart({ protocolCode: rec.code, duration: 6 })}>
-          <span className="rec-card__eyebrow">{t('For you today')}</span>
-          <span className="rec-card__title">{recProtocol.title}</span>
-          <span className="rec-card__reason">{t(rec.reason)} · 6 {t('min')}</span>
-        </button>
-      )}
-
-      <button className="compose-card" onClick={onCompose}>
-        <span className="compose-card__icon">♪</span>
-        <span className="compose-card__text">
-          <strong>{t('Compose your own')}</strong>
-          <span>{t('Pick a focus, soundscape & voice')}</span>
-        </span>
-        <span className="compose-card__arrow">→</span>
-      </button>
 
       <button className="assess-card" onClick={requestTherapist} disabled={!!myRequest || requesting} style={myRequest ? { opacity: 0.75 } : undefined}>
         <span className="assess-card__icon">🩺</span>

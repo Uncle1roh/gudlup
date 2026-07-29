@@ -41,3 +41,15 @@ assert(CLUSTER_SPECS.find((c) => c.cluster === 'resilience')!.options[2].alterna
 
 if (process.exitCode) { console.error('\nTEST FAILED'); process.exit(1) }
 console.log('\nALL PASS')
+
+/* --- the protocol project (family pathway + progression) --- */
+import { buildProgramCodes } from '../src/data/program'
+{
+  const fromEntry = buildProgramCodes('GL-ANX 1.3')
+  assert(fromEntry.join(' | ') === 'GL-ANX 1.3 | GL-ANX 1.4 | GL-ANX 1.5 | GL-ANX 1.1 | GL-ANX 1.2', `entry 1.3 → 1.3, 1.4, 1.5, wrap 1.1, 1.2`)
+  const fromOne = buildProgramCodes('GL-DEP 2.1')
+  assert(fromOne.join(' | ') === 'GL-DEP 2.1 | GL-DEP 2.2 | GL-DEP 2.3 | GL-DEP 2.4 | GL-DEP 2.5', `entry 2.1 → straight 2.1…2.5`)
+  assert(buildProgramCodes('GL-STRESS 4.5').length === 5 && buildProgramCodes('GL-STRESS 4.5')[1] === 'GL-STRESS 4.1', `entry 4.5 wraps to 4.1`)
+  assert(fromEntry.every((c) => codes.has(c)), `every pathway code resolves in the registry`)
+}
+console.log('program checks done')

@@ -1,5 +1,36 @@
 # Good Loop — build manifest
 
+**Slice: B2C composer removed + the protocol project (auto progression)**
+(current)
+- "Compose your own" is GONE from the B2C app: the home card, the composer
+  screen state and its launch path are removed — an employee can never
+  build their own audio. The SessionComposer itself stays available in the
+  THERAPIST portal (clinical tool), untouched.
+- **The protocol project** (`src/data/program.ts`): the wizard's answers
+  now create the person's whole family pathway, not just one session.
+  Entry protocol = the wizard's primary; the pathway ascends through the
+  family and wraps to cover all five sub-protocols exactly once (entry
+  GL-ANX 1.3 → 1.3, 1.4, 1.5, 1.1, 1.2 — per the innovation doc's sequence
+  model, collapsed to per-session steps for the self-guided B2C; the
+  Phase-2 therapist pathway keeps its own clinical pacing). Finishing the
+  program's current session ADVANCES it: 1.1 → next session is 1.2, and so
+  on. Repeat/Explore sessions never advance the path. State in
+  localStorage (`gl.program`), duration = the wizard's Q4 answer.
+- Home screen: with a path running, the big CTA becomes "Continue your
+  path — <protocol> · session N of 5 · Xm"; a "Feeling different? Check in
+  again" card re-runs the wizard (restarting the path from today's
+  answers); the "Didn't resonate?" card (shown after session 1) now
+  RESTARTS the path from the spec's alternative protocol. Path complete →
+  the CTA invites a fresh check-in. Onboarding starts the program too.
+- Note on "the 1-minute placeholder audio": that is the dev-bar demo
+  toggle (demo · 1 min) and/or a protocol whose audio isn't published yet
+  — only GL-ANX 1.1 has attached audio today. As each protocol's PLAIN
+  file is imported + rendered + attached in the admin, the same program
+  sessions automatically stream the real files (registry hydration).
+- Node proofs: pathway construction (entry 1.3 wrap, 2.1 straight, 4.5
+  wrap, all codes resolve) added to test-wizard — ALL PASS; all seven
+  prior proofs pass; `tsc` + `npm run build` clean.
+
 **Fix: onboarding uses the new wizard** (current)
 - The screenshot'd emoji screen was the OLD MicroIntake inside the
   first-run onboarding — the main app already opened the new wizard, but a

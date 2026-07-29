@@ -5,6 +5,7 @@ import { StereoCheck } from '../screens/StereoCheck'
 import { ImmersivePlayer } from '../screens/ImmersivePlayer'
 import { PostSession } from '../screens/PostSession'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
+import { startProgram } from '../data/program'
 import { useI18n } from '../i18n'
 import type { WizardResult } from '../data/wizard'
 import type { MoodCheck, Protocol } from '../types/domain'
@@ -44,6 +45,7 @@ export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: On
 
   function handleWizardDone(r: WizardResult) {
     setWizardResult(r)
+    startProgram(r) // the whole family pathway starts here
     // remember the ALTERNATIVE for the "didn't resonate?" card on the home
     try {
       localStorage.setItem('gl.wizard.last', JSON.stringify({

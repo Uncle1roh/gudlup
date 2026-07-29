@@ -5,8 +5,8 @@ import { Explore } from './Explore'
 import { Profile } from './Profile'
 import { SessionRunner } from './SessionRunner'
 import { Assessment } from './Assessment'
-import { SessionComposer } from '../compose/SessionComposer'
 import { SessionWizard } from '../screens/SessionWizard'
+import { advanceProgramAfter, startProgram } from '../data/program'
 import type { WizardResult } from '../data/wizard'
 import { useSessions } from '../data/hooks'
 import { useDataProvider } from '../data/provider'
@@ -35,11 +35,13 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   const [tab, setTab] = useState<Tab>('session')
   const [launch, setLaunch] = useState<Launch | null>(null)
   const [wizard, setWizard] = useState(false)
-  const [composing, setComposing] = useState(false)
   const [assessing, setAssessing] = useState(false)
 
   async function finishSession(record: SessionRecord) {
     await dp.recordSession(record)
+    // the protocol project: finishing the program's current sub-protocol
+    // advances it to the next one (1.1 → 1.2 → …)
+    advanceProgramAfter(record.protocolCode)
     refetch()
     setLaunch(null)
     setTab('session')
@@ -63,6 +65,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
               at: Date.now(),
             }))
           } catch { /* private mode — fine */ }
+          startProgram(r) // build the whole family pathway from the answers
           setWizard(false)
           setLaunch({ protocolCode: r.protocolCode, duration: r.duration })
         }}
@@ -82,16 +85,6 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
     )
   }
 
-  if (composing) {
-    return (
-      <SessionComposer
-        context="b2c"
-        onCancel={() => setComposing(false)}
-        onUse={(r) => { setComposing(false); setLaunch({ protocolCode: r.protocolCode, duration: r.durationMin }) }}
-      />
-    )
-  }
-
   if (assessing) {
     return <Assessment onDone={() => setAssessing(false)} />
   }
@@ -99,7 +92,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   return (
     <div className="app-frame app-frame--tabs">
       <div className="tabview">
-        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onWizard={() => setWizard(true)} onExplore={() => setTab('explore')} onCompose={() => setComposing(true)} onAssess={() => setAssessing(true)} />}
+        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onWizard={() => setWizard(true)} onExplore={() => setTab('explore')} onAssess={() => setAssessing(true)} />}
         {tab === 'progress' && <Progress history={history} />}
         {tab === 'explore' && <Explore onStart={setLaunch} />}
         {tab === 'profile' && <Profile demoSeconds={demoSeconds} onDemoToggle={onDemoToggle} />}

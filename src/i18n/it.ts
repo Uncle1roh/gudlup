@@ -375,4 +375,10 @@ export const IT: Record<string, string> = {
   'Cancel': 'Annulla',
   'Before we start': 'Prima di iniziare',
   'full session': 'sessione intera',
+  'Continue your path': 'Continua il tuo percorso',
+  'session {n} of {total}': 'sessione {n} di {total}',
+  'Path complete — check in to begin the next one': 'Percorso completato — fai un nuovo check-in per iniziare il prossimo',
+  'Feeling different?': 'Ti senti diverso?',
+  'Check in again': 'Fai di nuovo il check-in',
+  'A new check-in restarts your path from today’s answers': 'Un nuovo check-in fa ripartire il percorso dalle risposte di oggi',
 }
