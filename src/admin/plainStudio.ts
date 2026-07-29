@@ -346,6 +346,7 @@ export function plainToStudioTracks(
       })
       const hi = Math.max(...l.clipDbs)
       const lo = Math.min(...l.clipDbs)
+      l.track.baseLufs = +(ANCHOR_LUFS + hi).toFixed(1) // fader reads/edits LUFS
       notes.push(`"${l.track.name}": clips input-normalized to ${hi === lo ? levelLabel(hi, 'lufs') : `${levelLabel(hi, 'lufs')}…${levelLabel(lo, 'lufs')}`} (from the Excel); fader neutral.`)
     } else {
       const base = Math.min(12, Math.max(-60, Math.max(...l.clipDbs)))
@@ -354,8 +355,11 @@ export function plainToStudioTracks(
         clip.calibrateDb = +(l.clipDbs[i] - base).toFixed(2)
         clip.gainDb = undefined
       })
+      // legacy offset sheets read in LUFS too: at fader gain 1 the lane sits
+      // at anchor (clips normalized to dB−base, fader carries base)
+      l.track.baseLufs = ANCHOR_LUFS
       const lo = Math.min(...l.clipDbs)
-      notes.push(`"${l.track.name}": fader at ${base} dB (the Excel value); clips input-normalized in LUFS${lo < base ? `, quieter ones down to ${(lo - base).toFixed(0)} dB vs the fader` : ''}.`)
+      notes.push(`"${l.track.name}": fader at ${(ANCHOR_LUFS + base).toFixed(0)} LUFS (the Excel's ${base} dB vs voice); clips input-normalized${lo < base ? `, quieter ones down to ${(lo - base).toFixed(0)} dB vs the fader` : ''}.`)
     }
   }
 

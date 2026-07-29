@@ -105,6 +105,25 @@ function gainToDbLabel(gain: number): string {
   return `${db > 0 ? '+' : ''}${db.toFixed(1)} dB`
 }
 
+/* LUFS fader (PLAIN imports): the slider reads/edits the lane's RESULTING
+   loudness target — authored baseLufs (README §6 map) plus the fader's gain.
+   Voice at −16 LUFS shows "−16.0 LUFS"; pulling it to −22 attenuates 6 dB. */
+const FADER_MIN_LUFS = -60
+const FADER_MAX_LUFS = -6
+function trackLufs(baseLufs: number, gain: number): number {
+  return gain <= 0 ? -Infinity : baseLufs + 20 * Math.log10(gain)
+}
+function lufsToGain(baseLufs: number, lufs: number): number {
+  return Math.pow(10, (Math.min(FADER_MAX_LUFS, lufs) - baseLufs) / 20)
+}
+function lufsToFaderPos(lufs: number): number {
+  if (!Number.isFinite(lufs)) return 0
+  return Math.min(1, Math.max(0, (lufs - FADER_MIN_LUFS) / (FADER_MAX_LUFS - FADER_MIN_LUFS)))
+}
+function faderPosToLufs(pos: number): number {
+  return FADER_MIN_LUFS + pos * (FADER_MAX_LUFS - FADER_MIN_LUFS)
+}
+
 interface Track {
   id: string
   type: TrackType
@@ -116,6 +135,9 @@ interface Track {
   channel?: TrackChannel
   /** Per-track effect chain (harmonizer · echo · reverb · saturation · filter). */
   effects?: TrackEffect[]
+  /** Authored loudness target (absolute LUFS at fader gain 1) — PLAIN
+      imports set it; when present the fader reads/edits in LUFS. */
+  baseLufs?: number
   clips: Clip[]
 }
 
@@ -142,6 +164,7 @@ function seedTrackToTrack(t: SeedTrack): Track {
     id: uid(), type: t.type, name: t.name, volume: t.volume, muted: false, soloed: false,
     channel: t.channel,
     effects: t.effects,
+    baseLufs: t.baseLufs,
     clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec, calibrateDb: c.calibrateDb })),
   }
 }
@@ -1011,30 +1034,57 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
         <span style={{ flex: 1 }} />
         <button className="mt-addclip" onClick={onAddClip} title="Add clip at playhead">＋</button>
       </div>
-      <div className="mt-head__vol" title="Track level in dB vs the mix — scroll for ±0.5 dB fine steps">
-        <input
-          className="mt-vol"
-          type="range" min={0} max={1} step={0.002}
-          value={gainToFaderPos(track.volume)}
-          onChange={(e) => onVolume(faderPosToGain(+e.target.value))}
-          onWheel={(e) => {
-            e.preventDefault()
-            if (track.volume <= 0) { onVolume(faderPosToGain(0.02)); return }
-            const db = 20 * Math.log10(track.volume) + (e.deltaY < 0 ? 0.5 : -0.5)
-            onVolume(db < FADER_MIN_DB ? 0 : Math.pow(10, Math.min(FADER_MAX_DB, db) / 20))
-          }}
-        />
-        <span className="mt-head__voldb">
-          <EditableValue
-            display={gainToDbLabel(track.volume)}
-            commit={(raw) => {
-              const v = parseTyped(raw, FADER_MIN_DB, FADER_MAX_DB)
-              if (v != null) onVolume(Math.pow(10, v / 20))
+      {track.baseLufs !== undefined ? (
+        <div className="mt-head__vol" title="Track loudness target in LUFS (the protocol's mix language) — scroll for ±0.5 LU">
+          <input
+            className="mt-vol"
+            type="range" min={0} max={1} step={0.002}
+            value={lufsToFaderPos(trackLufs(track.baseLufs, track.volume))}
+            onChange={(e) => onVolume(lufsToGain(track.baseLufs!, faderPosToLufs(+e.target.value)))}
+            onWheel={(e) => {
+              e.preventDefault()
+              const cur = trackLufs(track.baseLufs!, track.volume)
+              const next = (Number.isFinite(cur) ? cur : FADER_MIN_LUFS) + (e.deltaY < 0 ? 0.5 : -0.5)
+              onVolume(next < FADER_MIN_LUFS ? 0 : lufsToGain(track.baseLufs!, next))
             }}
-            title="Click to type the level in dB (e.g. -12)"
           />
-        </span>
-      </div>
+          <span className="mt-head__voldb">
+            <EditableValue
+              display={Number.isFinite(trackLufs(track.baseLufs, track.volume)) ? `${trackLufs(track.baseLufs, track.volume).toFixed(1)} LUFS` : '−∞'}
+              commit={(raw) => {
+                const v = parseTyped(raw, FADER_MIN_LUFS, FADER_MAX_LUFS)
+                if (v != null) onVolume(lufsToGain(track.baseLufs!, v))
+              }}
+              title="Click to type the target in LUFS (e.g. -22)"
+            />
+          </span>
+        </div>
+      ) : (
+        <div className="mt-head__vol" title="Track level in dB vs the mix — scroll for ±0.5 dB fine steps">
+          <input
+            className="mt-vol"
+            type="range" min={0} max={1} step={0.002}
+            value={gainToFaderPos(track.volume)}
+            onChange={(e) => onVolume(faderPosToGain(+e.target.value))}
+            onWheel={(e) => {
+              e.preventDefault()
+              if (track.volume <= 0) { onVolume(faderPosToGain(0.02)); return }
+              const db = 20 * Math.log10(track.volume) + (e.deltaY < 0 ? 0.5 : -0.5)
+              onVolume(db < FADER_MIN_DB ? 0 : Math.pow(10, Math.min(FADER_MAX_DB, db) / 20))
+            }}
+          />
+          <span className="mt-head__voldb">
+            <EditableValue
+              display={gainToDbLabel(track.volume)}
+              commit={(raw) => {
+                const v = parseTyped(raw, FADER_MIN_DB, FADER_MAX_DB)
+                if (v != null) onVolume(Math.pow(10, v / 20))
+              }}
+              title="Click to type the level in dB (e.g. -12)"
+            />
+          </span>
+        </div>
+      )}
     </div>
   )
 }

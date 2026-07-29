@@ -51,6 +51,9 @@ export interface SeedTrack {
       / 'soundscape' −6 dB under active voice; 'none' = never duck (voice,
       entrainment, heartbeat). Ignored by the live Studio transport. */
   duck?: 'music' | 'soundscape' | 'none'
+  /** The lane's authored loudness target in absolute LUFS (at fader gain 1).
+      When present, the Studio fader reads/edits in LUFS instead of dB. */
+  baseLufs?: number
   clips: SeedClip[]
 }
 

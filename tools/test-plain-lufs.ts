@@ -59,6 +59,12 @@ async function main() {
   const loop = seed.tracks.find((x) => x.name.startsWith('VOX-C Materna · loop'))!
   assert(loop.clips.length === 12 && loop.clips.every((c) => close(c.calibrateDb!, off(-16))), `loop: 12 clips at −16 LUFS`)
 
+  // LUFS faders: every lane carries its authored baseLufs so the Studio
+  // fader reads the protocol's language (voice −16, music −22, …)
+  assert(close(guide.baseLufs ?? 0, -16, 0.01), `VOX-C fader reads −16.0 LUFS at neutral`)
+  assert(close(mus.baseLufs ?? 0, -22, 0.01), `MUS-1 fader reads −22.0 LUFS (its loudest clip)`)
+  assert(close(ss1.baseLufs ?? 0, -22, 0.01) && close(bin.baseLufs ?? 0, -25, 0.01), `SS-1 −22 · BIN-1 −25 on the faders`)
+
   // fades/crossfades/ducking survive the encoding switch
   const ss1Sorted = [...ss1.clips].sort((a, b) => a.startSec - b.startSec)
   assert(ss1Sorted[1].fadeInSec === 6 && (ss1Sorted[0].fadeOutSec ?? 0) >= 6, `crossfades still applied`)

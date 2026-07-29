@@ -1,5 +1,17 @@
 # Good Loop — build manifest
 
+**Fix: Studio faders read LUFS** (current)
+- PLAIN lanes now carry their authored loudness target (`baseLufs` on the
+  seed → track), and the Studio fader reads/edits in LUFS — the protocol's
+  own mix language: VOX-C shows "−16.0 LUFS" at neutral, MUS-1 "−22.0",
+  BIN-1 "−25.0"; dragging to −22 attenuates exactly 6 dB; type-in ("-22")
+  and scroll (±0.5 LU) work in LUFS; range −60…−6 LUFS, bottom = mute.
+  Legacy volume_db sheets read in LUFS too (anchor-referenced). Manual /
+  non-PLAIN tracks keep the dB fader. Internally nothing changed —
+  `track.volume` stays linear gain, engine/mixdown untouched.
+- Proven on the PO's LUFS workbook: baseLufs −16 / −22 / −22 / −25 on the
+  respective lanes; all prior proofs pass. `tsc` + build clean.
+
 **Slice: volume_lufs — absolute per-clip LUFS targets (PO's new Excel)**
 (current)
 - The PO re-encoded the level column exactly as the loudness doc's
