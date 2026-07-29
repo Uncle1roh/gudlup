@@ -1,11 +1,11 @@
-/* The review + render half of the PLAIN Timeline import path. A parsed
-   PlainTimeline is verified (identity, per-version phase map, tracks with
-   clip counts per type, the affirmation database, every Rules-doc validation
-   issue), seeded into the Sound Studio 1:1, rendered offline (the WAV IS the
-   Studio mixdown — same clip renderer, same FX builder — plus the app-side
-   §8.3 ducking and the random draws from the tag / phase pools), published
-   to the shared catalog with the full timeline attached, and uploaded as the
-   192 kbps streaming copy. */
+/* The PLAIN protocol workscreen — deliberately minimal (PO feedback):
+   after the catalog list, the admin sees ONE line of identity and FOUR
+   actions — Import Excel · Edit in Studio · Publish · Download — nothing
+   else. Publish is the whole pipeline in one press (catalog entry with the
+   full timeline → offline render with voice → 192 kbps upload → live in the
+   employee app and monitored sessions). Download renders the same WAV
+   locally. Everything technical (validation issues, seeding decisions,
+   render notes, the voice-engine key) lives behind a collapsed "Details". */
 
 import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
@@ -21,13 +21,7 @@ import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
 import { plainWavFileName, renderPlainWav } from './renderPlain'
-import {
-  PLAIN_TIPO_LABEL,
-  secToMmss,
-  type PlainTimeline,
-  type PlainTipo,
-  type PlainVersion,
-} from './plainTimeline'
+import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
 interface Props {
   timeline: PlainTimeline
@@ -37,14 +31,7 @@ interface Props {
   onDone: () => void
 }
 
-const TIPO_ORDER: PlainTipo[] = ['voice', 'soundscape', 'music', 'binaural', 'bilateral', 'solfeggio']
 const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
-
-function tipoCounts(v: PlainVersion): { tipo: PlainTipo; n: number }[] {
-  const map = new Map<PlainTipo, number>()
-  for (const c of v.clips) map.set(c.tipo, (map.get(c.tipo) ?? 0) + 1)
-  return TIPO_ORDER.filter((t) => map.has(t)).map((t) => ({ tipo: t, n: map.get(t)! }))
-}
 
 function familyFromCode(code: string | null): ProtocolFamily {
   const fam = (code ?? '').split(/\s+/)[0] as ProtocolFamily
@@ -74,407 +61,256 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
 
   const errors = t.issues.filter((i) => i.level === 'error')
-  const warnings = t.issues.filter((i) => i.level === 'warning')
-  const infos = t.issues.filter((i) => i.level === 'info')
-  const totalClips = useMemo(() => t.versions.reduce((n, v) => n + v.clips.length, 0), [t])
+  const nonErrors = t.issues.filter((i) => i.level !== 'error')
 
-  /* ---- asset pools for the random draw. The draw happens at SEED time, so
-     seeding/rendering is GATED until this resolves — clicking fast must never
-     produce a silent "no pool available" project again. Mock mode and a
-     failed load stay usable (with the silent-lanes note + a Retry). ---- */
+  /* one selected version (chips only when the workbook has several) */
+  const [sheet, setSheet] = useState<string>(t.versions[0]?.sheet ?? '')
+  const version = t.versions.find((v) => v.sheet === sheet) ?? t.versions[0]
+
+  /* ---- asset pools (draw happens at seed/render — gate until ready) ---- */
   const [pools, setPools] = useState<AssetPools | null>(null)
   const [poolsState, setPoolsState] = useState<'loading' | 'ready' | 'failed' | 'mock'>(hasSupabaseEnv() ? 'loading' : 'mock')
-  const [poolsMsg, setPoolsMsg] = useState<string>(hasSupabaseEnv() ? 'Loading the asset library…' : 'No Supabase env — Music/Soundscape lanes stay silent (mock mode).')
   const [poolsTick, setPoolsTick] = useState(0)
   useEffect(() => {
     if (!hasSupabaseEnv()) return
     let alive = true
     setPoolsState('loading')
-    setPoolsMsg('Loading the asset library…')
     void (async () => {
       try {
         const [assets, meta] = await Promise.all([listAssets(), loadAssetMeta()])
         if (!alive) return
-        const p = buildAssetPools(assets, meta)
-        setPools(p)
-        const music = Object.values(p.musicByPhase).reduce((n, arr) => n + (arr?.length ?? 0), 0)
+        setPools(buildAssetPools(assets, meta))
         setPoolsState('ready')
-        setPoolsMsg(`Pools ready: ${music} music files across ${Object.keys(p.musicByPhase).length} phase pools · ${p.soundscapes.length} soundscapes / ${p.soundscapeByTag.size} tags · ${p.heartbeat.length} heartbeat.`)
-      } catch (e) {
-        if (!alive) return
-        setPoolsState('failed')
-        setPoolsMsg(`Asset library unreachable (${(e as Error).message}) — lanes would be silent.`)
+      } catch {
+        if (alive) setPoolsState('failed')
       }
     })()
     return () => { alive = false }
   }, [poolsTick])
   const poolsLoading = poolsState === 'loading'
 
-  /* ---- Studio hand-off ---- */
-  const [seedNotes, setSeedNotes] = useState<{ sheet: string; notes: string[] } | null>(null)
-  const [seedError, setSeedError] = useState<string | null>(null)
-
-  function openInStudio(v: PlainVersion) {
-    try {
-      const seed = plainToStudioTracks(t, v, { pools: pools ?? undefined })
-      const dur = v.durationMin === 6 || v.durationMin === 12 || v.durationMin === 24 ? (v.durationMin as Duration) : undefined
-      const attach = t.code && dur ? { code: t.code, duration: dur } : undefined
-      setStudioSeed(seed.tracks, seed.name, attach)
-      setSeedError(null)
-      setSeedNotes({ sheet: v.sheet, notes: seed.notes })
-      // Navigation is the user's second click (in the notes panel), so the
-      // seeding decisions are readable before leaving this screen.
-    } catch (e) {
-      setSeedError((e as Error).message)
-    }
-  }
-
-  /* ---- publish ---- */
-  const [title, setTitle] = useState(t.title ?? t.code ?? '')
-  const [blurb, setBlurb] = useState('')
-  const [published, setPublished] = useState<CatalogProtocol | null>(null)
-  const [publishError, setPublishError] = useState<string | null>(null)
+  /* ---- status line (single, replaces all the old cards) ---- */
+  const [status, setStatus] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [notes, setNotes] = useState<string[]>([])
 
-  /* If this code is already in the catalog (opened FROM the catalog, or a
-     re-import of a published protocol), start in the published state — no
-     second Publish needed before attaching audio. */
+  /* ---- published state (auto-detected for catalog reopens) ---- */
+  const [published, setPublished] = useState<CatalogProtocol | null>(null)
+  const [live, setLive] = useState(false)
   useEffect(() => {
     if (!t.code) return
     let alive = true
     void dp.listProtocols()
       .then((ps) => {
         const existing = ps.find((p) => p.code === t.code)
-        if (alive && existing?.plain) setPublished(existing)
+        if (alive && existing?.plain) {
+          setPublished(existing)
+          setLive(existing.versions.some((v) => v.audioUrl?.['pt-BR']))
+        }
       })
-      .catch(() => { /* mock/offline — publish manually */ })
+      .catch(() => undefined)
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.code])
 
-  function explainSaveError(e: unknown): string {
+  function explain(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
     if (/plain|datasheet|asset_map|PGRST204|42703|column .* does not exist|schema cache/i.test(msg)) {
-      return `${msg} — the database is missing the new catalog columns. Run the updated supabase/setup.sql (it adds protocols.plain and asset_meta, and is safe to re-run), then press Publish again.`
+      return `${msg} — run the updated supabase/setup.sql, then try again.`
     }
     if (/row-level security|RLS|permission|policy/i.test(msg)) {
-      return `${msg} — the signed-in account isn't an admin for the catalog write policy. Sign in as admin@goodloop.app and retry.`
+      return `${msg} — sign in as a catalog admin (admin@goodloop.app).`
     }
     return msg
   }
 
+  /* ---- actions ------------------------------------------------------- */
+
+  function editInStudio() {
+    if (!version) return
+    try {
+      const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
+      const dur = version.durationMin === 6 || version.durationMin === 12 || version.durationMin === 24 ? (version.durationMin as Duration) : undefined
+      setStudioSeed(seed.tracks, seed.name, t.code && dur ? { code: t.code, duration: dur } : undefined)
+      setNotes(seed.notes)
+      window.location.hash = '#studio'
+    } catch (e) {
+      setError(explain(e))
+    }
+  }
+
+  async function publishToCatalog(): Promise<CatalogProtocol> {
+    if (!t.code) throw new Error('The workbook has no GL-code (README) — publishing needs one.')
+    const durations = t.versions
+      .map((v) => v.durationMin)
+      .filter((d): d is Duration => d === 6 || d === 12 || d === 24)
+    const phased = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
+    const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
+    const versions = (durations.length ? durations : [12 as Duration]).map((d) => {
+      const prev = existing?.versions.find((v) => v.duration === d)
+      return prev?.audioUrl ? { duration: d, audioUrl: prev.audioUrl } : { duration: d }
+    })
+    const proto: CatalogProtocol = {
+      code: t.code,
+      family: familyFromCode(t.code),
+      title: (t.title ?? t.code).trim(),
+      blurb: existing?.blurb ?? '',
+      phases: phasesForCatalog(phased),
+      versions,
+      enabled: true,
+      source: 'imported',
+      tenants: 'all',
+      audioReady: existing?.audioReady ?? false,
+      spec: existing?.spec,
+      datasheet: existing?.datasheet,
+      plain: t,
+      assetMap: existing?.assetMap,
+      updatedAt: Date.now(),
+    }
+    await dp.saveProtocol(proto)
+    registerProtocol(proto)
+    await dp.logAudit({ actor, action: 'protocol.plain.imported', target: proto.code, detail: fileName }).catch(() => undefined)
+    setPublished(proto)
+    return proto
+  }
+
+  /** Publish = the WHOLE pipeline: catalog entry → render (with voice) →
+      upload & attach → live in the app. */
   async function publish() {
-    if (!t.code) { setPublishError('The workbook has no GL-code (README) — publishing needs one.'); return }
+    if (!version) return
     setBusy(true)
-    setPublishError(null)
+    setError(null)
+    setLive(false)
     try {
-      const durations = t.versions
-        .map((v) => v.durationMin)
-        .filter((d): d is Duration => d === 6 || d === 12 || d === 24)
-      const phasedVersion = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
-      const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
-      // versions: rebuilt from the workbook, but attached audio SURVIVES —
-      // re-publishing (or re-importing a revised Excel) must never detach the
-      // streaming file the B2C app and monitored sessions already use
-      const versions = (durations.length ? durations : [12 as Duration]).map((d) => {
-        const prev = existing?.versions.find((v) => v.duration === d)
-        return prev?.audioUrl ? { duration: d, audioUrl: prev.audioUrl } : { duration: d }
-      })
-      const proto: CatalogProtocol = {
-        code: t.code,
-        family: familyFromCode(t.code),
-        title: title.trim() || t.code,
-        blurb: blurb.trim() || `Imported PLAIN timeline — ${t.versions.map((v) => `${v.durationMin} min`).join(' / ')}.`,
-        phases: phasesForCatalog(phasedVersion),
-        versions,
-        enabled: true,
-        source: 'imported',
-        tenants: 'all',
-        audioReady: existing?.audioReady ?? false,
-        spec: existing?.spec,
-        datasheet: existing?.datasheet,
-        plain: t,
-        assetMap: existing?.assetMap,
-        updatedAt: Date.now(),
+      setStatus('Publishing to the catalog…')
+      const proto = await publishToCatalog()
+      const dur = version.durationMin as Duration
+      if (dur !== 6 && dur !== 12 && dur !== 24) throw new Error(`${version.durationMin} min is not a catalog duration (6/12/24).`)
+      if (!tts.canRender) {
+        setDetailsOpen(true)
+        throw new Error('The voice engine has no key — set the ElevenLabs key in Details, then press Publish again.')
       }
-      await dp.saveProtocol(proto)
-      registerProtocol(proto)
-      await dp.logAudit({ actor, action: 'protocol.plain.imported', target: proto.code, detail: `${fileName} · ${t.versions.length} versions · ${totalClips} clips · ${t.affirmations.length} affirmations` })
-        .catch(() => { /* the protocol IS saved — a failed audit write must not block */ })
-      setPublished(proto)
-    } catch (e) {
-      setPublishError(explainSaveError(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /* ---- render ---- */
-  const [renderSheet, setRenderSheet] = useState<string>(t.versions[0]?.sheet ?? '')
-  const [withVoice, setWithVoice] = useState(tts.canRender)
-  const [progress, setProgress] = useState<string | null>(null)
-  const [renderNotes, setRenderNotes] = useState<string[]>([])
-  const [renderError, setRenderError] = useState<string | null>(null)
-  const [rendered, setRendered] = useState<{ name: string; seconds: number; voiceClips: number; blob: Blob; buffer: AudioBuffer; version: PlainVersion } | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [attached, setAttached] = useState<string | null>(null)
-
-  async function runRender() {
-    const v = t.versions.find((x) => x.sheet === renderSheet) ?? t.versions[0]
-    if (!v) return
-    setBusy(true)
-    setRenderError(null)
-    setRendered(null)
-    setRenderNotes([])
-    setAttached(null)
-    try {
-      const result = await renderPlainWav(t, v, {
+      const result = await renderPlainWav(t, version, {
         pools: pools ?? undefined,
-        withVoice: withVoice && tts.canRender,
-        onProgress: setProgress,
+        withVoice: true,
+        onProgress: setStatus,
       })
-      setRenderNotes(result.notes)
-      setRendered({
-        name: plainWavFileName(t.code, v.sheet),
-        seconds: result.seconds,
-        voiceClips: result.voiceClips,
-        blob: result.blob,
-        buffer: result.buffer,
-        version: v,
-      })
+      setNotes(result.notes)
+      setStatus('Uploading the streaming copy…')
+      await attachRenderedAudio(dp, proto.code, dur, result.buffer)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
+      setLive(true)
+      setStatus(`Live — ${proto.code} now streams in the employee app and monitored sessions.`)
     } catch (e) {
-      setRenderError((e as Error).message)
+      setStatus(null)
+      setError(explain(e))
     } finally {
-      setProgress(null)
       setBusy(false)
     }
   }
 
-  async function uploadAndAttach() {
-    if (!rendered || !published || !t.code) return
-    const dur = rendered.version.durationMin as Duration
-    if (dur !== 6 && dur !== 12 && dur !== 24) { setRenderError(`${rendered.version.durationMin} min is not a catalog duration (6/12/24).`); return }
-    setUploading(true)
-    setRenderError(null)
+  /** Download = the same full render, saved locally as WAV. */
+  async function download() {
+    if (!version) return
+    setBusy(true)
+    setError(null)
     try {
-      const { url } = await attachRenderedAudio(dp, t.code, dur, rendered.buffer)
-      setAttached(url)
-      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: t.code, detail: `plain · ${dur} min · ${rendered.voiceClips} voice clips` }).catch(() => { /* non-blocking */ })
+      const result = await renderPlainWav(t, version, {
+        pools: pools ?? undefined,
+        withVoice: tts.canRender,
+        onProgress: setStatus,
+      })
+      setNotes(result.notes)
+      if (!tts.canRender) setStatus('Rendered WITHOUT voice (no engine key — see Details).')
+      else setStatus(null)
+      downloadBlob(plainWavFileName(t.code, version.sheet), result.blob)
     } catch (e) {
-      setRenderError((e as Error).message)
+      setStatus(null)
+      setError(explain(e))
     } finally {
-      setUploading(false)
+      setBusy(false)
     }
   }
+
+  const disabled = busy || errors.length > 0 || poolsLoading
 
   return (
-    <div className="adm-page">
-      <header className="adm-page__head adm-page__head--row">
-        <div>
-          <h1 className="b2b-h1">PLAIN Timeline — review</h1>
-          <p className="b2b-sub">
-            From <code>{fileName}</code> — clip-level format (Rules doc): one row = one clip.{' '}
-            {t.versions.length} version{t.versions.length === 1 ? '' : 's'}, {totalClips} clips, {t.affirmations.length} affirmations.
-          </p>
+    <div className="adm-page adm-plain">
+      <header className="adm-plain__head">
+        <button className="b2b-btn b2b-btn--ghost" onClick={onCancel}>←</button>
+        <div className="adm-plain__id">
+          <span className="adm-plain__code">{t.code ?? fileName}</span>
+          {t.title && <span className="adm-plain__title">{t.title}</span>}
+          <span className="adm-plain__meta">
+            {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clips` : ''}
+            {live ? ' · live ✓' : published ? ' · published' : ''}
+          </span>
         </div>
-        <button className="b2b-btn b2b-btn--ghost" onClick={onCancel}>← Choose another file</button>
-      </header>
-
-      <div className="adm-spec__card">
-        <div className="adm-spec__facts">
-          {t.code && <span><b>{t.code}</b></span>}
-          {t.title && <span>{t.title}</span>}
-          {t.methodology && <span>{t.methodology}</span>}
-          {t.source && <span>src: {t.source}</span>}
-          <span>{poolsMsg}{poolsState === 'failed' && <> <button className="b2b-btn" style={{ marginLeft: 6 }} onClick={() => setPoolsTick((n) => n + 1)}>Retry</button></>}</span>
-        </div>
-
-        {t.versions.map((v) => {
-          const counts = tipoCounts(v)
-          return (
-            <div key={v.sheet} className="adm-spec__version">
-              <div className="adm-spec__vhead" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span>
-                  Sheet “{v.sheet}” {v.versionKey ? `· ${v.versionKey.toUpperCase()}` : ''} · {v.durationMin} min ({secToMmss(v.durationS)})
-                  {v.declaredTotal !== null && ` · declared ${v.declaredTotal} clips`}
-                </span>
-                <button
-                  className="b2b-btn"
-                  disabled={errors.length > 0 || poolsLoading}
-                  title={errors.length ? 'Fix the errors below first' : poolsLoading ? 'Waiting for the asset library (the file draw happens at seed time)' : 'Seed the Sound Studio: 1 Excel row = 1 clip'}
-                  onClick={() => openInStudio(v)}
-                >
-                  {poolsLoading ? 'Loading library…' : 'Open in Sound Studio →'}
-                </button>
-              </div>
-
-              <div className="adm-spec__phases" style={{ marginBottom: 8 }}>
-                {v.phases.map((p) => (
-                  <span key={p.fase} className="adm-spec__phase" title={p.label}>
-                    F{p.fase} {secToMmss(p.startS)}–{secToMmss(p.endS)}
-                  </span>
-                ))}
-              </div>
-
-              <div className="adm-spec__facts" style={{ marginBottom: 8 }}>
-                {counts.map(({ tipo, n }) => (
-                  <span key={tipo}><b>{n}</b> {PLAIN_TIPO_LABEL[tipo]}</span>
-                ))}
-              </div>
-
-              <div className="adm-spec__phases">
-                {v.tracks.map((tr) => (
-                  <span key={tr.name} className="adm-spec__phase" title={PLAIN_TIPO_LABEL[tr.tipo]}>
-                    {tr.name} <span style={{ opacity: 0.6 }}>· {PLAIN_TIPO_LABEL[tr.tipo]} · {tr.clips} clip{tr.clips === 1 ? '' : 's'}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-
-        {t.affirmations.length > 0 && (
-          <div className="adm-spec__version">
-            <div className="adm-spec__vhead">Affirmations ({t.affirmations.length})</div>
-            <div className="adm-spec__phases">
-              {t.affirmations.map((a) => (
-                <span key={a.id} className="adm-spec__phase" title={`${a.testo}${a.ecoKeyword ? ` · eco: ${a.ecoKeyword}` : ''}`}>
-                  {a.id}
-                  <span style={{ opacity: 0.6 }}>
-                    {' '}· {[a.inQuick && 'Q', a.inStandard && 'S', a.inDeep && 'D'].filter(Boolean).join('·')}
-                    {a.durataS !== null ? ` · ${a.durataS}s` : ''}
-                    {a.bilateraleLato ? ` · ${a.bilateraleLato}` : ''}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {errors.length > 0 && (
-          <div className="adm-issues adm-issues--err">
-            {errors.map((i, k) => <span key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</span>)}
-          </div>
-        )}
-        {warnings.length > 0 && (
-          <div className="adm-issues adm-issues--warn">
-            {warnings.map((i, k) => <span key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</span>)}
-          </div>
-        )}
-        {infos.length > 0 && (
-          <ul className="adm-spec__issues">
-            {infos.map((i, k) => <li key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</li>)}
-          </ul>
-        )}
-        {errors.length === 0 && warnings.length === 0 && (
-          <div className="adm-note adm-note--ok">
-            <b>Workbook valid.</b> All clips parsed, every loop set resolved against the Affermazioni sheet,
-            Binaural XOR Solfeggio respected, §8.0 phase windows clean.
-          </div>
-        )}
-      </div>
-
-      {seedError && <div className="adm-issues adm-issues--err" style={{ marginTop: 12 }}><span>{seedError}</span></div>}
-      {seedNotes && (
-        <div className="adm-note adm-note--ok" style={{ marginTop: 12 }}>
-          <b>Studio project prepared from “{seedNotes.sheet}”</b> — 1 Excel row = 1 clip. Seeding decisions:
-          <ul className="adm-spec__issues">
-            {seedNotes.notes.map((n, k) => <li key={k}>{n}</li>)}
-          </ul>
-          <div className="adm-cred__actions" style={{ marginTop: 8 }}>
-            <button className="b2b-btn b2b-btn--primary" onClick={() => { window.location.hash = '#studio' }}>Go to the Sound Studio →</button>
-          </div>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------------- publish */}
-      <div className="adm-spec__card" style={{ marginTop: 16 }}>
-        <div className="adm-spec__vhead">Publish to the catalog</div>
-        <div className="adm-spec__row">
-          <span className="adm-spec__lbl">Title</span>
-          <input className="b2b-input" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div className="adm-spec__row">
-          <span className="adm-spec__lbl">Blurb</span>
-          <input className="b2b-input" placeholder="Patient-facing description" value={blurb} onChange={(e) => setBlurb(e.target.value)} />
-        </div>
-        {publishError && <div className="adm-issues adm-issues--err"><span>{publishError}</span></div>}
-        {published
-          ? <div className="adm-note adm-note--ok"><b>{published.code} published</b> with its full PLAIN timeline — selectable in the clinician wizard; re-renderable any time from the catalog data.</div>
-          : (
-            <div className="adm-cred__actions">
-              <button className="b2b-btn b2b-btn--primary" disabled={busy || errors.length > 0 || !t.code} onClick={publish}>
-                {busy ? 'Publishing…' : `Publish ${t.code ?? ''} →`}
-              </button>
-              {!t.code && <span className="b2b-sub">The README carries no GL-code — publishing needs one.</span>}
-            </div>
-          )}
-      </div>
-
-      {/* ----------------------------------------------------------- render */}
-      <div className="adm-spec__card" style={{ marginTop: 16 }}>
-        <div className="adm-spec__vhead">Render — the WAV is the Studio mixdown (draws + §8.3 ducking)</div>
-        <div className="adm-spec__row">
-          <span className="adm-spec__lbl">Version</span>
-          <div className="adm-spec__chips">
+        {t.versions.length > 1 && (
+          <div className="adm-plain__chips">
             {t.versions.map((v) => (
-              <button key={v.sheet} className={`b2b-btn${renderSheet === v.sheet ? ' b2b-btn--primary' : ''}`} onClick={() => setRenderSheet(v.sheet)}>
-                {v.sheet} · {v.durationMin}m
+              <button key={v.sheet} className={`b2b-btn${sheet === v.sheet ? ' b2b-btn--primary' : ''}`} onClick={() => setSheet(v.sheet)}>
+                {v.durationMin}m
               </button>
             ))}
           </div>
-        </div>
-        <div className="adm-spec__row">
-          <span className="adm-spec__lbl">Options</span>
-          <label className="adm-spec__check" title={tts.canRender ? undefined : 'Set ElevenLabs keys below first'}>
-            <input type="checkbox" checked={withVoice && tts.canRender} disabled={!tts.canRender} onChange={(e) => setWithVoice(e.target.checked)} /> Voice ({tts.label})
-          </label>
-        </div>
-        <VoiceEnginePanel onChanged={() => { setTtsTick((n) => n + 1); setWithVoice(true) }} />
-        {progress && <div className="adm-note">{progress}</div>}
-        {renderError && <div className="adm-issues adm-issues--err"><span>{renderError}</span></div>}
-        {rendered && (
-          <div className="adm-note adm-note--ok">
-            <b>{rendered.name}</b> — {secToMmss(rendered.seconds)}, {rendered.voiceClips} voice clips.
-            <div className="adm-cred__actions" style={{ marginTop: 8 }}>
-              <button className="b2b-btn" onClick={() => downloadBlob(rendered.name, rendered.blob)}>Download WAV</button>
-              <button
-                className="b2b-btn b2b-btn--primary"
-                disabled={uploading || !published}
-                title={!published ? 'Publish first' : undefined}
-                onClick={uploadAndAttach}
-              >
-                {uploading ? 'Uploading…' : 'Upload & attach (192 kbps MP3) →'}
-              </button>
-            </div>
-            {attached && <div style={{ marginTop: 6 }}>Attached — this exact file now streams in the employee app and monitored sessions: <code style={{ wordBreak: 'break-all' }}>{attached}</code></div>}
-          </div>
         )}
-        {renderNotes.length > 0 && (
-          <ul className="adm-spec__issues">
-            {renderNotes.map((n, k) => <li key={k}>{n}</li>)}
-          </ul>
-        )}
-        <div className="adm-cred__actions">
-          <button
-            className="b2b-btn b2b-btn--primary"
-            disabled={busy || errors.length > 0 || poolsLoading}
-            title={poolsLoading ? 'Waiting for the asset library (the file draw happens at render time)' : undefined}
-            onClick={runRender}
-          >
-            {busy && progress ? 'Rendering…' : poolsLoading ? 'Loading library…' : 'Render WAV →'}
-          </button>
-          {attached && <button className="b2b-btn" onClick={onDone}>Done — back to catalog</button>}
-        </div>
+      </header>
+
+      <div className="adm-plain__actions">
+        <button className="adm-plain__act" onClick={onCancel} disabled={busy}>
+          <span className="adm-plain__act-ico">⬆</span> Import Excel
+        </button>
+        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={poolsLoading ? 'Loading the sound library…' : undefined}>
+          <span className="adm-plain__act-ico">🎚</span> Edit in Studio
+        </button>
+        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled}>
+          <span className="adm-plain__act-ico">🚀</span> Publish
+        </button>
+        <button className="adm-plain__act" onClick={() => void download()} disabled={disabled}>
+          <span className="adm-plain__act-ico">⬇</span> Download
+        </button>
       </div>
 
-      <div className="adm-import__foot" style={{ marginTop: 16 }}>
-        <p className="b2b-sub adm-import__hint">
-          One source of truth: the render executes the SAME seeded project the Sound Studio opens (1 row = 1 clip, drawn
-          files, per-clip dB + fades baked in) through the SAME mixdown path — plus the app-side ducking (Music −10 dB /
-          Soundscape −6 dB under active voice; entrainment, voice and the heartbeat never duck). Every random draw is
-          listed in the notes; a re-render draws fresh files by design.
-        </p>
+      {poolsLoading && <div className="adm-plain__status">Loading the sound library…</div>}
+      {poolsState === 'failed' && (
+        <div className="adm-plain__status adm-plain__status--err">
+          Sound library unreachable — clips would be silent. <button className="b2b-btn" onClick={() => setPoolsTick((n) => n + 1)}>Retry</button>
+        </div>
+      )}
+      {status && <div className="adm-plain__status">{status}</div>}
+      {error && <div className="adm-plain__status adm-plain__status--err">{error}</div>}
+      {errors.length > 0 && (
+        <div className="adm-plain__status adm-plain__status--err">
+          The workbook has {errors.length} error{errors.length === 1 ? '' : 's'} — fix the Excel and import again.
+          <ul className="adm-spec__issues">
+            {errors.map((i, k) => <li key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="adm-plain__details">
+        <button className="adm-plain__toggle" onClick={() => setDetailsOpen((o) => !o)}>
+          {detailsOpen ? '▾' : '▸'} Details
+        </button>
+        {detailsOpen && (
+          <div className="adm-plain__detailbody">
+            <VoiceEnginePanel onChanged={() => setTtsTick((n) => n + 1)} />
+            {nonErrors.length > 0 && (
+              <ul className="adm-spec__issues">
+                {nonErrors.map((i, k) => <li key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</li>)}
+              </ul>
+            )}
+            {notes.length > 0 && (
+              <ul className="adm-spec__issues">
+                {notes.map((n, k) => <li key={k}>{n}</li>)}
+              </ul>
+            )}
+            {live && <button className="b2b-btn" onClick={onDone}>Back to catalog</button>}
+          </div>
+        )}
       </div>
     </div>
   )

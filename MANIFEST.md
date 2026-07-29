@@ -1,5 +1,27 @@
 # Good Loop — build manifest
 
+**Slice: simplified protocol workscreen (admin)** (current)
+- The PLAIN screen after the catalog list is now MINIMAL, per PO feedback:
+  one identity line (code · title · duration/clips · published/live badge)
+  and FOUR large actions — Import Excel · Edit in Studio · Publish ·
+  Download. All the old cards (review, phases, tracks, affirmations,
+  publish form, render options) are gone.
+- **Publish is the whole pipeline in one press**: catalog entry (with the
+  full timeline; existing audio/blurb preserved) → offline render with
+  voice → 192 kbps upload & attach → "Live ✓". A single status line
+  narrates progress; errors show as one line with the fix spelled out
+  (missing SQL columns → run setup.sql; missing voice key → opens
+  Details).
+- **Download** renders the same full WAV locally. **Edit in Studio** seeds
+  and navigates straight there (no notes screen in between). Version chips
+  appear only when a workbook carries more than one sheet.
+- Everything technical moved behind a collapsed "Details": the ElevenLabs
+  key panel, workbook warnings/infos, seeding + render notes. Workbook
+  ERRORS still block the actions and list compactly. The pool-loading gate
+  and Retry stay. Catalog button relabeled "⬆ Import Excel".
+- `tsc` + `npm run build` clean; all proofs pass (logic unchanged — UI
+  only, plus Publish now chains the existing publish/render/attach calls).
+
 **Slice: profile pictures for every user** (current)
 - New shared `src/components/AvatarUpload.tsx`, placed on all four
   surfaces: B2C Profile (52 px, replaces the 🙂), therapist topbar (34 px,

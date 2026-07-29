@@ -67,7 +67,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           <p className="b2b-sub">The single shared catalog every company draws from. {protocols.length} protocol{protocols.length === 1 ? '' : 's'}.</p>
         </div>
         <button className="b2b-btn b2b-btn--primary" onClick={() => setView('import')}>
-          + Import protocol (PDF / Excel)
+          ⬆ Import Excel
         </button>
       </header>
 

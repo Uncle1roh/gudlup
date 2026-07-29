@@ -1823,3 +1823,27 @@ img, svg, video, canvas { max-width: 100%; }
 .avatarup--bar .avatarup__badge { width: 13px; height: 13px; font-size: 8px; line-height: 13px; }
 .avatarup__err { position: absolute; top: 100%; right: 0; font-size: 11px; color: #a04545; white-space: nowrap; background: #fff; border: 1px solid #e4c9c9; border-radius: 6px; padding: 2px 6px; margin-top: 4px; z-index: 30; }
 .adm-who .avatarup__btn { background: rgba(255,255,255,0.12); }
+
+/* Minimal PLAIN workscreen — identity line + four actions */
+.adm-plain__head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.adm-plain__id { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.adm-plain__code { font-weight: 700; font-size: 19px; }
+.adm-plain__title { font-size: 15px; }
+.adm-plain__meta { font-size: 12.5px; color: var(--muted, #7a8a80); }
+.adm-plain__chips { display: flex; gap: 6px; margin-left: auto; }
+.adm-plain__actions { display: grid; grid-template-columns: repeat(4, minmax(150px, 220px)); gap: 14px; }
+.adm-plain__act {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 22px 12px; font-size: 14.5px; font-weight: 600;
+  border: 1px solid var(--line, #dfe7e2); border-radius: 14px; background: #fff;
+  cursor: pointer; transition: border-color 0.12s, background 0.12s, opacity 0.12s;
+}
+.adm-plain__act:hover:not(:disabled) { border-color: var(--accent, #2e7d5b); background: #f4faf7; }
+.adm-plain__act:disabled { opacity: 0.45; cursor: default; }
+.adm-plain__act--primary { border-color: var(--accent, #2e7d5b); background: #f0f8f3; }
+.adm-plain__act-ico { font-size: 22px; }
+.adm-plain__status { margin-top: 16px; font-size: 13.5px; color: var(--ink, #1c2b23); }
+.adm-plain__status--err { color: #a04545; }
+.adm-plain__details { margin-top: 26px; }
+.adm-plain__toggle { background: none; border: none; font-size: 13px; color: var(--muted, #7a8a80); cursor: pointer; padding: 0; }
+.adm-plain__detailbody { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
