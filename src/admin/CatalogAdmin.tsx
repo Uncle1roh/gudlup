@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
-import { ImportProtocol } from './ImportProtocol'
+import { useRef } from 'react'
 import { PlainImport } from './PlainImport'
+import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
 import type { CatalogProtocol } from '../data/catalog'
 
 function tenantsLabel(p: CatalogProtocol): string {
@@ -13,9 +14,31 @@ function tenantsLabel(p: CatalogProtocol): string {
 export function CatalogAdmin({ actor }: { actor: string }) {
   const dp = useDataProvider()
   const { data, loading, refetch } = useProtocols()
-  const [view, setView] = useState<'list' | 'import'>('list')
   const [opened, setOpened] = useState<CatalogProtocol | null>(null)
+  const [imported, setImported] = useState<{ timeline: PlainTimeline; fileName: string } | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  /* Import Excel straight from the list: file dialog → parse → workscreen.
+     (The old multi-format import page is gone — PO decision.) */
+  async function onImportFile(file: File | undefined) {
+    if (!file) return
+    setImportError(null)
+    try {
+      const bytes = await file.arrayBuffer()
+      if (!(await probePlainTimeline(bytes))) {
+        throw new Error(`"${file.name}" is not a PLAIN Timeline workbook (clip_id / traccia / tipo / start_s / end_s headers not found).`)
+      }
+      const res = await parsePlainTimeline(bytes)
+      if (res.error || !res.timeline) throw new Error(res.error ?? 'Could not parse the workbook.')
+      setImported({ timeline: res.timeline, fileName: file.name })
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   async function toggle(p: CatalogProtocol) {
     setBusyCode(p.code)
@@ -38,13 +61,23 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     }
   }
 
-  if (view === 'import') {
-    return <ImportProtocol actor={actor} onBack={() => { setView('list'); refetch() }} />
-  }
-
   /* A protocol imported in the PLAIN format reopens its full workscreen
      (review → Studio → render → attach) straight from the catalog row — the
      timeline lives on the catalog entry, no re-import needed. */
+  if (imported) {
+    return (
+      <PlainImport
+        timeline={imported.timeline}
+        fileName={imported.fileName}
+        actor={actor}
+        onCancel={() => { setImported(null); refetch() }}
+        onDone={() => { setImported(null); refetch() }}
+        onImportExcel={() => fileRef.current?.click()}
+        fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
+      />
+    )
+  }
+
   if (opened?.plain) {
     return (
       <PlainImport
@@ -53,6 +86,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         actor={actor}
         onCancel={() => { setOpened(null); refetch() }}
         onDone={() => { setOpened(null); refetch() }}
+        onImportExcel={() => fileRef.current?.click()}
+        fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
       />
     )
   }
@@ -66,9 +101,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           <h1 className="b2b-h1">Protocol catalog</h1>
           <p className="b2b-sub">The single shared catalog every company draws from. {protocols.length} protocol{protocols.length === 1 ? '' : 's'}.</p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => setView('import')}>
+        <button className="b2b-btn b2b-btn--primary" onClick={() => fileRef.current?.click()}>
           ⬆ Import Excel
         </button>
+        <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />
+        {importError && <span className="adm-plain__status adm-plain__status--err" style={{ marginLeft: 10 }}>{importError}</span>}
       </header>
 
       {loading && <p className="b2b-sub">Loading catalog…</p>}

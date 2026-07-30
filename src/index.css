@@ -1883,3 +1883,7 @@ img, svg, video, canvas { max-width: 100%; }
 .agenda__appt { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border: 1px solid var(--line, #dfe7e2); border-radius: 10px; background: #fff; font-size: 14px; }
 .agenda__appt-when { font-weight: 600; min-width: 150px; }
 .agenda__appt-who { flex: 1; }
+
+/* 5-action row + mastered state */
+.adm-plain__actions--5 { grid-template-columns: repeat(5, minmax(140px, 200px)); }
+.adm-plain__act--done { border-color: var(--accent, #2e7d5b); background: #eef8f1; }

@@ -7,7 +7,7 @@
    locally. Everything technical (validation issues, seeding decisions,
    render notes, the voice-engine key) lives behind a collapsed "Details". */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
 import { getTtsProvider } from '../tts'
@@ -29,6 +29,11 @@ interface Props {
   actor: string
   onCancel: () => void
   onDone: () => void
+  /** Opens the catalog's Import Excel file dialog directly (no page). */
+  onImportExcel?: () => void
+  /** The catalog's hidden file input, mounted here so the dialog works
+      while this screen is the one on display. */
+  fileInput?: import('react').ReactNode
 }
 
 const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
@@ -55,7 +60,7 @@ function downloadBlob(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: Props) {
+export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, onImportExcel, fileInput }: Props) {
   const dp = useDataProvider()
   const [ttsTick, setTtsTick] = useState(0)
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
@@ -126,6 +131,37 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
     return msg
   }
 
+  /* ---- externally-mastered file (PO workflow: download WAV → masterize
+     outside → upload the mastered version → Publish ships THAT file) ---- */
+  const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer } | null>(null)
+  const masteredRef = useRef<HTMLInputElement>(null)
+
+  async function onMasteredFile(file: File | undefined) {
+    if (!file) return
+    setBusy(true)
+    setError(null)
+    try {
+      const bytes = await file.arrayBuffer()
+      const ctx = new AudioContext()
+      try {
+        const buffer = await ctx.decodeAudioData(bytes)
+        if (version && Math.abs(buffer.duration - version.durationS) > 20) {
+          setStatus(`Note: "${file.name}" is ${secToMmss(Math.round(buffer.duration))} — the protocol version is ${secToMmss(version.durationS)}.`)
+        } else {
+          setStatus(null)
+        }
+        setMastered({ name: file.name, buffer })
+      } finally {
+        await ctx.close().catch(() => undefined)
+      }
+    } catch (e) {
+      setError(`Could not read "${file.name}" as audio: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+      if (masteredRef.current) masteredRef.current.value = ''
+    }
+  }
+
   /* ---- actions ------------------------------------------------------- */
 
   function editInStudio() {
@@ -188,21 +224,29 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
       const proto = await publishToCatalog()
       const dur = version.durationMin as Duration
       if (dur !== 6 && dur !== 12 && dur !== 24) throw new Error(`${version.durationMin} min is not a catalog duration (6/12/24).`)
-      if (!tts.canRender) {
-        setDetailsOpen(true)
-        throw new Error('The voice engine has no key — set the ElevenLabs key in Details, then press Publish again.')
+      let audioBuffer: AudioBuffer
+      if (mastered) {
+        // the externally-mastered upload IS the published audio
+        setStatus(`Using the mastered file "${mastered.name}"…`)
+        audioBuffer = mastered.buffer
+      } else {
+        if (!tts.canRender) {
+          setDetailsOpen(true)
+          throw new Error('The voice engine has no key — set the ElevenLabs key in Details, then press Publish again (or upload a mastered file).')
+        }
+        const result = await renderPlainWav(t, version, {
+          pools: pools ?? undefined,
+          withVoice: true,
+          onProgress: setStatus,
+        })
+        setNotes(result.notes)
+        audioBuffer = result.buffer
       }
-      const result = await renderPlainWav(t, version, {
-        pools: pools ?? undefined,
-        withVoice: true,
-        onProgress: setStatus,
-      })
-      setNotes(result.notes)
       setStatus('Uploading the streaming copy…')
-      await attachRenderedAudio(dp, proto.code, dur, result.buffer)
+      await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
       setLive(true)
-      setStatus(`Live — ${proto.code} now streams in the employee app and monitored sessions.`)
+      setStatus(`Live — ${proto.code} now streams in the employee app and monitored sessions${mastered ? ` (mastered file "${mastered.name}")` : ''}.`)
     } catch (e) {
       setStatus(null)
       setError(explain(e))
@@ -259,20 +303,33 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone }: 
         )}
       </header>
 
-      <div className="adm-plain__actions">
-        <button className="adm-plain__act" onClick={onCancel} disabled={busy}>
+      <div className="adm-plain__actions adm-plain__actions--5">
+        <button className="adm-plain__act" onClick={onImportExcel ?? onCancel} disabled={busy}>
           <span className="adm-plain__act-ico">⬆</span> Import Excel
         </button>
         <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={poolsLoading ? 'Loading the sound library…' : undefined}>
           <span className="adm-plain__act-ico">🎚</span> Edit in Studio
         </button>
-        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled}>
-          <span className="adm-plain__act-ico">🚀</span> Publish
-        </button>
         <button className="adm-plain__act" onClick={() => void download()} disabled={disabled}>
           <span className="adm-plain__act-ico">⬇</span> Download
         </button>
+        <button
+          className={`adm-plain__act${mastered ? ' adm-plain__act--done' : ''}`}
+          onClick={() => masteredRef.current?.click()}
+          disabled={busy}
+          title="Upload the externally-mastered WAV/MP3 — Publish will ship this exact file"
+        >
+          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Mastered ✓' : 'Upload mastered'}
+        </button>
+        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled}>
+          <span className="adm-plain__act-ico">🚀</span> Publish
+        </button>
+        <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
+        {fileInput}
       </div>
+      {mastered && !live && (
+        <div className="adm-plain__status">Mastered file loaded: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Publish ships this file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Use the app render instead</a></div>
+      )}
 
       {poolsLoading && <div className="adm-plain__status">Loading the sound library…</div>}
       {poolsState === 'failed' && (

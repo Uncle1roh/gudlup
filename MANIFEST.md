@@ -1,5 +1,28 @@
 # Good Loop — build manifest
 
+**Slice: direct Excel import + externally-mastered upload** (current)
+- The "Import protocols" page is GONE. The catalog's "⬆ Import Excel"
+  button now opens the file dialog directly; the workbook is probed and
+  parsed on the spot (PLAIN Timeline only — anything else shows a one-line
+  error next to the button) and lands straight on the minimal workscreen.
+  The workscreen's own Import Excel button opens the same dialog, so
+  re-importing a corrected file never leaves the screen.
+- **The PO's mastering workflow is now first-class**: import the Excel →
+  Edit in Studio → Download the WAV → masterize it OUTSIDE the app →
+  🎧 Upload mastered (accepts WAV/MP3/FLAC/M4A, decoded and validated;
+  a >20 s duration mismatch vs the protocol version is flagged) → Publish
+  ships THAT exact file to the whole application (192 kbps streaming copy,
+  same attach path), skipping the in-app render and the TTS-key
+  requirement entirely. The action shows "Mastered ✓" once loaded, a
+  status line names the file (+ "Use the app render instead" to clear it),
+  and the Live confirmation records which file went out. Without an
+  upload, Publish renders in-app as before.
+- Action row is now five: Import Excel · Edit in Studio · Download ·
+  Upload mastered · Publish.
+- `tsc` + `npm run build` clean; all eight node proofs pass (PLAIN,
+  studio seed, pools, shape, mastering, LUFS workbook, wizard/program,
+  scheduling).
+
 **Slice: patient ↔ therapist scheduling** (current)
 - **Patient journey** (PO spec, verbatim): the home's therapist card became
   "Schedule a session" → popup listing the company's APPROVED therapists
