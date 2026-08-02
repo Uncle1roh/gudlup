@@ -50,7 +50,7 @@ export interface SeedTrack {
   /** Ducking family for the offline PLAIN render (Rules §8.3): 'music' −10 dB
       / 'soundscape' −6 dB under active voice; 'none' = never duck (voice,
       entrainment, heartbeat). Ignored by the live Studio transport. */
-  duck?: 'music' | 'soundscape' | 'none'
+  duck?: 'music' | 'soundscape' | 'whisper' | 'none'
   /** The lane's authored loudness target in absolute LUFS (at fader gain 1).
       When present, the Studio fader reads/edits in LUFS instead of dB. */
   baseLufs?: number

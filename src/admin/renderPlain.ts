@@ -38,8 +38,10 @@ import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimelin
 
 const CHANNEL_PAN: Record<'L' | 'C' | 'R', number> = { L: -1, C: 0, R: 1 }
 
-/* Rules §8.3 — fixed app-side ducking constants. */
-const DUCK_DB: Record<'music' | 'soundscape', number> = { music: -10, soundscape: -6 }
+/* Rules §8.3 — fixed app-side ducking constants. 'whisper' is the
+   mini-spec §B sidechain: the ostinato dips gently under the MAIN voice so
+   the −16 LUFS anchor always stays intelligible. */
+const DUCK_DB: Record<'music' | 'soundscape' | 'whisper', number> = { music: -10, soundscape: -6, whisper: -2.5 }
 const DUCK_ATTACK_S = 0.2
 const DUCK_RELEASE_S = 0.5
 
@@ -167,18 +169,18 @@ export async function renderPlainWav(
     /* §8.3 ducking: voice windows from the SEED (only clips that will really
        sound — i.e. with text — count; silent voice lanes don't duck the bed). */
     const voiceWindows = seed.tracks
-      .filter((t) => t.type === 'voice')
+      .filter((t) => t.type === 'voice' && t.duck !== 'whisper') // the ostinato itself never ducks anyone
       .flatMap((t) => t.clips
         .filter((c) => (c.text ?? '').trim() && c.startSec < lengthSec && canVoice)
         .map((c) => ({ start: c.startSec, end: Math.min(lengthSec, c.startSec + c.durationSec) })))
     if (voiceWindows.length) {
       seed.tracks.forEach((t: SeedTrack, i: number) => {
-        if (t.duck === 'music' || t.duck === 'soundscape') {
+        if (t.duck === 'music' || t.duck === 'soundscape' || t.duck === 'whisper') {
           mix[i].gainAutomation = buildDuckEnvelope(voiceWindows, DUCK_DB[t.duck], lengthSec)
         }
       })
-      const ducked = seed.tracks.filter((t) => t.duck === 'music' || t.duck === 'soundscape')
-      if (ducked.length) notes.push(`Ducking (§8.3): ${ducked.map((t) => `"${t.name}" ${DUCK_DB[t.duck as 'music' | 'soundscape']} dB`).join(', ')} under ${mergeWindows(voiceWindows).length} voice windows (200/500 ms).`)
+      const ducked = seed.tracks.filter((t) => t.duck === 'music' || t.duck === 'soundscape' || t.duck === 'whisper')
+      if (ducked.length) notes.push(`Ducking (§8.3 + whisper sidechain): ${ducked.map((t) => `"${t.name}" ${DUCK_DB[t.duck as 'music' | 'soundscape' | 'whisper']} dB`).join(', ')} under ${mergeWindows(voiceWindows).length} voice windows (200/500 ms).`)
     }
 
     progress('Mixing down…')

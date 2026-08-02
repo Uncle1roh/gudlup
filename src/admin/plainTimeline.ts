@@ -120,6 +120,9 @@ export interface PlainAffirmation {
   inQuick: boolean
   inStandard: boolean
   inDeep: boolean
+  /** REF-xx rows: referenceable refrains — never counted among the
+      clinical CSI affirmations (mini-spec §A). */
+  refrain: boolean
   durataS: number | null
   tema?: string
   /* Kept beyond the Rules doc (flagged to POs as an info issue): */
@@ -336,6 +339,7 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
       inQuick: /quick/.test(setLc),
       inStandard: /std|standard/.test(setLc),
       inDeep: /deep/.test(setLc),
+      refrain: !/^csi-/i.test(id),
       durataS: num(cellAt(ws, r, col['durata_s'] ?? col['durata'] ?? -1, X)),
       tema: str(cellAt(ws, r, col['tema'] ?? -1, X)) || undefined,
       ordineLoop: num(cellAt(ws, r, col['ordine_loop'] ?? -1, X)) ?? undefined,
@@ -372,11 +376,18 @@ function parseFase(raw: string): { from: number | null; to: number | null } {
   return { from, to: m[2] ? parseInt(m[2], 10) : from }
 }
 
-/** "CSI-01..12" / "CSI-01..08" → range. */
+/** Mini-spec §A grammar: "CSI-01..12" (range) or a single ID "CSI-05" /
+    "REF-01" (one Affermazioni row). REF-xx = referenceable refrain, NOT a
+    clinical CSI affirmation. */
 function parseSetRange(raw: string): Omit<PlainSetRange, 'ids'> | null {
   const m = raw.match(/^([A-Z]{2,4})-(\d+)\s*\.\.\s*(?:[A-Z]{2,4}-)?(\d+)$/i)
-  if (!m) return null
-  return { prefix: m[1].toUpperCase(), from: parseInt(m[2], 10), to: parseInt(m[3], 10) }
+  if (m) return { prefix: m[1].toUpperCase(), from: parseInt(m[2], 10), to: parseInt(m[3], 10) }
+  const single = raw.match(/^([A-Z]{2,4})-(\d{2,})$/i)
+  if (single) {
+    const n = parseInt(single[2], 10)
+    return { prefix: single[1].toUpperCase(), from: n, to: n }
+  }
+  return null
 }
 
 function parseClipSheet(
@@ -623,7 +634,7 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
     if (c.tipo !== 'voice' || c.tipoContenuto !== 'loop' || !c.setAffermazioni) continue
     const rng = parseSetRange(c.setAffermazioni)
     if (!rng) {
-      issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Cannot parse set_affermazioni "${c.setAffermazioni}" (expected e.g. "CSI-01..12").` })
+      issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Cannot parse set_affermazioni "${c.setAffermazioni}" (expected a range "CSI-01..12" or a single ID "CSI-05" / "REF-01").` })
       continue
     }
     const ids: string[] = []
@@ -641,7 +652,9 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
     })
     c.setRange = { ...rng, ids }
     if (missing.length) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `set_affermazioni ${c.setAffermazioni}: missing in the Affermazioni sheet: ${missing.join(', ')}.` })
-    if (c.intervalloS === undefined) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Loop clip without intervallo_s — app default will be used.` })
+    const isOstinato = c.modalita === 'sussurrato' && rng.from === rng.to
+    if (c.intervalloS === undefined && !isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Loop clip without intervallo_s — app default will be used.` })
+    if (isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Whisper-ostinato (${c.setAffermazioni}): app cadence ~29 s cycle, deliberately offset from the affirmation interval.` })
     // does the loop fit its window?
     if (c.intervalloS && ids.length) {
       const cycles = c.cicli ?? 1
@@ -739,9 +752,10 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
 
   // subset sanity 8 ⊂ 12 ⊂ 20 (informative — the file may carry only one version)
   if (affirmations.length) {
-    const q = affirmations.filter((a) => a.inQuick).length
-    const s = affirmations.filter((a) => a.inStandard).length
-    const d = affirmations.filter((a) => a.inDeep).length
+    const clinical = affirmations.filter((a) => !a.refrain)
+    const q = clinical.filter((a) => a.inQuick).length
+    const s = clinical.filter((a) => a.inStandard).length
+    const d = clinical.filter((a) => a.inDeep).length
     if (q && s && q > s) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Quick set (${q}) is larger than Standard (${s}) — expected 8 ⊂ 12 ⊂ 20.` })
     if (s && d && s > d) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Standard set (${s}) is larger than Deep (${d}) — expected 8 ⊂ 12 ⊂ 20.` })
   }

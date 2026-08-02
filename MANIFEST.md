@@ -1,5 +1,34 @@
 # Good Loop — build manifest
 
+**Slice: REF-xx parser + whisper-ostinato (triple stacking, mini-spec)**
+(current)
+- **Request A (parser)**: `set_affermazioni` now accepts a SINGLE ID
+  alongside the unchanged CSI range grammar — `CSI-05` and `REF-01`
+  resolve to one Affermazioni row (`^[A-Z]{2,4}-\d{2,}(\.\.\d{2,})?$`).
+  REF-xx rows are flagged `refrain` and EXCLUDED from the clinical
+  8⊂12⊂20 subset counts (mini-spec: "REF is not an affirmation"). Error
+  message updated; all existing CSI ranges untouched, no file migration.
+- **Request B (whisper-ostinato rendering)**: a Voice clip with
+  tipo_contenuto=loop + modalità=sussurrato + single REF-xx set is
+  expanded as the 3rd stacking layer: the refrain's "..."-separated
+  fragments loop at a 5 s expiratory cadence + 9 s breathing silence =
+  29 s cycle, DELIBERATELY offset from the 24 s affirmation interval (no
+  rhythmic lock-in — 1 exact coincidence in the whole 8-min phase);
+  whisper voice of the same Maternal figure, diffuse alternating ±15% pan
+  (never dry-center), riverbero from the sheet; the last ~90 s stretches
+  ×1.15 and drops a further −2.5 dB with ≥3 s fades so it dissolves into
+  the 20:00 transition (no hard cut, no fragment crossing the phase end).
+  Sidechain implemented as a new duck family `whisper` (−2.5 dB, 200/500
+  ms) driven ONLY by main-voice windows (the ostinato never ducks anyone,
+  and never masks the −16 LUFS anchor). [PROTOCOL] level honored:
+  volume_lufs −28.
+- Node-proven against the real Deep workbook (tools/test-plain-deep.ts):
+  every §D acceptance criterion — 0 errors (109 clips), REF-01 → 1 row,
+  CSI-01..20 → 20 rows, clinical Deep count = 20, whisper lane at −28
+  LUFS with duck='whisper', 4 fragments, 29 s cycle, offset held, tail
+  −30.5 LUFS with ≥3 s fades, nothing crosses 20:00. All eight prior
+  proofs + build + tsc clean.
+
 **Slice: direct Excel import + externally-mastered upload** (current)
 - The "Import protocols" page is GONE. The catalog's "⬆ Import Excel"
   button now opens the file dialog directly; the workbook is probed and

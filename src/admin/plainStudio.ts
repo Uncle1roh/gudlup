@@ -271,6 +271,50 @@ export function plainToStudioTracks(
       }))
       if (c.riverberoPct !== undefined && c.riverberoPct > 0) l.track.effects = withReverb(l.track.effects, c.riverberoPct)
       const ids = c.setRange?.ids ?? []
+
+      /* ---- whisper-ostinato (mini-spec §B): loop + sussurrato + single
+         REF-xx. The refrain's "..."-separated fragments loop in a slow
+         expiratory cadence for the whole window, deliberately OFFSET from
+         the main affirmation interval; the last ~90 s slows down and drops
+         a further −2.5 dB so it dissolves into the phase fade. ---- */
+      const isOstinato = c.modalita === 'sussurrato' && ids.length === 1 && c.setRange && c.setRange.from === c.setRange.to
+      if (isOstinato) {
+        const aff = affById.get(ids[0])
+        const fragments = (aff?.testo ?? '').split(/\.\.\./).map((x) => x.trim()).filter(Boolean)
+        if (aff && fragments.length) {
+          const SPACING = 5      // s between fragment starts [DESIGN ~4–5 s]
+          const BREATH = 9       // s of breathing silence after a pass [DESIGN ~8–10 s]
+          const cycleLen = fragments.length * SPACING + BREATH // 4 frags → 29 s (≠ 24 s main interval)
+          const tailStart = Math.max(c.startS, c.endS - 90)
+          l.track.duck = 'whisper' // sidechain: dips under the MAIN voice, never masks it
+          let placedW = 0
+          for (let cy = 0; ; cy++) {
+            const cycleStart = c.startS + cy * cycleLen
+            let done = false
+            for (let i = 0; i < fragments.length; i++) {
+              const start = cycleStart + i * SPACING
+              const inTail = start >= tailStart // per-FRAGMENT: the whole last ~90 s dissolves
+              const dur = Math.min(4, SPACING - 1) * (inTail ? 1.15 : 1) // slight slowdown
+              if (start + dur > c.endS - 0.5) { done = true; break }
+              l.track.clips.push({
+                startSec: start,
+                durationSec: dur,
+                // diffuse, never dry-center: gentle alternating spread
+                params: { pan: ((i % 2 === 0 ? -1 : 1) * 0.15), pulseHz: 0.35, toneHz: 320, voiceId: voice.id } as VoiceParams,
+                text: fragments[i],
+                fadeInSec: 1,
+                fadeOutSec: inTail ? 3 : 1.5, // the tail dissolves, no hard cut
+              })
+              l.clipDbs.push(nominalDb + (inTail ? -2.5 : 0))
+              placedW++
+            }
+            if (done || c.startS + (cy + 1) * cycleLen >= c.endS) break
+          }
+          notes.push(`Whisper-ostinato ${c.clipId} (${ids[0]}): ${placedW} fragment clips ("${fragments.join(' / ')}") — ${SPACING}s cadence + ${BREATH}s breath = ${cycleLen}s cycle, offset from the affirmation interval; the last ~90 s stretches ×1.15 and drops −2.5 dB into the ${secToMmss(c.endS)} fade; ducks −2.5 dB under the main voice (never masks the −16 LUFS anchor).`)
+          continue
+        }
+      }
+
       const interval = c.intervalloS ?? 20
       const cycles = Math.max(1, c.cicli ?? 1)
       const att = c.attenuazioneCicloDb ?? -3
