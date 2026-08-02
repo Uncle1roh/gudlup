@@ -41,7 +41,9 @@ export interface CatalogVoice {
 
 export const VOICE_CATALOG: CatalogVoice[] = [
   // Maternal
-  { id: 'DrXMEEZ3ZiRzhi81CK7I', name: 'Valeria', gender: 'F', archetype: 'maternal' },
+  { id: 'eUdJpUEN3EslrgE24PKx', name: 'Rhea', gender: 'F', archetype: 'maternal' },
+  { id: 'KEr2f8NATTb5QZ2nw3PQ', name: 'Aurora', gender: 'F', archetype: 'maternal' },
+  { id: 'ChvF2eSRaJsHDVJhdmbG', name: 'Isabel', gender: 'F', archetype: 'maternal' },
   // Paternal
   { id: 'W71zT1VwIFFx3mMGH2uZ', name: 'Marco Trox', gender: 'M', archetype: 'paternal' },
   // Wise / Mentor
@@ -69,7 +71,7 @@ export const VOICE_CATALOG: CatalogVoice[] = [
 ]
 
 /** The standard engine voice — every [F] / unmarked line. */
-export const DEFAULT_PRIMARY = VOICE_CATALOG[0] // Valeria — Maternal
+export const DEFAULT_PRIMARY = VOICE_CATALOG[0] // Rhea — Maternal
 /** The default secondary — [M] rows (Deep double-induction). */
 export const DEFAULT_SECONDARY = VOICE_CATALOG[1] // Marco Trox — Paternal
 
