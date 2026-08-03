@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PRESETS, fmtDateTime, type Patient, type Therapist } from './data'
 import { getProtocol } from '../data/protocols'
-import type { SessionResult } from './MonitoredSession'
+import type { SessionResult } from './ConsultationRoom'
 import type { DebriefData } from './Debrief'
 
 interface SessionReportProps {
@@ -18,7 +18,7 @@ function mmss(s: number): string {
 
 export function SessionReport({ patient, therapist, result, debrief, onConfirm }: SessionReportProps) {
   const proto = getProtocol(result.protocolCode)
-  const preset = PRESETS[proto!.family]
+  const preset = proto ? PRESETS[proto.family] : undefined
   const [notes, setNotes] = useState(debrief.observations)
   const [signed, setSigned] = useState(false)
 
@@ -30,10 +30,10 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
       <div className="report">
         <div className="report__row"><span>Patient</span><b>{patient.name} · {patient.age}</b></div>
         <div className="report__row"><span>Date / time</span><b>{fmtDateTime(result.endedAt)}</b></div>
-        <div className="report__row"><span>Protocol</span><b>{proto?.code} — {proto?.title}</b></div>
-        <div className="report__row"><span>Parameters</span><b>{preset.binaural} · breathing {preset.breathing} · {preset.voice}</b></div>
-        <div className="report__row"><span>Duration</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.completed ? '(completed)' : '(ended early)'}</b></div>
-        <div className="report__row"><span>VAS pre → post</span><b>{result.vasPre} → {result.vasPost} <span className="report__delta">(+{result.vasPost - result.vasPre})</span></b></div>
+        <div className="report__row"><span>Protocol</span><b>{proto ? `${proto.code} — ${proto.title}` : 'None — conversation only'}</b></div>
+        {preset && <div className="report__row"><span>Parameters</span><b>{preset.binaural} · breathing {preset.breathing} · {preset.voice}</b></div>}
+        <div className="report__row"><span>Duration</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.audioPlayed ? (result.completed ? '(audio completed)' : '(audio ended early)') : ''}</b></div>
+        {result.audioPlayed && <div className="report__row"><span>VAS pre → post</span><b>{result.vasPre} → {result.vasPost} <span className="report__delta">(+{result.vasPost - result.vasPre})</span></b></div>}
         <div className="report__row"><span>Goal</span><b>{result.goal || '—'}</b></div>
         {result.intervened && <div className="report__row"><span>Intervention</span><b className="report__flag">INTERVENE used during session</b></div>}
 
@@ -44,7 +44,7 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
           ) : (
             <ul className="report__notes">
               {result.notes.map((n, i) => (
-                <li key={i}><code>P{n.phase} · {mmss(n.at)}</code> {n.text}</li>
+                <li key={i}><code>{n.phase ? `P${n.phase} · ` : ''}{mmss(n.at)}</code> {n.text}</li>
               ))}
             </ul>
           )}

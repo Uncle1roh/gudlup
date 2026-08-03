@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Patient } from './data'
 import { getProtocol } from '../data/protocols'
-import type { SessionResult } from './MonitoredSession'
+import type { SessionResult } from './ConsultationRoom'
 
 export interface DebriefData {
   observations: string
@@ -28,8 +28,12 @@ export function Debrief({ patient, result, onGenerate }: DebriefProps) {
       <div className="transition-head">
         <span className="transition-head__check">✓</span>
         <div>
-          <h1 className="b2b-h1">Session complete</h1>
-          <p className="b2b-sub">{proto?.title} · {result.completed ? 'completed' : 'ended early'} · reconnected to video</p>
+          <h1 className="b2b-h1">Consultation complete</h1>
+          <p className="b2b-sub">
+            {result.audioPlayed
+              ? `${proto?.title ?? result.protocolCode} · ${result.completed ? 'completed' : 'ended early'}`
+              : 'Conversation only — no protocol played'}
+          </p>
         </div>
       </div>
 
@@ -59,7 +63,9 @@ export function Debrief({ patient, result, onGenerate }: DebriefProps) {
             <h2 className="b2b-card__title">Instruments</h2>
             <p className="b2b-sub" style={{ marginBottom: 10 }}>Available to administer — your choice, no auto-prompts.</p>
             <ul className="instruments">
-              <li><span className="inst-ok">✓ recorded</span> VAS pre/post (+{result.vasPost - result.vasPre})</li>
+              {result.audioPlayed
+                ? <li><span className="inst-ok">✓ recorded</span> VAS pre/post (+{result.vasPost - result.vasPre})</li>
+                : <li><span className="inst-opt">n/a</span> VAS pre/post — no audio session</li>}
               <li><span className="inst-due">due</span> DASS-21 (T2) {patient.assessmentDue?.includes('T') ? '' : '— not yet due'}</li>
               <li><span className="inst-opt">optional</span> PSS-10 · BRS · CBI</li>
             </ul>

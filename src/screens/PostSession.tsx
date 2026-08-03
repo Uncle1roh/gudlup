@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
-import { EmojiScale } from '../components/EmojiScale'
-import { makeMoodCheck } from '../lib/vas'
+import { MoodScale } from '../components/MoodScale'
+import { makeMoodFromVas } from '../lib/vas'
 import { useI18n } from '../i18n'
 import type { MoodCheck } from '../types/domain'
 
@@ -18,16 +18,16 @@ interface PostSessionProps {
  */
 export function PostSession({ vasPre, onFinish, doneLabel = 'Done' }: PostSessionProps) {
   const { t } = useI18n()
-  const [postEmoji, setPostEmoji] = useState<number | null>(null)
+  const [postVas, setPostVas] = useState<number | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   function reveal(v: number) {
-    setPostEmoji(v)
+    setPostVas(v)
     setTimeout(() => setRevealed(true), 260)
   }
 
-  const post: MoodCheck | null = postEmoji != null ? makeMoodCheck(postEmoji) : null
+  const post: MoodCheck | null = postVas != null ? makeMoodFromVas(postVas) : null
   const delta = post ? Number((post.vas - vasPre.vas).toFixed(1)) : 0
   const sign = delta >= 0 ? '+' : ''
 
@@ -41,8 +41,9 @@ export function PostSession({ vasPre, onFinish, doneLabel = 'Done' }: PostSessio
       <div className="screen screen--center">
         <div className="screen__body" style={{ justifyContent: 'center', gap: 30, maxWidth: 320 }}>
           <h2 className="display">{t('Well done.')}</h2>
-          <p className="lead">{t('How do you feel now?')}</p>
-          <EmojiScale value={postEmoji} onChange={reveal} />
+          <p className="lead">{t('How do you feel now, compared to before?')}</p>
+          <MoodScale value={postVas} onChange={reveal} reference={vasPre.vas} referenceLabel="before" />
+          <p className="muted small">{t('Your answer before the session was {v}.', { v: Math.round(vasPre.vas) })}</p>
         </div>
       </div>
     )
@@ -55,8 +56,10 @@ export function PostSession({ vasPre, onFinish, doneLabel = 'Done' }: PostSessio
           <BreathingOrb size={150} breathing={false} />
         </div>
         <div className="metric fade-in delay-1">
-          <div className="metric__value">{sign}{Math.abs(delta).toFixed(1)}</div>
-          <div className="metric__label">{delta >= 0 ? t('more relaxed') : t('change noted')}</div>
+          <div className="metric__value">{sign}{Math.abs(Math.round(delta))}</div>
+          <div className="metric__label">
+            {Math.round(vasPre.vas)} → {post ? Math.round(post.vas) : '—'} · {delta >= 0 ? t('better than before') : t('change noted')}
+          </div>
         </div>
       </div>
 

@@ -96,6 +96,9 @@ function mapPatient(r: any): Patient {
     b2cSessions: [], // B2C bridge is consent-gated — merged in a later pass
     messages,
     clinicalNotes: r.clinical_notes ?? '',
+    notes: ((r.patient_notes ?? []) as any[])
+      .map((n) => ({ id: n.id as string, at: toMs(n.at), editedAt: n.edited_at ? toMs(n.edited_at) : undefined, text: n.text as string }))
+      .sort((a, b) => a.at - b.at),
     prescription: r.prescription ?? undefined,
     lastSessionAt: b2b.length ? Math.max(...b2b.map((x) => x.date)) : undefined,
     nextSessionAt: r.next_session_at ? toMs(r.next_session_at) : undefined,
@@ -118,7 +121,7 @@ function mapSessionRequest(r: any): SessionRequest {
   }
 }
 
-const PATIENT_SELECT = '*, goals(*), scores(*), messages(*), patient_consents(*), sessions(*, rapid_notes(*))'
+const PATIENT_SELECT = '*, goals(*), scores(*), messages(*), patient_consents(*), patient_notes(*), sessions(*, rapid_notes(*))'
 
 /* ---- admin / catalog mappers ---- */
 const CRED_STATUSES: CredentialStatus[] = ['pending', 'approved', 'rejected', 'more_info']
@@ -506,6 +509,20 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
           if (iErr) throw iErr
         }
       }
+    },
+
+    /* ---- clinical diary (therapist-only, RLS-scoped to owned patients) ---- */
+    async addPatientNote(patientId: string, text: string): Promise<void> {
+      const { error } = await sb.from('patient_notes').insert({ patient_id: patientId, text })
+      if (error) throw error
+    },
+    async updatePatientNote(_patientId: string, noteId: string, text: string): Promise<void> {
+      const { error } = await sb.from('patient_notes').update({ text, edited_at: toIso(Date.now()) }).eq('id', noteId)
+      if (error) throw error
+    },
+    async deletePatientNote(_patientId: string, noteId: string): Promise<void> {
+      const { error } = await sb.from('patient_notes').delete().eq('id', noteId)
+      if (error) throw error
     },
 
     // --- Protocol catalog ---

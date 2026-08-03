@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
-import { EmojiScale } from '../components/EmojiScale'
+import { MoodScale } from '../components/MoodScale'
 import { ImmersivePlayer } from '../screens/ImmersivePlayer'
 import { PostSession } from '../screens/PostSession'
-import { makeMoodCheck } from '../lib/vas'
+import { makeMoodFromVas } from '../lib/vas'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { useI18n } from '../i18n'
 import type { MoodCheck, SessionRecord, Duration } from '../types/domain'
@@ -28,7 +28,7 @@ export function SessionRunner({ protocolCode, duration, demoSeconds, onDone, onC
   const startedAt = useRef(Date.now())
 
   function pickPre(v: number) {
-    setVasPre(makeMoodCheck(v))
+    setVasPre(makeMoodFromVas(v))
     startedAt.current = Date.now()
     setTimeout(() => setStage('play'), 200)
   }
@@ -56,8 +56,9 @@ export function SessionRunner({ protocolCode, duration, demoSeconds, onDone, onC
             <div className="stack-md" style={{ textAlign: 'center' }}>
               <span className="eyebrow">{protocol.title}</span>
               <h2 className="display">{t('How are you right now?')}</h2>
+              <p className="muted small">{t('0 = not well at all · 10 = very well')}</p>
             </div>
-            <EmojiScale value={vasPre?.emoji ?? null} onChange={pickPre} />
+            <MoodScale value={vasPre?.vas ?? null} onChange={pickPre} />
           </div>
         </div>
       </div>
@@ -80,7 +81,7 @@ export function SessionRunner({ protocolCode, duration, demoSeconds, onDone, onC
 
   return (
     <div className="app-frame">
-      <PostSession vasPre={vasPre ?? makeMoodCheck(3)} onFinish={finish} doneLabel={'Back to home'} />
+      <PostSession vasPre={vasPre ?? makeMoodFromVas(5)} onFinish={finish} doneLabel={'Back to home'} />
     </div>
   )
 }

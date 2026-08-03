@@ -77,6 +77,20 @@ export function Profile({ demoSeconds, onDemoToggle }: ProfileProps) {
       <button className="dev-inline" onClick={onDemoToggle}>
         Dev · session length: {demoSeconds === null ? 'full' : '1 min demo'}
       </button>
+      {/* the intro runs once per account; this puts it back for demos/testing */}
+      <button
+        className="dev-inline"
+        onClick={() => {
+          try {
+            Object.keys(localStorage)
+              .filter((k) => k === 'gl.onboarded' || k.startsWith('gl.onboarded.'))
+              .forEach((k) => localStorage.removeItem(k))
+          } catch { /* private mode */ }
+          window.location.reload()
+        }}
+      >
+        Dev · replay the first-time intro
+      </button>
 
       {toast && <div className="toast">{toast}</div>}
     </div>

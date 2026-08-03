@@ -146,6 +146,16 @@ create table if not exists rapid_notes (
   text        text not null
 );
 
+-- clinical diary: many dated notes per patient (therapist-only, see RLS below)
+create table if not exists patient_notes (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references patients(id) on delete cascade,
+  text        text not null,
+  at          timestamptz not null default now(),
+  edited_at   timestamptz
+);
+create index if not exists patient_notes_patient_idx on patient_notes (patient_id, at desc);
+
 create table if not exists messages (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,
@@ -283,6 +293,7 @@ alter table scores                 enable row level security;
 alter table sessions               enable row level security;
 alter table rapid_notes            enable row level security;
 alter table messages               enable row level security;
+alter table patient_notes          enable row level security;
 alter table reports                enable row level security;
 alter table clinical_events        enable row level security;
 alter table companies              enable row level security;
@@ -334,6 +345,11 @@ create policy goals_via_patient on goals
 
 drop policy if exists scores_via_patient on scores;
 create policy scores_via_patient on scores
+  for all using (patient_id in (select id from patients where therapist_id = current_profile()))
+  with check (patient_id in (select id from patients where therapist_id = current_profile()));
+
+drop policy if exists patient_notes_via_patient on patient_notes;
+create policy patient_notes_via_patient on patient_notes
   for all using (patient_id in (select id from patients where therapist_id = current_profile()))
   with check (patient_id in (select id from patients where therapist_id = current_profile()));
 

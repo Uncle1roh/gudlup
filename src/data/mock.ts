@@ -31,6 +31,7 @@ const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
   b2bSessions: [...p.b2bSessions],
   b2cSessions: [...p.b2cSessions],
   messages: [...p.messages],
+  notes: p.notes.map((n) => ({ ...n })),
   goals: p.goals.map((g) => ({ ...g })),
   scores: p.scores.map((s) => ({ ...s })),
   conditions: [...p.conditions],
@@ -263,7 +264,7 @@ export function createMockProvider(): DataProvider {
         id, name: req.requesterName, age: 0, sex: 'F', reason: req.note ?? '',
         conditions: [], medications: [], contraindications: [],
         goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
-        clinicalNotes: '', vasTrend: 'stable', unread: 0,
+        clinicalNotes: '', notes: [], vasTrend: 'stable', unread: 0,
         consents: { therapy: true, sharing: false, aggregates: false },
       })
       req.status = 'claimed'
@@ -276,7 +277,7 @@ export function createMockProvider(): DataProvider {
         id, name, age: 0, sex: 'F', reason: '',
         conditions: [], medications: [], contraindications: [],
         goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
-        clinicalNotes: '', vasTrend: 'stable', unread: 0,
+        clinicalNotes: '', notes: [], vasTrend: 'stable', unread: 0,
         consents: { therapy: true, sharing: false, aggregates: false },
       })
       await wait()
@@ -294,6 +295,21 @@ export function createMockProvider(): DataProvider {
     updatePatient: async (patientId, patch) => {
       const p = patients.find((x) => x.id === patientId)
       if (p) Object.assign(p, patch)
+      await wait()
+    },
+    addPatientNote: async (patientId, text) => {
+      const p = patients.find((x) => x.id === patientId)
+      if (p) p.notes = [...p.notes, { id: nextId('note'), at: Date.now(), text }]
+      await wait()
+    },
+    updatePatientNote: async (patientId, noteId, text) => {
+      const p = patients.find((x) => x.id === patientId)
+      if (p) p.notes = p.notes.map((n) => (n.id === noteId ? { ...n, text, editedAt: Date.now() } : n))
+      await wait()
+    },
+    deletePatientNote: async (patientId, noteId) => {
+      const p = patients.find((x) => x.id === patientId)
+      if (p) p.notes = p.notes.filter((n) => n.id !== noteId)
       await wait()
     },
 

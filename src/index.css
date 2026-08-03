@@ -1887,3 +1887,97 @@ img, svg, video, canvas { max-width: 100%; }
 /* 5-action row + mastered state */
 .adm-plain__actions--5 { grid-template-columns: repeat(5, minmax(140px, 200px)); }
 .adm-plain__act--done { border-color: var(--accent, #2e7d5b); background: #eef8f1; }
+
+/* ============================================================================
+   Numeric mood check-in (0–10) — replaces the emoji faces; the post-session
+   scale keeps the "before" answer marked so now is answered against it.
+   ============================================================================ */
+.mood-scale { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.mood-scale__row { display: flex; gap: 4px; }
+.mood-step {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1 / 1.35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--mist-2);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(13px, 3.4vw, 17px);
+  font-weight: 600;
+  opacity: 0.78;
+  transition: transform 160ms var(--ease), opacity 160ms, background 160ms, box-shadow 200ms;
+}
+.mood-step:active { transform: scale(0.94); }
+.mood-step.is-on {
+  opacity: 1;
+  background: var(--aura-deep, #009b77);
+  color: #fff;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 4px rgba(0, 155, 119, 0.18), var(--shadow-soft);
+}
+.mood-step.is-ref { opacity: 1; box-shadow: inset 0 0 0 2px var(--aura, #3db189); }
+.mood-step.is-ref.is-on { box-shadow: 0 0 0 4px rgba(0, 155, 119, 0.18); }
+.mood-step__ref {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--slate);
+  white-space: nowrap;
+}
+.mood-scale__anchors { display: flex; justify-content: space-between; font-size: 12px; color: var(--slate); margin-top: 10px; }
+.mood-scale--dark .mood-step { background: rgba(255,255,255,0.08); color: #e6ecf2; }
+.mood-scale--dark .mood-scale__anchors { color: #9fb0c0; }
+
+/* ============================================================================
+   Clinical diary (patient card) — many dated notes, searchable
+   ============================================================================ */
+.diary__count { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--slate); }
+.diary__compose { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.diary__compose .b2b-btn { align-self: flex-start; }
+.diary__search { margin-bottom: 10px; }
+.diary__list { list-style: none; display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow-y: auto; }
+.diary__item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.diary__meta { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--slate); margin-bottom: 6px; }
+.diary__date { font-weight: 700; }
+.diary__edited { font-style: italic; }
+.diary__actions { margin-left: auto; display: flex; gap: 8px; }
+.diary__act { font-size: 11.5px; font-weight: 700; color: var(--aura-deep, #009b77); }
+.diary__act--del { color: #c2483f; }
+.diary__text { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+
+/* ============================================================================
+   Consultation room — the video call is the room; the right dock holds the
+   Good Loop library, the notes and the running protocol.
+   ============================================================================ */
+.monitor__grid--room { grid-template-rows: 1fr; }
+.monitor__grid--room .monitor__video { grid-row: 1; }
+.monitor__end { margin-left: 14px; padding: 6px 12px; font-size: 12px; }
+.dock { display: flex; flex-direction: column; background: #171c22; border: 1px solid #232a32; border-radius: 14px; min-height: 0; overflow: hidden; }
+.dock__tabs { display: flex; gap: 4px; padding: 8px 8px 0; border-bottom: 1px solid #232a32; }
+.dock__tab { flex: 1; padding: 9px 6px; font-size: 12.5px; font-weight: 700; color: #8a99a8; border-radius: 9px 9px 0 0; }
+.dock__tab.is-on { background: #1f262e; color: #6ee7b7; }
+.dock__tab:disabled { opacity: 0.4; }
+.dock__body { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+.dock__hint { font-size: 12.5px; color: #8a99a8; line-height: 1.5; margin-bottom: 12px; }
+.dock__checks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.dock__check { font-size: 11.5px; font-weight: 700; color: #8a99a8; background: #0f1318; border: 1px solid #2c343d; border-radius: 999px; padding: 5px 11px; display: inline-flex; align-items: center; gap: 6px; }
+.dock__check.is-ok { color: #6ee7b7; border-color: #285143; }
+.dock__check.is-bad { color: #ff8a8a; border-color: #4a1f1f; }
+.dock__label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7a89; margin-bottom: 6px; }
+.dock__body .b2b-input { background: #0f1318; border-color: #2c343d; color: #e6ecf2; margin-bottom: 14px; }
+.dock__protos { margin-bottom: 12px; }
+.dock__protos .proto { border-color: #2c343d; color: #cdd7e0; }
+.dock__protos .proto.is-on { border-color: #34d399; background: #14251f; }
+.dock__protos .proto .b2b-sub { color: #7d8b99; }
+.dock__preset { font-size: 12px; color: #9fb0c0; background: #0f1318; border: 1px solid #2c343d; border-radius: 9px; padding: 9px 11px; margin-bottom: 12px; }
+.dock__preset b { color: #6ee7b7; }
+.dock__blocked { color: #f0c674; text-align: center; margin-top: 8px; }
+.dock__controls { margin-top: 16px; }
+.notes-list--tall { max-height: none; }

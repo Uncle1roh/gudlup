@@ -1,12 +1,18 @@
 import { fmtDate, relWhen, type Patient, type Score } from './data'
 import { getProtocol } from '../data/protocols'
 import { LINKED_PATIENT_ID } from '../data/mock'
+import { PatientNotes } from './PatientNotes'
 
 interface PatientCardProps {
   patient: Patient
   onBack: () => void
   onEdit: () => void
-  onStartSession: () => void
+  /** Open the video consultation room (no protocol chosen up front). */
+  onOpenConsultation: () => void
+  /** Optional: pre-plan a protocol/composed audio before the call. */
+  onPlanSession: () => void
+  /** Refetch the patient after a write (diary edits). */
+  onRefetch: () => void
 }
 
 function ScoreTrend({ s }: { s: Score }) {
@@ -41,7 +47,7 @@ function ScoreTrend({ s }: { s: Score }) {
   )
 }
 
-export function PatientCard({ patient: p, onBack, onEdit, onStartSession }: PatientCardProps) {
+export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, onPlanSession, onRefetch }: PatientCardProps) {
   const sinceLast = p.b2cSessions.filter((s) => !p.lastSessionAt || s.date > p.lastSessionAt)
   const interVas = sinceLast.length ? sinceLast.reduce((a, s) => a + (s.vasPost - s.vasPre), 0) / sinceLast.length : null
   const linked = p.id === LINKED_PATIENT_ID
@@ -61,7 +67,8 @@ export function PatientCard({ patient: p, onBack, onEdit, onStartSession }: Pati
         <div className="card-head__cta">
           {p.nextSessionAt && <span className="b2b-sub">Next: {relWhen(p.nextSessionAt)}</span>}
           <button className="b2b-btn b2b-btn--ghost" onClick={onEdit}>Edit record</button>
-          <button className="b2b-btn b2b-btn--primary" onClick={onStartSession}>Start session →</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={onPlanSession}>Plan audio</button>
+          <button className="b2b-btn b2b-btn--primary" onClick={onOpenConsultation}>Open consultation →</button>
         </div>
       </div>
 
@@ -145,25 +152,23 @@ export function PatientCard({ patient: p, onBack, onEdit, onStartSession }: Pati
           </ul>
         </section>
 
-        {/* notes (therapist-only) */}
-        <section className="b2b-card">
-          <h2 className="b2b-card__title">Clinical notes <span className="lock">🔒 therapist only</span></h2>
-          <p className="notes">{p.clinicalNotes}</p>
-          {p.messages.length > 0 && (
-            <>
-              <h3 className="b2b-card__sub">Messages</h3>
-              <ul className="msgs">
-                {p.messages.map((m, i) => (
-                  <li key={i} className={`msg msg--${m.from}`}>
-                    <span className="msg__who">{m.from === 'patient' ? p.name.split(' ')[0] : 'You'}</span>
-                    <span>{m.text}</span>
-                    <span className="b2b-sub">{relWhen(m.at)}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+        {/* clinical diary (therapist-only) — searchable, editable, per-entry */}
+        <PatientNotes patientId={p.id} notes={p.notes} onChanged={onRefetch} />
+
+        {p.messages.length > 0 && (
+          <section className="b2b-card">
+            <h2 className="b2b-card__title">Messages</h2>
+            <ul className="msgs">
+              {p.messages.map((m, i) => (
+                <li key={i} className={`msg msg--${m.from}`}>
+                  <span className="msg__who">{m.from === 'patient' ? p.name.split(' ')[0] : 'You'}</span>
+                  <span>{m.text}</span>
+                  <span className="b2b-sub">{relWhen(m.at)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   )

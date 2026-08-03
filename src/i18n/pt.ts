@@ -394,4 +394,19 @@ export const PT: Record<string, string> = {
   'Cancel booking': 'Cancelar agendamento',
   'Schedule a session': 'Agendar uma sessão',
   'Pick a therapist and a time that works for you.': 'Escolha um terapeuta e um horário que funcione para você.',
+
+  /* ---- home: next session + repeat ---- */
+  'Next session': 'Próxima sessão',
+  'The session you did last time': 'A sessão que você fez da última vez',
+
+  /* ---- numeric check-in (0–10) ---- */
+  'How are you feeling, from 0 to 10?': 'Como você se sente, de 0 a 10?',
+  '{v} of 10': '{v} de 10',
+  'Not well at all': 'Nada bem',
+  'Very well': 'Muito bem',
+  'before': 'antes',
+  '0 = not well at all · 10 = very well': '0 = nada bem · 10 = muito bem',
+  'How do you feel now, compared to before?': 'Como você se sente agora, comparado a antes?',
+  'Your answer before the session was {v}.': 'Antes da sessão você respondeu {v}.',
+  'better than before': 'melhor do que antes',
 }

@@ -3,7 +3,7 @@ import { Roster } from './Roster'
 import { PatientCard } from './PatientCard'
 import { PatientEdit } from './PatientEdit'
 import { ClinicalWizard, type LaunchConfig } from './ClinicalWizard'
-import { MonitoredSession, type SessionResult } from './MonitoredSession'
+import { ConsultationRoom, type SessionResult } from './ConsultationRoom'
 import { Debrief, type DebriefData } from './Debrief'
 import { SessionReport } from './SessionReport'
 import { Credentialing } from './Credentialing'
@@ -26,6 +26,7 @@ function buildB2bSession(result: SessionResult): B2bSession {
   return {
     id: `rep-${result.endedAt}`,
     date: result.endedAt,
+    // talk-only consultations are still logged, with no protocol attached
     protocolCode: result.protocolCode,
     duration: Math.max(1, Math.round((result.endedAt - result.startedAt) / 60_000)),
     vasPre: result.vasPre,
@@ -120,11 +121,12 @@ export function TherapistApp() {
     )
   }
 
-  // The monitored session takes over the full frame (no chrome).
-  if (screen === 'session' && config) {
+  // The consultation room takes over the full frame (no chrome). It opens
+  // without a protocol — one is chosen from the in-call library, if at all.
+  if (screen === 'session') {
     if (!patient) return <Loading label="Connecting…" />
     return (
-      <MonitoredSession
+      <ConsultationRoom
         patient={patient}
         config={config}
         demoSeconds={fullLength ? null : DEMO_SESSION_SECONDS}
@@ -158,7 +160,7 @@ export function TherapistApp() {
       </header>
 
       <main className="b2b-main">
-        {dueNow && screen !== 'session' && (
+        {dueNow && (
           <div className="b2b-duebar">
             <span>
               <b>Session with {dueNow.patientName}</b> at {fmtTime(dueNow.startsAtMs)} — the patient sees their
@@ -173,7 +175,14 @@ export function TherapistApp() {
         {screen === 'roster' && <Roster onOpenPatient={(id) => { setSelectedId(id); setScreen('card') }} />}
 
         {screen === 'card' && (patient ? (
-          <PatientCard patient={patient} onBack={() => setScreen('roster')} onEdit={() => setScreen('edit')} onStartSession={() => setScreen('wizard')} />
+          <PatientCard
+            patient={patient}
+            onBack={() => setScreen('roster')}
+            onEdit={() => setScreen('edit')}
+            onOpenConsultation={() => { setConfig(null); setScreen('session') }}
+            onPlanSession={() => setScreen('wizard')}
+            onRefetch={refetchPatient}
+          />
         ) : <Loading />)}
 
         {screen === 'edit' && (patient ? (

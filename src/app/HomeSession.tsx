@@ -67,9 +67,11 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }:
         <BreathingOrb size={64} rings={false} />
       </header>
 
+      {/* the one big button: the next session of the plan, already decided —
+          protocol, sub-protocol and length come from the programme */}
       {step ? (
         <button className="start-cta" onClick={() => onStart({ protocolCode: step.code, duration: step.duration })}>
-          <span className="start-cta__label">{t('Continue your path')}</span>
+          <span className="start-cta__label">{t('Next session')}</span>
           <span className="start-cta__sub">
             {step.protocol?.title ?? step.code} · {t('session {n} of {total}', { n: step.step, total: step.total })} · {step.duration} {t('min')}
           </span>
@@ -78,6 +80,15 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }:
         <button className="start-cta" onClick={onWizard}>
           <span className="start-cta__label">{t('Start session')}</span>
           <span className="start-cta__sub">{complete ? t('Path complete — check in to begin the next one') : t('A few quick questions find the right session for now')}</span>
+        </button>
+      )}
+
+      {/* directly under it: play the last session again */}
+      {history.length > 0 && lastProtocol && (
+        <button className="rec-card rec-card--repeat" onClick={() => onStart(last)}>
+          <span className="rec-card__eyebrow">{t('Repeat')}</span>
+          <span className="rec-card__title">{lastProtocol.title}</span>
+          <span className="rec-card__reason">{t('The session you did last time')} · {last.duration} {t('min')}</span>
         </button>
       )}
 
@@ -102,14 +113,6 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }:
           <span className="rec-card__eyebrow">{t('Didn’t resonate?')}</span>
           <span className="rec-card__title">{altProtocol.title}</span>
           <span className="rec-card__reason">{t('The alternative to your last choice')}</span>
-        </button>
-      )}
-
-      {!step && lastProtocol && (
-        <button className="rec-card" onClick={() => onStart(last)}>
-          <span className="rec-card__eyebrow">{t('Repeat')}</span>
-          <span className="rec-card__title">{lastProtocol.title}</span>
-          <span className="rec-card__reason">{t('Same as last time')} · {last.duration} {t('min')}</span>
         </button>
       )}
 

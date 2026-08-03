@@ -45,6 +45,10 @@ export interface DataProvider {
   getPatient(id: string): Promise<Patient | undefined>
   recordB2bSession(patientId: string, session: B2bSession): Promise<void>
   updatePatient(patientId: string, patch: Partial<Patient>): Promise<void>
+  /** Clinical diary (therapist-only): one dated entry per note. */
+  addPatientNote(patientId: string, text: string): Promise<void>
+  updatePatientNote(patientId: string, noteId: string, text: string): Promise<void>
+  deletePatientNote(patientId: string, noteId: string): Promise<void>
 
   // --- Protocol catalog (shared, admin-managed) ---
   /** Every protocol in the catalog (enabled + disabled). */

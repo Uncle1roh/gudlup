@@ -18,3 +18,16 @@ export function emojiToVas(emoji: number): number {
 export function makeMoodCheck(emoji: number): MoodCheck {
   return { emoji, vas: emojiToVas(emoji), at: Date.now() }
 }
+
+/** Map a 0..10 VAS back onto the 1..5 emoji bucket (history/trends keep using it). */
+export function vasToEmoji(vas: number): number {
+  const clamped = Math.min(10, Math.max(0, vas))
+  return Math.min(5, Math.max(1, Math.round(clamped / 2.5) + 1))
+}
+
+/** The numeric scale is the source of truth now: the person answers 0..10 and
+    the emoji bucket is derived, so older screens and trends keep working. */
+export function makeMoodFromVas(vas: number): MoodCheck {
+  const clamped = Math.min(10, Math.max(0, Math.round(vas)))
+  return { emoji: vasToEmoji(clamped), vas: clamped, at: Date.now() }
+}

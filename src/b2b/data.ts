@@ -52,6 +52,17 @@ export interface Message {
   at: number
 }
 
+/** One dated entry in a patient's clinical diary. Therapist-only; searchable,
+    editable and removable from the patient card. */
+export interface ClinicalNote {
+  id: string
+  /** Written at (ms). */
+  at: number
+  /** Last edit (ms), absent when never edited. */
+  editedAt?: number
+  text: string
+}
+
 export interface Patient {
   id: string
   name: string
@@ -66,7 +77,11 @@ export interface Patient {
   b2bSessions: B2bSession[]
   b2cSessions: B2cSession[]
   messages: Message[]
+  /** Legacy single-field summary — kept for older records; the diary below is
+      what the console reads and writes. */
   clinicalNotes: string
+  /** Clinical diary, newest last. */
+  notes: ClinicalNote[]
   prescription?: string
   // roster status
   lastSessionAt?: number
@@ -125,6 +140,12 @@ export const DEMO_PATIENTS: Patient[] = [
       { from: 'therapist', text: "That's great to hear, Mariana. Keep them up this week.", at: now - 2 * DAY + HOUR },
     ],
     clinicalNotes: 'Responding well. Consider stepping to maintenance cadence after T2.',
+    notes: [
+      { id: 'n1', at: now - 21 * DAY, text: 'Intake. Work-related rumination peaking at night; sleep onset ~90 min. Agreed to start GL-ANX.' },
+      { id: 'n2', at: now - 14 * DAY, text: 'First monitored session. Visible easing of shoulders during Processing. Tolerated binaural well.' },
+      { id: 'n3', at: now - 7 * DAY, text: 'Brief tearfulness at bilateral onset — settled quickly. Reports falling asleep faster on evening self-practice.' },
+      { id: 'n4', at: now - 2 * DAY, text: 'Responding well. Consider stepping to maintenance cadence after T2.' },
+    ],
     prescription: '3× GL-ANX Quick / week',
     lastSessionAt: now - 7 * DAY,
     nextSessionAt: now + 2 * HOUR,
@@ -153,6 +174,10 @@ export const DEMO_PATIENTS: Patient[] = [
     b2cSessions: [{ date: now - 9 * DAY, protocolCode: 'GL-STRESS 4.1', duration: 6, vasPre: 3, vasPost: 4 }],
     messages: [{ from: 'patient', text: 'Had a rough week, did not manage many sessions.', at: now - 26 * HOUR }],
     clinicalNotes: 'Adherence dropping. Address barriers at next session.',
+    notes: [
+      { id: 'n5', at: now - 30 * DAY, text: 'Intake. Occupational burnout, 60h weeks. Hypertension monitored by GP.' },
+      { id: 'n6', at: now - 10 * DAY, text: 'Adherence dropping. Address barriers at next session.' },
+    ],
     prescription: '2× GL-STRESS Standard / week',
     lastSessionAt: now - 10 * DAY,
     nextSessionAt: now + 1 * DAY,
@@ -177,6 +202,9 @@ export const DEMO_PATIENTS: Patient[] = [
     b2cSessions: [],
     messages: [],
     clinicalNotes: 'New patient. Baseline (T0) completed; first session today.',
+    notes: [
+      { id: 'n7', at: now - 3 * DAY, text: 'New patient. Baseline (T0) completed; first session today.' },
+    ],
     lastSessionAt: undefined,
     nextSessionAt: now + 30 * 60_000,
     vasTrend: 'stable',
@@ -199,6 +227,9 @@ export const DEMO_PATIENTS: Patient[] = [
     b2cSessions: [{ date: now - 12 * DAY, protocolCode: 'GL-DEP 2.4', duration: 12, vasPre: 5, vasPost: 6 }],
     messages: [],
     clinicalNotes: 'Stable maintenance. Monthly cadence appropriate.',
+    notes: [
+      { id: 'n8', at: now - 21 * DAY, text: 'Stable maintenance. Monthly cadence appropriate.' },
+    ],
     prescription: '1× GL-RESIL Standard / week',
     lastSessionAt: now - 21 * DAY,
     nextSessionAt: now + 6 * DAY,

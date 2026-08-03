@@ -25,7 +25,6 @@ export function PatientEdit({ patient, onCancel, onSave }: Props) {
   const [conditions, setConditions] = useState(patient.conditions.join(', '))
   const [medications, setMedications] = useState(patient.medications.join(', '))
   const [prescription, setPrescription] = useState(patient.prescription ?? '')
-  const [notes, setNotes] = useState(patient.clinicalNotes)
   const [goals, setGoals] = useState<Goal[]>(patient.goals.map((g) => ({ ...g })))
   const [next, setNext] = useState(toLocalInput(patient.nextSessionAt))
   const [busy, setBusy] = useState(false)
@@ -43,7 +42,6 @@ export function PatientEdit({ patient, onCancel, onSave }: Props) {
       conditions: splitList(conditions),
       medications: splitList(medications),
       prescription: prescription.trim() || undefined,
-      clinicalNotes: notes,
       goals: goals.filter((g) => g.text.trim()).map((g) => ({ text: g.text.trim(), status: g.status })),
       nextSessionAt: next ? new Date(next).getTime() : patient.nextSessionAt,
     }
@@ -104,7 +102,7 @@ export function PatientEdit({ patient, onCancel, onSave }: Props) {
 
         <section className="b2b-card pe-card--wide">
           <h2 className="b2b-card__title">Clinical notes <span className="lock">🔒 therapist only</span></h2>
-          <textarea className="pe-notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <p className="b2b-sub">Notes live in the patient card's clinical diary — one dated, searchable entry per note.</p>
         </section>
       </div>
 
