@@ -34,7 +34,7 @@ import {
 } from './multitrack'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
-import { ARCHETYPES, DEFAULT_PRIMARY, voicesByArchetype } from '../tts/voiceCatalog'
+import { ARCHETYPES, defaultPrimary, voicesByArchetype } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, type AssetPools } from '../admin/assetPools'
@@ -1552,7 +1552,7 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
       <span className="mt-tts__lbl">Voce</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Default — {DEFAULT_PRIMARY.name} (engine voice)</option>
+        <option value="">Predefinita — {defaultPrimary().name} (voce del motore)</option>
         {ARCHETYPES.map((a) => {
           const list = voicesByArchetype(a.id)
           return list.length ? (

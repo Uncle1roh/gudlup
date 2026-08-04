@@ -38,7 +38,7 @@
 import type { SeedClip, SeedTrack } from '../compose/types'
 import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
-import { matchVoiceFromText, voiceLabel, voicesByArchetype, DEFAULT_PRIMARY, type CatalogVoice } from '../tts/voiceCatalog'
+import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
 import { ANCHOR_LUFS } from '../studio/multitrack'
 import { drawMusic, drawSoundscape, mulberry32, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
@@ -96,7 +96,7 @@ function levelLabel(v: number, mode: 'lufs' | 'offset'): string {
 /** Dec. 6 (developer's mapping): archetype+modalità → catalog voice.
     sussurrato prefers a Whisper voice of the same gender as the archetype. */
 export function resolvePlainVoice(archetipo: string | undefined, modalita: 'normale' | 'sussurrato' | undefined): { voice: CatalogVoice; why: string } {
-  const base = matchVoiceFromText(archetipo) ?? DEFAULT_PRIMARY
+  const base = matchVoiceFromText(archetipo) ?? defaultPrimary()
   const baseWhy = matchVoiceFromText(archetipo) ? `archetipo "${archetipo}"` : archetipo ? `archetipo "${archetipo}" not in catalog → default` : 'no archetipo → default'
   if (modalita !== 'sussurrato') return { voice: base, why: baseWhy }
   if (base.archetype === 'whisper') return { voice: base, why: `${baseWhy} (already Whisper)` }

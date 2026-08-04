@@ -9,9 +9,16 @@ import { AuthProvider } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
 import { I18nProvider } from './i18n'
 import { Hub } from './hub/Hub'
+import { initVoiceSync } from './tts/voiceSync'
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash)
+
+  /* Voices come from the connected ElevenLabs account: the cache paints the
+     pickers instantly, then a background refresh picks up anything the POs
+     added since. */
+  useEffect(() => { initVoiceSync() }, [])
+
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash)
     window.addEventListener('hashchange', onHash)

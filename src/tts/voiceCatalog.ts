@@ -1,24 +1,20 @@
 /* ============================================================================
-   Good Loop — Voice catalog (PO-approved ElevenLabs voices per archetype)
-   The definitive voice list selected by the Project Leaders. Baked into the
-   app so no screen ever asks for a voice ID again: every picker offers these
-   by name, grouped by archetype.
+   Good Loop — Voice catalog
 
-   Defaults: Custom Mattia (Maternal, F) is THE standard engine voice — every
-   [F] / unmarked line. Brian (Paternal, M) is the default secondary — the [M]
-   rows of the Deep double-induction.
+   The list is LIVE: it mirrors whatever the connected ElevenLabs account holds
+   (see voiceSync.ts). The POs add a voice in their workspace and it shows up in
+   every picker on the next load — no code change, no redeploy.
 
-   ACTIVE WORKSPACE (2026-08): the ElevenLabs account in use holds only
-   'Custom Mattia' + the 21 premade voices. The named voices below (Valeria,
-   Marco Trox, Rhea, Aurora, Isabel, Iris, Giulio, Chiara, …) live in a
-   DIFFERENT account and will return 404 voice_not_found until the POs re-add
-   them to this workspace. They are kept here because they are the PO-approved
-   selection — re-adding a voice may mint a NEW id, so verify before trusting.
+   The old hardcoded roster is gone. Its ids belonged to a different ElevenLabs
+   account and returned 404 voice_not_found; a baked-in list is exactly what
+   made that failure invisible until render time. What stays hardcoded:
+     · the ARCHETYPES (the product's own vocabulary),
+     · a tiny SEED so the app has something before the first sync,
+     · ARCHETYPE_OVERRIDES, where a PO decision beats the inferred archetype.
 
-   Also in the PO list, as EFFECTS rather than voices (engine roadmap):
-   · CORAL/MULTIPLE — a Harmonizer effect layering a voice into a chorus.
-   · EMOTIONAL ECHO — an activatable echo effect (the engine's −8 dB/+2 s
-     echo stacking already implements its core behavior).
+   Defaults resolve BY ID with a fallback chain, never by list position:
+   prepending a voice in 76f830a silently made the secondary Rhea (a maternal F
+   voice), so every [M] double-induction row rendered in the wrong voice.
    ============================================================================ */
 
 export type ArchetypeId =
@@ -28,15 +24,15 @@ export type ArchetypeId =
 export interface Archetype { id: ArchetypeId; label: string; icon: string }
 
 export const ARCHETYPES: Archetype[] = [
-  { id: 'maternal', label: 'Maternal', icon: '🤱' },
-  { id: 'paternal', label: 'Paternal', icon: '👨' },
-  { id: 'wise', label: 'Wise / Mentor', icon: '🦉' },
-  { id: 'neutral', label: 'Neutral / Descriptive', icon: '📖' },
-  { id: 'warrior', label: 'Warrior', icon: '🛡️' },
-  { id: 'shadow', label: 'Shadow', icon: '🌑' },
-  { id: 'ritual', label: 'Ritual / Ceremonial', icon: '🕯️' },
-  { id: 'child', label: 'Interior Kid', icon: '🧒' },
-  { id: 'whisper', label: 'Intimate / Whispered', icon: '🤫' },
+  { id: 'maternal', label: 'Materna', icon: '🤱' },
+  { id: 'paternal', label: 'Paterna', icon: '👨' },
+  { id: 'wise', label: 'Saggio / Mentore', icon: '🦉' },
+  { id: 'neutral', label: 'Neutra / Descrittiva', icon: '📖' },
+  { id: 'warrior', label: 'Guerriera', icon: '🛡️' },
+  { id: 'shadow', label: 'Ombra', icon: '🌑' },
+  { id: 'ritual', label: 'Rituale / Cerimoniale', icon: '🕯️' },
+  { id: 'child', label: 'Bambino interiore', icon: '🧒' },
+  { id: 'whisper', label: 'Intima / Sussurrata', icon: '🤫' },
 ]
 
 export interface CatalogVoice {
@@ -44,76 +40,123 @@ export interface CatalogVoice {
   name: string
   gender: 'F' | 'M'
   archetype: ArchetypeId
+  /** ElevenLabs category. 'premade' = stock voice on every account; anything
+      else is this workspace's own (generated / cloned / library-added). */
+  category?: string
+  /** BCP-47-ish language tag from the ElevenLabs labels, when present. */
+  language?: string
 }
 
-export const VOICE_CATALOG: CatalogVoice[] = [
-  // Maternal
-  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Custom Mattia', gender: 'F', archetype: 'maternal' },
-  // Paternal — premade ElevenLabs voice, present on EVERY account, so the [M]
-  // double-induction always renders even when the workspace lacks Marco Trox.
-  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'M', archetype: 'paternal' },
-  { id: 'eUdJpUEN3EslrgE24PKx', name: 'Rhea', gender: 'F', archetype: 'maternal' },
-  { id: 'KEr2f8NATTb5QZ2nw3PQ', name: 'Aurora', gender: 'F', archetype: 'maternal' },
-  { id: 'ChvF2eSRaJsHDVJhdmbG', name: 'Isabel', gender: 'F', archetype: 'maternal' },
-  // Paternal
-  { id: 'W71zT1VwIFFx3mMGH2uZ', name: 'Marco Trox', gender: 'M', archetype: 'paternal' },
-  // Wise / Mentor
-  { id: 'O79jWrXzrCmtLwD8gO2a', name: 'Brando Vox', gender: 'M', archetype: 'wise' },
-  { id: '6sFKzaJr574YWVu4UuJF', name: 'Cornelio', gender: 'M', archetype: 'wise' },
-  { id: '9ebwxABSgElm9wISOP0J', name: 'Iris', gender: 'F', archetype: 'wise' },
-  // Neutral / Descriptive
-  { id: 'wNIMZNAVa95a3UpgwWJr', name: 'Giulio', gender: 'M', archetype: 'neutral' },
-  { id: '9EU0h6CVtEDS6vriwwq5', name: 'Veronica', gender: 'F', archetype: 'neutral' },
-  { id: 'Dzlw1nIlAqiOOW6J7qo1', name: 'Chiara', gender: 'F', archetype: 'neutral' },
-  // Warrior
-  { id: 'k8cFOyAg7B9qwBlDDNTC', name: 'Miguel', gender: 'M', archetype: 'warrior' },
-  // Shadow
-  { id: 'iB0m5bo5Htdz0t9yE0xq', name: 'Jax Meridian', gender: 'M', archetype: 'shadow' },
-  { id: 'NxGA8X3YhTrnf3TRQf6Q', name: 'Jerry B', gender: 'M', archetype: 'shadow' },
-  { id: 'vfaqCOvlrKi4Zp7C2IAm', name: 'Malyx', gender: 'M', archetype: 'shadow' },
-  // Ritual / Ceremonial
-  { id: 'cPoqAvGWCPfCfyPMwe4z', name: 'Victor', gender: 'M', archetype: 'ritual' },
-  // Interior Kid
-  { id: 'XJ2fW4ybq7HouelYYGcL', name: 'Cherry Twinkle', gender: 'M', archetype: 'child' },
-  // Intimate / Whispered
-  { id: '1cxc5c3E9K6F1wlqOJGV', name: 'Emily', gender: 'F', archetype: 'whisper' },
-  { id: 'crip8a67H5HFGlukcx1h', name: 'Thomas', gender: 'M', archetype: 'whisper' },
-  { id: 'uCAKWh24Y93ESUjKwRGP', name: 'Matthew Schmitz', gender: 'M', archetype: 'whisper' },
+/** A PO decision beats whatever we infer from the ElevenLabs labels. */
+export const ARCHETYPE_OVERRIDES: Record<string, ArchetypeId> = {
+  aYBXyupCnZqrSVuPsR5i: 'maternal', // Custom Mattia — the PO's Italian maternal voice
+  nPczCjzI2devNBz1zQrb: 'paternal', // Brian — deep, resonant, comforting
+}
+
+/** Preferred defaults, in order. The first one that exists in the live list
+    wins, so a workspace change degrades instead of breaking. */
+const PRIMARY_PREFERENCE = ['aYBXyupCnZqrSVuPsR5i']
+const SECONDARY_PREFERENCE = ['W71zT1VwIFFx3mMGH2uZ', 'nPczCjzI2devNBz1zQrb'] // Marco Trox, then Brian
+
+/** Bootstrap list: only voices verified to resolve on the active account.
+    Replaced wholesale by the first successful sync. */
+const SEED: CatalogVoice[] = [
+  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Custom Mattia', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it' },
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'M', archetype: 'paternal', category: 'premade' },
 ]
 
-/* Defaults are resolved BY ID, never by list position: prepending a voice used
-   to silently re-point the secondary (after 76f830a, DEFAULT_SECONDARY was
-   Rhea — a maternal F voice — so every [M] row rendered in the wrong voice). */
-function byId(id: string): CatalogVoice {
-  const v = VOICE_CATALOG.find((x) => x.id === id)
-  if (!v) throw new Error(`Voice ${id} is not in the catalog`)
-  return v
+/* The live list. Mutated in place so existing imports of VOICE_CATALOG keep
+   pointing at the same array and see synced content. */
+export const VOICE_CATALOG: CatalogVoice[] = [...SEED]
+
+let lastSyncAt: number | null = null
+
+/** Replace the catalog with the voices the connected account actually has. */
+export function registerVoices(list: CatalogVoice[], at: number = Date.now()): void {
+  if (!list.length) return
+  VOICE_CATALOG.splice(0, VOICE_CATALOG.length, ...list)
+  lastSyncAt = at
+}
+
+/** When the list last came from ElevenLabs (null = still the seed). */
+export function voicesSyncedAt(): number | null {
+  return lastSyncAt
+}
+
+function pick(preferred: string[], fallback: (v: CatalogVoice) => boolean): CatalogVoice {
+  for (const id of preferred) {
+    const hit = VOICE_CATALOG.find((v) => v.id === id)
+    if (hit) return hit
+  }
+  return VOICE_CATALOG.find(fallback) ?? VOICE_CATALOG[0]
 }
 
 /** The standard engine voice — every [F] / unmarked line. */
-export const DEFAULT_PRIMARY = byId('aYBXyupCnZqrSVuPsR5i') // Custom Mattia — Maternal
-/** The default secondary — [M] rows (Deep double-induction).
-    Marco Trox (W71zT1VwIFFx3mMGH2uZ) is the PO's choice; swap this back as
-    soon as that voice is re-added to the active ElevenLabs workspace. */
-export const DEFAULT_SECONDARY = byId('nPczCjzI2devNBz1zQrb') // Brian — Paternal
+export function defaultPrimary(): CatalogVoice {
+  return pick(PRIMARY_PREFERENCE, (v) => v.archetype === 'maternal' || v.gender === 'F')
+}
+
+/** The default secondary — [M] rows of the Deep double-induction. */
+export function defaultSecondary(): CatalogVoice {
+  return pick(SECONDARY_PREFERENCE, (v) => v.archetype === 'paternal' || v.gender === 'M')
+}
 
 export function voiceById(id: string | undefined): CatalogVoice | undefined {
   return id ? VOICE_CATALOG.find((v) => v.id === id) : undefined
 }
 
 export function voicesByArchetype(a: ArchetypeId): CatalogVoice[] {
-  return VOICE_CATALOG.filter((v) => v.archetype === a)
+  // the workspace's own voices first — stock ElevenVoices are the long tail
+  return VOICE_CATALOG
+    .filter((v) => v.archetype === a)
+    .sort((x, y) => Number(x.category === 'premade') - Number(y.category === 'premade') || x.name.localeCompare(y.name))
 }
 
-/** Display label, e.g. "Valeria (F · Maternal)". */
+/** Display label, e.g. "Custom Mattia (F · Materna)". */
 export function voiceLabel(v: CatalogVoice): string {
   const arch = ARCHETYPES.find((a) => a.id === v.archetype)
   return `${v.name} (${v.gender} · ${arch?.label ?? v.archetype})`
 }
 
+/* ---- archetype inference from the ElevenLabs labels ----
+   ElevenLabs has no notion of our archetypes, so we read its own metadata
+   (descriptive / use_case / name) and map it onto the product's vocabulary.
+   Order matters: the first pattern that matches wins. */
+const INFERENCE: [RegExp, ArchetypeId][] = [
+  [/whisper|sussurr|asmr|breathy/i, 'whisper'],
+  [/villain|demon|dark|menac|malevolent|sinister|evil/i, 'shadow'],
+  [/warrior|fierce|dominant|commanding|firm|power/i, 'warrior'],
+  [/ancient|ceremon|ritual|epic|sacred|myth/i, 'ritual'],
+  [/child|kid|bubbly|quirky|playful|sweet|cute/i, 'child'],
+  [/wise|mature|mentor|narrat|storytell|educator|professor|sage/i, 'wise'],
+  [/matern|nurtur|caring|soothing|gentle|gentile|gentle|warm.*(female|woman)/i, 'maternal'],
+  [/patern|deep|resonant|comforting|fatherly/i, 'paternal'],
+]
+
+export interface ElevenLabsLabels {
+  gender?: string
+  descriptive?: string
+  use_case?: string
+  age?: string
+  accent?: string
+  language?: string
+}
+
+export function inferArchetype(name: string, labels: ElevenLabsLabels = {}, gender: 'F' | 'M' = 'F'): ArchetypeId {
+  const hay = [name, labels.descriptive, labels.use_case, labels.age].filter(Boolean).join(' ')
+  for (const [rx, a] of INFERENCE) {
+    if (rx.test(hay)) {
+      // a "deep/comforting" female reads maternal, not paternal, and vice versa
+      if (a === 'paternal' && gender === 'F') return 'maternal'
+      if (a === 'maternal' && gender === 'M') return 'paternal'
+      return a
+    }
+  }
+  return 'neutral'
+}
 
 /* ---- match a datasheet voice description to a catalog voice ----
-   Accepts either an explicit voice NAME ("Valeria", "Marco Trox") or an
+   Accepts either an explicit voice NAME ("Custom Mattia", "Marco Trox") or an
    archetype keyword in Italian/English/Portuguese ("materna", "paternal",
    "sussurrata", "saggio/mentore", "guerriero", "ombra", "rituale",
    "bambino interiore", "neutra"), optionally gender-filtered by [F]/[M]. */

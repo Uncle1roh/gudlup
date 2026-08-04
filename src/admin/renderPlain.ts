@@ -18,7 +18,7 @@
    ============================================================================ */
 
 import { getTtsProvider } from '../tts'
-import { voiceById, DEFAULT_PRIMARY } from '../tts/voiceCatalog'
+import { voiceById, defaultPrimary } from '../tts/voiceCatalog'
 import {
   SAMPLE_RATE,
   bakeVoiceBuffer,
@@ -133,7 +133,7 @@ export async function renderPlainWav(
           const vp = c.params as VoiceParams
           const text = (c.text ?? '').trim()
           if (!text || !canVoice || !decoder) { continue }
-          const voiceId = vp.voiceId ?? DEFAULT_PRIMARY.id
+          const voiceId = vp.voiceId ?? defaultPrimary().id
           const key = `${voiceId}|${text}`
           let decoded = ttsCache.get(key)
           if (!decoded) {

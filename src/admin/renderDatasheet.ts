@@ -35,7 +35,7 @@
 import { SAMPLE_RATE } from '../studio/multitrack'
 import { audioBufferToWav } from '../lib/wav'
 import { getTtsProvider } from '../tts'
-import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, matchVoiceFromText } from '../tts/voiceCatalog'
+import { defaultPrimary, defaultSecondary, matchVoiceFromText } from '../tts/voiceCatalog'
 import { timeStretch } from '../studio/timestretch'
 import { harmonizeBuffer } from '../studio/effects'
 import type { Duration } from '../types/domain'
@@ -490,7 +490,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         ?? matchVoiceFromText(ds.invariants.find((i) => /voce primaria|voce predefinita/i.test(i.param))?.value)
       const dsSecondary = matchVoiceFromText(ds.defaultVoiceM)
         ?? matchVoiceFromText(ds.invariants.find((i) => /voce secondaria/i.test(i.param))?.value)
-      notes.push(`Voices: [F] ${dsPrimary ? `${dsPrimary.name} (from the datasheet)` : `${DEFAULT_PRIMARY.name} (default — the datasheet doesn't specify one)`} · [M] ${dsSecondary ? `${dsSecondary.name} (from the datasheet)` : `${DEFAULT_SECONDARY.name} (default)`}.`)
+      notes.push(`Voices: [F] ${dsPrimary ? `${dsPrimary.name} (from the datasheet)` : `${defaultPrimary().name} (default — the datasheet doesn't specify one)`} · [M] ${dsSecondary ? `${dsSecondary.name} (from the datasheet)` : `${defaultSecondary().name} (default)`}.`)
       const usedVoices = new Set<string>()
       const resolveJobVoice = (job: VoiceJob): string | undefined => {
         const rowMatch = matchVoiceFromText(job.voiceName)
@@ -541,7 +541,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       }
       onProgress?.('voice', jobs.length, jobs.length)
       if (jobs.some((j) => j.secondary)) {
-        notes.push(`Secondary [M] voice rows: ${jobs.filter((j) => j.secondary).length} (rendered with ${dsSecondary?.name ?? DEFAULT_SECONDARY.name}).`)
+        notes.push(`Secondary [M] voice rows: ${jobs.filter((j) => j.secondary).length} (rendered with ${dsSecondary?.name ?? defaultSecondary().name}).`)
       }
       if (usedVoices.size) notes.push(`Row-level voices from the datasheet: ${[...usedVoices].join(', ')}.`)
     }

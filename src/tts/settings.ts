@@ -58,18 +58,5 @@ export function elevenLabsSource(): 'settings' | 'env' | 'none' {
 }
 
 
-/* ---- voice roster (the PO-selected ElevenLabs voices, saved on Load voices) ---- */
-const ROSTER_KEY = 'gl.tts.roster'
-export interface RosterVoice { id: string; name: string }
-
-export function getVoiceRoster(): RosterVoice[] {
-  try {
-    const raw = localStorage.getItem(ROSTER_KEY)
-    const list = raw ? (JSON.parse(raw) as RosterVoice[]) : []
-    return Array.isArray(list) ? list.filter((v) => v && typeof v.id === 'string' && typeof v.name === 'string') : []
-  } catch { return [] }
-}
-
-export function saveVoiceRoster(list: RosterVoice[]): void {
-  try { localStorage.setItem(ROSTER_KEY, JSON.stringify(list.slice(0, 30))) } catch { /* storage unavailable */ }
-}
+/* The voice list itself is no longer stored here: it is synced from the
+   ElevenLabs account and cached by tts/voiceSync.ts (key 'gl.tts.voices'). */
