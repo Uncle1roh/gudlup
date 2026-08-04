@@ -4,9 +4,16 @@
    app so no screen ever asks for a voice ID again: every picker offers these
    by name, grouped by archetype.
 
-   Defaults: Valeria (Maternal, F) is THE standard engine voice — every [F] /
-   unmarked line. Marco Trox (Paternal, M) is the default secondary — the [M]
+   Defaults: Custom Mattia (Maternal, F) is THE standard engine voice — every
+   [F] / unmarked line. Brian (Paternal, M) is the default secondary — the [M]
    rows of the Deep double-induction.
+
+   ACTIVE WORKSPACE (2026-08): the ElevenLabs account in use holds only
+   'Custom Mattia' + the 21 premade voices. The named voices below (Valeria,
+   Marco Trox, Rhea, Aurora, Isabel, Iris, Giulio, Chiara, …) live in a
+   DIFFERENT account and will return 404 voice_not_found until the POs re-add
+   them to this workspace. They are kept here because they are the PO-approved
+   selection — re-adding a voice may mint a NEW id, so verify before trusting.
 
    Also in the PO list, as EFFECTS rather than voices (engine roadmap):
    · CORAL/MULTIPLE — a Harmonizer effect layering a voice into a chorus.
@@ -41,7 +48,10 @@ export interface CatalogVoice {
 
 export const VOICE_CATALOG: CatalogVoice[] = [
   // Maternal
-  { id: '6GVWiX6jy20d4rQimnP1', name: 'Custom', gender: 'F', archetype: 'maternal' },
+  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Custom Mattia', gender: 'F', archetype: 'maternal' },
+  // Paternal — premade ElevenLabs voice, present on EVERY account, so the [M]
+  // double-induction always renders even when the workspace lacks Marco Trox.
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'M', archetype: 'paternal' },
   { id: 'eUdJpUEN3EslrgE24PKx', name: 'Rhea', gender: 'F', archetype: 'maternal' },
   { id: 'KEr2f8NATTb5QZ2nw3PQ', name: 'Aurora', gender: 'F', archetype: 'maternal' },
   { id: 'ChvF2eSRaJsHDVJhdmbG', name: 'Isabel', gender: 'F', archetype: 'maternal' },
@@ -71,10 +81,21 @@ export const VOICE_CATALOG: CatalogVoice[] = [
   { id: 'uCAKWh24Y93ESUjKwRGP', name: 'Matthew Schmitz', gender: 'M', archetype: 'whisper' },
 ]
 
+/* Defaults are resolved BY ID, never by list position: prepending a voice used
+   to silently re-point the secondary (after 76f830a, DEFAULT_SECONDARY was
+   Rhea — a maternal F voice — so every [M] row rendered in the wrong voice). */
+function byId(id: string): CatalogVoice {
+  const v = VOICE_CATALOG.find((x) => x.id === id)
+  if (!v) throw new Error(`Voice ${id} is not in the catalog`)
+  return v
+}
+
 /** The standard engine voice — every [F] / unmarked line. */
-export const DEFAULT_PRIMARY = VOICE_CATALOG[0] // Custom — Maternal
-/** The default secondary — [M] rows (Deep double-induction). */
-export const DEFAULT_SECONDARY = VOICE_CATALOG[1] // Marco Trox — Paternal
+export const DEFAULT_PRIMARY = byId('aYBXyupCnZqrSVuPsR5i') // Custom Mattia — Maternal
+/** The default secondary — [M] rows (Deep double-induction).
+    Marco Trox (W71zT1VwIFFx3mMGH2uZ) is the PO's choice; swap this back as
+    soon as that voice is re-added to the active ElevenLabs workspace. */
+export const DEFAULT_SECONDARY = byId('nPczCjzI2devNBz1zQrb') // Brian — Paternal
 
 export function voiceById(id: string | undefined): CatalogVoice | undefined {
   return id ? VOICE_CATALOG.find((v) => v.id === id) : undefined
