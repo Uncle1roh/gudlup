@@ -2003,3 +2003,12 @@ img, svg, video, canvas { max-width: 100%; }
 .pe-consents { list-style: none; display: flex; flex-direction: column; gap: 9px; }
 .pe-consent { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; cursor: pointer; }
 .pe-consent input { margin-top: 2px; accent-color: var(--aura-deep, #009b77); }
+
+/* --- track master parameters (the P button + its drawer) --- */
+.mt-mini--p { color: var(--mt-text); }
+.mt-mini--p:hover { border-color: var(--mt-accent); }
+.mt-mini.is-p { background: var(--mt-accent); color: #05231a; border-color: var(--mt-accent); }
+.mt-params__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 18px; align-items: start; }
+.mt-params .mt-seg { grid-column: 1 / -1; }
+.mt-params .mt-note { grid-column: 1 / -1; margin: 0; }
+.mt-params .mt-tts__row { grid-column: 1 / -1; }

@@ -598,6 +598,8 @@ function StudioDesktop() {
 
   /* ---- track effects ---- */
   const [fxTrackId, setFxTrackId] = useState<string | null>(null)
+  /** Track whose master-parameter drawer (the P button) is open. */
+  const [paramTrackId, setParamTrackId] = useState<string | null>(null)
   const [fxBusy, setFxBusy] = useState(false)
 
   function patchEffect(trackId: string, kind: TrackEffect['kind'], patch: Partial<TrackEffect> | { params: Record<string, number> }) {
@@ -741,6 +743,28 @@ function StudioDesktop() {
   function patchClipParams(trackId: string, clipId: string, patch: Partial<ClipParams>) {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, params: { ...c.params, ...patch } as ClipParams })) })))
     scheduleRender(trackId, clipId)
+  }
+
+  /** Master parameter change: apply one patch to EVERY clip on the track, so a
+      value is set once instead of clip by clip. Cut/glued pieces are skipped —
+      their audio is frozen and would not re-render. */
+  function patchTrackParams(trackId: string, patch: Partial<ClipParams>) {
+    const track = tracksRef.current.find((t) => t.id === trackId)
+    if (!track) return
+    const targets = track.clips.filter((c) => !c.frozen)
+    if (!targets.length) {
+      setEditMsg('Tutte le clip di questa traccia hanno l’audio congelato (pezzi tagliati) — i parametri non si applicano.')
+      return
+    }
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      clips: t.clips.map((c) => (c.frozen ? c : { ...c, params: { ...c.params, ...patch } as ClipParams })),
+    })))
+    for (const c of targets) scheduleRender(trackId, c.id)
+    const frozen = track.clips.length - targets.length
+    setEditMsg(frozen > 0
+      ? `Applicato a ${targets.length} clip · ${frozen} pezzo${frozen === 1 ? '' : 'i'} tagliato${frozen === 1 ? '' : 'i'} salta${frozen === 1 ? '' : 'no'} (audio congelato).`
+      : null)
   }
   function patchClipTiming(trackId: string, clipId: string, patch: { startSec?: number; durationSec?: number }) {
     const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
@@ -934,6 +958,17 @@ function StudioDesktop() {
           />
         )
       })()}
+      {paramTrackId && (() => {
+        const t = tracks.find((x) => x.id === paramTrackId)
+        if (!t) return null
+        return (
+          <TrackParamsDrawer
+            track={t}
+            onClose={() => setParamTrackId(null)}
+            onParam={(patch) => patchTrackParams(t.id, patch)}
+          />
+        )
+      })()}
       <div className="mt-body">
         <div className="mt-grid">
           <div className="mt-headers" style={{ width: HEADER_W }}>
@@ -949,6 +984,8 @@ function StudioDesktop() {
               onAddClip={() => addClip(t.id, playhead)}
               onChannel={(c) => patchTrack(t.id, { channel: c })}
               onFx={() => setFxTrackId((v) => (v === t.id ? null : t.id))}
+              paramsOpen={paramTrackId === t.id}
+              onParams={() => setParamTrackId((v) => (v === t.id ? null : t.id))}
             />
           ))}
           {tracks.length === 0 && <div className="mt-empty">Nessuna traccia. Usa ＋ Traccia.</div>}
@@ -1000,7 +1037,7 @@ function StudioDesktop() {
 }
 
 /* ============================ track header ============================ */
-function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, onAddClip, onChannel, onFx }: {
+function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, onAddClip, onChannel, onFx, paramsOpen, onParams }: {
   track: Track
   onVolume: (v: number) => void
   onToggleMute: () => void
@@ -1009,6 +1046,8 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
   onAddClip: () => void
   onChannel: (c: TrackChannel) => void
   onFx: () => void
+  paramsOpen: boolean
+  onParams: () => void
 }) {
   const meta = TRACK_META[track.type]
   const ch = track.channel ?? 'C'
@@ -1031,6 +1070,13 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
             <button key={c} className={`mt-chan__b${ch === c ? ' is-on' : ''}`} onClick={() => onChannel(c)}>{c}</button>
           ))}
         </span>
+        <button
+          className={`mt-mini mt-mini--p${paramsOpen ? ' is-p' : ''}`}
+          onClick={onParams}
+          title="Parametri della traccia — cambia un valore una volta sola per tutte le clip"
+        >
+          P
+        </button>
         <span style={{ flex: 1 }} />
         <button className="mt-addclip" onClick={onAddClip} title="Aggiungi una clip al cursore">＋</button>
       </div>
@@ -1630,6 +1676,154 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
 
 
 /* ---- per-track effects drawer (metadata-driven controls) ---- */
+/* ==================== track master parameters (the P button) ====================
+   Every parameter of a track type in one place, applied to ALL its clips at
+   once. Values that differ across clips show as "misto"; setting one levels
+   every clip to it. Cut pieces keep their frozen audio and are reported. */
+function TrackParamsDrawer({ track, onClose, onParam }: {
+  track: Track
+  onClose: () => void
+  onParam: (patch: Partial<ClipParams>) => void
+}) {
+  const meta = TRACK_META[track.type]
+  const live = track.clips.filter((c) => !c.frozen)
+  const frozen = track.clips.length - live.length
+
+  /** The shared value of one param across the track — plus whether clips differ. */
+  function shared<T>(key: string, fallback: T): { value: T; mixed: boolean } {
+    if (!live.length) return { value: fallback, mixed: false }
+    const values = live.map((c) => (c.params as unknown as Record<string, unknown>)[key] as T | undefined)
+    const first = values[0] ?? fallback
+    return { value: first, mixed: values.some((v) => v !== values[0]) }
+  }
+
+  /** A slider bound to the whole track. */
+  function TrackSlider({ label, k, fallback, min, max, step, fmt }: {
+    label: string; k: string; fallback: number; min: number; max: number; step: number; fmt: (v: number) => string
+  }) {
+    const { value, mixed } = shared<number>(k, fallback)
+    return (
+      <Slider
+        label={mixed ? `${label} · misto` : label}
+        value={value}
+        min={min} max={max} step={step}
+        onChange={(v) => onParam({ [k]: v } as unknown as Partial<ClipParams>)}
+        fmt={fmt}
+      />
+    )
+  }
+
+  /** A segmented choice bound to the whole track. */
+  function TrackSeg<T extends string>({ k, options, fallback, label }: { k: string; options: readonly T[]; fallback: T; label: (o: T) => string }) {
+    const { value, mixed } = shared<T>(k, fallback)
+    return (
+      <>
+        <div className="mt-seg">
+          {options.map((o) => (
+            <button key={o} className={!mixed && value === o ? 'is-on' : ''} onClick={() => onParam({ [k]: o } as unknown as Partial<ClipParams>)}>{label(o)}</button>
+          ))}
+        </div>
+        {mixed && <div className="mt-note">Le clip usano valori diversi — sceglierne uno lo applica a tutte.</div>}
+      </>
+    )
+  }
+
+  const voiceShared = shared<string>('voiceId', '')
+
+  return (
+    <div className="mt-fx mt-params">
+      <div className="mt-fx__head">
+        <b style={{ color: meta.color }}>{meta.icon} Parametri — {track.name}</b>
+        <span className="mt-fx__hint">
+          Vale per tutte le {live.length} clip della traccia in una volta sola.
+          {frozen > 0 && ` ${frozen} pezzo${frozen === 1 ? '' : 'i'} tagliato${frozen === 1 ? '' : 'i'} resta${frozen === 1 ? '' : 'no'} con l’audio congelato.`}
+        </span>
+        <button className="mt-x" onClick={onClose}>✕</button>
+      </div>
+
+      <div className="mt-params__grid">
+        {live.length === 0 && <div className="mt-note">Nessuna clip modificabile su questa traccia.</div>}
+
+        {track.type === 'binaural' && live.length > 0 && (() => {
+          const carrier = shared<number>('carrierHz', 180).value
+          const beat = shared<number>('beatHz', 6).value
+          return <>
+            <TrackSlider label="Portante" k="carrierHz" fallback={180} min={60} max={520} step={1} fmt={(v) => `${v} Hz`} />
+            <TrackSlider label="Battimento" k="beatHz" fallback={6} min={0.5} max={16} step={0.1} fmt={(v) => `${v.toFixed(1)} Hz`} />
+            <div className="mt-note">L {Math.round(carrier - beat / 2)} Hz · R {Math.round(carrier + beat / 2)} Hz</div>
+          </>
+        })()}
+
+        {track.type === 'soundscape' && live.length > 0 && <>
+          <TrackSeg k="texture" options={['lake', 'air', 'deep'] as const} fallback={'lake' as Texture} label={(o) => o} />
+          <TrackSlider label="Calore" k="warmth" fallback={640} min={200} max={2000} step={10} fmt={(v) => `${v} Hz`} />
+        </>}
+
+        {track.type === 'breath' && live.length > 0 && <>
+          <TrackSlider label="Respiri / min" k="breathsPerMin" fallback={5.5} min={3} max={10} step={0.1} fmt={(v) => v.toFixed(1)} />
+          <TrackSlider label="Tono" k="toneHz" fallback={300} min={120} max={520} step={1} fmt={(v) => `${v} Hz`} />
+        </>}
+
+        {track.type === 'music' && live.length > 0 && <>
+          <TrackSeg k="chord" options={['c', 'g', 'am', 'f', 'dm', 'em'] as const} fallback={'c' as Chord} label={(o) => o.toUpperCase()} />
+          <div className="mt-note">Imposta lo stesso accordo su tutta la traccia — utile per riportare un pad a una tonalità unica.</div>
+        </>}
+
+        {track.type === 'bilateral' && live.length > 0 && <>
+          <TrackSlider label="Tono" k="toneHz" fallback={400} min={200} max={800} step={5} fmt={(v) => `${v} Hz`} />
+          <TrackSlider label="Impulso" k="blipMs" fallback={120} min={40} max={400} step={5} fmt={(v) => `${v} ms`} />
+          <TrackSlider label="Ogni" k="everySec" fallback={4} min={1} max={10} step={0.5} fmt={(v) => `${v.toFixed(1)} s`} />
+          <TrackSlider label="Ampiezza pan" k="panAmp" fallback={0.8} min={0.1} max={1} step={0.05} fmt={(v) => `±${Math.round(v * 100)}`} />
+        </>}
+
+        {track.type === 'voice' && live.length > 0 && <>
+          <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
+            <span className="mt-tts__lbl">Voce{voiceShared.mixed ? ' · misto' : ''}</span>
+            <select
+              className="mt-tts__sel"
+              value={voiceShared.mixed ? '' : voiceShared.value}
+              onChange={(e) => onParam({ voiceId: e.target.value || undefined } as unknown as Partial<ClipParams>)}
+            >
+              <option value="">Predefinita — {defaultPrimary().name} (voce del motore)</option>
+              {ARCHETYPES.map((a) => {
+                const list = voicesByArchetype(a.id)
+                return list.length ? (
+                  <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
+                    {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
+                  </optgroup>
+                ) : null
+              })}
+            </select>
+          </div>
+          <TrackSlider label="Pan" k="pan" fallback={0} min={-1} max={1} step={0.05} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
+          <TrackSlider label="Velocità" k="speed" fallback={1} min={0.7} max={1.4} step={0.05} fmt={(v) => `×${v.toFixed(2)}`} />
+          <TrackSlider label="Pulsazione" k="pulseHz" fallback={0.2} min={0.05} max={1.2} step={0.01} fmt={(v) => `${v.toFixed(2)} Hz`} />
+          <TrackSlider label="Tono" k="toneHz" fallback={420} min={200} max={700} step={1} fmt={(v) => `${v} Hz`} />
+          <div className="mt-note">
+            Cambiare voce qui riguarda tutte le battute della traccia. Le clip già sintetizzate vengono
+            rigenerate alla prossima sintesi; pan e velocità si riapplicano subito, senza nuove chiamate TTS.
+          </div>
+        </>}
+
+        {track.type === 'sample' && live.length > 0 && (() => {
+          const tag = shared<string | undefined>('drawTag', undefined)
+          const phase = shared<number | undefined>('drawPhase', undefined)
+          return <>
+            <div className="mt-note">
+              Le clip file audio puntano a un file ciascuna: il sorteggio dal pool e la scelta del file restano
+              nell’ispettore della singola clip, così una traccia può alternare più ambienti.
+            </div>
+            <div className="mt-note" style={{ marginTop: 6 }}>
+              Pool della traccia: {tag.mixed || phase.mixed ? 'misto' : tag.value ? `tag "${tag.value}"` : phase.value ? `fase ${phase.value}` : 'nessuno'} ·
+              {' '}{live.filter((c) => !(c.params as SampleParams).url).length} clip senza file.
+            </div>
+          </>
+        })()}
+      </div>
+    </div>
+  )
+}
+
 function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
   track: Track
   busy: boolean
