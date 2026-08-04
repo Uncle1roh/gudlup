@@ -12,13 +12,13 @@ import { AuditLog } from './AuditLog'
 type Section = 'overview' | 'catalog' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
-  { id: 'overview', label: 'Overview', icon: '▦' },
-  { id: 'catalog', label: 'Protocol catalog', icon: '♪' },
-  { id: 'assets', label: 'Asset library', icon: '♫' },
-  { id: 'credentials', label: 'Credentialing', icon: '✓' },
-  { id: 'companies', label: 'Companies', icon: '◭' },
-  { id: 'users', label: 'Users & roles', icon: '◑' },
-  { id: 'audit', label: 'Audit log', icon: '≣' },
+  { id: 'overview', label: 'Panoramica', icon: '▦' },
+  { id: 'catalog', label: 'Catalogo protocolli', icon: '♪' },
+  { id: 'assets', label: 'Libreria audio', icon: '♫' },
+  { id: 'credentials', label: 'Credenziali', icon: '✓' },
+  { id: 'companies', label: 'Aziende', icon: '◭' },
+  { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
+  { id: 'audit', label: 'Registro attività', icon: '≣' },
 ]
 
 export function AdminApp() {

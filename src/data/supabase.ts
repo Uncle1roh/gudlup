@@ -19,7 +19,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
-import type { Patient, Therapist, B2bSession, Goal, Score, Message, RapidNote } from '../b2b/data'
+import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, Message, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
@@ -93,7 +93,9 @@ function mapPatient(r: any): Patient {
     goals: (r.goals ?? []).map(mapGoal),
     scores: (r.scores ?? []).map(mapScore),
     b2bSessions: b2b,
-    b2cSessions: [], // B2C bridge is consent-gated — merged in a later pass
+    // filled by mergeB2cSessions() — the bridge is consent-gated in RLS, so a
+    // patient without the 'sharing' consent simply yields no rows
+    b2cSessions: [],
     messages,
     clinicalNotes: r.clinical_notes ?? '',
     notes: ((r.patient_notes ?? []) as any[])
@@ -169,6 +171,47 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
   }
 
   const toMs2 = (iso: string) => new Date(iso).getTime()
+
+  /**
+   * The B2C↔B2B bridge: self-practice sessions the person did in the consumer
+   * app, surfaced in their clinician's view of the record. The link is
+   * patients.b2c_profile_id; the CONSENT GATE lives in the RLS policy
+   * (therapist_reads_linked_b2c_sessions — 'sharing' granted), so a revoked
+   * consent silently yields no rows here rather than being filtered client-side.
+   */
+  async function mergeB2cSessions(rows: any[], patients: Patient[]): Promise<void> {
+    const linked = rows
+      .map((r, i) => ({ profileId: r.b2c_profile_id as string | null, patient: patients[i] }))
+      .filter((x): x is { profileId: string; patient: Patient } => !!x.profileId)
+    if (!linked.length) return
+
+    const { data, error } = await sb
+      .from('sessions')
+      .select('b2c_profile_id, protocol_code, duration_min, started_at, ended_at, vas_pre, vas_post')
+      .eq('kind', 'b2c')
+      .in('b2c_profile_id', linked.map((x) => x.profileId))
+      .order('started_at')
+    if (error || !data) return // no consent / no access → the record shows none
+
+    const byProfile = new Map<string, B2cSession[]>()
+    for (const r of data as any[]) {
+      const list = byProfile.get(r.b2c_profile_id) ?? []
+      list.push({
+        date: toMs(r.ended_at ?? r.started_at),
+        protocolCode: r.protocol_code,
+        duration: r.duration_min,
+        vasPre: Number(r.vas_pre ?? 0),
+        vasPost: Number(r.vas_post ?? 0),
+      })
+      byProfile.set(r.b2c_profile_id, list)
+    }
+    for (const { profileId, patient } of linked) {
+      const list = byProfile.get(profileId) ?? []
+      patient.b2cSessions = list
+      const last = list[list.length - 1]
+      if (last) patient.b2cInactiveDays = Math.max(0, Math.round((Date.now() - last.date) / 86_400_000))
+    }
+  }
 
   async function authUid(): Promise<string> {
     const { data: auth } = await sb.auth.getUser()
@@ -374,7 +417,10 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       // RLS limits rows to the therapist's own patients
       const { data, error } = await sb.from('patients').select(PATIENT_SELECT).order('name')
       if (error) throw error
-      return (data ?? []).map(mapPatient)
+      const rows = data ?? []
+      const patients = rows.map(mapPatient)
+      await mergeB2cSessions(rows, patients)
+      return patients
     },
 
     async requestSession(note?: string): Promise<void> {
@@ -456,7 +502,10 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         if ((error as any).code === 'PGRST116') return undefined // no rows
         throw error
       }
-      return data ? mapPatient(data) : undefined
+      if (!data) return undefined
+      const patient = mapPatient(data)
+      await mergeB2cSessions([data], [patient])
+      return patient
     },
 
     async recordB2bSession(patientId: string, session: B2bSession): Promise<void> {
@@ -498,6 +547,16 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (Object.keys(row).length > 0) {
         const { error } = await sb.from('patients').update(row).eq('id', patientId)
         if (error) throw error
+      }
+      // LGPD consents live in their own table, one row per kind. 'sharing' is
+      // the gate the B2C↔B2B bridge policy reads.
+      if (patch.consents !== undefined) {
+        const at = toIso(Date.now())
+        const rows = (['therapy', 'sharing', 'aggregates'] as const).map((kind) => ({
+          patient_id: patientId, kind, granted: patch.consents![kind], at,
+        }))
+        const { error: cErr } = await sb.from('patient_consents').upsert(rows, { onConflict: 'patient_id,kind' })
+        if (cErr) throw cErr
       }
       // goals live in their own table — replace the set wholesale
       if (patch.goals !== undefined) {

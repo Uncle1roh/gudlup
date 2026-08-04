@@ -21,8 +21,8 @@ import { loadAssetMeta, saveAssetTags } from './assetPools'
 type Tab = 'music' | 'soundscape' | 'special'
 
 const PHASE_LABEL: Record<PhaseKey, string> = {
-  f1: 'F1 · Intro', f2: 'F2 · Breathing', f3: 'F3 · Centering',
-  f4: 'F4 · Affirmation loop', f5: 'F5 · Integration', f6: 'F6 · Outro',
+  f1: 'F1 · Intro', f2: 'F2 · Respiro', f3: 'F3 · Centratura',
+  f4: 'F4 · Loop affermazioni', f5: 'F5 · Integrazione', f6: 'F6 · Chiusura',
 }
 
 export function AssetLibrary({ actor }: { actor: string }) {
@@ -56,7 +56,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
   useEffect(() => {
     if (hasSupabaseEnv()) void refresh()
-    else { setError('The asset library reads Supabase Storage — mock mode has no bucket. Set VITE_SUPABASE_URL / _ANON_KEY.'); setAssets([]) }
+    else { setError('La libreria audio legge da Supabase Storage — in modalità mock non esiste alcun bucket. Imposta VITE_SUPABASE_URL / _ANON_KEY.'); setAssets([]) }
     void dp.listProtocols().then((ps) => {
       const mappable = ps.filter((p) => p.datasheet || p.spec)
       setProtocols(mappable)
@@ -154,15 +154,15 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
   const assetRow = (a: AudioAsset) => (
     <div key={a.path} className="adm-asset">
-      <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? 'Stop' : 'Preview'}>
+      <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? 'Ferma' : 'Ascolta'}>
         {playing === a.path ? '■' : '▶'}
       </button>
       <span className="adm-asset__name" title={a.path}>{a.name}</span>
       {a.kind === 'soundscape' && (
         <input
           className="b2b-input adm-asset__tags"
-          placeholder="extra draw tags (lago, fabbrica…)"
-          title="PLAIN random-draw tags for this file — the folder + filename already count; add synonyms/extra ambienti here. Saved on blur."
+          placeholder="tag aggiuntivi per il sorteggio (lago, fabbrica…)"
+          title="Tag PLAIN per il sorteggio casuale di questo file — cartella e nome file contano già; qui aggiungi sinonimi e ambienti extra. Salvati all’uscita dal campo."
           value={metaTags[a.path] ?? ''}
           disabled={tagBusy === a.path}
           onChange={(e) => setMetaTags((m) => ({ ...m, [a.path]: e.target.value }))}
@@ -177,15 +177,15 @@ export function AssetLibrary({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Asset Library</h1>
-          <p className="b2b-sub">The PO's produced audio in <code>protocol-audio/assets</code> — preview anything, then map which asset serves each protocol phase. Renderer v3 mixes exactly this mapping.</p>
+          <h1 className="b2b-h1">Libreria audio</h1>
+          <p className="b2b-sub">L’audio prodotto in <code>protocol-audio/assets</code> — ascolta qualsiasi file, poi assegna quale asset serve ciascuna fase del protocollo. Il renderer v3 miscela esattamente questa mappatura.</p>
         </div>
         <button className="b2b-btn" onClick={() => void refresh()} disabled={assets === null}>↻ Refresh</button>
       </header>
 
       {error && <div className="adm-note adm-note--warn">{error}</div>}
       {tagErr && <div className="adm-note adm-note--warn">Tags: {tagErr} — run the updated supabase/setup.sql (adds asset_meta) if the table is missing.</div>}
-      {assets === null && <div className="adm-note">Listing the bucket…</div>}
+      {assets === null && <div className="adm-note">Lettura del bucket…</div>}
 
       {assets !== null && (
         <>
@@ -209,8 +209,8 @@ export function AssetLibrary({ actor }: { actor: string }) {
               })}
               {music.some((a) => !a.phase) && (
                 <div className="adm-asset__group">
-                  <div className="adm-asset__ghead">No phase prefix <span className="adm-asset__count">{music.filter((a) => !a.phase).length}</span></div>
-                  <div className="adm-asset__empty">Files under assets/music without an f1–f6 folder or name prefix — selectable for any phase below.</div>
+                  <div className="adm-asset__ghead">Senza prefisso di fase <span className="adm-asset__count">{music.filter((a) => !a.phase).length}</span></div>
+                  <div className="adm-asset__empty">File in assets/music senza cartella o prefisso f1–f6 — selezionabili per qualsiasi fase qui sotto.</div>
                   {music.filter((a) => !a.phase).map(assetRow)}
                 </div>
               )}
@@ -219,7 +219,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
           {tab === 'soundscape' && (
             <div className="adm-asset__groups">
-              {scapes.size === 0 && <div className="adm-asset__empty">No soundscape textures found under assets/soundscape.</div>}
+              {scapes.size === 0 && <div className="adm-asset__empty">Nessuna texture di paesaggio sonoro trovata in assets/soundscape.</div>}
               {[...scapes.entries()].map(([texture, list]) => (
                 <div key={texture} className="adm-asset__group">
                   <div className="adm-asset__ghead">{texture} <span className="adm-asset__count">{list.length}</span></div>
@@ -232,7 +232,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
           {tab === 'special' && (
             <div className="adm-asset__groups">
               <div className="adm-asset__group">
-                <div className="adm-asset__ghead">Heartbeat & singing bowl</div>
+                <div className="adm-asset__ghead">Battito cardiaco e campana tibetana</div>
                 {special.length === 0 && (
                   <div className="adm-asset__empty">
                     Nothing under assets/heartbeat or assets/bowl yet — these are PO deliverables. Until a file is mapped,
@@ -246,13 +246,13 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
           {/* -------- phase mapping -------- */}
           <div className="adm-asset__mapper">
-            <div className="adm-asset__ghead" style={{ marginBottom: 8 }}>Phase → asset mapping</div>
+            <div className="adm-asset__ghead" style={{ marginBottom: 8 }}>Mappatura fase → asset</div>
             {protocols.length === 0 ? (
-              <div className="adm-asset__empty">No mappable protocols yet — import a datasheet or protocol document first.</div>
+              <div className="adm-asset__empty">Nessun protocollo mappabile — importa prima un protocollo.</div>
             ) : (
               <>
                 <div className="adm-spec__row">
-                  <span className="adm-spec__lbl">Protocol</span>
+                  <span className="adm-spec__lbl">Protocollo</span>
                   <select className="b2b-input adm-asset__sel" value={selCode} onChange={(e) => setSelCode(e.target.value)}>
                     {protocols.map((p) => <option key={p.code} value={p.code}>{p.code} — {p.title}</option>)}
                   </select>
@@ -260,9 +260,9 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 </div>
 
                 <div className="adm-asset__grid">
-                  <div className="adm-asset__gridhead">Phase</div>
-                  <div className="adm-asset__gridhead">Music stem</div>
-                  <div className="adm-asset__gridhead">Soundscape texture</div>
+                  <div className="adm-asset__gridhead">Fase</div>
+                  <div className="adm-asset__gridhead">Stem musicale</div>
+                  <div className="adm-asset__gridhead">Texture paesaggio sonoro</div>
                   {PHASE_KEYS.map((k) => (
                     <PhaseMapRow
                       key={k}
@@ -279,14 +279,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 </div>
 
                 <div className="adm-spec__row" style={{ marginTop: 8 }}>
-                  <span className="adm-spec__lbl">Heartbeat file</span>
+                  <span className="adm-spec__lbl">File battito cardiaco</span>
                   <select className="b2b-input adm-asset__sel" value={draft.heartbeat ?? ''} onChange={(e) => setSpecial('heartbeat', e.target.value)}>
                     <option value="">— synth provisional (60 BPM) —</option>
                     {assets.filter((a) => a.kind === 'heartbeat').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
                   </select>
                 </div>
                 <div className="adm-spec__row">
-                  <span className="adm-spec__lbl">Singing bowl file</span>
+                  <span className="adm-spec__lbl">File campana tibetana</span>
                   <select className="b2b-input adm-asset__sel" value={draft.bowl ?? ''} onChange={(e) => setSpecial('bowl', e.target.value)}>
                     <option value="">— synth provisional strike —</option>
                     {assets.filter((a) => a.kind === 'bowl').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
@@ -295,7 +295,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
                 <div className="adm-cred__actions" style={{ marginTop: 12 }}>
                   <button className="b2b-btn b2b-btn--primary" disabled={!dirty || saving || !selected} onClick={() => void save()}>
-                    {saving ? 'Saving…' : `Save mapping for ${selCode}`}
+                    {saving ? 'Salvataggio…' : `Salva la mappatura per ${selCode}`}
                   </button>
                   {saved && <span className="adm-asset__meta">✓ Saved — the next render of {selCode} uses these assets.</span>}
                 </div>

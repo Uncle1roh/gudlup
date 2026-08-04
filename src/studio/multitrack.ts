@@ -42,13 +42,13 @@ export type ClipParams = BinauralParams | SoundscapeParams | BreathParams | Voic
 export const SAMPLE_RATE = 44100
 
 export const TRACK_META: Record<TrackType, { label: string; icon: string; color: string; blurb: string }> = {
-  soundscape: { label: 'Soundscape', icon: '🌊', color: '#2FA98C', blurb: 'Ambient bed' },
-  binaural: { label: 'Binaural', icon: '🧠', color: '#9B7BC4', blurb: 'L/R carrier beat' },
-  breath: { label: 'Breathing', icon: '🌬️', color: '#4F86C6', blurb: 'Paced swelling tone' },
-  voice: { label: 'Voice', icon: '🗣️', color: '#E0995E', blurb: 'Guided affirmation (TTS or placeholder)' },
-  music: { label: 'Music', icon: '🎹', color: '#C88FB0', blurb: 'Warm chord pad' },
-  bilateral: { label: 'Bilateral', icon: '↔️', color: '#7BA8C4', blurb: 'Alternating L/R blips (PAT-05)' },
-  sample: { label: 'Audio file', icon: '📼', color: '#8FA86B', blurb: 'Real library asset (looped to clip length)' },
+  soundscape: { label: 'Paesaggio sonoro', icon: '🌊', color: '#2FA98C', blurb: 'Tappeto ambientale' },
+  binaural: { label: 'Binaurale', icon: '🧠', color: '#9B7BC4', blurb: 'Battimento portante L/R' },
+  breath: { label: 'Respiro', icon: '🌬️', color: '#4F86C6', blurb: 'Tono pulsante cadenzato' },
+  voice: { label: 'Voce', icon: '🗣️', color: '#E0995E', blurb: 'Affermazione guidata (TTS o provvisoria)' },
+  music: { label: 'Musica', icon: '🎹', color: '#C88FB0', blurb: 'Pad armonico caldo' },
+  bilateral: { label: 'Bilaterale', icon: '↔️', color: '#7BA8C4', blurb: 'Impulsi alternati L/R (PAT-05)' },
+  sample: { label: 'File audio', icon: '📼', color: '#8FA86B', blurb: 'Asset reale della libreria (in loop sulla durata della clip)' },
 }
 
 export function defaultParams(type: TrackType): ClipParams {
@@ -59,7 +59,7 @@ export function defaultParams(type: TrackType): ClipParams {
     case 'voice': return { pan: 0, pulseHz: 0.2, toneHz: 420 }
     case 'music': return { chord: 'c' }
     case 'bilateral': return { toneHz: 400, blipMs: 120, everySec: 4 }
-    case 'sample': return { url: '', label: 'No file — set via the datasheet importer' }
+    case 'sample': return { url: '', label: 'Nessun file — si imposta dall’importazione' }
   }
 }
 

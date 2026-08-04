@@ -8,8 +8,8 @@ import { useDataProvider } from '../data/provider'
 import { fmtDay, fmtTime, slotKey, type Appointment } from '../data/scheduling'
 
 const WEEKDAYS = [
-  { d: 1, label: 'Mon' }, { d: 2, label: 'Tue' }, { d: 3, label: 'Wed' },
-  { d: 4, label: 'Thu' }, { d: 5, label: 'Fri' }, { d: 6, label: 'Sat' }, { d: 0, label: 'Sun' },
+  { d: 1, label: 'Lun' }, { d: 2, label: 'Mar' }, { d: 3, label: 'Mer' },
+  { d: 4, label: 'Gio' }, { d: 5, label: 'Ven' }, { d: 6, label: 'Sab' }, { d: 0, label: 'Dom' },
 ]
 const HOURS = Array.from({ length: 13 }, (_, i) => `${String(7 + i).padStart(2, '0')}:00`) // 07:00–19:00
 
@@ -63,13 +63,13 @@ export function Agenda({ onBack }: AgendaProps) {
   return (
     <div className="b2b-screen agenda">
       <div className="b2b-screen__head">
-        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Back</button>
-        <h1 className="b2b-h1">My agenda</h1>
-        <span className="b2b-sub">{saving ? 'Saving…' : savedAt ? 'Saved ✓' : ''}</span>
+        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Indietro</button>
+        <h1 className="b2b-h1">La mia agenda</h1>
+        <span className="b2b-sub">{saving ? 'Salvataggio…' : savedAt ? 'Salvato ✓' : ''}</span>
       </div>
       <p className="b2b-sub">
-        Mark the hours you are available every week — these are exactly the times patients can book.
-        Booked visits appear below and never re-open to others.
+        Segna le ore in cui sei disponibile ogni settimana — sono esattamente gli orari che i pazienti possono prenotare.
+        Le sedute prenotate compaiono qui sotto e non tornano più disponibili per altri.
       </p>
       {error && <div className="adm-plain__status adm-plain__status--err">{error}</div>}
 
@@ -87,7 +87,7 @@ export function Agenda({ onBack }: AgendaProps) {
                     key={`${w.d}|${h}`}
                     className={`agenda__cell${on ? ' is-on' : ''}`}
                     onClick={() => void toggle(w.d, h)}
-                    title={`${w.label} ${h}${on ? ' — available' : ''}`}
+                    title={`${w.label} ${h}${on ? ' — disponibile' : ''}`}
                     aria-pressed={on}
                   />
                 )
@@ -97,8 +97,8 @@ export function Agenda({ onBack }: AgendaProps) {
         </div>
       )}
 
-      <h2 className="b2b-h2" style={{ marginTop: 26 }}>Upcoming sessions ({appointments.length})</h2>
-      {appointments.length === 0 && <p className="b2b-sub">No bookings yet — as soon as a patient books one of your hours, it appears here.</p>}
+      <h2 className="b2b-h2" style={{ marginTop: 26 }}>Prossime sedute ({appointments.length})</h2>
+      {appointments.length === 0 && <p className="b2b-sub">Nessuna prenotazione — appena un paziente prenota una delle tue ore, comparirà qui.</p>}
       <div className="agenda__appts">
         {appointments.map((a) => (
           <div key={a.id} className="agenda__appt">

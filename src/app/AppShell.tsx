@@ -4,7 +4,9 @@ import { Progress } from './Progress'
 import { Explore } from './Explore'
 import { Profile } from './Profile'
 import { SessionRunner } from './SessionRunner'
+import { PatientCall } from './PatientCall'
 import { Assessment } from './Assessment'
+import type { Appointment } from '../data/scheduling'
 import { SessionWizard } from '../screens/SessionWizard'
 import { advanceProgramAfter, startProgram } from '../data/program'
 import type { WizardResult } from '../data/wizard'
@@ -34,6 +36,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   const { data: history = [], refetch } = useSessions()
   const [tab, setTab] = useState<Tab>('session')
   const [launch, setLaunch] = useState<Launch | null>(null)
+  const [joining, setJoining] = useState<Appointment | null>(null)
   const [wizard, setWizard] = useState(false)
   const [assessing, setAssessing] = useState(false)
 
@@ -85,6 +88,25 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
     )
   }
 
+  if (joining) {
+    return (
+      <PatientCall
+        appointment={joining}
+        demoSeconds={demoSeconds}
+        onDone={async (record) => {
+          // a therapist-led session is history, but it does not advance the
+          // self-guided programme — that stays the person's own path
+          if (record) {
+            await dp.recordSession(record)
+            refetch()
+          }
+          setJoining(null)
+          setTab('session')
+        }}
+      />
+    )
+  }
+
   if (assessing) {
     return <Assessment onDone={() => setAssessing(false)} />
   }
@@ -92,7 +114,7 @@ export function AppShell({ demoSeconds, onDemoToggle }: AppShellProps) {
   return (
     <div className="app-frame app-frame--tabs">
       <div className="tabview">
-        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onWizard={() => setWizard(true)} onExplore={() => setTab('explore')} onAssess={() => setAssessing(true)} />}
+        {tab === 'session' && <HomeSession history={history} onStart={setLaunch} onJoin={setJoining} onWizard={() => setWizard(true)} onExplore={() => setTab('explore')} onAssess={() => setAssessing(true)} />}
         {tab === 'progress' && <Progress history={history} />}
         {tab === 'explore' && <Explore onStart={setLaunch} />}
         {tab === 'profile' && <Profile demoSeconds={demoSeconds} onDemoToggle={onDemoToggle} />}

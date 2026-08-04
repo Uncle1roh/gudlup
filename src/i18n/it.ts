@@ -409,4 +409,11 @@ export const IT: Record<string, string> = {
   'How do you feel now, compared to before?': 'Come ti senti adesso, rispetto a prima?',
   'Your answer before the session was {v}.': 'Prima della sessione avevi risposto {v}.',
   'better than before': 'meglio di prima',
+
+  /* ---- patient side of a monitored session ---- */
+  'Your therapist': 'Il tuo terapeuta',
+  'your therapist is speaking': 'il tuo terapeuta sta parlando',
+  'Close your eyes and follow the sound.': 'Chiudi gli occhi e segui il suono.',
+  'Paused by your therapist': 'Messo in pausa dal tuo terapeuta',
+  'Leave the session': 'Esci dalla sessione',
 }

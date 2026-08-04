@@ -34,7 +34,7 @@ export function PatientNotes({ patientId, notes, onChanged }: Props) {
       await fn()
       onChanged()
     } catch (e) {
-      window.alert(`Couldn't save the note: ${(e as Error).message}`)
+      window.alert(`Impossibile salvare la nota: ${(e as Error).message}`)
     } finally {
       setBusy(false)
     }
@@ -59,55 +59,55 @@ export function PatientNotes({ patientId, notes, onChanged }: Props) {
   }
 
   function remove(n: ClinicalNote) {
-    if (!window.confirm('Delete this note? This cannot be undone.')) return
+    if (!window.confirm('Eliminare questa nota? L’operazione non è reversibile.')) return
     void run(() => dp.deletePatientNote(patientId, n.id))
   }
 
   return (
     <section className="b2b-card diary">
       <h2 className="b2b-card__title">
-        Clinical diary <span className="lock">🔒 therapist only</span>
-        <span className="diary__count">{notes.length} note{notes.length !== 1 ? 's' : ''}</span>
+        Diario clinico <span className="lock">🔒 solo clinico</span>
+        <span className="diary__count">{notes.length} not{notes.length !== 1 ? 'e' : 'a'}</span>
       </h2>
 
       <div className="diary__compose">
         <textarea
           className="b2b-textarea"
           rows={2}
-          placeholder="Write a note…"
+          placeholder="Scrivi una nota…"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) add() }}
         />
-        <button className="b2b-btn b2b-btn--primary" disabled={busy || !draft.trim()} onClick={add}>Add note</button>
+        <button className="b2b-btn b2b-btn--primary" disabled={busy || !draft.trim()} onClick={add}>Aggiungi nota</button>
       </div>
 
       <input
         className="b2b-input diary__search"
-        placeholder="Search notes…"
+        placeholder="Cerca nelle note…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
 
       <ul className="diary__list">
         {found.length === 0 && (
-          <li className="b2b-sub">{notes.length ? 'No note matches that search.' : 'No notes yet.'}</li>
+          <li className="b2b-sub">{notes.length ? 'Nessuna nota corrisponde alla ricerca.' : 'Ancora nessuna nota.'}</li>
         )}
         {found.map((n) => (
           <li key={n.id} className="diary__item">
             <div className="diary__meta">
               <span className="diary__date">{fmtDateTime(n.at)}</span>
-              {n.editedAt && <span className="diary__edited">edited {fmtDateTime(n.editedAt)}</span>}
+              {n.editedAt && <span className="diary__edited">modificata {fmtDateTime(n.editedAt)}</span>}
               <span className="diary__actions">
                 {editingId === n.id ? (
                   <>
-                    <button className="diary__act" disabled={busy} onClick={() => saveEdit(n.id)}>Save</button>
-                    <button className="diary__act" onClick={() => setEditingId(null)}>Cancel</button>
+                    <button className="diary__act" disabled={busy} onClick={() => saveEdit(n.id)}>Salva</button>
+                    <button className="diary__act" onClick={() => setEditingId(null)}>Annulla</button>
                   </>
                 ) : (
                   <>
-                    <button className="diary__act" onClick={() => { setEditingId(n.id); setEditText(n.text) }}>Edit</button>
-                    <button className="diary__act diary__act--del" onClick={() => remove(n)}>Delete</button>
+                    <button className="diary__act" onClick={() => { setEditingId(n.id); setEditText(n.text) }}>Modifica</button>
+                    <button className="diary__act diary__act--del" onClick={() => remove(n)}>Elimina</button>
                   </>
                 )}
               </span>

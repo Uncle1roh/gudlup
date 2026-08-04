@@ -35,22 +35,22 @@ export function Users({ actor }: { actor: string }) {
   return (
     <div className="adm-page">
       <header className="adm-page__head">
-        <h1 className="b2b-h1">Users &amp; roles</h1>
-        <p className="b2b-sub">Everyone on the platform — therapists, company admins and self-use employees. {users.length} total.</p>
+        <h1 className="b2b-h1">Utenti e ruoli</h1>
+        <p className="b2b-sub">Tutte le persone sulla piattaforma — clinici, referenti aziendali e dipendenti che usano l’app. {users.length} in totale.</p>
       </header>
 
-      {loading && <p className="b2b-sub">Loading…</p>}
+      {loading && <p className="b2b-sub">Caricamento…</p>}
 
       {!loading && (
         <div className="adm-table adm-table--users">
           <div className="adm-tr adm-tr--head">
-            <div>Name</div><div>Email</div><div>Company</div><div>Role</div><div className="adm-tr__right">Access</div>
+            <div>Nome</div><div>Email</div><div>Azienda</div><div>Ruolo</div><div className="adm-tr__right">Accesso</div>
           </div>
           {users.map((u) => (
             <div className={`adm-tr ${u.active ? '' : 'is-inactive'}`} key={u.id}>
               <div><b>{u.name}</b></div>
               <div className="adm-muted">{u.email}</div>
-              <div>{companyName(u.companyId) ?? <span className="adm-muted">Platform</span>}</div>
+              <div>{companyName(u.companyId) ?? <span className="adm-muted">Piattaforma</span>}</div>
               <div>
                 <select
                   className="adm-select"
@@ -67,7 +67,7 @@ export function Users({ actor }: { actor: string }) {
                   disabled={busy === u.id}
                   onClick={() => toggleActive(u)}
                 >
-                  {u.active ? 'Deactivate' : 'Activate'}
+                  {u.active ? 'Disattiva' : 'Attiva'}
                 </button>
               </div>
             </div>

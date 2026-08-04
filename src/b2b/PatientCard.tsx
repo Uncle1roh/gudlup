@@ -15,6 +15,8 @@ interface PatientCardProps {
   onRefetch: () => void
 }
 
+const GOAL_STATUS: Record<string, string> = { achieved: 'raggiunto', 'in-progress': 'in corso', review: 'da rivedere' }
+
 function ScoreTrend({ s }: { s: Score }) {
   const pts = [s.t0, s.t1, s.t2].filter((v): v is number => v != null)
   const first = pts[0]
@@ -54,62 +56,62 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
 
   return (
     <div className="b2b-page">
-      <button className="b2b-back" onClick={onBack}>← Roster</button>
+      <button className="b2b-back" onClick={onBack}>← Elenco pazienti</button>
 
       <div className="card-head">
         <div className="card-head__id">
           <div className="card-head__avatar">{p.sex === 'F' ? '🧑🏻' : '🧑🏽'}</div>
           <div>
             <h1 className="b2b-h1">{p.name}</h1>
-            <p className="b2b-sub">{p.age} · {p.sex === 'F' ? 'Female' : 'Male'} · {p.reason}</p>
+            <p className="b2b-sub">{p.age} anni · {p.sex === 'F' ? 'Donna' : 'Uomo'} · {p.reason}</p>
           </div>
         </div>
         <div className="card-head__cta">
-          {p.nextSessionAt && <span className="b2b-sub">Next: {relWhen(p.nextSessionAt)}</span>}
-          <button className="b2b-btn b2b-btn--ghost" onClick={onEdit}>Edit record</button>
-          <button className="b2b-btn b2b-btn--ghost" onClick={onPlanSession}>Plan audio</button>
-          <button className="b2b-btn b2b-btn--primary" onClick={onOpenConsultation}>Open consultation →</button>
+          {p.nextSessionAt && <span className="b2b-sub">Prossima: {relWhen(p.nextSessionAt)}</span>}
+          <button className="b2b-btn b2b-btn--ghost" onClick={onEdit}>Modifica scheda</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={onPlanSession}>Pianifica audio</button>
+          <button className="b2b-btn b2b-btn--primary" onClick={onOpenConsultation}>Apri la consulenza →</button>
         </div>
       </div>
 
       {/* continuity briefing (auto) */}
       <div className="continuity">
-        <span className="continuity__tag">Pre-session briefing</span>
+        <span className="continuity__tag">Briefing pre-seduta</span>
         <span>
           {sinceLast.length
-            ? `${sinceLast.length} B2C session${sinceLast.length > 1 ? 's' : ''} since last appointment · inter-session VAS ${interVas! >= 0 ? '+' : ''}${interVas!.toFixed(1)}`
-            : 'No B2C sessions since last appointment'}
-          {p.unread > 0 && ` · ${p.unread} unread message`}
+            ? `${sinceLast.length} session${sinceLast.length > 1 ? 'i' : 'e'} in autonomia dall’ultimo appuntamento · VAS fra le sedute ${interVas! >= 0 ? '+' : ''}${interVas!.toFixed(1)}`
+            : 'Nessuna sessione in autonomia dall’ultimo appuntamento'}
+          {p.unread > 0 && ` · ${p.unread} messaggio non letto`}
         </span>
       </div>
 
       <div className="card-grid">
         {/* clinical snapshot */}
         <section className="b2b-card">
-          <h2 className="b2b-card__title">Clinical snapshot</h2>
+          <h2 className="b2b-card__title">Quadro clinico</h2>
           <dl className="kv">
-            <dt>Active conditions</dt><dd>{p.conditions.join(', ') || '—'}</dd>
-            <dt>Medications</dt><dd>{p.medications.join(', ') || 'None'}</dd>
-            <dt>GL contraindications</dt><dd>{p.contraindications.join(', ')}</dd>
-            <dt>Prescription</dt><dd>{p.prescription ?? 'None set'}</dd>
+            <dt>Condizioni attive</dt><dd>{p.conditions.join(', ') || '—'}</dd>
+            <dt>Farmaci</dt><dd>{p.medications.join(', ') || 'Nessuno'}</dd>
+            <dt>Controindicazioni GL</dt><dd>{p.contraindications.join(', ')}</dd>
+            <dt>Prescrizione</dt><dd>{p.prescription ?? 'Non impostata'}</dd>
           </dl>
         </section>
 
         {/* scores */}
         <section className="b2b-card">
-          <h2 className="b2b-card__title">Assessment trend (T0 → T2)</h2>
+          <h2 className="b2b-card__title">Andamento delle valutazioni (T0 → T2)</h2>
           <div className="scores">{p.scores.map((s) => <ScoreTrend key={s.label} s={s} />)}</div>
         </section>
 
         {/* goals */}
         <section className="b2b-card">
-          <h2 className="b2b-card__title">Goals</h2>
+          <h2 className="b2b-card__title">Obiettivi</h2>
           <ul className="goals">
             {p.goals.map((g, i) => (
               <li key={i} className="goal">
                 <span className={`goal__dot goal__dot--${g.status}`} />
                 <span>{g.text}</span>
-                <span className="goal__status">{g.status.replace('-', ' ')}</span>
+                <span className="goal__status">{GOAL_STATUS[g.status] ?? g.status}</span>
               </li>
             ))}
           </ul>
@@ -117,16 +119,16 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
 
         {/* B2B chronology */}
         <section className="b2b-card">
-          <h2 className="b2b-card__title">Session history</h2>
+          <h2 className="b2b-card__title">Storico delle sedute</h2>
           <ul className="chron">
-            {p.b2bSessions.length === 0 && <li className="b2b-sub">No sessions yet</li>}
+            {p.b2bSessions.length === 0 && <li className="b2b-sub">Ancora nessuna seduta</li>}
             {[...p.b2bSessions].reverse().map((s) => {
               const proto = getProtocol(s.protocolCode)
               return (
                 <li key={s.id} className="chron__item">
                   <div>
                     <strong>{proto?.title ?? s.protocolCode}</strong>
-                    <span className="b2b-sub">{fmtDate(s.date)} · {s.duration} min · {s.notes.length} note{s.notes.length !== 1 ? 's' : ''}</span>
+                    <span className="b2b-sub">{fmtDate(s.date)} · {s.duration} min · {s.notes.length} not{s.notes.length !== 1 ? 'e' : 'a'}</span>
                   </div>
                   <span className="chron__delta">+{(s.vasPost - s.vasPre).toFixed(0)}</span>
                 </li>
@@ -137,9 +139,9 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
 
         {/* B2C between appointments */}
         <section className="b2b-card">
-          <h2 className="b2b-card__title">B2C self-practice {linked && <span className="link-badge">● linked account · live</span>}</h2>
+          <h2 className="b2b-card__title">Pratica in autonomia {linked && <span className="link-badge">● account collegato · in diretta</span>}</h2>
           <ul className="chron">
-            {p.b2cSessions.length === 0 && <li className="b2b-sub">No self-practice logged</li>}
+            {p.b2cSessions.length === 0 && <li className="b2b-sub">Nessuna pratica in autonomia registrata</li>}
             {[...p.b2cSessions].reverse().slice(0, 4).map((s, i) => (
               <li key={i} className="chron__item">
                 <div>
@@ -157,11 +159,11 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
 
         {p.messages.length > 0 && (
           <section className="b2b-card">
-            <h2 className="b2b-card__title">Messages</h2>
+            <h2 className="b2b-card__title">Messaggi</h2>
             <ul className="msgs">
               {p.messages.map((m, i) => (
                 <li key={i} className={`msg msg--${m.from}`}>
-                  <span className="msg__who">{m.from === 'patient' ? p.name.split(' ')[0] : 'You'}</span>
+                  <span className="msg__who">{m.from === 'patient' ? p.name.split(' ')[0] : 'Tu'}</span>
                   <span>{m.text}</span>
                   <span className="b2b-sub">{relWhen(m.at)}</span>
                 </li>

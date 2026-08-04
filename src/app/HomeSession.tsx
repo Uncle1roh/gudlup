@@ -12,6 +12,8 @@ import type { SessionRecord, Duration } from '../types/domain'
 interface HomeSessionProps {
   history: SessionRecord[]
   onStart: (launch: { protocolCode: string; duration: Duration }) => void
+  /** Join the therapist's consultation room (a booked appointment). */
+  onJoin: (appointment: Appointment) => void
   onWizard: () => void
   onExplore: () => void
   onAssess: () => void
@@ -33,7 +35,7 @@ function lastWizardAlternative(): { code: string; title: string; primaryCode: st
 
 /** B9: one large CTA — the protocol project when one is running (next
     sub-protocol of the family pathway), the 3–4 question wizard otherwise. */
-export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }: HomeSessionProps) {
+export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onAssess }: HomeSessionProps) {
   const { t, locale } = useI18n()
   const dp = useDataProvider()
   const [toast] = useState<string | null>(null)
@@ -118,10 +120,7 @@ export function HomeSession({ history, onStart, onWizard, onExplore, onAssess }:
 
       {appointment && isUpcoming(appointment, Date.now()) ? (
         joinWindowOpen(appointment, Date.now()) ? (
-          <button
-            className="start-cta start-cta--join"
-            onClick={() => onStart({ protocolCode: currentProgramStep()?.code ?? last.protocolCode, duration: currentProgramStep()?.duration ?? last.duration })}
-          >
+          <button className="start-cta start-cta--join" onClick={() => onJoin(appointment)}>
             <span className="start-cta__label">{t('Enter session')}</span>
             <span className="start-cta__sub">{t('Your therapist is waiting — {name}', { name: appointment.therapistName ?? '' })}</span>
           </button>

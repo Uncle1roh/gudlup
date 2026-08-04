@@ -14,7 +14,7 @@ type Filter = 'all' | 'today' | 'assessment' | 'alerts' | 'inactive'
 function TrendArrow({ trend }: { trend: Patient['vasTrend'] }) {
   const map = { up: ['↗', 'trend-up'], down: ['↘', 'trend-down'], stable: ['→', 'trend-flat'] } as const
   const [glyph, cls] = map[trend]
-  return <span className={`trend ${cls}`} title={`VAS trend ${trend}`}>{glyph}</span>
+  return <span className={`trend ${cls}`} title={`Andamento VAS ${trend}`}>{glyph}</span>
 }
 
 function urgencyScore(p: Patient): number {
@@ -49,7 +49,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
   const [creating, setCreating] = useState(false)
 
   async function newPatient() {
-    const name = window.prompt('Patient name')?.trim()
+    const name = window.prompt('Nome del paziente')?.trim()
     if (!name) return
     setCreating(true)
     try {
@@ -57,7 +57,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
       refetch()
       onOpenPatient(id)
     } catch (e) {
-      window.alert(`Couldn't create the patient: ${(e as Error).message}`)
+      window.alert(`Impossibile creare il paziente: ${(e as Error).message}`)
     } finally {
       setCreating(false)
     }
@@ -99,32 +99,32 @@ export function Roster({ onOpenPatient }: RosterProps) {
   }, [patients, sort, filter, q])
 
   const FILTERS: [Filter, string][] = [
-    ['all', 'All'],
-    ['today', 'Session today'],
-    ['assessment', 'Assessment due'],
-    ['alerts', 'Active alerts'],
-    ['inactive', 'Inactive >7d'],
+    ['all', 'Tutti'],
+    ['today', 'Seduta oggi'],
+    ['assessment', 'Valutazione in scadenza'],
+    ['alerts', 'Allerte attive'],
+    ['inactive', 'Inattivi >7g'],
   ]
 
   return (
     <div className="b2b-page">
       <div className="b2b-page__head">
         <div>
-          <h1 className="b2b-h1">Your patients</h1>
-          <p className="b2b-sub">{patients.length} active · sorted by {sort === 'az' ? 'name' : sort + ' session'}</p>
+          <h1 className="b2b-h1">I tuoi pazienti</h1>
+          <p className="b2b-sub">{patients.length} attivi · ordinati per {sort === 'az' ? 'nome' : sort === 'next' ? 'prossima seduta' : sort === 'last' ? 'ultima seduta' : 'urgenza clinica'}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input className="b2b-search" placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="b2b-search" placeholder="Cerca per nome…" value={q} onChange={(e) => setQ(e.target.value)} />
           <button className="b2b-btn b2b-btn--primary" onClick={newPatient} disabled={creating}>
-            {creating ? 'Creating…' : '＋ New patient'}
+            {creating ? 'Creazione…' : '＋ Nuovo paziente'}
           </button>
         </div>
       </div>
 
       {requests.length > 0 && (
         <section className="req-queue">
-          <h2 className="req-queue__title">Session requests <span className="req-queue__count">{requests.length}</span></h2>
-          <p className="b2b-sub" style={{ marginBottom: 10 }}>Employees asking for a session from the app. Accepting creates the linked patient record.</p>
+          <h2 className="req-queue__title">Richieste di seduta <span className="req-queue__count">{requests.length}</span></h2>
+          <p className="b2b-sub" style={{ marginBottom: 10 }}>Dipendenti che chiedono una seduta dall’app. Accettando si crea la scheda paziente collegata.</p>
           {requests.map((r) => (
             <div key={r.id} className="req-queue__row">
               <span className="req-queue__who">
@@ -133,7 +133,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
               </span>
               <span className="b2b-sub req-queue__note">{r.note ?? '—'}</span>
               <button className="b2b-btn b2b-btn--primary" disabled={accepting === r.id} onClick={() => accept(r.id)}>
-                {accepting === r.id ? 'Accepting…' : 'Accept'}
+                {accepting === r.id ? 'Accettazione…' : 'Accetta'}
               </button>
             </div>
           ))}
@@ -145,11 +145,11 @@ export function Roster({ onOpenPatient }: RosterProps) {
           <button key={id} className={`b2b-chip${filter === id ? ' is-on' : ''}`} onClick={() => setFilter(id)}>{label}</button>
         ))}
         <div className="b2b-sort">
-          <span className="b2b-sub">Sort</span>
+          <span className="b2b-sub">Ordina</span>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-            <option value="next">Next session</option>
-            <option value="last">Last session</option>
-            <option value="urgency">Clinical urgency</option>
+            <option value="next">Prossima seduta</option>
+            <option value="last">Ultima seduta</option>
+            <option value="urgency">Urgenza clinica</option>
             <option value="az">A–Z</option>
           </select>
         </div>
@@ -157,7 +157,7 @@ export function Roster({ onOpenPatient }: RosterProps) {
 
       <div className="roster">
         <div className="roster__head">
-          <span>Patient</span><span>Last</span><span>Next</span><span>VAS</span><span>Flags</span><span></span>
+          <span>Paziente</span><span>Ultima</span><span>Prossima</span><span>VAS</span><span>Segnali</span><span></span>
         </div>
         {rows.map((p) => {
           const urgent = urgencyScore(p) >= 3
@@ -176,16 +176,16 @@ export function Roster({ onOpenPatient }: RosterProps) {
               </span>
               <span><TrendArrow trend={p.vasTrend} /></span>
               <span className="roster__flags">
-                {p.assessmentDue?.includes('T') && <span className="flag flag--due" title="Assessment due">⏱ {p.assessmentDue}</span>}
-                {(p.b2cInactiveDays ?? 0) > 7 && <span className="flag flag--warn" title="Inactive in B2C">💤 {p.b2cInactiveDays}d</span>}
-                {p.unread > 0 && <span className="flag flag--msg" title="Unread messages">✉ {p.unread}</span>}
+                {p.assessmentDue?.includes('T') && <span className="flag flag--due" title="Valutazione in scadenza">⏱ {p.assessmentDue}</span>}
+                {(p.b2cInactiveDays ?? 0) > 7 && <span className="flag flag--warn" title="Inattivo in autonomia">💤 {p.b2cInactiveDays}g</span>}
+                {p.unread > 0 && <span className="flag flag--msg" title="Messaggi non letti">✉ {p.unread}</span>}
               </span>
               <span className="roster__chev">›</span>
             </button>
           )
         })}
-        {loading && <div style={{ padding: 20 }}><Loading label="Loading caseload…" /></div>}
-        {!loading && rows.length === 0 && <p className="b2b-sub" style={{ padding: 20 }}>No patients match this filter.</p>}
+        {loading && <div style={{ padding: 20 }}><Loading label="Caricamento pazienti…" /></div>}
+        {!loading && rows.length === 0 && <p className="b2b-sub" style={{ padding: 20 }}>Nessun paziente corrisponde a questo filtro.</p>}
       </div>
     </div>
   )

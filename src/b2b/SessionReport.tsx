@@ -24,23 +24,23 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
 
   return (
     <div className="b2b-page">
-      <h1 className="b2b-h1">Session report</h1>
-      <p className="b2b-sub" style={{ marginBottom: 18 }}>Auto-generated. Review, edit if needed, then sign.</p>
+      <h1 className="b2b-h1">Referto della seduta</h1>
+      <p className="b2b-sub" style={{ marginBottom: 18 }}>Generato automaticamente. Rivedi, modifica se serve, poi firma.</p>
 
       <div className="report">
-        <div className="report__row"><span>Patient</span><b>{patient.name} · {patient.age}</b></div>
-        <div className="report__row"><span>Date / time</span><b>{fmtDateTime(result.endedAt)}</b></div>
-        <div className="report__row"><span>Protocol</span><b>{proto ? `${proto.code} — ${proto.title}` : 'None — conversation only'}</b></div>
-        {preset && <div className="report__row"><span>Parameters</span><b>{preset.binaural} · breathing {preset.breathing} · {preset.voice}</b></div>}
-        <div className="report__row"><span>Duration</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.audioPlayed ? (result.completed ? '(audio completed)' : '(audio ended early)') : ''}</b></div>
+        <div className="report__row"><span>Paziente</span><b>{patient.name} · {patient.age}</b></div>
+        <div className="report__row"><span>Data e ora</span><b>{fmtDateTime(result.endedAt)}</b></div>
+        <div className="report__row"><span>Protocollo</span><b>{proto ? `${proto.code} — ${proto.title}` : 'Nessuno — solo colloquio'}</b></div>
+        {preset && <div className="report__row"><span>Parametri</span><b>{preset.binaural} · respirazione {preset.breathing} · {preset.voice}</b></div>}
+        <div className="report__row"><span>Durata</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.audioPlayed ? (result.completed ? '(audio completato)' : '(audio interrotto)') : ''}</b></div>
         {result.audioPlayed && <div className="report__row"><span>VAS pre → post</span><b>{result.vasPre} → {result.vasPost} <span className="report__delta">(+{result.vasPost - result.vasPre})</span></b></div>}
-        <div className="report__row"><span>Goal</span><b>{result.goal || '—'}</b></div>
-        {result.intervened && <div className="report__row"><span>Intervention</span><b className="report__flag">INTERVENE used during session</b></div>}
+        <div className="report__row"><span>Obiettivo</span><b>{result.goal || '—'}</b></div>
+        {result.intervened && <div className="report__row"><span>Intervento</span><b className="report__flag">INTERVIENI usato durante la seduta</b></div>}
 
         <div className="report__block">
-          <span>Rapid notes (timestamped)</span>
+          <span>Note rapide (con orario)</span>
           {result.notes.length === 0 ? (
-            <p className="b2b-sub">No notes recorded.</p>
+            <p className="b2b-sub">Nessuna nota registrata.</p>
           ) : (
             <ul className="report__notes">
               {result.notes.map((n, i) => (
@@ -51,32 +51,32 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
         </div>
 
         <div className="report__block">
-          <span>Clinical observations (editable)</span>
+          <span>Osservazioni cliniche (modificabili)</span>
           <textarea className="b2b-textarea" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 
-        <div className="report__row"><span>Next session goal</span><b>{debrief.nextGoal || '—'}</b></div>
-        <div className="report__row"><span>B2C assignment</span><b>{debrief.assignment || '—'}</b></div>
+        <div className="report__row"><span>Obiettivo prossima seduta</span><b>{debrief.nextGoal || '—'}</b></div>
+        <div className="report__row"><span>Compito nell’app</span><b>{debrief.assignment || '—'}</b></div>
 
         {/* signature */}
         <div className={`signature${signed ? ' is-signed' : ''}`}>
           {signed ? (
             <>
-              <span className="signature__mark">✓ Signed</span>
+              <span className="signature__mark">✓ Firmato</span>
               <div>
                 <b>{therapist.name}</b>
                 <span className="b2b-sub">{therapist.crp} · {fmtDateTime(Date.now())}</span>
               </div>
             </>
           ) : (
-            <button className="b2b-btn" onClick={() => setSigned(true)}>✍ Sign as {therapist.crp}</button>
+            <button className="b2b-btn" onClick={() => setSigned(true)}>✍ Firma come {therapist.crp}</button>
           )}
         </div>
       </div>
 
       <div className="report__footer">
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={!signed} onClick={onConfirm}>
-          {signed ? 'Confirm & save report' : 'Sign to confirm'}
+          {signed ? 'Conferma e salva il referto' : 'Firma per confermare'}
         </button>
       </div>
     </div>

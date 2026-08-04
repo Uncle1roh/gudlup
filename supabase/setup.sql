@@ -365,6 +365,23 @@ create policy b2c_own_sessions on sessions
 drop policy if exists b2c_insert_own_sessions on sessions;
 create policy b2c_insert_own_sessions on sessions
   for insert with check (kind = 'b2c' and b2c_profile_id = current_profile());
+-- B2C↔B2B bridge: a therapist may READ the self-practice sessions of a linked
+-- consumer profile ONLY while that patient's 'sharing' consent is granted.
+-- Revoking the consent revokes the visibility, server-side.
+drop policy if exists therapist_reads_linked_b2c_sessions on sessions;
+create policy therapist_reads_linked_b2c_sessions on sessions
+  for select using (
+    kind = 'b2c'
+    and b2c_profile_id in (
+      select p.b2c_profile_id
+      from patients p
+      join patient_consents c
+        on c.patient_id = p.id and c.kind = 'sharing' and c.granted
+      where p.therapist_id = current_profile()
+        and p.b2c_profile_id is not null
+    )
+  );
+
 drop policy if exists therapist_patient_sessions on sessions;
 create policy therapist_patient_sessions on sessions
   for all using (patient_id in (select id from patients where therapist_id = current_profile()))

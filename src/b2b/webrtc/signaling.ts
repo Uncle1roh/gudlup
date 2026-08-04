@@ -15,10 +15,31 @@
 
 import { getSupabaseClient, hasSupabaseEnv } from '../../auth/supabaseClient'
 
+export type PeerRole = 'therapist' | 'patient'
+
+/**
+ * Session control travels on the SAME channel as the negotiation, so the
+ * therapist can drive the patient's local player. The protocol audio is NEVER
+ * streamed through the peer connection: WebRTC is mono-ised, echo-cancelled
+ * voice, which would destroy the binaural beat. Instead the patient's device
+ * plays the file locally and these messages keep the two sides in step.
+ */
+export type ControlAction =
+  | { action: 'play'; protocolCode: string; durationMin: number }
+  | { action: 'pause' }
+  | { action: 'resume' }
+  | { action: 'stop' }
+  | { action: 'intervene'; on: boolean }
+  | { action: 'end' }
+
 export type SignalMessage =
   | { kind: 'offer'; sdp: RTCSessionDescriptionInit }
   | { kind: 'answer'; sdp: RTCSessionDescriptionInit }
   | { kind: 'ice'; candidate: RTCIceCandidateInit }
+  /** Presence: broadcast on join so the other peer knows someone is there. */
+  | { kind: 'hello'; role: PeerRole }
+  | { kind: 'bye' }
+  | { kind: 'control'; control: ControlAction }
 
 export interface Signaling {
   send(msg: SignalMessage): void
@@ -69,8 +90,6 @@ export function createLoopbackPair(): [Signaling, Signaling] {
    The in-tab loopback above remains the default for the offline demo.
    ============================================================================ */
 
-
-export type PeerRole = 'therapist' | 'patient'
 
 /** True when the app has Supabase env — i.e. real signalling is possible. */
 export function hasRealtimeSignaling(): boolean {

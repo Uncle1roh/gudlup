@@ -12,10 +12,10 @@
 export type UserRole = 'admin' | 'therapist' | 'hr_admin' | 'b2c_user'
 
 export const ROLE_LABEL: Record<UserRole, string> = {
-  admin: 'Administrator',
-  therapist: 'Therapist',
-  hr_admin: 'HR / company admin',
-  b2c_user: 'Employee (self-use)',
+  admin: 'Amministratore',
+  therapist: 'Clinico',
+  hr_admin: 'HR / referente aziendale',
+  b2c_user: 'Dipendente (uso autonomo)',
 }
 
 /** A company the platform is deployed to (the corporate-wellbeing tenant). */

@@ -57,10 +57,20 @@ export function TherapistApp() {
     try {
       const patientId = await dp.patientForAppointment(a)
       setSelectedId(patientId)
+      setRoomId(a.id) // the appointment id IS the call room both devices join
       setScreen('card') // the ordinary session flow prevails from the card
     } catch { /* patient lookup failed — the roster is still usable */ }
   }
+
+  /** The room both peers join. A booked appointment gives a shared id; an
+      ad-hoc consultation falls back to a patient-scoped one (no second device
+      can guess it, so that path stays demo-only). */
+  function roomForPatient(patientId: string, name: string): string {
+    const appt = appointments.find((a) => a.patientName === name)
+    return appt?.id ?? `patient-${patientId}`
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [roomId, setRoomId] = useState<string | null>(null)
   const { data: patient, refetch: refetchPatient } = usePatient(selectedId ?? '')
   const [config, setConfig] = useState<LaunchConfig | null>(null)
   const [result, setResult] = useState<SessionResult | null>(null)
@@ -72,6 +82,7 @@ export function TherapistApp() {
     setResult(null)
     setDebrief(null)
     setSelectedId(null)
+    setRoomId(null)
     setScreen('roster')
   }
 
@@ -82,20 +93,20 @@ export function TherapistApp() {
       }
       reset()
     } catch (e) {
-      window.alert(`Couldn't save the report: ${(e as Error).message}`)
+      window.alert(`Impossibile salvare il referto: ${(e as Error).message}`)
     }
   }
 
   // ---- credential gate: the clinical app opens only for APPROVED clinicians.
   if (thLoading && !therapist) {
-    return <div className="b2b-app"><div className="b2b-gate"><Loading label="Loading your account…" /></div></div>
+    return <div className="b2b-app"><div className="b2b-gate"><Loading label="Caricamento del tuo account…" /></div></div>
   }
   if (thError) {
     return (
       <div className="b2b-app"><div className="b2b-gate">
         <div className="b2b-gate__card">
-          <h1 className="b2b-h1">Not a clinician account</h1>
-          <p className="b2b-sub">This login isn't registered as a clinician. Sign out and create a clinician account (name + CRP) from the sign-in screen.</p>
+          <h1 className="b2b-h1">Account non clinico</h1>
+          <p className="b2b-sub">Questo accesso non è registrato come clinico. Esci e crea un account clinico (nome + numero di albo) dalla schermata di accesso.</p>
           <SignOutButton className="b2b-btn b2b-btn--primary" />
         </div>
       </div></div>
@@ -106,14 +117,14 @@ export function TherapistApp() {
       <div className="b2b-app"><div className="b2b-gate">
         <div className="b2b-gate__card">
           <span className="b2b-gate__badge">⏳</span>
-          <h1 className="b2b-h1">Credentials under review</h1>
+          <h1 className="b2b-h1">Credenziali in verifica</h1>
           <p className="b2b-sub">
             {therapist.name} · {therapist.crp}<br />
-            Your registration was received. An administrator reviews and approves clinician credentials before
-            patient access is enabled — you'll get in as soon as it's approved.
+            La tua registrazione è stata ricevuta. Un amministratore verifica e approva le credenziali cliniche prima
+            di abilitare l’accesso ai pazienti — entrerai appena sarà approvata.
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <button className="b2b-btn" onClick={refetchTherapist}>Check again</button>
+            <button className="b2b-btn" onClick={refetchTherapist}>Controlla di nuovo</button>
             <SignOutButton className="b2b-btn" />
           </div>
         </div>
@@ -124,11 +135,12 @@ export function TherapistApp() {
   // The consultation room takes over the full frame (no chrome). It opens
   // without a protocol — one is chosen from the in-call library, if at all.
   if (screen === 'session') {
-    if (!patient) return <Loading label="Connecting…" />
+    if (!patient) return <Loading label="Connessione…" />
     return (
       <ConsultationRoom
         patient={patient}
         config={config}
+        roomId={roomId ?? roomForPatient(patient.id, patient.name)}
         demoSeconds={fullLength ? null : DEMO_SESSION_SECONDS}
         onEnd={(r) => {
           setResult(r)
@@ -151,8 +163,8 @@ export function TherapistApp() {
             <span className="b2b-credchip__badge">✓</span>
             {therapist?.name ?? '…'} · {therapist?.crp ?? ''}
           </button>
-          <button className="b2b-demobtn" onClick={() => setFullLength((v) => !v)} title="Session length for the demo">
-            {fullLength ? 'full 24 min' : 'demo ~90s'}
+          <button className="b2b-demobtn" onClick={() => setFullLength((v) => !v)} title="Durata della seduta per la demo">
+            {fullLength ? '24 min completi' : 'demo ~90s'}
           </button>
           <AvatarUpload size={34} fallback={therapist?.avatar ?? '👤'} className="avatarup--bar" />
           <SignOutButton className="b2b-demobtn" />
@@ -163,11 +175,11 @@ export function TherapistApp() {
         {dueNow && (
           <div className="b2b-duebar">
             <span>
-              <b>Session with {dueNow.patientName}</b> at {fmtTime(dueNow.startsAtMs)} — the patient sees their
-              &ldquo;Enter session&rdquo; button now.
+              <b>Seduta con {dueNow.patientName}</b> alle {fmtTime(dueNow.startsAtMs)} — il paziente vede ora il suo
+              pulsante &ldquo;Entra nella sessione&rdquo;.
             </span>
             <button className="b2b-btn b2b-btn--primary" onClick={() => void startScheduledSession(dueNow)}>
-              Start session →
+              Avvia la seduta →
             </button>
           </div>
         )}

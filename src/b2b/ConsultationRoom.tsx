@@ -5,6 +5,7 @@ import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { useProtocols } from '../admin/hooks'
 import { PRESETS, type Patient, type RapidNote } from './data'
 import { VideoStage } from './webrtc/VideoStage'
+import { useVideoCall } from './webrtc/useVideoCall'
 import type { LaunchConfig } from './ClinicalWizard'
 
 export interface SessionResult {
@@ -28,6 +29,9 @@ interface ConsultationRoomProps {
       without one and the protocol is chosen from the library, mid-call. */
   config: LaunchConfig | null
   demoSeconds: number | null
+  /** Shared room id — the appointment id when the session was booked. Both
+      devices must use the same one for the real call to connect. */
+  roomId?: string | null
   onEnd: (result: SessionResult) => void
 }
 
@@ -47,7 +51,8 @@ function mmss(s: number): string {
  * session. Notes are always available and are timestamped against the audio
  * when one is running, against the call otherwise.
  */
-export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: ConsultationRoomProps) {
+export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, onEnd }: ConsultationRoomProps) {
+  const call = useVideoCall({ roomId, role: 'therapist' })
   const { data: catalog, loading: catalogLoading } = useProtocols()
   const protocols = useMemo(() => (catalog ?? []).filter((p) => p.enabled), [catalog])
 
@@ -135,7 +140,10 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
     setActiveCode(code)
     setStatus('running')
     setDock('session')
-    addNote(`Audio started — ${p.code} ${p.title}`)
+    addNote(`Audio avviato — ${p.code} ${p.title}`)
+    // the patient's device plays the file LOCALLY (streaming it through the
+    // call would collapse the binaural image); we only send the cue
+    call.sendControl({ action: 'play', protocolCode: code, durationMin })
   }
 
   function stopAudio(completed: boolean) {
@@ -143,16 +151,19 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
     player.current = null
     setAudioDone(true)
     setStatus('running')
-    addNote(completed ? 'Audio finished' : 'Audio stopped early')
+    addNote(completed ? 'Audio terminato' : 'Audio interrotto')
+    call.sendControl({ action: 'stop' })
   }
 
   function togglePause() {
     if (status === 'running') {
       setStatus('paused')
       player.current?.pause()
+      call.sendControl({ action: 'pause' })
     } else if (status === 'paused') {
       setStatus('running')
       void player.current?.resume()
+      call.sendControl({ action: 'resume' })
     }
   }
 
@@ -160,11 +171,13 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
     if (status === 'intervening') {
       setStatus('running')
       void player.current?.resume()
+      call.sendControl({ action: 'intervene', on: false })
     } else {
       intervenedRef.current = true
       setStatus('intervening')
       player.current?.pause()
-      addNote('INTERVENE — two-way audio opened')
+      addNote('INTERVIENI — audio bidirezionale aperto')
+      call.sendControl({ action: 'intervene', on: true })
     }
   }
 
@@ -191,6 +204,8 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
 
   function endConsultation() {
     player.current?.stop()
+    call.sendControl({ action: 'end' })
+    call.hangup()
     onEnd({
       protocolCode: audioPlayedRef.current ? (activeCode ?? '') : '',
       goal,
@@ -219,28 +234,28 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
       <div className="monitor__bar">
         <span className="monitor__patient">● {patient.name}</span>
         <span className="monitor__proto">
-          {playing ? `${protocol?.code} · ${goal || 'no goal set'}` : audioDone ? 'audio finished · in conversation' : 'consultation — no audio playing'}
+          {playing ? `${protocol?.code} · ${goal || 'nessun obiettivo impostato'}` : audioDone ? 'audio terminato · in colloquio' : 'consulenza — nessun audio in riproduzione'}
         </span>
         <span className="monitor__clock">
           {playing ? `${mmss(elapsed)} / ${mmss(total)}` : mmss(callElapsed)}
         </span>
         {playing && status !== 'running' && (
-          <span className={`monitor__state monitor__state--${status}`}>{status === 'paused' ? 'PAUSED' : 'INTERVENING'}</span>
+          <span className={`monitor__state monitor__state--${status}`}>{status === 'paused' ? 'IN PAUSA' : 'INTERVENTO'}</span>
         )}
-        <button className="ctl ctl--stop monitor__end" onClick={() => setConfirmEnd(true)}>⏹ End consultation</button>
+        <button className="ctl ctl--stop monitor__end" onClick={() => setConfirmEnd(true)}>⏹ Chiudi la consulenza</button>
       </div>
 
       <div className="monitor__grid monitor__grid--room">
         {/* LEFT — the video call is the room; the audio mirror only appears
             once a protocol is playing */}
         <div className="monitor__video">
-          <VideoStage patientName={patient.name} intervening={status === 'intervening'} />
+          <VideoStage call={call} peerName={patient.name} intervening={status === 'intervening'} />
           {playing && (
             <div className="vid-mirror">
               <div className={`vid-mirror__screen${showOrb ? '' : ' is-dark'}`}>
                 {showOrb ? <BreathingOrb size={56} /> : <span className="vid-mirror__dot" />}
               </div>
-              <span className="b2b-sub">patient screen</span>
+              <span className="b2b-sub">schermo del paziente</span>
             </div>
           )}
         </div>
@@ -248,34 +263,34 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
         {/* RIGHT — the dock: library / notes / running session */}
         <div className="dock">
           <div className="dock__tabs">
-            <button className={`dock__tab${dock === 'library' ? ' is-on' : ''}`} onClick={() => setDock('library')}>🎧 Library</button>
-            <button className={`dock__tab${dock === 'notes' ? ' is-on' : ''}`} onClick={() => setDock('notes')}>📝 Notes{notes.length ? ` (${notes.length})` : ''}</button>
-            <button className={`dock__tab${dock === 'session' ? ' is-on' : ''}`} onClick={() => setDock('session')} disabled={!activeCode}>▶ Session</button>
+            <button className={`dock__tab${dock === 'library' ? ' is-on' : ''}`} onClick={() => setDock('library')}>🎧 Libreria</button>
+            <button className={`dock__tab${dock === 'notes' ? ' is-on' : ''}`} onClick={() => setDock('notes')}>📝 Note{notes.length ? ` (${notes.length})` : ''}</button>
+            <button className={`dock__tab${dock === 'session' ? ' is-on' : ''}`} onClick={() => setDock('session')} disabled={!activeCode}>▶ Seduta</button>
           </div>
 
           <div className="dock__body">
             {dock === 'library' && (
               <>
-                <h3 className="monitor__h">Good Loop library</h3>
+                <h3 className="monitor__h">Libreria Good Loop</h3>
                 <p className="dock__hint">
-                  Talk first. When you're ready, pick a protocol and play it into the session — the patient hears it, you keep the video.
+                  Prima parlate. Quando sei pronto, scegli un protocollo e mandalo in seduta — il paziente lo ascolta, tu resti in video.
                 </p>
 
                 <div className="dock__checks">
-                  <span className={`dock__check${consentOk ? ' is-ok' : ' is-bad'}`}>{consentOk ? '✓' : '✕'} Consent {consentOk ? 'active' : 'missing'}</span>
+                  <span className={`dock__check${consentOk ? ' is-ok' : ' is-bad'}`}>{consentOk ? '✓' : '✕'} Consenso {consentOk ? 'attivo' : 'mancante'}</span>
                   <span className={`dock__check${stereoOk ? ' is-ok' : ''}`}>
                     {stereoOk ? '✓ Stereo OK' : (
-                      <button className="check__action" onClick={runStereoCheck} disabled={checking}>{checking ? 'Checking…' : 'Run stereo check'}</button>
+                      <button className="check__action" onClick={runStereoCheck} disabled={checking}>{checking ? 'Verifica…' : 'Verifica lo stereo'}</button>
                     )}
                   </span>
                 </div>
 
-                <label className="dock__label">Session goal</label>
-                <input className="b2b-input" placeholder="e.g. Reduce acute anxiety" value={goal} onChange={(e) => setGoal(e.target.value)} />
+                <label className="dock__label">Obiettivo della seduta</label>
+                <input className="b2b-input" placeholder="es. Ridurre l’ansia acuta" value={goal} onChange={(e) => setGoal(e.target.value)} />
 
                 <div className="proto-list dock__protos">
-                  {catalogLoading && <p className="b2b-sub">Loading protocols…</p>}
-                  {!catalogLoading && protocols.length === 0 && <p className="b2b-sub">No protocols are enabled.</p>}
+                  {catalogLoading && <p className="b2b-sub">Caricamento protocolli…</p>}
+                  {!catalogLoading && protocols.length === 0 && <p className="b2b-sub">Nessun protocollo attivo.</p>}
                   {protocols.map((p) => (
                     <button key={p.code} className={`proto${pick === p.code ? ' is-on' : ''}`} onClick={() => setPick(p.code)}>
                       <span className="proto__radio" />
@@ -291,7 +306,7 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
                   <div className="dock__preset">
                     {(() => {
                       const ps = PRESETS[getProtocol(pick)!.family]
-                      return <>Binaural <b>{ps.binaural}</b> · voice <b>{ps.voice}</b> · looper <b>{ps.loop}</b></>
+                      return <>Binaurale <b>{ps.binaural}</b> · voce <b>{ps.voice}</b> · looper <b>{ps.loop}</b></>
                     })()}
                   </div>
                 )}
@@ -301,27 +316,27 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
                   disabled={!pick || !canStart}
                   onClick={() => startAudio(pick)}
                 >
-                  {playing ? 'Switch to this protocol →' : 'Play into session →'}
+                  {playing ? 'Passa a questo protocollo →' : 'Manda in seduta →'}
                 </button>
-                {!canStart && <p className="b2b-sub dock__blocked">{consentOk ? 'Run the stereo check first.' : 'Consent for therapy is not active for this patient.'}</p>}
+                {!canStart && <p className="b2b-sub dock__blocked">{consentOk ? 'Esegui prima la verifica dello stereo.' : 'Il consenso al trattamento non è attivo per questo paziente.'}</p>}
               </>
             )}
 
             {dock === 'notes' && (
               <>
-                <h3 className="monitor__h">Session notes</h3>
+                <h3 className="monitor__h">Note della seduta</h3>
                 <div className="notes-box">
                   <div className="notes-box__input">
                     <input
-                      placeholder="Note…"
+                      placeholder="Nota…"
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && submitNote()}
                     />
-                    <button onClick={submitNote}>Add</button>
+                    <button onClick={submitNote}>Aggiungi</button>
                   </div>
                   <ul className="notes-list notes-list--tall">
-                    {notes.length === 0 && <li className="b2b-sub">Notes are timestamped — to the audio phase while a protocol plays, to the call clock otherwise. They feed the report.</li>}
+                    {notes.length === 0 && <li className="b2b-sub">Le note sono marcate con l’orario — sulla fase audio quando un protocollo è in riproduzione, altrimenti sul tempo della chiamata. Confluiscono nel referto.</li>}
                     {[...notes].reverse().map((n, i) => (
                       <li key={i} className="note-line">
                         <span className="note-line__ts">{n.phase ? `P${n.phase} · ` : ''}{mmss(n.at)}</span>
@@ -349,24 +364,24 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
 
                 {preset && (
                   <>
-                    <h3 className="monitor__h">Active parameters</h3>
+                    <h3 className="monitor__h">Parametri attivi</h3>
                     <div className="params">
-                      <span className="param">Binaural <b>{preset.binaural}</b></span>
-                      <span className="param">Breathing <b>{preset.breathing}</b></span>
-                      <span className="param">Voice <b>{preset.voice}</b></span>
+                      <span className="param">Binaurale <b>{preset.binaural}</b></span>
+                      <span className="param">Respirazione <b>{preset.breathing}</b></span>
+                      <span className="param">Voce <b>{preset.voice}</b></span>
                       <span className="param">Looper <b>{preset.loop}</b></span>
                     </div>
                   </>
                 )}
 
                 <div className="monitor__controls dock__controls">
-                  <button className="ctl" disabled={!playing} onClick={togglePause}>{status === 'paused' ? '▶ Resume' : '⏸ Pause'}</button>
-                  <button className="ctl ctl--stop" disabled={!playing} onClick={() => stopAudio(false)}>⏹ Stop audio</button>
+                  <button className="ctl" disabled={!playing} onClick={togglePause}>{status === 'paused' ? '▶ Riprendi' : '⏸ Pausa'}</button>
+                  <button className="ctl ctl--stop" disabled={!playing} onClick={() => stopAudio(false)}>⏹ Ferma l’audio</button>
                   <button className={`ctl ctl--intervene${status === 'intervening' ? ' is-active' : ''}`} disabled={!playing} onClick={intervene}>
-                    {status === 'intervening' ? '✓ Resume treatment' : '⚠ INTERVENE'}
+                    {status === 'intervening' ? '✓ Riprendi il trattamento' : '⚠ INTERVIENI'}
                   </button>
                 </div>
-                {audioDone && <p className="b2b-sub">Audio ended — you're back in conversation. Play another protocol from the library, or end the consultation.</p>}
+                {audioDone && <p className="b2b-sub">Audio terminato — siete di nuovo in colloquio. Manda un altro protocollo dalla libreria oppure chiudi la consulenza.</p>}
               </>
             )}
           </div>
@@ -376,15 +391,15 @@ export function ConsultationRoom({ patient, config, demoSeconds, onEnd }: Consul
       {confirmEnd && (
         <div className="modal">
           <div className="modal__box">
-            <h3>End the consultation?</h3>
+            <h3>Chiudere la consulenza?</h3>
             <p className="b2b-sub">
               {playing
-                ? 'A protocol is still playing — it will stop. You go to the debrief and report.'
-                : 'You go to the debrief and report.'}
+                ? 'Un protocollo è ancora in riproduzione e verrà fermato. Passerai al debriefing e al referto.'
+                : 'Passerai al debriefing e al referto.'}
             </p>
             <div className="modal__actions">
-              <button className="b2b-btn" onClick={() => setConfirmEnd(false)}>Keep going</button>
-              <button className="b2b-btn b2b-btn--danger" onClick={endConsultation}>End consultation</button>
+              <button className="b2b-btn" onClick={() => setConfirmEnd(false)}>Continua</button>
+              <button className="b2b-btn b2b-btn--danger" onClick={endConsultation}>Chiudi la consulenza</button>
             </div>
           </div>
         </div>

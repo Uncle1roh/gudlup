@@ -1,5 +1,5 @@
 /* ============================================================================
-   Good Loop — Voice engine panel (internal tool, English on purpose)
+   Good Loop — Pannello motore vocale
    Shows which TTS engine is ACTIVE and lets the operator paste the ElevenLabs
    API key. Voice IDs are GONE from every screen: the PO-approved voice
    catalog (9 archetypes, all ids baked in) supplies every option by name.
@@ -45,17 +45,17 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
 
   const provider = getTtsProvider()
   const source = elevenLabsSource()
-  const sourceNote = source === 'settings' ? 'key saved in this browser'
-    : source === 'env' ? 'key from build env'
-    : 'no ElevenLabs key — using fallback'
+  const sourceNote = source === 'settings' ? 'chiave salvata in questo browser'
+    : source === 'env' ? 'chiave dall’ambiente di build'
+    : 'nessuna chiave ElevenLabs — voce di ripiego'
   const pName = voiceById(voiceId)?.name ?? DEFAULT_PRIMARY.name
   const mName = voiceById(voiceIdM)?.name ?? DEFAULT_SECONDARY.name
 
   function save() {
     setError(null); setStatus(null)
-    if (!apiKey.trim()) { setError('Paste the ElevenLabs API key — the voices are already built in.'); return }
+    if (!apiKey.trim()) { setError('Incolla la chiave API di ElevenLabs — le voci sono già incluse.'); return }
     saveTtsSettings({ apiKey, voiceId, voiceIdSecondary: voiceIdM || undefined })
-    setStatus(`Saved — ElevenLabs active with ${pName} (primary) + ${mName} ([M] voice).`)
+    setStatus(`Salvato — ElevenLabs attivo con ${pName} (principale) + ${mName} (voce [M]).`)
     onChanged?.()
   }
 
@@ -65,7 +65,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setVoiceId(DEFAULT_PRIMARY.id)
     setVoiceIdM(DEFAULT_SECONDARY.id)
     setError(null)
-    setStatus('Cleared — falling back to the env key (if set) or the browser voice.')
+    setStatus('Cancellato — si torna alla chiave d’ambiente (se impostata) o alla voce del browser.')
     onChanged?.()
   }
 
@@ -74,7 +74,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     const p = getTtsProvider()
     try {
       await p.speak(which === 'secondary' ? TEST_LINE_M : TEST_LINE, { lang: which === 'secondary' ? 'it' : 'pt-BR', voice: which })
-      setStatus(`Spoken with: ${p.label} — ${which === 'secondary' ? mName : pName}${p.canRender ? '' : ' — preview-only (robotic). Save the ElevenLabs key above for the real voice.'}`)
+      setStatus(`Riprodotto con: ${p.label} — ${which === 'secondary' ? mName : pName}${p.canRender ? '' : ' — solo anteprima (voce robotica). Salva qui sopra la chiave ElevenLabs per la voce reale.'}`)
     } catch (e) {
       setError(`${p.label}: ${(e as Error).message}`)
     } finally {
@@ -86,37 +86,37 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     <div className="voice-panel">
       <div className="voice-panel__row">
         <span className={`voice-panel__badge${provider.canRender ? ' is-ok' : ''}`}>
-          {provider.canRender ? '●' : '○'} Active engine: {provider.label}{provider.canRender ? ` · ${pName} + ${mName}` : ''}
+          {provider.canRender ? '●' : '○'} Motore attivo: {provider.label}{provider.canRender ? ` · ${pName} + ${mName}` : ''}
         </span>
         <span className="voice-panel__src">{sourceNote}</span>
       </div>
 
       <div className="voice-panel__fields">
         <input
-          className="voice-panel__input" type="password" placeholder="ElevenLabs API key"
+          className="voice-panel__input" type="password" placeholder="Chiave API ElevenLabs"
           value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="off"
         />
         <VoiceSelect value={voiceId} onChange={setVoiceId} />
         <VoiceSelect value={voiceIdM} onChange={setVoiceIdM} />
       </div>
       <p className="voice-panel__fine" style={{ marginTop: 2 }}>
-        Left: primary voice (every [F]/unmarked line — default {DEFAULT_PRIMARY.name}, Maternal).
-        Right: [M] voice (Deep double-induction — default {DEFAULT_SECONDARY.name}, Paternal).
-        All {VOICE_CATALOG.length} PO-approved voices are built in — no IDs to paste.
+        A sinistra: voce principale (ogni battuta [F] o non marcata — predefinita {DEFAULT_PRIMARY.name}, Materna).
+        A destra: voce [M] (doppia induzione Deep — predefinita {DEFAULT_SECONDARY.name}, Paterna).
+        Tutte le {VOICE_CATALOG.length} voci approvate sono già incluse — nessun ID da incollare.
       </p>
 
       <div className="voice-panel__actions">
-        <button className="voice-panel__btn voice-panel__btn--primary" onClick={save}>Save</button>
-        <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? 'Speaking…' : '▶ Test voice'}</button>
-        <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title="Speaks an Italian double-induction line with the [M] voice">▶ Test M</button>
-        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={clear}>Clear</button>
+        <button className="voice-panel__btn voice-panel__btn--primary" onClick={save}>Salva</button>
+        <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? 'Riproduzione…' : '▶ Prova la voce'}</button>
+        <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title="Riproduce una battuta italiana di doppia induzione con la voce [M]">▶ Prova [M]</button>
+        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={clear}>Cancella</button>
       </div>
 
       {status && <p className="voice-panel__ok">{status}</p>}
       {error && <p className="voice-panel__err">{error}</p>}
       <p className="voice-panel__fine">
-        The key saved here lives only in this browser (localStorage) and takes effect immediately — no rebuild.
-        Build-time env keys still work as the fallback.
+        La chiave salvata qui resta solo in questo browser (localStorage) ed è attiva subito, senza ricompilare.
+        Le chiavi impostate nell’ambiente di build restano come ripiego.
       </p>
     </div>
   )

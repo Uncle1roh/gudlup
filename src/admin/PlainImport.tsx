@@ -123,10 +123,10 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
   function explain(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
     if (/plain|datasheet|asset_map|PGRST204|42703|column .* does not exist|schema cache/i.test(msg)) {
-      return `${msg} — run the updated supabase/setup.sql, then try again.`
+      return `${msg} — esegui la versione aggiornata di supabase/setup.sql e riprova.`
     }
     if (/row-level security|RLS|permission|policy/i.test(msg)) {
-      return `${msg} — sign in as a catalog admin (admin@goodloop.app).`
+      return `${msg} — accedi come amministratore del catalogo (admin@goodloop.app).`
     }
     return msg
   }
@@ -146,7 +146,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
       try {
         const buffer = await ctx.decodeAudioData(bytes)
         if (version && Math.abs(buffer.duration - version.durationS) > 20) {
-          setStatus(`Note: "${file.name}" is ${secToMmss(Math.round(buffer.duration))} — the protocol version is ${secToMmss(version.durationS)}.`)
+          setStatus(`Nota: "${file.name}" dura ${secToMmss(Math.round(buffer.duration))} — la versione del protocollo dura ${secToMmss(version.durationS)}.`)
         } else {
           setStatus(null)
         }
@@ -155,7 +155,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         await ctx.close().catch(() => undefined)
       }
     } catch (e) {
-      setError(`Could not read "${file.name}" as audio: ${(e as Error).message}`)
+      setError(`Impossibile leggere "${file.name}" come audio: ${(e as Error).message}`)
     } finally {
       setBusy(false)
       if (masteredRef.current) masteredRef.current.value = ''
@@ -178,7 +178,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
   }
 
   async function publishToCatalog(): Promise<CatalogProtocol> {
-    if (!t.code) throw new Error('The workbook has no GL-code (README) — publishing needs one.')
+    if (!t.code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
     const durations = t.versions
       .map((v) => v.durationMin)
       .filter((d): d is Duration => d === 6 || d === 12 || d === 24)
@@ -220,19 +220,19 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
     setError(null)
     setLive(false)
     try {
-      setStatus('Publishing to the catalog…')
+      setStatus('Pubblicazione nel catalogo…')
       const proto = await publishToCatalog()
       const dur = version.durationMin as Duration
-      if (dur !== 6 && dur !== 12 && dur !== 24) throw new Error(`${version.durationMin} min is not a catalog duration (6/12/24).`)
+      if (dur !== 6 && dur !== 12 && dur !== 24) throw new Error(`${version.durationMin} min non è una durata di catalogo (6/12/24).`)
       let audioBuffer: AudioBuffer
       if (mastered) {
         // the externally-mastered upload IS the published audio
-        setStatus(`Using the mastered file "${mastered.name}"…`)
+        setStatus(`Uso il file masterizzato "${mastered.name}"…`)
         audioBuffer = mastered.buffer
       } else {
         if (!tts.canRender) {
           setDetailsOpen(true)
-          throw new Error('The voice engine has no key — set the ElevenLabs key in Details, then press Publish again (or upload a mastered file).')
+          throw new Error('Il motore vocale non ha una chiave — imposta la chiave ElevenLabs in Dettagli e premi di nuovo Pubblica (oppure carica un file masterizzato).')
         }
         const result = await renderPlainWav(t, version, {
           pools: pools ?? undefined,
@@ -242,11 +242,11 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         setNotes(result.notes)
         audioBuffer = result.buffer
       }
-      setStatus('Uploading the streaming copy…')
+      setStatus('Caricamento della copia per lo streaming…')
       await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
       setLive(true)
-      setStatus(`Live — ${proto.code} now streams in the employee app and monitored sessions${mastered ? ` (mastered file "${mastered.name}")` : ''}.`)
+      setStatus(`In linea — ${proto.code} ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.`)
     } catch (e) {
       setStatus(null)
       setError(explain(e))
@@ -267,7 +267,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         onProgress: setStatus,
       })
       setNotes(result.notes)
-      if (!tts.canRender) setStatus('Rendered WITHOUT voice (no engine key — see Details).')
+      if (!tts.canRender) setStatus('Renderizzato SENZA voce (nessuna chiave del motore vocale — vedi Dettagli).')
       else setStatus(null)
       downloadBlob(plainWavFileName(t.code, version.sheet), result.blob)
     } catch (e) {
@@ -288,8 +288,8 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
           <span className="adm-plain__code">{t.code ?? fileName}</span>
           {t.title && <span className="adm-plain__title">{t.title}</span>}
           <span className="adm-plain__meta">
-            {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clips` : ''}
-            {live ? ' · live ✓' : published ? ' · published' : ''}
+            {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clip` : ''}
+            {live ? ' · in linea ✓' : published ? ' · pubblicato' : ''}
           </span>
         </div>
         {t.versions.length > 1 && (
@@ -305,43 +305,43 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
 
       <div className="adm-plain__actions adm-plain__actions--5">
         <button className="adm-plain__act" onClick={onImportExcel ?? onCancel} disabled={busy}>
-          <span className="adm-plain__act-ico">⬆</span> Import Excel
+          <span className="adm-plain__act-ico">⬆</span> Importa Excel
         </button>
-        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={poolsLoading ? 'Loading the sound library…' : undefined}>
-          <span className="adm-plain__act-ico">🎚</span> Edit in Studio
+        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={poolsLoading ? 'Caricamento della libreria sonora…' : undefined}>
+          <span className="adm-plain__act-ico">🎚</span> Modifica nello Studio
         </button>
         <button className="adm-plain__act" onClick={() => void download()} disabled={disabled}>
-          <span className="adm-plain__act-ico">⬇</span> Download
+          <span className="adm-plain__act-ico">⬇</span> Scarica
         </button>
         <button
           className={`adm-plain__act${mastered ? ' adm-plain__act--done' : ''}`}
           onClick={() => masteredRef.current?.click()}
           disabled={busy}
-          title="Upload the externally-mastered WAV/MP3 — Publish will ship this exact file"
+          title="Carica il WAV/MP3 masterizzato esternamente — Pubblica userà esattamente questo file"
         >
-          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Mastered ✓' : 'Upload mastered'}
+          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Masterizzato ✓' : 'Carica masterizzato'}
         </button>
         <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled}>
-          <span className="adm-plain__act-ico">🚀</span> Publish
+          <span className="adm-plain__act-ico">🚀</span> Pubblica
         </button>
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
         {fileInput}
       </div>
       {mastered && !live && (
-        <div className="adm-plain__status">Mastered file loaded: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Publish ships this file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Use the app render instead</a></div>
+        <div className="adm-plain__status">File masterizzato caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Pubblica userà questo file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Usa invece il render dell’app</a></div>
       )}
 
-      {poolsLoading && <div className="adm-plain__status">Loading the sound library…</div>}
+      {poolsLoading && <div className="adm-plain__status">Caricamento della libreria sonora…</div>}
       {poolsState === 'failed' && (
         <div className="adm-plain__status adm-plain__status--err">
-          Sound library unreachable — clips would be silent. <button className="b2b-btn" onClick={() => setPoolsTick((n) => n + 1)}>Retry</button>
+          Libreria sonora irraggiungibile — le clip risulterebbero mute. <button className="b2b-btn" onClick={() => setPoolsTick((n) => n + 1)}>Riprova</button>
         </div>
       )}
       {status && <div className="adm-plain__status">{status}</div>}
       {error && <div className="adm-plain__status adm-plain__status--err">{error}</div>}
       {errors.length > 0 && (
         <div className="adm-plain__status adm-plain__status--err">
-          The workbook has {errors.length} error{errors.length === 1 ? '' : 's'} — fix the Excel and import again.
+          Il file ha {errors.length} error{errors.length === 1 ? 'e' : 'i'} — correggi l’Excel e importa di nuovo.
           <ul className="adm-spec__issues">
             {errors.map((i, k) => <li key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</li>)}
           </ul>
@@ -350,7 +350,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
 
       <div className="adm-plain__details">
         <button className="adm-plain__toggle" onClick={() => setDetailsOpen((o) => !o)}>
-          {detailsOpen ? '▾' : '▸'} Details
+          {detailsOpen ? '▾' : '▸'} Dettagli
         </button>
         {detailsOpen && (
           <div className="adm-plain__detailbody">
@@ -365,7 +365,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
                 {notes.map((n, k) => <li key={k}>{n}</li>)}
               </ul>
             )}
-            {live && <button className="b2b-btn" onClick={onDone}>Back to catalog</button>}
+            {live && <button className="b2b-btn" onClick={onDone}>Torna al catalogo</button>}
           </div>
         )}
       </div>

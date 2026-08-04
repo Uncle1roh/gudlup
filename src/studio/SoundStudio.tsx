@@ -199,8 +199,8 @@ function StudioTooSmall() {
     <div className="mt-gate">
       <div className="mt-gate__card">
         <div className="mt-gate__icon">🎛️</div>
-        <h1>Sound Studio is desktop-only</h1>
-        <p>The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.</p>
+        <h1>Il Sound Studio è solo per desktop</h1>
+        <p>L’editor multitraccia richiede uno schermo più ampio. Apri Good Loop su laptop o desktop per comporre e renderizzare le sessioni.</p>
         <a className="mt-gate__back" href="#">← Back to the app</a>
       </div>
     </div>
@@ -285,7 +285,7 @@ function StudioDesktop() {
     } catch (e) {
       // e.g. a sample clip whose file fetch failed — keep the clip, silent,
       // instead of crashing the render loop
-      console.warn('clip render failed', type, (e as Error).message)
+      console.warn('render della clip non riuscito', type, (e as Error).message)
       buf = await renderClipBuffer(type === 'sample' ? 'sample' : type, type === 'sample' ? { url: '', label: `load failed: ${(e as Error).message}` } : params, dur)
     }
     if (shape) buf = shapeClipBuffer(buf, shape)
@@ -405,7 +405,7 @@ function StudioDesktop() {
       clips: t.clips.map((c) => (c.id !== clipId ? c : {
         ...c,
         params: { ...(c.params as VoiceParams), voiceId: voiceId || undefined },
-        ttsSource: null, // a different voice = a new TTS render — ♪ or "All voices"
+        ttsSource: null, // a different voice = a new TTS render — ♪ or "Tutte le voci"
       })),
     })))
   }, [])
@@ -422,7 +422,7 @@ function StudioDesktop() {
     const player = playerRef.current
     if (!tr || !cl || !player) return
     const text = (cl.text ?? '').trim()
-    if (!text) { setTtsError('Type an affirmation first.'); return }
+    if (!text) { setTtsError('Scrivi prima un’affermazione.'); return }
     setTtsError(null); setTtsBusy(clipId)
     try {
       const provider = getTtsProvider()
@@ -458,7 +458,7 @@ function StudioDesktop() {
         if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
-    if (!jobs.length) { setTtsError('No un-synthesized voice clips with text.'); return }
+    if (!jobs.length) { setTtsError('Nessuna clip vocale con testo da sintetizzare.'); return }
     setTtsError(null)
     const cache = new Map<string, AudioBuffer>()
     let done = 0
@@ -655,13 +655,13 @@ function StudioDesktop() {
       Slicing the rendered buffer (instead of re-rendering halves) keeps
       periodic layers phase-continuous and keeps synthesized voices intact. */
   function cutAtPlayhead() {
-    if (!selected) { setEditMsg('Select a clip first, place the playhead inside it, then Cut.'); return }
+    if (!selected) { setEditMsg('Seleziona prima una clip, porta il cursore al suo interno, poi Taglia.'); return }
     const tr = tracksRef.current.find((t) => t.id === selected.trackId)
     const cl = tr?.clips.find((c) => c.id === selected.clipId)
     if (!tr || !cl) return
     const t0 = cl.startSec, t1 = cl.startSec + cl.durationSec
-    if (playhead < t0 + 0.2 || playhead > t1 - 0.2) { setEditMsg('Place the playhead INSIDE the selected clip (not at its very edge), then Cut.'); return }
-    if (!cl.buffer) { setEditMsg('This clip is still rendering — wait for its waveform, then Cut.'); return }
+    if (playhead < t0 + 0.2 || playhead > t1 - 0.2) { setEditMsg('Porta il cursore DENTRO la clip selezionata (non sul bordo), poi Taglia.'); return }
+    if (!cl.buffer) { setEditMsg('Questa clip è ancora in render — aspetta la forma d’onda, poi Taglia.'); return }
     const cutAt = playhead - t0
     const bufA = sliceBuffer(cl.buffer, 0, cutAt)
     const bufB = sliceBuffer(cl.buffer, cutAt, cl.durationSec)
@@ -684,17 +684,17 @@ function StudioDesktop() {
   /** Merge the selected clip with the NEXT clip on the same track into one
       frozen clip; any gap between them becomes silence inside the clip. */
   function glueWithNext() {
-    if (!selected) { setEditMsg('Select the left clip of the pair to glue.'); return }
+    if (!selected) { setEditMsg('Seleziona la clip di sinistra della coppia da unire.'); return }
     const tr = tracksRef.current.find((t) => t.id === selected.trackId)
     if (!tr) return
     const sorted = [...tr.clips].sort((x, y) => x.startSec - y.startSec)
     const i = sorted.findIndex((c) => c.id === selected.clipId)
     const cl = sorted[i]
     const nx = sorted[i + 1]
-    if (!cl || !nx) { setEditMsg('No clip after the selected one on this track — nothing to glue.'); return }
-    if (!cl.buffer || !nx.buffer) { setEditMsg('Both clips need their audio rendered before gluing (wait for the waveforms).'); return }
+    if (!cl || !nx) { setEditMsg('Nessuna clip dopo quella selezionata su questa traccia — niente da unire.'); return }
+    if (!cl.buffer || !nx.buffer) { setEditMsg('Entrambe le clip devono avere l’audio renderizzato prima di unirle (aspetta le forme d’onda).'); return }
     const gap = Math.max(0, nx.startSec - (cl.startSec + cl.durationSec))
-    if (gap > 60) { setEditMsg('These clips are more than 60 s apart — move them closer before gluing.'); return }
+    if (gap > 60) { setEditMsg('Queste clip distano più di 60 s — avvicinale prima di unirle.'); return }
     const bufA = sliceBuffer(cl.buffer, 0, cl.durationSec)
     const bufB = sliceBuffer(nx.buffer, 0, nx.durationSec)
     const buf = concatBuffers(bufA, bufB, gap)
@@ -848,12 +848,12 @@ function StudioDesktop() {
         <div className="mt-brand"><span className="mt-brand__mark">◠◡</span>goodloop <span className="mt-brand__sub">studio</span></div>
         <input className="mt-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
         <div className="mt-transport">
-          <button className="mt-tbtn" onClick={stopT} title="Stop / to start">⏹</button>
-          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? 'Pause' : 'Play'}>{playing ? '⏸' : '▶'}</button>
+          <button className="mt-tbtn" onClick={stopT} title="Stop / torna all’inizio">⏹</button>
+          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? 'Pausa' : 'Riproduci'}>{playing ? '⏸' : '▶'}</button>
           <span className="mt-time">
             <EditableValue
               display={fmtTime(playhead)}
-              title="Click to type a time (e.g. 3:45 or 225)"
+              title="Clicca per digitare un tempo (es. 3:45 o 225)"
               commit={(raw) => {
                 const t = raw.trim()
                 const mm = /^(\d{1,3}):(\d{1,2})$/.exec(t)
@@ -864,19 +864,19 @@ function StudioDesktop() {
             {' '}<span className="mt-time__sep">/</span> {fmtTime(lengthSec)}
           </span>
         </div>
-        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Voice engine (TTS keys)">
+        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Motore vocale (chiavi TTS)">
           {ttsInfo.canRender ? '🎙' : '🎙!'}
         </button>
         <button
           className="mt-tbtn mt-tbtn--wide"
           onClick={() => void synthesizeAllVoices()}
           disabled={!!synthAll}
-          title="Synthesize every voice clip that has text and no rendered voice yet (one TTS render per unique line)"
+          title="Sintetizza ogni clip vocale che ha testo e non è ancora stata renderizzata (un render TTS per battuta unica)"
         >
-          {synthAll ?? '♪ All voices'}
+          {synthAll ?? '♪ Tutte le voci'}
         </button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title="Cut the selected clip in two at the playhead">✂ Cut</button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title="Glue the selected clip with the next clip on its track (gap becomes silence)">🩹 Glue</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title="Taglia in due la clip selezionata al cursore">✂ Taglia</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title="Unisce la clip selezionata alla successiva sulla stessa traccia (lo spazio diventa silenzio)">🩹 Unisci</button>
         <div className="mt-master">
           <span className="mt-master__lbl">Master</span>
           <input type="range" min={0} max={1} step={0.01} value={masterGain} onChange={(e) => setMasterGain(+e.target.value)} />
@@ -887,12 +887,12 @@ function StudioDesktop() {
           <button onClick={() => setPxPerSec((v) => clamp(+(v * 1.25).toFixed(2), 2, 60))}>+</button>
         </div>
         <div className="mt-len">
-          <span>length</span>
+          <span>durata</span>
           <input type="number" min={10} max={1800} value={lengthSec} onChange={(e) => setLengthSec(clamp(Math.round(+e.target.value || 10), 10, 1800))} />
           <span>s</span>
         </div>
         <div className="mt-addwrap">
-          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>＋ Track ▾</button>
+          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>＋ Traccia ▾</button>
           {addOpen && (
             <div className="mt-addmenu">
               {(Object.keys(TRACK_META) as TrackType[]).map((tp) => (
@@ -901,13 +901,13 @@ function StudioDesktop() {
             </div>
           )}
         </div>
-        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Rendering…' : '⬇ Export WAV'}</button>
+        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Render in corso…' : '⬇ Esporta WAV'}</button>
         {attachTarget && hasSupabaseEnv() && (
-          <button className="mt-export" onClick={attachToCatalog} disabled={attaching} title={`Re-attach this edit to ${attachTarget.code} · ${attachTarget.duration} min`}>
-            {attaching ? 'Attaching…' : `⬆ Attach to ${attachTarget.code}`}
+          <button className="mt-export" onClick={attachToCatalog} disabled={attaching} title={`Ricollega questa modifica a ${attachTarget.code} · ${attachTarget.duration} min`}>
+            {attaching ? 'Collegamento…' : `⬆ Collega a ${attachTarget.code}`}
           </button>
         )}
-        <a className="mt-exit" href="#" title="Exit studio">✕</a>
+        <a className="mt-exit" href="#" title="Esci dallo studio">✕</a>
       </header>
 
       {voiceSetupOpen && (
@@ -951,7 +951,7 @@ function StudioDesktop() {
               onFx={() => setFxTrackId((v) => (v === t.id ? null : t.id))}
             />
           ))}
-          {tracks.length === 0 && <div className="mt-empty">No tracks. Use ＋ Track.</div>}
+          {tracks.length === 0 && <div className="mt-empty">Nessuna traccia. Usa ＋ Traccia.</div>}
           </div>
 
           <div className="mt-content" ref={lanesRef} style={{ width: contentWidth, height: contentHeight }}>
@@ -1018,24 +1018,24 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
       <div className="mt-head__top">
         <span className="mt-head__icon">{meta.icon}</span>
         <span className="mt-head__name">{track.name}</span>
-        <button className={`mt-fxbtn${fxOn ? ' is-on' : ''}`} onClick={onFx} title="Track effects (harmonizer · echo · reverb · saturation · filter)">
+        <button className={`mt-fxbtn${fxOn ? ' is-on' : ''}`} onClick={onFx} title="Effetti della traccia (armonizzatore · eco · riverbero · saturazione · filtro)">
           FX{fxOn ? ` ${fxOn}` : ''}
         </button>
-        <button className="mt-x" onClick={onDelete} title="Remove track">✕</button>
+        <button className="mt-x" onClick={onDelete} title="Rimuovi la traccia">✕</button>
       </div>
       <div className="mt-head__row">
-        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title="Mute">M</button>
+        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title="Muto">M</button>
         <button className={`mt-mini${track.soloed ? ' is-s' : ''}`} onClick={onToggleSolo} title="Solo">S</button>
-        <span className="mt-chan" title="Track channel — the whole track plays left / center / right (live + in the export)">
+        <span className="mt-chan" title="Canale della traccia — l’intera traccia suona a sinistra / centro / destra (in ascolto e nell’export)">
           {(['L', 'C', 'R'] as TrackChannel[]).map((c) => (
             <button key={c} className={`mt-chan__b${ch === c ? ' is-on' : ''}`} onClick={() => onChannel(c)}>{c}</button>
           ))}
         </span>
         <span style={{ flex: 1 }} />
-        <button className="mt-addclip" onClick={onAddClip} title="Add clip at playhead">＋</button>
+        <button className="mt-addclip" onClick={onAddClip} title="Aggiungi una clip al cursore">＋</button>
       </div>
       {track.baseLufs !== undefined ? (
-        <div className="mt-head__vol" title="Track loudness target in LUFS (the protocol's mix language) — scroll for ±0.5 LU">
+        <div className="mt-head__vol" title="Loudness target della traccia in LUFS (il linguaggio di mix del protocollo) — scorri per ±0,5 LU">
           <input
             className="mt-vol"
             type="range" min={0} max={1} step={0.002}
@@ -1055,12 +1055,12 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
                 const v = parseTyped(raw, FADER_MIN_LUFS, FADER_MAX_LUFS)
                 if (v != null) onVolume(lufsToGain(track.baseLufs!, v))
               }}
-              title="Click to type the target in LUFS (e.g. -22)"
+              title="Clicca per digitare il target in LUFS (es. -22)"
             />
           </span>
         </div>
       ) : (
-        <div className="mt-head__vol" title="Track level in dB vs the mix — scroll for ±0.5 dB fine steps">
+        <div className="mt-head__vol" title="Livello della traccia in dB rispetto al mix — scorri per passi fini di ±0,5 dB">
           <input
             className="mt-vol"
             type="range" min={0} max={1} step={0.002}
@@ -1080,7 +1080,7 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
                 const v = parseTyped(raw, FADER_MIN_DB, FADER_MAX_DB)
                 if (v != null) onVolume(Math.pow(10, v / 20))
               }}
-              title="Click to type the level in dB (e.g. -12)"
+              title="Clicca per digitare il livello in dB (es. -12)"
             />
           </span>
         </div>
@@ -1288,7 +1288,7 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
         {clip.eq && (
           <button
             className="mt-eq__reset"
-            title="Reset all bands to flat"
+            title="Azzera tutte le bande"
             onClick={() => onEq(defaultClipEq())}
           >
             Reset
@@ -1307,7 +1307,7 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
               >
                 {EQ_BAND_LABEL[b.type]}
               </button>
-              <label className="mt-eq__f" title="Frequency (click number to type)">
+              <label className="mt-eq__f" title="Frequenza (clicca il numero per digitarlo)">
                 <input
                   type="range" min={0} max={1} step={0.002}
                   value={Math.log10(b.freqHz / 20) / 3}
@@ -1322,11 +1322,11 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                     const hz = /k/.test(t) ? n * 1000 : n
                     patchBand(i, { freqHz: Math.round(Math.min(20000, Math.max(20, hz))) })
                   }}
-                  title="Frequency in Hz (e.g. 250 or 2.5k)"
+                  title="Frequenza in Hz (es. 250 o 2.5k)"
                 />
               </label>
               {b.type !== 'highpass' && b.type !== 'lowpass' && (
-                <label className="mt-eq__g" title="Gain (click number to type)">
+                <label className="mt-eq__g" title="Guadagno (clicca il numero per digitarlo)">
                   <input
                     type="range" min={-18} max={18} step={0.5}
                     value={b.gainDb}
@@ -1335,12 +1335,12 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                   <EditableValue
                     display={`${b.gainDb > 0 ? '+' : ''}${b.gainDb.toFixed(1)}`}
                     commit={(raw) => { const v = parseTyped(raw, -18, 18); if (v != null) patchBand(i, { gainDb: v }) }}
-                    title="Gain in dB"
+                    title="Guadagno in dB"
                   />
                 </label>
               )}
               {b.type === 'peaking' && (
-                <label className="mt-eq__q" title="Q — width of the bell (higher = narrower)">
+                <label className="mt-eq__q" title="Q — larghezza della campana (più alto = più stretta)">
                   <input
                     type="range" min={0.3} max={8} step={0.1}
                     value={b.q}
@@ -1349,7 +1349,7 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                   <EditableValue
                     display={`Q${b.q.toFixed(1)}`}
                     commit={(raw) => { const v = parseTyped(raw, 0.3, 8); if (v != null) patchBand(i, { q: v }) }}
-                    title="Q (0.3–8)"
+                    title="Q (0,3–8)"
                   />
                 </label>
               )}
@@ -1417,7 +1417,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
   if (!track || !clip) {
     return (
       <div className="mt-inspector mt-inspector--empty">
-        <span>Select a clip to edit its sound · double-click a lane to add one · drag edges to trim · drag a clip up/down to move it to another track of the same type</span>
+        <span>Seleziona una clip per modificarne il suono · doppio clic su una corsia per aggiungerne una · trascina i bordi per accorciarla · trascina su/giù per spostarla su un’altra traccia dello stesso tipo</span>
       </div>
     )
   }
@@ -1427,7 +1427,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
       <div className="mt-insp__head">
         <span className="mt-insp__title" style={{ color: meta.color }}>{meta.icon} {meta.label}</span>
         <span className="mt-insp__sub">{meta.blurb}</span>
-        <button className="mt-insp__del" onClick={onDelete}>Delete clip</button>
+        <button className="mt-insp__del" onClick={onDelete}>Elimina la clip</button>
       </div>
       <div className="mt-insp__grid">
         <Slider label="Start" value={clip.startSec} min={0} max={1800} step={0.25} onChange={(v) => onTiming({ startSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
@@ -1447,7 +1447,7 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
         )}
         {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}
         {clip.frozen && clip.eq && (
-          <div className="mt-note" style={{ marginTop: 6 }}>EQ is locked on cut pieces — the audio is frozen.</div>
+          <div className="mt-note" style={{ marginTop: 6 }}>L’EQ è bloccato sui frammenti tagliati — l’audio è congelato.</div>
         )}
 
         {track.type === 'binaural' && (() => { const p = clip.params as BinauralParams; return <>
@@ -1476,26 +1476,26 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
               <button key={ch} className={p.chord === ch ? 'is-on' : ''} onClick={() => onParam({ chord: ch })}>{ch.toUpperCase()}</button>
             ))}
           </div>
-          <div className="mt-note">Warm triad pad — key changes follow the protocol's music transitions.</div>
+          <div className="mt-note">Pad in triade calda — i cambi di tonalità seguono le transizioni musicali del protocollo.</div>
         </> })()}
 
         {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; return <>
           <Slider label="Tone" value={p.toneHz} min={200} max={800} step={5} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
           <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
           <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
-          <div className="mt-note">Alternating L(−80)/R(+80) — the doc's PAT-05 stimulation.</div>
+          <div className="mt-note">Alternanza L(−80)/R(+80) — la stimolazione PAT-05 del protocollo.</div>
         </> })()}
 
         {track.type === 'sample' && (() => { const p = clip.params as SampleParams; return <>
           <div className="mt-note" style={{ marginBottom: 6 }}>
-            <b>Library file:</b> {p.label || '— none —'}
+            <b>File di libreria:</b> {p.label || '— none —'}
           </div>
           {(p.drawTag !== undefined || p.drawPhase !== undefined) && (
             <div className="mt-tts__row" style={{ margin: '4px 0' }}>
-              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawClip} title="Random draw from this clip's pool (tag / phase)">
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawClip} title="Sorteggio casuale dal pool di questa clip (tag / fase)">
                 🎲 {p.url ? 'Redraw from pool' : 'Draw from pool'}
               </button>
-              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawAllMissing} title="Fill every silent sample clip in this project from its pool">
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawAllMissing} title="Riempi dal suo pool ogni clip campione muta di questo progetto">
                 Draw ALL missing
               </button>
             </div>
@@ -1503,37 +1503,37 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           {drawMsg && <div className="mt-note" style={{ marginBottom: 6 }}>{drawMsg}</div>}
           <SampleFilePicker value={p.label} onPick={(url, label) => onParam({ url, label })} />
           <div className="mt-note">
-            Plays the real asset, looped to the clip length with seam crossfades. Level = the track fader on the left.
-            Picking a file here changes THIS clip only — the protocol's default per-phase mapping stays in the admin Asset Library.
+            Riproduce l’asset reale, in loop sulla durata della clip con crossfade sulle giunzioni. Il livello è il fader della traccia a sinistra.
+            Scegliere un file qui cambia SOLO questa clip — la mappatura predefinita per fase resta nella Libreria audio dell’amministrazione.
           </div>
         </> })()}
 
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
-              <span className="mt-tts__lbl">Affirmation</span>
-              <span className="mt-tts__eng">{rendered ? 'voice rendered ✓' : `voice: ${ttsLabel}`}</span>
+              <span className="mt-tts__lbl">Affermazione</span>
+              <span className="mt-tts__eng">{rendered ? 'voce renderizzata ✓' : `voce: ${ttsLabel}`}</span>
             </div>
             <textarea
               className="mt-tts__text"
-              placeholder={'Type the spoken line, e.g. "Você está em segurança. Respire fundo."'}
+              placeholder={'Scrivi la battuta parlata, es. "Você está em segurança. Respire fundo."'}
               value={clip.text ?? ''}
               onChange={(e) => onVoiceText(e.target.value)}
               rows={2}
             />
             <div className="mt-tts__btns">
-              <button className="mt-tts__btn" onClick={onVoicePreview} disabled={ttsBusy || !hasText}>▶ Preview</button>
+              <button className="mt-tts__btn" onClick={onVoicePreview} disabled={ttsBusy || !hasText}>▶ Anteprima</button>
               <button className="mt-tts__btn mt-tts__btn--go" onClick={onVoiceSynthesize} disabled={ttsBusy || !ttsCanRender || !hasText} title={ttsCanRender ? '' : 'Set an ElevenLabs or Azure key to render real voice'}>
                 {ttsBusy ? 'Synthesizing…' : rendered ? '↻ Re-synthesize' : '✓ Synthesize into clip'}
               </button>
             </div>
-            {!ttsCanRender && <div className="mt-tts__hint">Preview uses the browser voice. To render &amp; layer real voice, add a TTS key (docs/TTS_SETUP.md).</div>}
+            {!ttsCanRender && <div className="mt-tts__hint">L’anteprima usa la voce del browser. Per renderizzare e montare la voce reale, aggiungi una chiave TTS (docs/TTS_SETUP.md).</div>}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
           <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
           <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
-          {rendered && <div className="mt-note">Pan and speed re-bake the rendered voice instantly — no new TTS call. Speed is pitch-preserving (time-stretch): the voice speaks faster or slower without sounding higher or deeper.</div>}
+          {rendered && <div className="mt-note">Panning e velocità rielaborano subito la voce già renderizzata, senza una nuova chiamata TTS. La velocità preserva l’intonazione (time-stretch): la voce parla più veloce o più lenta senza diventare più acuta o più grave.</div>}
           {!rendered && <>
             <Slider label="Pulse" value={p.pulseHz} min={0.05} max={1.2} step={0.01} onChange={(v) => onParam({ pulseHz: v })} fmt={(v) => `${v.toFixed(2)} Hz`} />
             <Slider label="Tone" value={p.toneHz} min={200} max={700} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
@@ -1550,7 +1550,7 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
   void rendered
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
-      <span className="mt-tts__lbl">Voice</span>
+      <span className="mt-tts__lbl">Voce</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Default — {DEFAULT_PRIMARY.name} (engine voice)</option>
         {ARCHETYPES.map((a) => {
@@ -1590,7 +1590,7 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
     assetListPromise.then(setAssets).catch((e) => { assetListPromise = null; setErr((e as Error).message); setAssets([]) })
   }, [])
   if (err) return <div className="mt-note">{err}</div>
-  if (!assets) return <div className="mt-note">Loading the asset library…</div>
+  if (!assets) return <div className="mt-note">Caricamento della libreria audio…</div>
   const music = assets.filter((a) => a.kind === 'music')
   const scapes = groupSoundscapes(assets)
   return (
@@ -1642,8 +1642,8 @@ function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
     <div className="mt-fx">
       <div className="mt-fx__head">
         <b>FX — {track.name}</b>
-        {busy && <span className="mt-fx__busy">processing chorus…</span>}
-        <span className="mt-fx__hint">Effects apply live and in the export. Harmonizer processes each clip (a short wait); the others are instant.</span>
+        {busy && <span className="mt-fx__busy">elaborazione del coro…</span>}
+        <span className="mt-fx__hint">Gli effetti valgono sia in ascolto sia nell’export. L’armonizzatore elabora ogni clip (breve attesa); gli altri sono immediati.</span>
         <button className="mt-x" onClick={onClose}>✕</button>
       </div>
       <div className="mt-fx__grid">
