@@ -2018,3 +2018,10 @@ img, svg, video, canvas { max-width: 100%; }
 .voice-panel__acct.is-low b { color: #f0c674; }
 .mt-seg--wrap { flex-wrap: wrap; }
 .mt-seg--wrap button { flex: 0 0 auto; padding: 4px 10px; }
+.mt-trim { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border: 1px solid var(--mt-line); border-radius: 9px; background: rgba(255,255,255,0.03); }
+.mt-trim__lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mt-sub); }
+.mt-trim__val { font-size: 12.5px; font-weight: 700; color: var(--mt-text); font-variant-numeric: tabular-nums; }
+.mt-trim__btns { display: flex; gap: 6px; margin-left: auto; }
+.mt-trim__btns button { border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); border-radius: 7px; padding: 4px 9px; font-size: 11.5px; cursor: pointer; }
+.mt-trim__btns button:hover { border-color: var(--mt-accent); }
+.mt-trim .mt-note { flex: 1 0 100%; margin: 0; }

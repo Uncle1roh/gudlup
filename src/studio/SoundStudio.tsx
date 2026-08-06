@@ -804,6 +804,43 @@ function StudioDesktop() {
       ? `Applicato a ${targets.length} clip · ${frozen} pezzo${frozen === 1 ? '' : 'i'} tagliato${frozen === 1 ? '' : 'i'} salta${frozen === 1 ? '' : 'no'} (audio congelato).`
       : null)
   }
+  /** Per-clip volume trim, in dB RELATIVE to the track fader. It is baked into
+      the clip's buffer (like the PLAIN Excel's volume_db), so the track keeps
+      owning the layer's level in the mix and the clip only rides above or
+      below it — the hierarchy stays intact, nothing is bypassed. */
+  function patchClipGain(trackId: string, clipId: string, gainDb: number) {
+    const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
+    if (cl?.frozen) {
+      setEditMsg('I pezzi tagliati hanno l’audio congelato — il volume si cambia prima di tagliare, oppure riunendo le parti.')
+      return
+    }
+    const v = Math.max(-24, Math.min(12, Math.round(gainDb * 2) / 2))
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, gainDb: v === 0 ? undefined : v })),
+    })))
+    scheduleRender(trackId, clipId)
+  }
+
+  /** Nudge EVERY clip on a track by the same number of dB, keeping the
+      relative ladder the protocol authored (a flat "set all to X" would erase
+      the per-clip differences the Excel encodes). */
+  function trimTrackClips(trackId: string, deltaDb: number) {
+    const track = tracksRef.current.find((t) => t.id === trackId)
+    if (!track) return
+    const targets = track.clips.filter((c) => !c.frozen)
+    if (!targets.length) return
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      clips: t.clips.map((c) => {
+        if (c.frozen) return c
+        const next = deltaDb === 0 ? 0 : Math.max(-24, Math.min(12, (c.gainDb ?? 0) + deltaDb))
+        return { ...c, gainDb: next === 0 ? undefined : next }
+      }),
+    })))
+    for (const c of targets) scheduleRender(trackId, c.id)
+  }
+
   function patchClipTiming(trackId: string, clipId: string, patch: { startSec?: number; durationSec?: number }) {
     const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
     if (cl?.frozen && patch.durationSec != null && Math.abs(patch.durationSec - cl.durationSec) > 0.01) {
@@ -1004,6 +1041,7 @@ function StudioDesktop() {
             track={t}
             onClose={() => setParamTrackId(null)}
             onParam={(patch) => patchTrackParams(t.id, patch)}
+            onTrim={(db) => trimTrackClips(t.id, db)}
           />
         )
       })()}
@@ -1055,6 +1093,7 @@ function StudioDesktop() {
         clip={selClip}
         onParam={(patch) => selected && patchClipParams(selected.trackId, selected.clipId, patch)}
         onTiming={(patch) => selected && patchClipTiming(selected.trackId, selected.clipId, patch)}
+        onGain={(db) => selected && patchClipGain(selected.trackId, selected.clipId, db)}
         onDelete={() => selected && deleteClip(selected.trackId, selected.clipId)}
         ttsLabel={ttsInfo.label}
         ttsCanRender={ttsInfo.canRender}
@@ -1478,11 +1517,12 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
+function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
   onTiming: (patch: { startSec?: number; durationSec?: number }) => void
+  onGain: (db: number) => void
   onDelete: () => void
   ttsLabel: string
   ttsCanRender: boolean
@@ -1516,6 +1556,22 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
       <div className="mt-insp__grid">
         <Slider label="Start" value={clip.startSec} min={0} max={1800} step={0.25} onChange={(v) => onTiming({ startSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
         <Slider label="Length" value={clip.durationSec} min={MIN_CLIP} max={600} step={0.25} onChange={(v) => onTiming({ durationSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
+        {!clip.frozen && (
+          <>
+            <Slider
+              label="Volume clip"
+              value={clip.gainDb ?? 0}
+              min={-24} max={12} step={0.5}
+              onChange={onGain}
+              fmt={(v) => (v === 0 ? '0 dB' : `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`)}
+            />
+            <div className="mt-note">
+              Relativo al fader della traccia: la traccia resta il livello del layer nel mix, la clip sale o scende
+              rispetto a quello. 0 dB = esattamente il livello della traccia.
+              {clip.calibrateDb !== undefined && ' Si applica DOPO la calibrazione LUFS del protocollo.'}
+            </div>
+          </>
+        )}
         {clip.frozen && (
           <div className="mt-note" style={{ marginTop: 6 }}>
             ✂ Cut piece — its audio is frozen: move it freely, cut it again, or glue it with its neighbor.
@@ -1524,9 +1580,8 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
         )}
         {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            📄 From the protocol Excel: {clip.calibrateDb !== undefined ? `input-normalized to ${(ANCHOR_LUFS + clip.calibrateDb).toFixed(1)} LUFS · ` : ''}
-            {clip.gainDb !== undefined && clip.gainDb !== 0 ? `clip gain ${clip.gainDb > 0 ? '+' : ''}${clip.gainDb} dB · ` : ''}
-            fades {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — baked into the clip's audio.
+            📄 Dall’Excel del protocollo: {clip.calibrateDb !== undefined ? `normalizzata a ${(ANCHOR_LUFS + clip.calibrateDb).toFixed(1)} LUFS · ` : ''}
+            dissolvenze {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — impresse nell’audio della clip.
           </div>
         )}
         {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}
@@ -1724,10 +1779,12 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
    Every parameter of a track type in one place, applied to ALL its clips at
    once. Values that differ across clips show as "misto"; setting one levels
    every clip to it. Cut pieces keep their frozen audio and are reported. */
-function TrackParamsDrawer({ track, onClose, onParam }: {
+function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
   track: Track
   onClose: () => void
   onParam: (patch: Partial<ClipParams>) => void
+  /** Relative dB nudge applied to every clip (0 = reset them all to the track level). */
+  onTrim: (deltaDb: number) => void
 }) {
   const meta = TRACK_META[track.type]
   const live = track.clips.filter((c) => !c.frozen)
@@ -1787,6 +1844,30 @@ function TrackParamsDrawer({ track, onClose, onParam }: {
 
       <div className="mt-params__grid">
         {live.length === 0 && <div className="mt-note">Nessuna clip modificabile su questa traccia.</div>}
+
+        {live.length > 0 && (() => {
+          const gains = live.map((c) => c.gainDb ?? 0)
+          const lo = Math.min(...gains)
+          const hi = Math.max(...gains)
+          const fmt = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}`
+          return (
+            <div className="mt-trim">
+              <span className="mt-trim__lbl">Volume delle clip</span>
+              <span className="mt-trim__val">{lo === hi ? `${fmt(lo)} dB` : `da ${fmt(lo)} a ${fmt(hi)} dB`}</span>
+              <span className="mt-trim__btns">
+                <button onClick={() => onTrim(-1)} title="Abbassa ogni clip di 1 dB">−1 dB</button>
+                <button onClick={() => onTrim(-0.5)}>−0,5</button>
+                <button onClick={() => onTrim(0.5)}>+0,5</button>
+                <button onClick={() => onTrim(1)} title="Alza ogni clip di 1 dB">+1 dB</button>
+                <button onClick={() => onTrim(0)} title="Riporta ogni clip al livello della traccia">azzera</button>
+              </span>
+              <div className="mt-note">
+                Sposta tutte le clip insieme mantenendo le differenze fra loro (la scala scritta nell’Excel resta intatta).
+                Il fader della traccia continua a decidere il livello del layer nel mix; qui le clip salgono o scendono rispetto a quello.
+              </div>
+            </div>
+          )
+        })()}
 
         {track.type === 'binaural' && live.length > 0 && (() => {
           const carrier = shared<number>('carrierHz', 180).value
