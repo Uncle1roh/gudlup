@@ -30,6 +30,8 @@ import {
   type MixTrack,
   type MusicParams,
   type BilateralParams,
+  type BilateralTimbre,
+  BILATERAL_TIMBRES,
   type Chord,
 } from './multitrack'
 import { getTtsProvider } from '../tts'
@@ -261,6 +263,12 @@ function StudioDesktop() {
   const rafRef = useRef<number | null>(null)
   const renderTokens = useRef<Map<string, number>>(new Map())
   const renderTimers = useRef<Map<string, number>>(new Map())
+  /* Clips with a TTS request in flight. A voice clip has no ttsSource until
+     the request lands, so ANY re-render triggered meanwhile (a drag, a pan
+     tweak, a track-wide parameter change) would synthesize the placeholder
+     pulsed tone and — finishing after the voice arrived — overwrite it. That
+     is the "one clip suddenly sounds like anything but the plan" bug. */
+  const ttsInFlight = useRef<Set<string>>(new Set())
   const dragRef = useRef<{ mode: 'move' | 'trim-l' | 'trim-r'; trackId: string; trackType: TrackType; clipId: string; startClientX: number; origStart: number; origDur: number } | null>(null)
   const lanesRef = useRef<HTMLDivElement | null>(null)
 
@@ -310,6 +318,8 @@ function StudioDesktop() {
     const cl = tr?.clips.find((c) => c.id === clipId)
     if (!tr || !cl) return
     if (cl.frozen) return // cut/glued audio is authoritative — never re-render over it
+    // a voice render is on its way: don't lay the placeholder tone over it
+    if (ttsInFlight.current.has(clipId)) return
     const hasEq = cl.eq && !eqIsTransparent(cl.eq)
     const shape: ClipShape | undefined = hasEq || cl.calibrateDb !== undefined || cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
       ? { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
@@ -400,6 +410,8 @@ function StudioDesktop() {
   }, [])
 
   const setClipVoice = useCallback((trackId: string, clipId: string, voiceId: string) => {
+    // invalidate anything in flight for this clip: its audio is the OLD voice
+    renderTokens.current.set(clipId, (renderTokens.current.get(clipId) ?? 0) + 1)
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
       ...t,
       clips: t.clips.map((c) => (c.id !== clipId ? c : {
@@ -424,6 +436,11 @@ function StudioDesktop() {
     const text = (cl.text ?? '').trim()
     if (!text) { setTtsError('Scrivi prima un’affermazione.'); return }
     setTtsError(null); setTtsBusy(clipId)
+    // claim the clip for the whole round-trip, and take a render token so a
+    // parameter edit that lands mid-flight supersedes us instead of racing
+    ttsInFlight.current.add(clipId)
+    const token = (renderTokens.current.get(clipId) ?? 0) + 1
+    renderTokens.current.set(clipId, token)
     try {
       const provider = getTtsProvider()
       const vp = cl.params as VoiceParams
@@ -432,10 +449,12 @@ function StudioDesktop() {
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
+      if (renderTokens.current.get(clipId) !== token) return
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
     } finally {
+      ttsInFlight.current.delete(clipId)
       setTtsBusy(null)
     }
   }, [setClipBuffer])
@@ -464,7 +483,10 @@ function StudioDesktop() {
     let done = 0
     let failed = 0
     for (const j of jobs) {
-      setSynthAll(`Synthesizing voices ${done + 1}/${jobs.length}…`)
+      setSynthAll(`Sintesi delle voci ${done + 1}/${jobs.length}…`)
+      ttsInFlight.current.add(j.clipId)
+      const token = (renderTokens.current.get(j.clipId) ?? 0) + 1
+      renderTokens.current.set(j.clipId, token)
       try {
         const key = `${j.voiceId ?? ''}|${j.text}`
         let decoded = cache.get(key)
@@ -476,11 +498,14 @@ function StudioDesktop() {
         const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
         let buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
         if (j.shape) buf = shapeClipBuffer(buf, j.shape)
+        if (renderTokens.current.get(j.clipId) !== token) continue
         setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
         done++
       } catch (e) {
         failed++
-        setTtsError(`Voice at ${fmtTime(j.startSec)}: ${(e as Error).message}`)
+        setTtsError(`Voce a ${fmtTime(j.startSec)}: ${(e as Error).message}`)
+      } finally {
+        ttsInFlight.current.delete(j.clipId)
       }
     }
     setSynthAll(null)
@@ -1525,7 +1550,13 @@ function Inspector({ track, clip, onParam, onTiming, onDelete, ttsLabel, ttsCanR
           <div className="mt-note">Pad in triade calda — i cambi di tonalità seguono le transizioni musicali del protocollo.</div>
         </> })()}
 
-        {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; return <>
+        {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; const tb = p.timbre ?? 'blip'; return <>
+          <div className="mt-seg mt-seg--wrap">
+            {BILATERAL_TIMBRES.map((t) => (
+              <button key={t.id} className={tb === t.id ? 'is-on' : ''} title={t.blurb} onClick={() => onParam({ timbre: t.id })}>{t.label}</button>
+            ))}
+          </div>
+          <div className="mt-note">{BILATERAL_TIMBRES.find((t) => t.id === tb)?.blurb}</div>
           <Slider label="Tone" value={p.toneHz} min={200} max={800} step={5} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
           <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
           <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
@@ -1770,6 +1801,7 @@ function TrackParamsDrawer({ track, onClose, onParam }: {
         </>}
 
         {track.type === 'bilateral' && live.length > 0 && <>
+          <TrackSeg k="timbre" options={BILATERAL_TIMBRES.map((t) => t.id)} fallback={'blip' as BilateralTimbre} label={(o) => BILATERAL_TIMBRES.find((t) => t.id === o)?.label ?? o} />
           <TrackSlider label="Tono" k="toneHz" fallback={400} min={200} max={800} step={5} fmt={(v) => `${v} Hz`} />
           <TrackSlider label="Impulso" k="blipMs" fallback={120} min={40} max={400} step={5} fmt={(v) => `${v} ms`} />
           <TrackSlider label="Ogni" k="everySec" fallback={4} min={1} max={10} step={0.5} fmt={(v) => `${v.toFixed(1)} s`} />

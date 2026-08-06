@@ -2016,3 +2016,5 @@ img, svg, video, canvas { max-width: 100%; }
 .voice-panel__acct b { color: var(--mt-text, #e6ecf2); }
 .voice-panel__acct.is-low { color: #f0c674; border-color: #4a3a1f; }
 .voice-panel__acct.is-low b { color: #f0c674; }
+.mt-seg--wrap { flex-wrap: wrap; }
+.mt-seg--wrap button { flex: 0 0 auto; padding: 4px 10px; }

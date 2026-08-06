@@ -24,7 +24,28 @@ export interface BreathParams { breathsPerMin: number; toneHz: number }
 export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number; voiceId?: string }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
-export interface BilateralParams { toneHz: number; blipMs: number; everySec: number; /** Symmetric pan extent 0..1 (PLAIN pan_ampiezza/100). Default 0.8. */ panAmp?: number }
+/** The sound each bilateral pulse makes. The alternation, timing and pan are
+    identical across all of them — only the timbre changes. */
+export type BilateralTimbre = 'blip' | 'gong' | 'bowl' | 'woodblock' | 'chime' | 'drum'
+
+export const BILATERAL_TIMBRES: { id: BilateralTimbre; label: string; blurb: string }[] = [
+  { id: 'blip', label: 'Bip', blurb: 'Sinusoide pulita — il segnale PAT-05 originale' },
+  { id: 'gong', label: 'Gong', blurb: 'Colpo metallico con parziali inarmoniche e coda lunga' },
+  { id: 'bowl', label: 'Campana tibetana', blurb: 'Timbro cristallino, battimento lento' },
+  { id: 'woodblock', label: 'Legno', blurb: 'Percussione secca, senza coda' },
+  { id: 'chime', label: 'Campanellino', blurb: 'Acuto e brillante, decadimento breve' },
+  { id: 'drum', label: 'Tamburo', blurb: 'Membrana grave e ovattata' },
+]
+
+export interface BilateralParams {
+  toneHz: number
+  blipMs: number
+  everySec: number
+  /** Symmetric pan extent 0..1 (PLAIN pan_ampiezza/100). Default 0.8. */
+  panAmp?: number
+  /** Pulse timbre. Absent = 'blip' (the original electronic beep). */
+  timbre?: BilateralTimbre
+}
 /** A real audio file (PO library stem / soundscape texture), looped to fill
     the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
 export interface SampleParams {
@@ -108,6 +129,109 @@ function buildTexture(ctx: BaseAudioContext, texture: Texture, dest: AudioNode, 
   }
 }
 
+/* ---- bilateral pulse timbres ------------------------------------------
+   One hit, panned by the caller. `hold` is the clip's blip length: percussive
+   timbres ring past it into their own decay (a gong cut off at 120 ms would
+   just be a click), while the plain blip stays gated exactly as before so
+   existing protocols sound unchanged. */
+function buildBilateralHit(
+  ctx: BaseAudioContext, timbre: BilateralTimbre, toneHz: number, at: number, hold: number, dest: AudioNode,
+): void {
+  /** Struck-body voice: a partial with its own decay. */
+  const strike = (freq: number, gain: number, decay: number, type: OscillatorType = 'sine', detune = 0) => {
+    const o = ctx.createOscillator()
+    o.type = type
+    o.frequency.value = freq
+    o.detune.value = detune
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, at)
+    g.gain.linearRampToValueAtTime(gain, at + 0.004)      // near-instant attack
+    g.gain.exponentialRampToValueAtTime(0.0001, at + decay) // natural ring-out
+    o.connect(g).connect(dest)
+    o.start(at)
+    o.stop(at + decay + 0.05)
+  }
+  /** Filtered noise burst — the "mallet on the surface" transient. */
+  const noise = (gain: number, decay: number, freq: number, q = 1) => {
+    const src = ctx.createBufferSource()
+    src.buffer = makeNoiseBuffer(ctx, Math.max(0.2, decay))
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(gain, at)
+    g.gain.exponentialRampToValueAtTime(0.0001, at + decay)
+    src.connect(bp).connect(g).connect(dest)
+    src.start(at)
+    src.stop(at + decay + 0.05)
+  }
+
+  switch (timbre) {
+    case 'gong': {
+      // inharmonic partials + a metallic shimmer: what makes a gong read as
+      // struck bronze rather than as a tuned bell
+      const d = Math.max(1.6, hold * 6)
+      strike(toneHz * 0.5, 0.55, d)
+      strike(toneHz, 0.42, d * 0.85)
+      strike(toneHz * 1.47, 0.20, d * 0.6)   // inharmonic
+      strike(toneHz * 2.39, 0.12, d * 0.45)  // inharmonic
+      strike(toneHz * 3.11, 0.07, d * 0.3)
+      noise(0.10, 0.22, toneHz * 3, 0.7)     // the mallet contact
+      break
+    }
+    case 'bowl': {
+      // singing bowl: near-harmonic, very long, with the slow beating that
+      // comes from two close partials
+      const d = Math.max(2.4, hold * 8)
+      strike(toneHz, 0.5, d)
+      strike(toneHz * 1.004, 0.32, d)        // ~0.4% apart → slow beat
+      strike(toneHz * 2.7, 0.16, d * 0.5)
+      strike(toneHz * 5.4, 0.06, d * 0.3)
+      break
+    }
+    case 'woodblock': {
+      const d = Math.max(0.12, hold * 0.9)
+      strike(toneHz * 2, 0.5, d, 'square')
+      strike(toneHz * 3.2, 0.18, d * 0.6)
+      noise(0.22, 0.035, toneHz * 4, 2)
+      break
+    }
+    case 'chime': {
+      const d = Math.max(0.9, hold * 4)
+      strike(toneHz * 2, 0.42, d)
+      strike(toneHz * 4.2, 0.2, d * 0.7)
+      strike(toneHz * 6.8, 0.08, d * 0.4)
+      noise(0.06, 0.05, toneHz * 6, 1.2)
+      break
+    }
+    case 'drum': {
+      // membrane: pitch drops as the skin relaxes
+      const d = Math.max(0.35, hold * 2)
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      o.frequency.setValueAtTime(toneHz * 0.6, at)
+      o.frequency.exponentialRampToValueAtTime(Math.max(30, toneHz * 0.25), at + d * 0.6)
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(0.6, at + 0.005)
+      g.gain.exponentialRampToValueAtTime(0.0001, at + d)
+      o.connect(g).connect(dest)
+      o.start(at); o.stop(at + d + 0.05)
+      noise(0.12, 0.06, toneHz, 0.8)
+      break
+    }
+    default: {
+      // 'blip' — the original gated sine, byte-for-byte behaviour preserved
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = toneHz
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(1, at + 0.01)
+      g.gain.setValueAtTime(1, at + Math.max(0.02, hold - 0.03))
+      g.gain.linearRampToValueAtTime(0, at + hold)
+      o.connect(g).connect(dest)
+      o.start(at); o.stop(at + hold + 0.05)
+    }
+  }
+}
+
 function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, dest: AudioNode, dur: number): void {
   if (type === 'binaural') {
     const p = params as BinauralParams
@@ -150,16 +274,10 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
     const blip = Math.max(0.03, p.blipMs / 1000)
     let side = -1
     for (let t = 0.05; t < dur - blip; t += Math.max(0.5, p.everySec)) {
-      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = p.toneHz
-      const g = ctx.createGain()
       const pan = ctx.createStereoPanner(); pan.pan.value = (p.panAmp ?? 0.8) * side
+      pan.connect(dest)
       side = -side
-      g.gain.setValueAtTime(0, t)
-      g.gain.linearRampToValueAtTime(1, t + 0.01)
-      g.gain.setValueAtTime(1, t + Math.max(0.02, blip - 0.03))
-      g.gain.linearRampToValueAtTime(0, t + blip)
-      o.connect(g).connect(pan).connect(dest)
-      o.start(t); o.stop(t + blip + 0.05)
+      buildBilateralHit(ctx, p.timbre ?? 'blip', p.toneHz, t, blip, pan)
     }
   } else {
     const p = params as VoiceParams
