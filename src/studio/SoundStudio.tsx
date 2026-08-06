@@ -69,6 +69,10 @@ interface Clip {
   fxBuffer?: AudioBuffer | null
   /** Which harmonizer params produced fxBuffer (invalidation key). */
   fxKey?: string
+  /** WHICH buffer fxBuffer was computed from. Without this, re-rendering a
+      clip (any parameter change) left the harmonized copy in place and
+      playback kept the old audio, since the params key had not changed. */
+  fxSource?: AudioBuffer | null
   /** PLAIN import: per-clip dB offset vs the track base, baked into the
       rendered buffer (with the fades below) via applyClipShape. */
   gainDb?: number
@@ -279,7 +283,14 @@ function StudioDesktop() {
   /* ---- clip rendering ---- */
   const setClipBuffer = useCallback((trackId: string, clipId: string, buf: AudioBuffer, extra?: Partial<Clip>) => {
     const peaks = computePeaks(buf, peakBuckets(buf.duration))
-    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, buffer: buf, peaks, ...extra })) })))
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      // Drop any harmonized copy: it was computed from the PREVIOUS audio, and
+      // playback/mixdown read `fxBuffer ?? buffer`. Leaving it would keep the
+      // old sound playing after a parameter change — the harmonizer effect
+      // then recomputes it from the new buffer.
+      clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, buffer: buf, peaks, fxBuffer: null, fxKey: undefined, fxSource: null, ...extra })),
+    })))
   }, [])
 
   type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
@@ -649,11 +660,13 @@ function StudioDesktop() {
       for (const c of t.clips) {
         if (!key) {
           if (c.fxBuffer || c.fxKey) {
-            setTracks((prev) => prev.map((x) => (x.id !== t.id ? x : { ...x, clips: x.clips.map((y) => (y.id !== c.id ? y : { ...y, fxBuffer: null, fxKey: undefined })) })))
+            setTracks((prev) => prev.map((x) => (x.id !== t.id ? x : { ...x, clips: x.clips.map((y) => (y.id !== c.id ? y : { ...y, fxBuffer: null, fxKey: undefined, fxSource: null })) })))
           }
           continue
         }
-        if (c.buffer && c.fxKey !== key) jobs.push({ trackId: t.id, clipId: c.id, source: c.buffer, params: h!.params, key })
+        // recompute when the harmonizer settings change OR when the clip's own
+        // audio was re-rendered underneath it
+        if (c.buffer && (c.fxKey !== key || c.fxSource !== c.buffer)) jobs.push({ trackId: t.id, clipId: c.id, source: c.buffer, params: h!.params, key })
       }
     }
     if (!jobs.length) return
@@ -665,7 +678,7 @@ function StudioDesktop() {
           if (cancelled) return
           setTracks((prev) => prev.map((t) => (t.id !== j.trackId ? t : {
             ...t,
-            clips: t.clips.map((c) => (c.id !== j.clipId || c.buffer !== j.source ? c : { ...c, fxBuffer: out, fxKey: j.key })),
+            clips: t.clips.map((c) => (c.id !== j.clipId || c.buffer !== j.source ? c : { ...c, fxBuffer: out, fxKey: j.key, fxSource: j.source })),
           })))
         } catch { /* clip keeps its dry buffer */ }
       }
