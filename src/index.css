@@ -2012,3 +2012,7 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-params .mt-seg { grid-column: 1 / -1; }
 .mt-params .mt-note { grid-column: 1 / -1; margin: 0; }
 .mt-params .mt-tts__row { grid-column: 1 / -1; }
+.voice-panel__acct { font-size: 11.5px; color: var(--mt-sub, #93a89e); background: rgba(255,255,255,0.04); border: 1px solid var(--mt-line, #2c343d); border-radius: 8px; padding: 5px 10px; margin: 6px 0 2px; }
+.voice-panel__acct b { color: var(--mt-text, #e6ecf2); }
+.voice-panel__acct.is-low { color: #f0c674; border-color: #4a3a1f; }
+.voice-panel__acct.is-low b { color: #f0c674; }

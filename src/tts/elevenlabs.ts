@@ -10,6 +10,26 @@ import type { TtsOptions, TtsProvider } from './types'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
 
+/**
+ * ElevenLabs' failures are almost always about WHICH KEY is in force, not
+ * about the request. Both of the ones this project hit — a voice belonging to
+ * another workspace, and a key whose own credit cap is exhausted while the
+ * account still shows plenty — read as nonsense until you know that.
+ */
+function explainError(status: number, detail: string): string {
+  const body = detail.toLowerCase()
+  if (status === 404 && body.includes('voice_not_found')) {
+    return `ElevenLabs 404: questa voce non esiste per la chiave in uso — appartiene a un altro account o workspace. Controlla il pannello Voce: l’account mostrato è quello che possiede la voce? (${detail.slice(0, 120)})`
+  }
+  if (status === 401 || body.includes('invalid_api_key')) {
+    return `ElevenLabs 401: chiave non valida o revocata. (${detail.slice(0, 120)})`
+  }
+  if (status === 429 || body.includes('quota') || body.includes('credit') || body.includes('character_limit')) {
+    return `ElevenLabs ${status}: credito esaurito PER QUESTA CHIAVE. Se l’account ha ancora crediti, la chiave ha un tetto proprio (impostato alla creazione) oppure è di un altro account — il pannello Voce mostra quale account e quanti caratteri restano. (${detail.slice(0, 120)})`
+  }
+  return `ElevenLabs ${status}: ${detail.slice(0, 180)}`
+}
+
 export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSecondary?: string): TtsProvider {
   let audio: HTMLAudioElement | null = null
   const secondary = voiceIdSecondary?.trim() || undefined
@@ -38,7 +58,7 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     })
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
-      throw new Error(`ElevenLabs ${res.status}: ${detail.slice(0, 180)}`)
+      throw new Error(explainError(res.status, detail))
     }
     return res.arrayBuffer()
   }

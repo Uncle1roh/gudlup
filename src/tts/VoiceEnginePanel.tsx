@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react'
 import { getTtsProvider } from './index'
 import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource } from './settings'
 import { ARCHETYPES, defaultPrimary, defaultSecondary, VOICE_CATALOG, voiceById, voicesByArchetype, voicesSyncedAt } from './voiceCatalog'
-import { syncVoices } from './voiceSync'
+import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
 const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
@@ -46,6 +46,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   /* bumped whenever the live catalog changes, so the pickers re-render */
   const [syncTick, setSyncTick] = useState(0)
   const [syncing, setSyncing] = useState(false)
+  const [account, setAccount] = useState<AccountInfo | null>(null)
 
   /** Pull the account's voices — the POs add one in ElevenLabs and it lands
       here, no code change. */
@@ -53,6 +54,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setSyncing(true)
     setError(null)
     const out = await syncVoices({ force, apiKey: key })
+    void fetchAccountInfo(key).then(setAccount)
     setSyncing(false)
     setSyncTick((n) => n + 1)
     if (out.error) {
@@ -117,6 +119,18 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         </span>
         <span className="voice-panel__src">{sourceNote}</span>
       </div>
+
+      {/* which ElevenLabs account this key really is, and what is left on it —
+          a mismatch here is what "voice not found" and "no credits" both mean */}
+      {account && (
+        <div className={`voice-panel__acct${account.charactersLeft < 2000 ? ' is-low' : ''}`}>
+          Account <b>{account.name}</b> · piano {account.tier} ·{' '}
+          <b>{account.charactersLeft.toLocaleString('it-IT')}</b> caratteri residui
+          {account.charactersLimit > 0 && ` su ${account.charactersLimit.toLocaleString('it-IT')}`}
+          {account.voiceSlotsUsed !== undefined && ` · ${account.voiceSlotsUsed} voci create`}
+          {account.charactersLeft < 2000 && ' — credito quasi esaurito'}
+        </div>
+      )}
 
       <div className="voice-panel__fields">
         <input

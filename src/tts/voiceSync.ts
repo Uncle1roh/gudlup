@@ -156,6 +156,47 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
   }
 }
 
+/* ---- who is this key, and how much quota is left? ----------------------
+   Four separate incidents in this project traced back to a key pointing at a
+   different ElevenLabs account than the one the person was looking at in the
+   browser. Surfacing the account name and the remaining characters next to
+   the key field turns that into a glance instead of an investigation. */
+export interface AccountInfo {
+  name: string
+  tier: string
+  charactersUsed: number
+  charactersLimit: number
+  charactersLeft: number
+  voiceSlotsUsed?: number
+}
+
+export async function fetchAccountInfo(apiKey?: string): Promise<AccountInfo | null> {
+  const key = apiKey?.trim() || activeApiKey()
+  if (!key) return null
+  const headers = { 'xi-api-key': key, Accept: 'application/json' }
+  try {
+    const [uRes, sRes] = await Promise.all([
+      fetch('https://api.elevenlabs.io/v1/user', { headers }),
+      fetch('https://api.elevenlabs.io/v1/user/subscription', { headers }),
+    ])
+    if (!sRes.ok) return null
+    const sub = (await sRes.json()) as { tier?: string; character_count?: number; character_limit?: number; voice_slots_used?: number }
+    const user = uRes.ok ? ((await uRes.json()) as { first_name?: string }) : {}
+    const used = sub.character_count ?? 0
+    const limit = sub.character_limit ?? 0
+    return {
+      name: user.first_name ?? '—',
+      tier: sub.tier ?? '—',
+      charactersUsed: used,
+      charactersLimit: limit,
+      charactersLeft: Math.max(0, limit - used),
+      voiceSlotsUsed: sub.voice_slots_used,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Startup path: cache first (instant), then a background refresh. */
 export function initVoiceSync(): void {
   hydrateVoicesFromCache()
