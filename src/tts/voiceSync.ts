@@ -13,6 +13,7 @@
 import {
   ARCHETYPE_OVERRIDES,
   inferArchetype,
+  parseVoiceName,
   registerVoices,
   type CatalogVoice,
   type ElevenLabsLabels,
@@ -60,27 +61,45 @@ export function clearVoiceCache(): void {
   try { localStorage.removeItem(CACHE_KEY) } catch { /* private mode */ }
 }
 
-interface ApiVoice {
+export interface ApiVoice {
   voice_id: string
   name?: string
   category?: string
   labels?: ElevenLabsLabels
 }
 
-function toCatalogVoice(v: ApiVoice): CatalogVoice {
+/**
+ * "My Voices" — what the ElevenLabs UI shows under that heading: the
+ * workspace's own generated/cloned voices plus anything added from the Voice
+ * Library. The 21 stock 'premade' voices are excluded: they are not the POs'
+ * selection and drowned the real list 21-to-11 in every picker.
+ */
+export function isMyVoice(v: ApiVoice): boolean {
+  return v.category !== 'premade'
+}
+
+export function toCatalogVoice(v: ApiVoice): CatalogVoice {
   const labels = v.labels ?? {}
-  const name = (v.name ?? v.voice_id).trim()
-  const gender: 'F' | 'M' = /female|woman/i.test(labels.gender ?? '') ? 'F'
+  const raw = (v.name ?? v.voice_id).trim()
+  // the POs' own convention ("[ok] ASMR (M) - ITA") wins: generated voices
+  // carry no ElevenLabs labels at all, so inference has nothing to read
+  const parsed = parseVoiceName(raw)
+  const labelGender: 'F' | 'M' | undefined = /female|woman/i.test(labels.gender ?? '') ? 'F'
     : /male|man/i.test(labels.gender ?? '') ? 'M'
-    : 'F'
+    : undefined
+  const gender = parsed.gender ?? labelGender ?? 'F'
+  const archetype = ARCHETYPE_OVERRIDES[v.voice_id]
+    ?? parsed.archetype
+    ?? inferArchetype(raw, labels, gender)
   return {
     id: v.voice_id,
-    // ElevenLabs names carry a marketing tail ("Sarah - Mature, Reassuring")
-    name: name.split(/\s+[-–—]\s+/)[0].trim() || name,
+    // library voices carry a marketing tail ("Borges - Slow, Calm and Confident")
+    name: parsed.archetype ? parsed.name : raw.split(/\s+[-–—]\s+/)[0].trim() || raw,
     gender,
-    archetype: ARCHETYPE_OVERRIDES[v.voice_id] ?? inferArchetype(name, labels, gender),
+    archetype,
     category: v.category,
     language: labels.language,
+    approved: parsed.approved,
   }
 }
 
@@ -117,7 +136,10 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
       throw new Error(`ElevenLabs ${res.status}: ${detail.slice(0, 160)}`)
     }
     const body = (await res.json()) as { voices?: ApiVoice[] }
-    const voices = (body.voices ?? []).map(toCatalogVoice)
+    const mine = (body.voices ?? []).filter(isMyVoice)
+    // an account with nothing of its own would otherwise go silent — fall back
+    // to the full list rather than leave every picker empty
+    const voices = (mine.length ? mine : (body.voices ?? [])).map(toCatalogVoice)
     if (!voices.length) throw new Error('L’account non espone alcuna voce.')
     const at = Date.now()
     registerVoices(voices, at)

@@ -9,7 +9,8 @@
    seconds: if a voice is absent here, the key belongs to another workspace. */
 
 import { readFileSync } from 'node:fs'
-import { ARCHETYPES, ARCHETYPE_OVERRIDES, inferArchetype, registerVoices, defaultPrimary, defaultSecondary, voicesByArchetype, type CatalogVoice } from '../src/tts/voiceCatalog'
+import { ARCHETYPES, registerVoices, defaultPrimary, defaultSecondary, voicesByArchetype } from '../src/tts/voiceCatalog'
+import { isMyVoice, toCatalogVoice, type ApiVoice } from '../src/tts/voiceSync'
 
 function keyFromEnvFile(): string | undefined {
   try {
@@ -26,8 +27,6 @@ if (!key) {
   process.exit(1)
 }
 
-interface ApiVoice { voice_id: string; name?: string; category?: string; labels?: Record<string, string> }
-
 const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } })
 if (!res.ok) {
   console.error(`FAIL: ElevenLabs ${res.status} — ${(await res.text()).slice(0, 200)}`)
@@ -36,35 +35,25 @@ if (!res.ok) {
 
 const body = (await res.json()) as { voices?: ApiVoice[] }
 const raw = body.voices ?? []
-
-const voices: CatalogVoice[] = raw.map((v) => {
-  const labels = v.labels ?? {}
-  const name = (v.name ?? v.voice_id).trim()
-  const gender: 'F' | 'M' = /female|woman/i.test(labels.gender ?? '') ? 'F' : /male|man/i.test(labels.gender ?? '') ? 'M' : 'F'
-  return {
-    id: v.voice_id,
-    name: name.split(/\s+[-–—]\s+/)[0].trim() || name,
-    gender,
-    archetype: ARCHETYPE_OVERRIDES[v.voice_id] ?? inferArchetype(name, labels, gender),
-    category: v.category,
-    language: labels.language,
-  }
-})
+const mine = raw.filter(isMyVoice)
+const voices = mine.map(toCatalogVoice)
 registerVoices(voices)
 
-const own = voices.filter((v) => v.category !== 'premade')
-console.log(`voices on this key : ${voices.length}  (${own.length} owned by the workspace, ${voices.length - own.length} stock)`)
+console.log(`on this key        : ${raw.length} voices — ${mine.length} in "My Voices", ${raw.length - mine.length} stock (excluded)`)
+console.log(`PO-approved ([ok]) : ${voices.filter((v) => v.approved).length}`)
 console.log(`default [F] primary: ${defaultPrimary().name}  ${defaultPrimary().id}`)
 console.log(`default [M] second : ${defaultSecondary().name}  ${defaultSecondary().id}`)
 console.log()
 
 for (const a of ARCHETYPES) {
   const list = voicesByArchetype(a.id)
-  if (!list.length) continue
+  if (!list.length) {
+    console.log(`${a.label} — EMPTY`)
+    continue
+  }
   console.log(`${a.label} (${list.length})`)
   for (const v of list) {
-    const own = v.category !== 'premade' ? '*' : ' '
-    console.log(`  ${own} ${v.name.padEnd(22)} ${v.gender}  ${v.id}  ${v.category ?? ''}${v.language ? ` · ${v.language}` : ''}`)
+    console.log(`  ${v.approved ? '✓' : ' '} ${v.name.padEnd(20)} ${v.gender}  ${v.id}  ${v.category ?? ''}${v.language ? ` · ${v.language}` : ''}`)
   }
 }
-console.log('\n* = this workspace\'s own voice (generated / cloned / library-added)')
+console.log('\n✓ = carries the POs\' [ok] approval marker')

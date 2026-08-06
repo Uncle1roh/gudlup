@@ -45,25 +45,74 @@ export interface CatalogVoice {
   category?: string
   /** BCP-47-ish language tag from the ElevenLabs labels, when present. */
   language?: string
+  /** Carries the POs' "[ok]" approval marker. */
+  approved?: boolean
 }
 
-/** A PO decision beats whatever we infer from the ElevenLabs labels. */
-export const ARCHETYPE_OVERRIDES: Record<string, ArchetypeId> = {
-  aYBXyupCnZqrSVuPsR5i: 'maternal', // Custom Mattia — the PO's Italian maternal voice
-  nPczCjzI2devNBz1zQrb: 'paternal', // Brian — deep, resonant, comforting
-}
+/** A PO decision beats both the naming convention and label inference. */
+export const ARCHETYPE_OVERRIDES: Record<string, ArchetypeId> = {}
 
 /** Preferred defaults, in order. The first one that exists in the live list
     wins, so a workspace change degrades instead of breaking. */
-const PRIMARY_PREFERENCE = ['aYBXyupCnZqrSVuPsR5i']
-const SECONDARY_PREFERENCE = ['W71zT1VwIFFx3mMGH2uZ', 'nPczCjzI2devNBz1zQrb'] // Marco Trox, then Brian
+const PRIMARY_PREFERENCE = ['aYBXyupCnZqrSVuPsR5i']   // [ok] MATERNAL - ITA
+const SECONDARY_PREFERENCE = ['Zd5ZRxsNxAoZHMRh5hdm'] // [ok] PATERNAL - ITA
 
-/** Bootstrap list: only voices verified to resolve on the active account.
-    Replaced wholesale by the first successful sync. */
+/** Bootstrap list: the two defaults, so the pickers are never empty before the
+    first sync. Replaced wholesale by the first successful sync. */
 const SEED: CatalogVoice[] = [
-  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Custom Mattia', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it' },
-  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', gender: 'M', archetype: 'paternal', category: 'premade' },
+  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Maternal', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it' },
+  { id: 'Zd5ZRxsNxAoZHMRh5hdm', name: 'Paternal', gender: 'M', archetype: 'paternal', category: 'generated', language: 'it' },
 ]
+
+/* ---- the POs' naming convention ----------------------------------------
+   Voices are authored in ElevenLabs as "[ok] ARCHETYPE (F|M) - ITA", e.g.
+   "[ok] MATERNAL - ITA" or "[ok] ASMR (M) - ITA". That name is a far better
+   source of truth than ElevenLabs' labels, which are empty on generated
+   voices — every one of them would otherwise land in Neutra as F. */
+const NAME_TO_ARCHETYPE: Record<string, ArchetypeId> = {
+  MATERNAL: 'maternal',
+  PATERNAL: 'paternal',
+  MENTOR: 'wise',
+  WISE: 'wise',
+  NEUTRAL: 'neutral',
+  WARRIOR: 'warrior',
+  SHADOW: 'shadow',
+  RITUAL: 'ritual',
+  CHILD: 'child',
+  ASMR: 'whisper',
+  WHISPER: 'whisper',
+}
+
+/** Genders implied by the archetype when the name carries no (F)/(M). */
+const ARCHETYPE_GENDER: Partial<Record<ArchetypeId, 'F' | 'M'>> = {
+  maternal: 'F',
+  paternal: 'M',
+}
+
+export interface ParsedVoiceName {
+  /** Display name, e.g. "Maternal" or "ASMR (M)". */
+  name: string
+  archetype?: ArchetypeId
+  gender?: 'F' | 'M'
+  /** The PO marked this voice as approved with the [ok] prefix. */
+  approved: boolean
+}
+
+/** Read "[ok] ASMR (M) - ITA" into archetype + gender + a clean display name. */
+export function parseVoiceName(raw: string): ParsedVoiceName {
+  const approved = /^\s*\[ok\]/i.test(raw)
+  let rest = raw.replace(/^\s*\[ok\]\s*/i, '').trim()
+  rest = rest.replace(/\s*[-–—]\s*IT(A)?\s*$/i, '').trim() // drop the language tail
+  const m = /^([A-Za-zÀ-ÿ]+)\s*(?:\(\s*([FM])\s*\))?$/.exec(rest)
+  if (!m) return { name: rest || raw, approved }
+  const token = m[1].toUpperCase()
+  const archetype = NAME_TO_ARCHETYPE[token]
+  const explicit = m[2]?.toUpperCase() as 'F' | 'M' | undefined
+  const gender = explicit ?? (archetype ? ARCHETYPE_GENDER[archetype] : undefined)
+  // "MATERNAL" → "Maternal"; keep ASMR-style acronyms upper-case
+  const pretty = token.length <= 4 ? token : token.charAt(0) + token.slice(1).toLowerCase()
+  return { name: explicit ? `${pretty} (${explicit})` : pretty, archetype, gender, approved }
+}
 
 /* The live list. Mutated in place so existing imports of VOICE_CATALOG keep
    pointing at the same array and see synced content. */
@@ -106,10 +155,10 @@ export function voiceById(id: string | undefined): CatalogVoice | undefined {
 }
 
 export function voicesByArchetype(a: ArchetypeId): CatalogVoice[] {
-  // the workspace's own voices first — stock ElevenVoices are the long tail
+  // PO-approved ([ok]) voices first, then the rest of the workspace's voices
   return VOICE_CATALOG
     .filter((v) => v.archetype === a)
-    .sort((x, y) => Number(x.category === 'premade') - Number(y.category === 'premade') || x.name.localeCompare(y.name))
+    .sort((x, y) => Number(!!y.approved) - Number(!!x.approved) || x.name.localeCompare(y.name))
 }
 
 /** Display label, e.g. "Custom Mattia (F · Materna)". */
