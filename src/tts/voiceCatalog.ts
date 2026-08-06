@@ -60,8 +60,8 @@ const SECONDARY_PREFERENCE = ['Zd5ZRxsNxAoZHMRh5hdm'] // [ok] PATERNAL - ITA
 /** Bootstrap list: the two defaults, so the pickers are never empty before the
     first sync. Replaced wholesale by the first successful sync. */
 const SEED: CatalogVoice[] = [
-  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Maternal', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it' },
-  { id: 'Zd5ZRxsNxAoZHMRh5hdm', name: 'Paternal', gender: 'M', archetype: 'paternal', category: 'generated', language: 'it' },
+  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Maternal', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it', approved: true },
+  { id: 'Zd5ZRxsNxAoZHMRh5hdm', name: 'Paternal', gender: 'M', archetype: 'paternal', category: 'generated', language: 'it', approved: true },
 ]
 
 /* ---- the POs' naming convention ----------------------------------------

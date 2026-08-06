@@ -78,6 +78,21 @@ export function isMyVoice(v: ApiVoice): boolean {
   return v.category !== 'premade'
 }
 
+/**
+ * The catalog the app should show, from a raw /v1/voices payload:
+ *   1. "My Voices" only — never the 21 stock premade voices.
+ *   2. of those, only the ones the POs marked "[ok]" — their finished
+ *      selection, not the library voices left over from experiments.
+ * Each narrowing falls back to the wider set when it would empty the list, so
+ * an account that does not follow the convention still gets pickers that work.
+ */
+export function selectCatalogVoices(all: ApiVoice[]): CatalogVoice[] {
+  const mine = all.filter(isMyVoice)
+  const mapped = (mine.length ? mine : all).map(toCatalogVoice)
+  const approved = mapped.filter((v) => v.approved)
+  return approved.length ? approved : mapped
+}
+
 export function toCatalogVoice(v: ApiVoice): CatalogVoice {
   const labels = v.labels ?? {}
   const raw = (v.name ?? v.voice_id).trim()
@@ -136,10 +151,7 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
       throw new Error(`ElevenLabs ${res.status}: ${detail.slice(0, 160)}`)
     }
     const body = (await res.json()) as { voices?: ApiVoice[] }
-    const mine = (body.voices ?? []).filter(isMyVoice)
-    // an account with nothing of its own would otherwise go silent — fall back
-    // to the full list rather than leave every picker empty
-    const voices = (mine.length ? mine : (body.voices ?? [])).map(toCatalogVoice)
+    const voices = selectCatalogVoices(body.voices ?? [])
     if (!voices.length) throw new Error('L’account non espone alcuna voce.')
     const at = Date.now()
     registerVoices(voices, at)

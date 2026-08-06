@@ -10,7 +10,7 @@
 
 import { readFileSync } from 'node:fs'
 import { ARCHETYPES, registerVoices, defaultPrimary, defaultSecondary, voicesByArchetype } from '../src/tts/voiceCatalog'
-import { isMyVoice, toCatalogVoice, type ApiVoice } from '../src/tts/voiceSync'
+import { isMyVoice, selectCatalogVoices, type ApiVoice } from '../src/tts/voiceSync'
 
 function keyFromEnvFile(): string | undefined {
   try {
@@ -36,11 +36,11 @@ if (!res.ok) {
 const body = (await res.json()) as { voices?: ApiVoice[] }
 const raw = body.voices ?? []
 const mine = raw.filter(isMyVoice)
-const voices = mine.map(toCatalogVoice)
+const voices = selectCatalogVoices(raw)
 registerVoices(voices)
 
-console.log(`on this key        : ${raw.length} voices — ${mine.length} in "My Voices", ${raw.length - mine.length} stock (excluded)`)
-console.log(`PO-approved ([ok]) : ${voices.filter((v) => v.approved).length}`)
+console.log(`on this key        : ${raw.length} voices — ${mine.length} in "My Voices", ${raw.length - mine.length} stock`)
+console.log(`shown in the app   : ${voices.length} (PO-approved "[ok]" only)`)
 console.log(`default [F] primary: ${defaultPrimary().name}  ${defaultPrimary().id}`)
 console.log(`default [M] second : ${defaultSecondary().name}  ${defaultSecondary().id}`)
 console.log()
