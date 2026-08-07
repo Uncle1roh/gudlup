@@ -4,11 +4,42 @@ import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
 import { useRef } from 'react'
 import { PlainImport } from './PlainImport'
+import { setStudioProject, setStudioSeed } from '../compose/handoff'
+import { plainToStudioTracks } from './plainStudio'
+import { listAssets } from './assets'
+import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
 import type { CatalogProtocol } from '../data/catalog'
 
 function tenantsLabel(p: CatalogProtocol): string {
   return p.tenants === 'all' ? 'Tutte le aziende' : `${p.tenants.length} aziend${p.tenants.length === 1 ? 'a' : 'e'}`
+}
+
+/** Open a protocol in the Sound Studio. A saved Studio session is restored
+    as-is; otherwise the PLAIN timeline is converted into one, so "edit" always
+    lands on the real material instead of an empty project. */
+async function openInStudio(p: CatalogProtocol): Promise<void> {
+  const duration = (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
+  const attach = duration ? { code: p.code, duration } : undefined
+  if (p.studio) {
+    setStudioProject(p.studio, attach, '#admin')
+    window.location.hash = '#studio'
+    return
+  }
+  if (!p.plain) throw new Error(`"${p.code}" non ha né una sessione salvata né una timeline PLAIN da aprire.`)
+  const version = p.plain.versions.find((v) => v.durationMin === duration) ?? p.plain.versions[0]
+  if (!version) throw new Error(`"${p.code}" non ha versioni nella timeline.`)
+  let pools: AssetPools | undefined
+  try {
+    if (hasSupabaseEnv()) {
+      const [assets, meta] = await Promise.all([listAssets(), loadAssetMeta()])
+      pools = buildAssetPools(assets, meta)
+    }
+  } catch { /* library unreachable — the seed just leaves sample clips undrawn */ }
+  const seed = plainToStudioTracks(p.plain, version, { pools })
+  setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin' })
+  window.location.hash = '#studio'
 }
 
 export function CatalogAdmin({ actor }: { actor: string }) {
@@ -131,6 +162,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               <div>{tenantsLabel(p)}</div>
               <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}</div>
               <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="adm-editbtn"
+                  disabled={busyCode === p.code}
+                  onClick={() => void openInStudio(p).catch((e) => setImportError((e as Error).message))}
+                  title={p.studio ? 'Apri nello Studio la sessione salvata' : 'Apri nello Studio dalla timeline del protocollo'}
+                >
+                  🎚 Modifica
+                </button>
                 <button
                   className={`adm-toggle ${p.enabled ? 'is-on' : ''}`}
                   disabled={busyCode === p.code}

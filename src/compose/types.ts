@@ -7,7 +7,7 @@
    ============================================================================ */
 
 import type { Duration, ProtocolFamily } from '../types/domain'
-import type { TrackType, ClipParams } from '../studio/multitrack'
+import type { TrackType, ClipParams, ClipEq } from '../studio/multitrack'
 
 export type Length = 'quick' | 'standard' | 'deep'
 export const LENGTH_MIN: Record<Length, Duration> = { quick: 6, standard: 12, deep: 24 }
@@ -38,6 +38,22 @@ export interface SeedClip {
   /** PLAIN loudness ladder: calibrate the rendered buffer's gated RMS to
       exactly this many dB vs the guide-voice reference. */
   calibrateDb?: number
+  /** Per-clip parametric EQ, so a saved Studio project reopens shaped the way
+      it was left. */
+  eq?: ClipEq
+}
+
+/** A Studio session saved into a catalog protocol: everything needed to reopen
+    the multitrack exactly as it was left. Audio buffers are NOT stored — clips
+    re-render from their parameters on load, and voice clips re-synthesize. */
+export interface StudioProject {
+  name: string
+  lengthSec: number
+  masterGain: number
+  fadeInSec?: number
+  fadeOutSec?: number
+  tracks: SeedTrack[]
+  savedAt: number
 }
 export interface SeedTrack {
   type: TrackType

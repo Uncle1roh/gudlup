@@ -42,6 +42,9 @@ import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAss
 import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, type AssetPools } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
+import { persistenceNote, saveProtocolVerified } from '../admin/publish'
+import type { CatalogProtocol } from '../data/catalog'
+import type { StudioProject } from '../compose/types'
 import { useDataProvider } from '../data/provider'
 import { attachRenderedAudio } from '../admin/attachAudio'
 import type { SeedTrack } from '../compose/types'
@@ -219,18 +222,125 @@ function StudioDesktop() {
     const h = takeStudioSeed()
     if (!h) return null
     const end = Math.max(120, ...h.tracks.flatMap((t) => t.clips.map((c) => c.startSec + c.durationSec)))
-    return { tracks: h.tracks.map(seedTrackToTrack), name: h.name, attach: h.attach ?? null, lengthSec: Math.ceil(end), fadeInSec: h.fadeInSec ?? 0, fadeOutSec: h.fadeOutSec ?? 0 }
+    return {
+      tracks: h.tracks.map(seedTrackToTrack),
+      name: h.name,
+      attach: h.attach ?? null,
+      lengthSec: h.lengthSec ?? Math.ceil(end),
+      masterGain: h.masterGain,
+      fadeInSec: h.fadeInSec ?? 0,
+      fadeOutSec: h.fadeOutSec ?? 0,
+      returnTo: h.returnTo ?? null,
+    }
   }, [])
   const [tracks, setTracks] = useState<Track[]>(() => handoff?.tracks ?? makeSeed())
   const [projectName, setProjectName] = useState(handoff?.name ?? 'GL-ANX 1.1 — Calm and Inner Safety')
-  const [masterGain, setMasterGain] = useState(0.82)
+  const [masterGain, setMasterGain] = useState(handoff?.masterGain ?? 0.82)
   const [lengthSec, setLengthSec] = useState(handoff?.lengthSec ?? 120)
   const [pxPerSec, setPxPerSec] = useState(() => (handoff ? Math.max(0.6, Math.min(7, 1100 / (handoff.lengthSec || 120))) : 7))
   const attachTarget: StudioAttachTarget | null = handoff?.attach ?? null
+  const returnTo: string | null = handoff?.returnTo ?? null
   const sessionFades = { inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 }
   const dp = useDataProvider()
   const [attaching, setAttaching] = useState(false)
   const [attachMsg, setAttachMsg] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  /** The whole session, serialized — everything except the audio buffers,
+      which re-render from these parameters when the project is reopened. */
+  function toStudioProject(): StudioProject {
+    return {
+      name: projectName,
+      lengthSec,
+      masterGain,
+      fadeInSec: sessionFades.inSec,
+      fadeOutSec: sessionFades.outSec,
+      savedAt: Date.now(),
+      tracks: tracks.map((t) => ({
+        type: t.type,
+        name: t.name,
+        volume: t.volume,
+        channel: t.channel,
+        effects: t.effects,
+        baseLufs: t.baseLufs,
+        clips: t.clips.map((c) => ({
+          startSec: c.startSec,
+          durationSec: c.durationSec,
+          params: c.params,
+          text: c.text,
+          gainDb: c.gainDb,
+          fadeInSec: c.fadeInSec,
+          fadeOutSec: c.fadeOutSec,
+          calibrateDb: c.calibrateDb,
+          eq: c.eq,
+        })),
+      })),
+    }
+  }
+
+  /** Persist every Studio edit onto the protocol this session came from. */
+  async function saveToProtocol(): Promise<CatalogProtocol | null> {
+    if (!attachTarget) return null
+    const all = await dp.listProtocols()
+    const existing = all.find((p) => p.code === attachTarget.code)
+    if (!existing) throw new Error(`"${attachTarget.code}" non è nel catalogo — pubblicalo prima dall’importazione.`)
+    const next: CatalogProtocol = { ...existing, studio: toStudioProject(), updatedAt: Date.now() }
+    const stored = await saveProtocolVerified(dp, next)
+    setDirty(false)
+    return stored
+  }
+
+  async function onSave() {
+    setSaving(true)
+    setAttachMsg(null)
+    try {
+      await saveToProtocol()
+      setAttachMsg(`Salvato in ${attachTarget?.code} — riaprendo il protocollo ritrovi esattamente questa sessione.${persistenceNote() ?? ''}`)
+    } catch (e) {
+      setAttachMsg(`Salvataggio non riuscito: ${(e as Error).message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /** Publish straight from the Studio: save the session, render the mixdown,
+      upload it and enable the protocol — the path for when nobody is going to
+      master the audio externally. */
+  async function publishFromStudio() {
+    if (!attachTarget) return
+    setPublishing(true)
+    setAttachMsg(null)
+    try {
+      setAttachMsg('Salvataggio della sessione…')
+      await saveToProtocol()
+      setAttachMsg('Render del mixdown…')
+      const solo = tracks.some((t) => t.soloed)
+      const mix: MixTrack[] = tracks.map((t) => ({
+        gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume,
+        pan: CHANNEL_PAN[t.channel ?? 'C'],
+        effects: t.effects,
+        clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
+      }))
+      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
+      setAttachMsg('Caricamento della copia per lo streaming…')
+      const { protocol } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
+      if (!protocol.enabled) {
+        await saveProtocolVerified(dp, { ...protocol, enabled: true, updatedAt: Date.now() })
+      }
+      setAttachMsg(`In linea — ${attachTarget.code} · ${attachTarget.duration} min ora riproduce questa versione nell’app.${persistenceNote() ?? ''}`)
+    } catch (e) {
+      setAttachMsg(`Pubblicazione non riuscita: ${(e as Error).message}`)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  function goBack() {
+    if (dirty && attachTarget && !window.confirm('Ci sono modifiche non salvate nel protocollo. Uscire comunque?')) return
+    window.location.hash = returnTo ?? '#'
+  }
 
   async function attachToCatalog() {
     if (!attachTarget) return
@@ -522,6 +632,13 @@ function StudioDesktop() {
     setSynthAll(null)
     if (!failed) setTtsError(null)
   }, [setClipBuffer])
+
+  /* any edit after the first paint means the saved project is behind */
+  const firstTracks = useRef(true)
+  useEffect(() => {
+    if (firstTracks.current) { firstTracks.current = false; return }
+    setDirty(true)
+  }, [tracks, lengthSec, masterGain, projectName])
 
   /* ---- mount / unmount ---- */
   useEffect(() => {
@@ -1001,12 +1118,34 @@ function StudioDesktop() {
           )}
         </div>
         <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Render in corso…' : '⬇ Esporta WAV'}</button>
-        {attachTarget && hasSupabaseEnv() && (
-          <button className="mt-export" onClick={attachToCatalog} disabled={attaching} title={`Ricollega questa modifica a ${attachTarget.code} · ${attachTarget.duration} min`}>
-            {attaching ? 'Collegamento…' : `⬆ Collega a ${attachTarget.code}`}
+        {attachTarget && (
+          <button
+            className={`mt-export${dirty ? ' is-dirty' : ''}`}
+            onClick={() => void onSave()}
+            disabled={saving || publishing}
+            title={`Salva tutte le modifiche dentro ${attachTarget.code} — riaprendolo ritrovi questa sessione`}
+          >
+            {saving ? 'Salvataggio…' : dirty ? '💾 Salva •' : '💾 Salva'}
           </button>
         )}
-        <a className="mt-exit" href="#" title="Esci dallo studio">✕</a>
+        {attachTarget && hasSupabaseEnv() && (
+          <button
+            className="mt-export mt-export--publish"
+            onClick={() => void publishFromStudio()}
+            disabled={publishing || saving}
+            title={`Salva, renderizza e manda in linea ${attachTarget.code} · ${attachTarget.duration} min — senza masterizzazione esterna`}
+          >
+            {publishing ? 'Pubblicazione…' : '🚀 Pubblica'}
+          </button>
+        )}
+        {attachTarget && hasSupabaseEnv() && (
+          <button className="mt-export" onClick={attachToCatalog} disabled={attaching || publishing} title={`Ricollega solo l’audio a ${attachTarget.code} · ${attachTarget.duration} min`}>
+            {attaching ? 'Collegamento…' : '⬆ Solo audio'}
+          </button>
+        )}
+        <button className="mt-back" onClick={goBack} title={returnTo ? 'Torna alla schermata precedente' : 'Esci dallo studio'}>
+          ← Indietro
+        </button>
       </header>
 
       {voiceSetupOpen && (

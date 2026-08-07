@@ -43,6 +43,11 @@ export interface CatalogProtocol extends Protocol {
   plain?: PlainTimeline
   /** Admin's phase → storage-path asset assignments (Asset Library). */
   assetMap?: AssetMap
+  /** The Sound Studio session for this protocol — every edit made in the
+      multitrack (clips, levels, EQ, timbres, voices). Saving it is what makes
+      "open in the Studio" resume the real work instead of re-deriving the bed
+      from the Excel. */
+  studio?: import('../compose/types').StudioProject
 }
 
 /** Lift the seeded domain protocols into catalog entries. */

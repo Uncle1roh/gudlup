@@ -2,9 +2,11 @@
    open the Sound Studio seeded with exactly the bed they built. Set it,
    navigate to #studio, and the Studio takes it on mount (one-shot). When the
    seed comes from a catalog protocol, `attach` lets the Studio re-attach its
-   edited mixdown to that protocol version. */
+   edited mixdown to that protocol version, `returnTo` sends the back button
+   where the user came from, and a saved StudioProject restores the session
+   exactly as it was left. */
 
-import type { SeedTrack } from './types'
+import type { SeedTrack, StudioProject } from './types'
 import type { Duration } from '../types/domain'
 
 export interface StudioAttachTarget { code: string; duration: Duration }
@@ -15,12 +17,43 @@ export interface StudioSeed {
   /** Session fade in/out seconds — applied to the exported/attached mixdown. */
   fadeInSec?: number
   fadeOutSec?: number
+  /** Hash route the Studio's back button returns to (e.g. '#admin'). */
+  returnTo?: string
+  /** Timeline length and master fader from a saved project. */
+  lengthSec?: number
+  masterGain?: number
+}
+
+export interface SeedExtras {
+  returnTo?: string
+  lengthSec?: number
+  masterGain?: number
 }
 
 let pending: StudioSeed | null = null
 
-export function setStudioSeed(tracks: SeedTrack[], name: string, attach?: StudioAttachTarget, fades?: { fadeInSec?: number; fadeOutSec?: number }): void {
-  pending = { tracks, name, attach, ...fades }
+export function setStudioSeed(
+  tracks: SeedTrack[],
+  name: string,
+  attach?: StudioAttachTarget,
+  fades?: { fadeInSec?: number; fadeOutSec?: number },
+  extras?: SeedExtras,
+): void {
+  pending = { tracks, name, attach, ...fades, ...extras }
+}
+
+/** Reopen a saved Studio session (the "edit protocol" path). */
+export function setStudioProject(project: StudioProject, attach?: StudioAttachTarget, returnTo?: string): void {
+  pending = {
+    tracks: project.tracks,
+    name: project.name,
+    attach,
+    fadeInSec: project.fadeInSec,
+    fadeOutSec: project.fadeOutSec,
+    lengthSec: project.lengthSec,
+    masterGain: project.masterGain,
+    returnTo,
+  }
 }
 
 export function takeStudioSeed(): StudioSeed | null {

@@ -139,6 +139,7 @@ function mapCatalog(r: any): CatalogProtocol {
     datasheet: r.datasheet ?? undefined,
     plain: r.plain ?? undefined,
     assetMap: r.asset_map ?? undefined,
+    studio: r.studio ?? undefined,
   }
 }
 function mapCompany(r: any): Company {
@@ -599,6 +600,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         datasheet: p.datasheet ?? null,
         plain: p.plain ?? null,
         asset_map: p.assetMap ?? null,
+        studio: p.studio ?? null,
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })
       if (error) throw error

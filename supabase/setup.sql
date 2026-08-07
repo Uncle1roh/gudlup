@@ -208,6 +208,8 @@ alter table protocols  add column if not exists audio_ready boolean not null def
 alter table protocols  add column if not exists datasheet jsonb;
 alter table protocols  add column if not exists plain jsonb;
 alter table protocols  add column if not exists asset_map jsonb;
+-- the Sound Studio session saved onto a protocol (all multitrack edits)
+alter table protocols  add column if not exists studio jsonb;
 
 create table if not exists audit_events (
   id        uuid primary key default gen_random_uuid(),

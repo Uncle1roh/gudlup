@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDataProvider } from '../data/provider'
-import { registerProtocol } from '../data/protocols'
+import { persistenceNote, saveProtocolVerified } from './publish'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
@@ -169,7 +169,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
     try {
       const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
       const dur = version.durationMin === 6 || version.durationMin === 12 || version.durationMin === 24 ? (version.durationMin as Duration) : undefined
-      setStudioSeed(seed.tracks, seed.name, t.code && dur ? { code: t.code, duration: dur } : undefined)
+      setStudioSeed(seed.tracks, seed.name, t.code && dur ? { code: t.code, duration: dur } : undefined, undefined, { returnTo: '#admin' })
       setNotes(seed.notes)
       window.location.hash = '#studio'
     } catch (e) {
@@ -205,11 +205,12 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
       assetMap: existing?.assetMap,
       updatedAt: Date.now(),
     }
-    await dp.saveProtocol(proto)
-    registerProtocol(proto)
+    // verified: a write rejected by RLS used to leave a protocol that looked
+    // published until the next screen change
+    const stored = await saveProtocolVerified(dp, proto)
     await dp.logAudit({ actor, action: 'protocol.plain.imported', target: proto.code, detail: fileName }).catch(() => undefined)
-    setPublished(proto)
-    return proto
+    setPublished(stored)
+    return stored
   }
 
   /** Publish = the WHOLE pipeline: catalog entry → render (with voice) →
@@ -246,7 +247,7 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
       await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
       setLive(true)
-      setStatus(`In linea — ${proto.code} ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.`)
+      setStatus(`In linea — ${proto.code} ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.${persistenceNote() ?? ''}`)
     } catch (e) {
       setStatus(null)
       setError(explain(e))
