@@ -86,7 +86,9 @@ export function specToStudioTracks(spec: ProtocolSpec, duration: Duration): { tr
     const clips: SeedClip[] = deriveBilateral(v, totalSec).map((seg) => ({
       startSec: seg.startSec,
       durationSec: Math.max(1, seg.endSec - seg.startSec),
-      params: { toneHz: seg.toneHz, blipMs: seg.blipMs, everySec: seg.everySec },
+      // the pulse is a PO file now: the spec's tone/blip figures only pick how
+      // bright the zen tone is, the beep they described no longer exists
+      params: { sound: seg.toneHz < 300 ? 'zen-deep' : seg.toneHz < 500 ? 'zen-mid' : 'zen-high', everySec: seg.everySec },
     }))
     if (clips.length) tracks.push({ type: 'bilateral', name: 'Bilateral (PAT-05)', volume: 0.06, clips })
   }

@@ -91,6 +91,10 @@ export interface PlainClip {
   intervalloAlternanzaS?: number
   frequenzaBlipHz?: number
   panAmpiezza?: number
+  /** Optional "timbro"/"suono" cell naming the pulse sound from the shipped
+      catalog ("gong", "campana tibetana", "whoosh-1"…). Absent = derived from
+      frequenza_blip_hz, then the default. */
+  timbro?: string
   /* Voice */
   archetipo?: string
   pan?: number
@@ -492,8 +496,9 @@ function parseClipSheet(
       clip.intervalloAlternanzaS = num(get(r, 'intervallo_alternanza_s')) ?? undefined
       clip.frequenzaBlipHz = num(get(r, 'frequenza_blip_hz')) ?? undefined
       clip.panAmpiezza = num(get(r, 'pan_ampiezza')) ?? undefined
+      clip.timbro = str(get(r, 'timbro')) || str(get(r, 'suono')) || undefined
       if (clip.intervalloAlternanzaS === undefined) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Bilateral clip missing intervallo_alternanza_s (the central clinical dial).` })
-      if (clip.frequenzaBlipHz === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Bilateral clip without frequenza_blip_hz — app default (400 Hz) will be used.` })
+      if (clip.frequenzaBlipHz === undefined && clip.timbro === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Bilateral clip without timbro/frequenza_blip_hz — the app's default pulse sound will be used.` })
       if (clip.panAmpiezza === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Bilateral clip without pan_ampiezza — app default (100) will be used.` })
     }
     if (tipo === 'voice') {

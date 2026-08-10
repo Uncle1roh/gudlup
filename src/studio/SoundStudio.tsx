@@ -30,8 +30,12 @@ import {
   type MixTrack,
   type MusicParams,
   type BilateralParams,
-  type BilateralTimbre,
-  BILATERAL_TIMBRES,
+  type BilateralSoundId,
+  BILATERAL_SOUNDS,
+  BILATERAL_FAMILY_LABEL,
+  DEFAULT_BILATERAL_SOUND,
+  bilateralSoundUrl,
+  resolveBilateralSound,
   type Chord,
 } from './multitrack'
 import { getTtsProvider } from '../tts'
@@ -1861,18 +1865,36 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           <div className="mt-note">Pad in triade calda — i cambi di tonalità seguono le transizioni musicali del protocollo.</div>
         </> })()}
 
-        {track.type === 'bilateral' && (() => { const p = clip.params as BilateralParams; const tb = p.timbre ?? 'blip'; return <>
-          <div className="mt-seg mt-seg--wrap">
-            {BILATERAL_TIMBRES.map((t) => (
-              <button key={t.id} className={tb === t.id ? 'is-on' : ''} title={t.blurb} onClick={() => onParam({ timbre: t.id })}>{t.label}</button>
-            ))}
-          </div>
-          <div className="mt-note">{BILATERAL_TIMBRES.find((t) => t.id === tb)?.blurb}</div>
-          <Slider label="Tone" value={p.toneHz} min={200} max={800} step={5} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
-          <Slider label="Blip" value={p.blipMs} min={40} max={400} step={5} onChange={(v) => onParam({ blipMs: v })} fmt={(v) => `${v} ms`} />
-          <Slider label="Every" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
-          <div className="mt-note">Alternanza L(−80)/R(+80) — la stimolazione PAT-05 del protocollo.</div>
-        </> })()}
+        {track.type === 'bilateral' && (() => {
+          const p = clip.params as BilateralParams
+          const snd = resolveBilateralSound(p)
+          const every = Math.max(0.5, p.everySec)
+          const hold = p.holdSec ?? Math.min(snd.naturalSec, every * 0.9)
+          return <>
+            <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
+              <span className="mt-tts__lbl">Suono</span>
+              <select className="mt-tts__sel" value={snd.id} onChange={(e) => onParam({ sound: e.target.value as BilateralSoundId })}>
+                {(['tone', 'bell', 'whoosh'] as const).map((fam) => (
+                  <optgroup key={fam} label={BILATERAL_FAMILY_LABEL[fam]}>
+                    {BILATERAL_SOUNDS.filter((s) => s.family === fam).map((s) => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <button className="mt-tts__btn" onClick={() => void auditionBilateral(snd.id)} title="Ascolta il file per intero">▶</button>
+            </div>
+            <div className="mt-note">{snd.blurb} · file da {snd.naturalSec.toFixed(1)} s</div>
+            <Slider label="Ogni" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
+            <Slider label="Durata colpo" value={hold} min={0.2} max={12} step={0.1} onChange={(v) => onParam({ holdSec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
+            <Slider label="Ampiezza pan" value={p.panAmp ?? 0.8} min={0.1} max={1} step={0.05} onChange={(v) => onParam({ panAmp: v })} fmt={(v) => `±${Math.round(v * 100)}`} />
+            {hold > every && <div className="mt-note">⚠ Il colpo dura più dell’intervallo: i lati si sovrappongono. Accorcia la durata o allarga “Ogni”.</div>}
+            <div className="mt-note">
+              Alternanza L/R a ±{Math.round((p.panAmp ?? 0.8) * 100)} — la stimolazione PAT-05 del protocollo.
+              Il file viene tagliato a “Durata colpo” con una breve dissolvenza, così anche una campana lunga non invade il colpo successivo.
+            </div>
+          </>
+        })()}
 
         {track.type === 'sample' && (() => { const p = clip.params as SampleParams; return <>
           <div className="mt-note" style={{ marginBottom: 6 }}>
@@ -1945,6 +1967,14 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   )
 }
 
+
+/* ---- audition a bilateral file whole, straight from public/ ---- */
+let bilateralAudio: HTMLAudioElement | null = null
+async function auditionBilateral(id: BilateralSoundId): Promise<void> {
+  bilateralAudio?.pause()
+  bilateralAudio = new Audio(bilateralSoundUrl(resolveBilateralSound({ sound: id })))
+  await bilateralAudio.play().catch(() => { /* autoplay policy — the click already unlocked it */ })
+}
 
 /* ---- which voice a clip is REALLY spoken in ----
 
@@ -2129,6 +2159,7 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
   }
 
   const voiceShared = shared<string>('voiceId', '')
+  const bilateralShared = shared<string>('sound', DEFAULT_BILATERAL_SOUND)
 
   return (
     <div className="mt-fx mt-params">
@@ -2194,10 +2225,25 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
         </>}
 
         {track.type === 'bilateral' && live.length > 0 && <>
-          <TrackSeg k="timbre" options={BILATERAL_TIMBRES.map((t) => t.id)} fallback={'blip' as BilateralTimbre} label={(o) => BILATERAL_TIMBRES.find((t) => t.id === o)?.label ?? o} />
-          <TrackSlider label="Tono" k="toneHz" fallback={400} min={200} max={800} step={5} fmt={(v) => `${v} Hz`} />
-          <TrackSlider label="Impulso" k="blipMs" fallback={120} min={40} max={400} step={5} fmt={(v) => `${v} ms`} />
+          <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
+            <span className="mt-tts__lbl">Suono</span>
+            <select
+              className="mt-tts__sel"
+              value={bilateralShared.mixed ? '' : bilateralShared.value}
+              onChange={(e) => e.target.value && onParam({ sound: e.target.value as BilateralSoundId } as unknown as Partial<ClipParams>)}
+            >
+              {bilateralShared.mixed && <option value="">— misto —</option>}
+              {(['tone', 'bell', 'whoosh'] as const).map((fam) => (
+                <optgroup key={fam} label={BILATERAL_FAMILY_LABEL[fam]}>
+                  {BILATERAL_SOUNDS.filter((s) => s.family === fam).map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
           <TrackSlider label="Ogni" k="everySec" fallback={4} min={1} max={10} step={0.5} fmt={(v) => `${v.toFixed(1)} s`} />
+          <TrackSlider label="Durata colpo" k="holdSec" fallback={3.6} min={0.2} max={12} step={0.1} fmt={(v) => `${v.toFixed(1)} s`} />
           <TrackSlider label="Ampiezza pan" k="panAmp" fallback={0.8} min={0.1} max={1} step={0.05} fmt={(v) => `±${Math.round(v * 100)}`} />
         </>}
 

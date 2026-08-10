@@ -24,27 +24,93 @@ export interface BreathParams { breathsPerMin: number; toneHz: number }
 export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number; voiceId?: string }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
-/** The sound each bilateral pulse makes. The alternation, timing and pan are
-    identical across all of them — only the timbre changes. */
-export type BilateralTimbre = 'blip' | 'gong' | 'bowl' | 'woodblock' | 'chime' | 'drum'
+/* ---- bilateral pulse sounds (PO library) --------------------------------
+   Each alternating hit plays one of the files the POs chose, shipped with the
+   app under public/bilateral/ so a render sounds the same everywhere and needs
+   no Storage round-trip. The synthesized timbres this replaced (sine blip,
+   modelled gong/bowl/woodblock/chime/drum) are gone: the POs judge the sound,
+   and a recorded instrument is not something to approximate with oscillators.
+   Timing, L/R alternation and pan extent are identical for every sound. */
+export type BilateralSoundId =
+  | 'zen-deep' | 'zen-mid' | 'zen-high'
+  | 'gong' | 'temple-bell' | 'bong' | 'bowl-gong' | 'bowl-low'
+  | 'whoosh-1' | 'whoosh-2' | 'swoosh' | 'deep-swoosh'
 
-export const BILATERAL_TIMBRES: { id: BilateralTimbre; label: string; blurb: string }[] = [
-  { id: 'blip', label: 'Bip', blurb: 'Sinusoide pulita — il segnale PAT-05 originale' },
-  { id: 'gong', label: 'Gong', blurb: 'Colpo metallico con parziali inarmoniche e coda lunga' },
-  { id: 'bowl', label: 'Campana tibetana', blurb: 'Timbro cristallino, battimento lento' },
-  { id: 'woodblock', label: 'Legno', blurb: 'Percussione secca, senza coda' },
-  { id: 'chime', label: 'Campanellino', blurb: 'Acuto e brillante, decadimento breve' },
-  { id: 'drum', label: 'Tamburo', blurb: 'Membrana grave e ovattata' },
+export type BilateralFamily = 'tone' | 'bell' | 'whoosh'
+
+export interface BilateralSound {
+  id: BilateralSoundId
+  label: string
+  blurb: string
+  family: BilateralFamily
+  /** File name under public/bilateral/ (kept verbatim — it carries the credit). */
+  file: string
+  /** Full length of the file in seconds; a hit is trimmed to fit its interval. */
+  naturalSec: number
+}
+
+export const BILATERAL_SOUNDS: BilateralSound[] = [
+  { id: 'zen-deep', label: 'Tono zen grave', blurb: 'Tono puro e caldo — il segnale bilaterale più discreto', family: 'tone', file: 'alex_jauk-zen-tone-deep-202555.mp3', naturalSec: 3.19 },
+  { id: 'zen-mid', label: 'Tono zen medio', blurb: 'Tono zen centrale, buon equilibrio fra presenza e morbidezza', family: 'tone', file: 'alex_jauk-zen-tone-mid-202556.mp3', naturalSec: 3.02 },
+  { id: 'zen-high', label: 'Tono zen medio-alto', blurb: 'Tono zen più brillante — si stacca meglio su un tappeto denso', family: 'tone', file: 'alex_jauk-zen-tone-mid-high-202557.mp3', naturalSec: 3.02 },
+  { id: 'gong', label: 'Gong', blurb: 'Colpo di gong con coda metallica — la richiesta originale dei PO', family: 'bell', file: 'freesound_community-gong1-94016.mp3', naturalSec: 7.3 },
+  { id: 'temple-bell', label: 'Campana da tempio', blurb: 'Rintocco profondo, attacco netto e lunga risonanza', family: 'bell', file: 'kalsstockmedia-church-temple-bell-gong-dong-sound-effect-3-241681.mp3', naturalSec: 8.1 },
+  { id: 'bong', label: 'Bong', blurb: 'Percussione intonata breve — la più asciutta del gruppo', family: 'bell', file: 'freesound_community-bong-105459.mp3', naturalSec: 5.62 },
+  { id: 'bowl-gong', label: 'Campana tibetana', blurb: 'Campana cantante percossa, timbro cristallino', family: 'bell', file: 'freesound_community-singing-bowl-gong-69238.mp3', naturalSec: 19.44 },
+  { id: 'bowl-low', label: 'Campana tibetana grave', blurb: 'Campana grande e piena — coda molto lunga, meglio con intervalli larghi', family: 'bell', file: 'freesound_community-singing-bowl-low-and-loud-76401.mp3', naturalSec: 59.69 },
+  { id: 'whoosh-1', label: 'Whoosh 1', blurb: 'Passaggio d’aria — segnale senza altezza, non interferisce col binaurale', family: 'whoosh', file: 'dragon-studio-whoosh-06-410874.mp3', naturalSec: 1.92 },
+  { id: 'whoosh-2', label: 'Whoosh 2', blurb: 'Passaggio d’aria, timbro leggermente più chiuso', family: 'whoosh', file: 'dragon-studio-whoosh-07-410877.mp3', naturalSec: 1.92 },
+  { id: 'swoosh', label: 'Swoosh breve', blurb: 'Soffio corto e rapido — il più discreto dei passaggi d’aria', family: 'whoosh', file: 'u_2ttqv1v1rq-17_swoosh2-473890.mp3', naturalSec: 1.34 },
+  { id: 'deep-swoosh', label: 'Swoosh profondo', blurb: 'Soffio grave e ampio, buono per le fasi lente', family: 'whoosh', file: 'universfield-deep-swoosh-383771.mp3', naturalSec: 2.14 },
 ]
 
+export const BILATERAL_FAMILY_LABEL: Record<BilateralFamily, string> = {
+  tone: 'Toni zen',
+  bell: 'Gong e campane',
+  whoosh: 'Passaggi d’aria',
+}
+
+/** The PO default: a gong, which is what they asked for in place of the beep. */
+export const DEFAULT_BILATERAL_SOUND: BilateralSoundId = 'gong'
+
+/** Saved protocols from the synth era name a timbre, not a file. Nearest PO
+    sound per old timbre, so those projects keep opening and rendering. */
+const LEGACY_TIMBRE: Record<string, BilateralSoundId> = {
+  blip: 'zen-mid',
+  gong: 'gong',
+  bowl: 'bowl-gong',
+  chime: 'zen-high',
+  woodblock: 'bong',
+  drum: 'temple-bell',
+}
+
+export function bilateralSoundById(id: string | undefined): BilateralSound | undefined {
+  return BILATERAL_SOUNDS.find((s) => s.id === id)
+}
+
+/** The sound a clip really plays: its own, else the migrated legacy timbre,
+    else the default. Never throws on old data. */
+export function resolveBilateralSound(p: Partial<BilateralParams> & { timbre?: string }): BilateralSound {
+  return bilateralSoundById(p.sound)
+    ?? bilateralSoundById(p.timbre ? LEGACY_TIMBRE[p.timbre] : undefined)
+    ?? bilateralSoundById(DEFAULT_BILATERAL_SOUND)!
+}
+
+/** Where the app serves the file from (public/ ships verbatim to the site). */
+export function bilateralSoundUrl(s: BilateralSound): string {
+  return `${import.meta.env.BASE_URL}bilateral/${s.file}`
+}
+
 export interface BilateralParams {
-  toneHz: number
-  blipMs: number
+  /** Which PO file each pulse plays. */
+  sound: BilateralSoundId
+  /** Seconds between one side's hit and the other's. */
   everySec: number
   /** Symmetric pan extent 0..1 (PLAIN pan_ampiezza/100). Default 0.8. */
   panAmp?: number
-  /** Pulse timbre. Absent = 'blip' (the original electronic beep). */
-  timbre?: BilateralTimbre
+  /** Hit length in seconds — the file is trimmed and faded to this so a long
+      bell can't smear across the next hit. Absent = fit the interval. */
+  holdSec?: number
 }
 /** A real audio file (PO library stem / soundscape texture), looped to fill
     the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
@@ -79,7 +145,7 @@ export function defaultParams(type: TrackType): ClipParams {
     case 'breath': return { breathsPerMin: 5.5, toneHz: 300 }
     case 'voice': return { pan: 0, pulseHz: 0.2, toneHz: 420 }
     case 'music': return { chord: 'c' }
-    case 'bilateral': return { toneHz: 400, blipMs: 120, everySec: 4 }
+    case 'bilateral': return { sound: DEFAULT_BILATERAL_SOUND, everySec: 4 }
     case 'sample': return { url: '', label: 'Nessun file — si imposta dall’importazione' }
   }
 }
@@ -129,110 +195,32 @@ function buildTexture(ctx: BaseAudioContext, texture: Texture, dest: AudioNode, 
   }
 }
 
-/* ---- bilateral pulse timbres ------------------------------------------
-   One hit, panned by the caller. `hold` is the clip's blip length: percussive
-   timbres ring past it into their own decay (a gong cut off at 120 ms would
-   just be a click), while the plain blip stays gated exactly as before so
-   existing protocols sound unchanged. */
+/* ---- bilateral pulse ---------------------------------------------------
+   One hit of the chosen PO file, panned by the caller. The file is trimmed to
+   `hold` seconds with a short attack and a proportional release, so a 60 s
+   singing bowl every 4 s does not smear over the next hit while a 1.3 s swoosh
+   plays out whole. Nothing is synthesized any more. */
 function buildBilateralHit(
-  ctx: BaseAudioContext, timbre: BilateralTimbre, toneHz: number, at: number, hold: number, dest: AudioNode,
+  ctx: BaseAudioContext, hit: AudioBuffer, at: number, hold: number, dest: AudioNode,
 ): void {
-  /** Struck-body voice: a partial with its own decay. */
-  const strike = (freq: number, gain: number, decay: number, type: OscillatorType = 'sine', detune = 0) => {
-    const o = ctx.createOscillator()
-    o.type = type
-    o.frequency.value = freq
-    o.detune.value = detune
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(0, at)
-    g.gain.linearRampToValueAtTime(gain, at + 0.004)      // near-instant attack
-    g.gain.exponentialRampToValueAtTime(0.0001, at + decay) // natural ring-out
-    o.connect(g).connect(dest)
-    o.start(at)
-    o.stop(at + decay + 0.05)
-  }
-  /** Filtered noise burst — the "mallet on the surface" transient. */
-  const noise = (gain: number, decay: number, freq: number, q = 1) => {
-    const src = ctx.createBufferSource()
-    src.buffer = makeNoiseBuffer(ctx, Math.max(0.2, decay))
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(gain, at)
-    g.gain.exponentialRampToValueAtTime(0.0001, at + decay)
-    src.connect(bp).connect(g).connect(dest)
-    src.start(at)
-    src.stop(at + decay + 0.05)
-  }
-
-  switch (timbre) {
-    case 'gong': {
-      // inharmonic partials + a metallic shimmer: what makes a gong read as
-      // struck bronze rather than as a tuned bell
-      const d = Math.max(1.6, hold * 6)
-      strike(toneHz * 0.5, 0.55, d)
-      strike(toneHz, 0.42, d * 0.85)
-      strike(toneHz * 1.47, 0.20, d * 0.6)   // inharmonic
-      strike(toneHz * 2.39, 0.12, d * 0.45)  // inharmonic
-      strike(toneHz * 3.11, 0.07, d * 0.3)
-      noise(0.10, 0.22, toneHz * 3, 0.7)     // the mallet contact
-      break
-    }
-    case 'bowl': {
-      // singing bowl: near-harmonic, very long, with the slow beating that
-      // comes from two close partials
-      const d = Math.max(2.4, hold * 8)
-      strike(toneHz, 0.5, d)
-      strike(toneHz * 1.004, 0.32, d)        // ~0.4% apart → slow beat
-      strike(toneHz * 2.7, 0.16, d * 0.5)
-      strike(toneHz * 5.4, 0.06, d * 0.3)
-      break
-    }
-    case 'woodblock': {
-      const d = Math.max(0.12, hold * 0.9)
-      strike(toneHz * 2, 0.5, d, 'square')
-      strike(toneHz * 3.2, 0.18, d * 0.6)
-      noise(0.22, 0.035, toneHz * 4, 2)
-      break
-    }
-    case 'chime': {
-      const d = Math.max(0.9, hold * 4)
-      strike(toneHz * 2, 0.42, d)
-      strike(toneHz * 4.2, 0.2, d * 0.7)
-      strike(toneHz * 6.8, 0.08, d * 0.4)
-      noise(0.06, 0.05, toneHz * 6, 1.2)
-      break
-    }
-    case 'drum': {
-      // membrane: pitch drops as the skin relaxes
-      const d = Math.max(0.35, hold * 2)
-      const o = ctx.createOscillator()
-      o.type = 'sine'
-      o.frequency.setValueAtTime(toneHz * 0.6, at)
-      o.frequency.exponentialRampToValueAtTime(Math.max(30, toneHz * 0.25), at + d * 0.6)
-      const g = ctx.createGain()
-      g.gain.setValueAtTime(0, at)
-      g.gain.linearRampToValueAtTime(0.6, at + 0.005)
-      g.gain.exponentialRampToValueAtTime(0.0001, at + d)
-      o.connect(g).connect(dest)
-      o.start(at); o.stop(at + d + 0.05)
-      noise(0.12, 0.06, toneHz, 0.8)
-      break
-    }
-    default: {
-      // 'blip' — the original gated sine, byte-for-byte behaviour preserved
-      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = toneHz
-      const g = ctx.createGain()
-      g.gain.setValueAtTime(0, at)
-      g.gain.linearRampToValueAtTime(1, at + 0.01)
-      g.gain.setValueAtTime(1, at + Math.max(0.02, hold - 0.03))
-      g.gain.linearRampToValueAtTime(0, at + hold)
-      o.connect(g).connect(dest)
-      o.start(at); o.stop(at + hold + 0.05)
-    }
-  }
+  const len = Math.min(hit.duration, Math.max(0.08, hold))
+  const src = ctx.createBufferSource()
+  src.buffer = hit
+  const g = ctx.createGain()
+  const attack = Math.min(0.008, len / 8)
+  // the release is a quarter of the hit (max 0.6 s) — enough to hide the cut
+  // without eating the instrument's own decay
+  const release = Math.min(0.6, len / 4)
+  g.gain.setValueAtTime(0, at)
+  g.gain.linearRampToValueAtTime(1, at + attack)
+  g.gain.setValueAtTime(1, at + Math.max(attack, len - release))
+  g.gain.linearRampToValueAtTime(0, at + len)
+  src.connect(g).connect(dest)
+  src.start(at)
+  src.stop(at + len + 0.02)
 }
 
-function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, dest: AudioNode, dur: number): void {
+function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, dest: AudioNode, dur: number, bilateralHit?: AudioBuffer | null): void {
   if (type === 'binaural') {
     const p = params as BinauralParams
     const g = ctx.createGain(); g.gain.value = 0.5; g.connect(dest)
@@ -270,14 +258,19 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
       }
     }
   } else if (type === 'bilateral') {
+    // no file decoded (offline / fetch failed) → the lane stays silent rather
+    // than falling back to a beep the POs did not choose
+    if (!bilateralHit) return
     const p = params as BilateralParams
-    const blip = Math.max(0.03, p.blipMs / 1000)
+    const every = Math.max(0.5, p.everySec)
+    // default hold: the file, but never long enough to smear into the next hit
+    const hold = Math.max(0.08, p.holdSec ?? Math.min(bilateralHit.duration, every * 0.9))
     let side = -1
-    for (let t = 0.05; t < dur - blip; t += Math.max(0.5, p.everySec)) {
+    for (let t = 0.05; t < dur - 0.08; t += every) {
       const pan = ctx.createStereoPanner(); pan.pan.value = (p.panAmp ?? 0.8) * side
       pan.connect(dest)
       side = -side
-      buildBilateralHit(ctx, p.timbre ?? 'blip', p.toneHz, t, blip, pan)
+      buildBilateralHit(ctx, bilateralHit, t, Math.min(hold, dur - t), pan)
     }
   } else {
     const p = params as VoiceParams
@@ -308,6 +301,42 @@ function fetchSampleBuffer(url: string): Promise<AudioBuffer> {
     })()
     p.catch(() => sampleCache.delete(url))
     sampleCache.set(url, p)
+  }
+  return p
+}
+
+/* ---- bilateral hits: one peak-normalized copy per file ------------------
+   The PO files were mastered by different people at different levels — a
+   singing bowl recorded hot next to a soft zen tone. Peak-normalizing every
+   hit to the same ceiling means changing the pulse sound changes the TIMBRE
+   and nothing else; the track fader (and the protocol's calibrateDb) still
+   decide how loud the layer sits. */
+const HIT_PEAK = 0.9
+const hitCache = new Map<string, Promise<AudioBuffer>>()
+
+function fetchBilateralHit(url: string): Promise<AudioBuffer> {
+  let p = hitCache.get(url)
+  if (!p) {
+    p = (async () => {
+      const raw = await fetchSampleBuffer(url)
+      let peak = 0
+      for (let c = 0; c < raw.numberOfChannels; c++) {
+        const d = raw.getChannelData(c)
+        for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v }
+      }
+      if (peak < 1e-6) return raw
+      const gain = HIT_PEAK / peak
+      const out = new AudioBuffer({ numberOfChannels: raw.numberOfChannels, length: raw.length, sampleRate: raw.sampleRate })
+      const scaled = new Float32Array(raw.length)
+      for (let c = 0; c < raw.numberOfChannels; c++) {
+        const d = raw.getChannelData(c)
+        for (let i = 0; i < d.length; i++) scaled[i] = d[i] * gain
+        out.copyToChannel(scaled, c)
+      }
+      return out
+    })()
+    p.catch(() => hitCache.delete(url))
+    hitCache.set(url, p)
   }
   return p
 }
@@ -349,6 +378,11 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
     if (!p.url) return new OfflineAudioContext(2, frames, SAMPLE_RATE).startRendering() // silent clip
     sampleSource = await fetchSampleBuffer(p.url)
   }
+  // the bilateral pulse is a PO file too — same rule, decode it up front
+  let bilateralHit: AudioBuffer | null = null
+  if (type === 'bilateral') {
+    bilateralHit = await fetchBilateralHit(bilateralSoundUrl(resolveBilateralSound(params as BilateralParams)))
+  }
   const ctx = new OfflineAudioContext(2, frames, SAMPLE_RATE)
   const env = ctx.createGain()
   const fade = Math.min(0.12, dur / 4)
@@ -358,7 +392,7 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
   env.gain.linearRampToValueAtTime(0, dur)
   env.connect(ctx.destination)
   if (type === 'sample' && sampleSource) buildSampleLayer(ctx, sampleSource, env, dur)
-  else buildLayer(ctx, type, params, env, dur)
+  else buildLayer(ctx, type, params, env, dur, bilateralHit)
   return ctx.startRendering()
 }
 

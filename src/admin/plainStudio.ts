@@ -39,7 +39,13 @@ import type { SeedClip, SeedTrack } from '../compose/types'
 import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
-import { ANCHOR_LUFS } from '../studio/multitrack'
+import {
+  ANCHOR_LUFS,
+  BILATERAL_SOUNDS,
+  DEFAULT_BILATERAL_SOUND,
+  bilateralSoundById,
+  type BilateralSound,
+} from '../studio/multitrack'
 import { drawMusic, drawSoundscape, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
@@ -118,6 +124,32 @@ function clipSpeed(c: PlainClip): number | undefined {
   if (c.velocitaWpm !== undefined) return clampSpeed(c.velocitaWpm / SPOKEN_WPM)
   if (c.modalita === 'sussurrato') return clampSpeed(WHISPER_WPM / SPOKEN_WPM)
   return undefined
+}
+
+/* ------------------------------------------------------ bilateral pulse ----
+
+   The pulse is a PO file now, not a synthesized beep, so a Bilateral row picks
+   one from the shipped catalog. Priority: an explicit `timbro`/`suono` cell
+   (matched by id, label or keyword), else the pitch tier implied by
+   frequenza_blip_hz — the only pitched option left is the zen-tone trio, and
+   the sheet's Hz is a statement about brightness — else the PO default. */
+function resolveBilateralFromRow(c: PlainClip): { sound: BilateralSound; why: string } {
+  const raw = (c.timbro ?? '').trim()
+  if (raw) {
+    const key = raw.toLowerCase()
+    const hit = BILATERAL_SOUNDS.find((s) => s.id === key)
+      ?? BILATERAL_SOUNDS.find((s) => s.label.toLowerCase() === key)
+      ?? BILATERAL_SOUNDS.find((s) => key.includes(s.id.split('-')[0]) || s.label.toLowerCase().includes(key))
+    if (hit) return { sound: hit, why: `colonna timbro "${raw}"` }
+  }
+  const hz = c.frequenzaBlipHz
+  if (hz !== undefined) {
+    const tier = hz < 300 ? 'zen-deep' : hz < 500 ? 'zen-mid' : 'zen-high'
+    const sound = bilateralSoundById(tier)!
+    return { sound, why: `frequenza_blip_hz ${hz} → tono zen ${hz < 300 ? 'grave' : hz < 500 ? 'medio' : 'medio-alto'} (il bip sintetico non esiste più)` }
+  }
+  const sound = bilateralSoundById(DEFAULT_BILATERAL_SOUND)!
+  return { sound, why: raw ? `timbro "${raw}" non riconosciuto → predefinito` : 'nessun timbro nel foglio → predefinito' }
 }
 
 /** How a row's rate came about, for the import notes. */
@@ -280,12 +312,13 @@ export function plainToStudioTracks(
 
     if (c.tipo === 'bilateral') {
       const l = lane(c.traccia, () => ({ type: 'bilateral', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }))
+      const { sound, why } = resolveBilateralFromRow(c)
       const params: BilateralParams = {
-        toneHz: c.frequenzaBlipHz ?? 400,
-        blipMs: 120,
+        sound: sound.id,
         everySec: c.intervalloAlternanzaS ?? 4,
         panAmp: Math.min(1, Math.max(0, (c.panAmpiezza ?? 100) / 100)),
       }
+      notes.push(`${c.clipId} (${c.traccia}): impulso bilaterale = ${sound.label} — ${why}.`)
       l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue
