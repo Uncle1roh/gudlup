@@ -3,6 +3,7 @@ import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { useProtocols } from '../admin/hooks'
+import { clinicalEntries } from '../data/catalog'
 import { PRESETS, type Patient, type RapidNote } from './data'
 import { VideoStage } from './webrtc/VideoStage'
 import { useVideoCall } from './webrtc/useVideoCall'
@@ -54,7 +55,9 @@ function mmss(s: number): string {
 export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, onEnd }: ConsultationRoomProps) {
   const call = useVideoCall({ roomId, role: 'therapist' })
   const { data: catalog, loading: catalogLoading } = useProtocols()
-  const protocols = useMemo(() => (catalog ?? []).filter((p) => p.enabled), [catalog])
+  // a supervised session plays CLINICAL material; the library is what the
+  // person browses on their own and has no place in the consultation dock
+  const protocols = useMemo(() => clinicalEntries(catalog ?? []), [catalog])
 
   const callStartedAt = useRef(Date.now())
   const [callElapsed, setCallElapsed] = useState(0)

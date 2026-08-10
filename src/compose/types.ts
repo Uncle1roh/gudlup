@@ -73,13 +73,14 @@ export interface SeedTrack {
   clips: SeedClip[]
 }
 
-/** Patient-facing labels for the five families. */
+/** Labels for the five clinical families, plus the non-clinical library. */
 export const FAMILY_LABEL: Record<ProtocolFamily, string> = {
   'GL-ANX': 'Anxiety',
   'GL-DEP': 'Depression',
   'GL-BURN': 'Burnout',
   'GL-STRESS': 'Stress',
   'GL-RESIL': 'Resilience',
+  'GL-LIB': 'Libreria',
 }
 
 /** Brainwave target → (carrier, beat) in Hz, with a short rationale label. */
@@ -97,6 +98,7 @@ export const FAMILY_DEFAULT_WAVE: Record<ProtocolFamily, Brainwave> = {
   'GL-BURN': 'alpha',
   'GL-STRESS': 'theta',
   'GL-RESIL': 'smr',
+  'GL-LIB': 'alpha',
 }
 
 export const SOUNDSCAPE_LABEL: Record<Soundscape, string> = {
@@ -110,4 +112,5 @@ export const FAMILY_AFFIRMATION: Record<ProtocolFamily, string> = {
   'GL-BURN': 'Você pode descansar. O mundo espera por você.',
   'GL-STRESS': 'Este momento é seu. Solte o que pesa.',
   'GL-RESIL': 'Você é mais forte do que imagina.',
+  'GL-LIB': 'Questo momento è tuo. Lascia andare quello che pesa.',
 }

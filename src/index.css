@@ -2036,3 +2036,84 @@ img, svg, video, canvas { max-width: 100%; }
 .adm-editbtn { border: 1px solid var(--line, #dfe7e2); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--aura-deep, #009b77); cursor: pointer; margin-right: 8px; }
 .adm-editbtn:hover { border-color: var(--aura, #3db189); }
 .adm-editbtn:disabled { opacity: 0.5; }
+
+/* ===========================================================================
+   Library (self-service catalog) + the therapist-written pathway
+   Shelves you scroll sideways: the person is looking for the audio that fits
+   what is about to happen, not reading a list of treatments.
+   =========================================================================== */
+.library { gap: 0; }
+.library__head { margin-bottom: 16px; }
+.library__search {
+  width: 100%; margin: 14px 0 6px; padding: 12px 14px; font: inherit; font-size: 15px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: #fff; color: var(--ink);
+}
+.library__search:focus { outline: none; border-color: var(--aura); }
+.library__legal {
+  margin: 26px 0 8px; padding-top: 14px; border-top: 1px solid var(--line);
+  font-size: 11.5px; line-height: 1.55; color: var(--slate);
+}
+.start-cta--pick { min-height: 0; padding: 20px 22px; }
+.start-cta--pick .start-cta__label { font-size: 22px; }
+
+.shelf { margin-top: 22px; }
+.shelf__title { font-family: var(--display); font-size: 17px; font-weight: 500; color: var(--ink); }
+.shelf__sub { font-size: 12.5px; color: var(--slate); margin-top: 2px; }
+.shelf__row {
+  display: flex; gap: 12px; margin-top: 12px; padding-bottom: 6px;
+  overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+}
+.shelf__row::-webkit-scrollbar { height: 6px; }
+.shelf__row::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.shelf__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+.shelf__row .libcard { flex: 0 0 180px; scroll-snap-align: start; }
+
+.libcard {
+  display: flex; flex-direction: column; gap: 5px; text-align: left;
+  padding: 14px; border-radius: var(--r-md); background: #fff; border: 1px solid var(--line);
+  transition: border-color 160ms, transform 160ms var(--ease);
+}
+.libcard:hover { border-color: var(--aura); }
+.libcard:active { transform: scale(0.99); }
+.libcard__cover {
+  font-size: 30px; line-height: 1; margin-bottom: 6px; width: 46px; height: 46px;
+  display: grid; place-items: center; border-radius: 12px;
+  background: radial-gradient(120% 100% at 25% 20%, var(--aura), var(--aura-deep) 95%);
+}
+.libcard__title { font-family: var(--display); font-size: 15.5px; color: var(--ink); line-height: 1.25; }
+.libcard__blurb { font-size: 12.5px; color: var(--slate); line-height: 1.4; }
+.libcard__meta { font-size: 11.5px; color: var(--aura-deep); font-weight: 700; margin-top: 2px; }
+
+/* the pathway on the home screen */
+.plan-strip { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.plan-strip__bar { flex: 1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.plan-strip__fill { height: 100%; background: var(--aura-deep); border-radius: 3px; transition: width 240ms var(--ease); }
+.plan-strip__txt { font-size: 11.5px; color: var(--slate); white-space: nowrap; }
+.plan-note {
+  display: flex; flex-direction: column; gap: 3px; margin-top: 12px; padding: 14px 16px;
+  border-radius: var(--r-md); background: #fff; border: 1px solid var(--line); font-size: 13.5px; color: var(--ink);
+}
+.plan-note__who { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--aura-deep); font-weight: 700; }
+
+/* the pathway editor (therapist console) */
+.b2b-card--wide { grid-column: 1 / -1; }
+.plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.plan-head__cta { display: flex; gap: 8px; flex-wrap: wrap; }
+.plan-preview { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.plan-preview li { display: flex; gap: 10px; font-size: 13px; color: var(--ink); }
+.plan-preview strong { flex: 0 0 68px; color: var(--slate); font-weight: 600; }
+.plan-empty { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.plan-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.plan-row {
+  display: grid; grid-template-columns: 78px minmax(180px, 1.4fr) 100px minmax(160px, 1fr) auto;
+  gap: 8px; align-items: center; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: #fff;
+}
+.plan-row.is-done { background: #f7faf8; }
+.plan-row__week { display: flex; align-items: center; gap: 6px; }
+.plan-row__weeknum { width: 52px; padding: 8px; text-align: center; }
+.plan-row__dur { padding: 8px; }
+.plan-row__ops { display: flex; align-items: center; gap: 4px; }
+@media (max-width: 900px) {
+  .plan-row { grid-template-columns: 1fr 1fr; }
+  .plan-row__ops { grid-column: 1 / -1; justify-content: flex-end; }
+}

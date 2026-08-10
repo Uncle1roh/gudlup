@@ -21,6 +21,7 @@ import type { DataProvider, SessionRequest } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, Message, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
+import { repositioned, type Plan, type PlanItem } from './plan'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -140,6 +141,21 @@ function mapCatalog(r: any): CatalogProtocol {
     plain: r.plain ?? undefined,
     assetMap: r.asset_map ?? undefined,
     studio: r.studio ?? undefined,
+    // rows written before the clinical/library split are clinical
+    audience: r.audience === 'library' ? 'library' : 'clinical',
+    library: r.library ?? undefined,
+  }
+}
+
+function mapPlanItem(r: any): PlanItem {
+  return {
+    id: r.id,
+    position: r.position ?? 0,
+    protocolCode: r.protocol_code,
+    duration: asDuration(r.duration_min),
+    week: r.week ?? 1,
+    note: r.note ?? undefined,
+    doneAt: r.done_at ? toMs(r.done_at) : undefined,
   }
 }
 function mapCompany(r: any): Company {
@@ -395,6 +411,66 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
     },
 
+    /* The pathway written FOR the signed-in person. RLS answers with the rows
+       of the patient record linked to this profile — no plan, no rows, and the
+       app then offers the library instead of inventing a pathway. */
+    async getMyPlan(): Promise<Plan | null> {
+      const { data, error } = await sb.from('plan_items').select('*').order('position')
+      if (error) throw error
+      const rows = data ?? []
+      if (!rows.length) return null
+      return {
+        patientId: rows[0].patient_id,
+        items: rows.map(mapPlanItem),
+        updatedAt: Math.max(...rows.map((r: any) => toMs(r.created_at))),
+      }
+    },
+
+    async markPlanItemDone(itemId: string): Promise<void> {
+      const { error } = await sb.from('plan_items').update({ done_at: toIso(Date.now()) }).eq('id', itemId)
+      if (error) throw error
+    },
+
+    async getPlan(patientId: string): Promise<Plan | null> {
+      const [items, patient] = await Promise.all([
+        sb.from('plan_items').select('*').eq('patient_id', patientId).order('position'),
+        sb.from('patients').select('plan_title').eq('id', patientId).single(),
+      ])
+      if (items.error) throw items.error
+      const rows = items.data ?? []
+      const title = (patient.data as { plan_title?: string } | null)?.plan_title ?? undefined
+      if (!rows.length && !title) return null
+      return {
+        patientId,
+        title,
+        items: rows.map(mapPlanItem),
+        updatedAt: rows.length ? Math.max(...rows.map((r: any) => toMs(r.created_at))) : Date.now(),
+      }
+    },
+
+    /* The editor saves the whole pathway: replace the rows, keeping the
+       done_at of items that survived the edit so a therapist reshuffling
+       week 9 doesn't wipe what the person already did. */
+    async savePlan(patientId: string, items: PlanItem[], title?: string): Promise<void> {
+      const del = await sb.from('plan_items').delete().eq('patient_id', patientId)
+      if (del.error) throw del.error
+      const rows = repositioned(items).map((i) => ({
+        patient_id: patientId,
+        position: i.position,
+        protocol_code: i.protocolCode,
+        duration_min: i.duration,
+        week: i.week,
+        note: i.note ?? null,
+        done_at: i.doneAt ? toIso(i.doneAt) : null,
+      }))
+      if (rows.length) {
+        const ins = await sb.from('plan_items').insert(rows)
+        if (ins.error) throw ins.error
+      }
+      const upd = await sb.from('patients').update({ plan_title: title ?? null }).eq('id', patientId)
+      if (upd.error) throw upd.error
+    },
+
     async getTherapist(): Promise<Therapist> {
       const { data: auth } = await sb.auth.getUser()
       const uid = auth.user?.id
@@ -601,6 +677,8 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         plain: p.plain ?? null,
         asset_map: p.assetMap ?? null,
         studio: p.studio ?? null,
+        audience: p.audience ?? 'clinical',
+        library: p.library ?? null,
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })
       if (error) throw error

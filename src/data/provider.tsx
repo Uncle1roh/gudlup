@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
+import type { Plan, PlanItem } from './plan'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -31,6 +32,11 @@ export interface DataProvider {
   // --- B2C ---
   listSessions(): Promise<SessionRecord[]>
   recordSession(rec: SessionRecord): Promise<void>
+  /** The pathway the signed-in person's therapist wrote for them, or null when
+      nobody has written one — the app never composes one by itself. */
+  getMyPlan(): Promise<Plan | null>
+  /** Tick off a plan session the person just finished. */
+  markPlanItemDone(itemId: string): Promise<void>
   // --- B2B ---
   getTherapist(): Promise<Therapist>
   listPatients(): Promise<Patient[]>
@@ -45,6 +51,10 @@ export interface DataProvider {
   getPatient(id: string): Promise<Patient | undefined>
   recordB2bSession(patientId: string, session: B2bSession): Promise<void>
   updatePatient(patientId: string, patch: Partial<Patient>): Promise<void>
+  /** The three-month pathway the therapist wrote for a patient. */
+  getPlan(patientId: string): Promise<Plan | null>
+  /** Replace a patient's pathway wholesale (the editor saves the whole list). */
+  savePlan(patientId: string, items: PlanItem[], title?: string): Promise<void>
   /** Clinical diary (therapist-only): one dated entry per note. */
   addPatientNote(patientId: string, text: string): Promise<void>
   updatePatientNote(patientId: string, noteId: string, text: string): Promise<void>

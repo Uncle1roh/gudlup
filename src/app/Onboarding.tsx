@@ -5,7 +5,9 @@ import { StereoCheck } from '../screens/StereoCheck'
 import { ImmersivePlayer } from '../screens/ImmersivePlayer'
 import { PostSession } from '../screens/PostSession'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
-import { startProgram } from '../data/program'
+import { useDataProvider } from '../data/provider'
+import { libraryEntries } from '../data/catalog'
+import { pickFromLibrary, type LibraryTag } from '../data/library'
 import { useI18n } from '../i18n'
 import type { WizardResult } from '../data/wizard'
 import type { MoodCheck, Protocol } from '../types/domain'
@@ -38,34 +40,34 @@ interface OnboardingProps {
 
 export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: OnboardingProps) {
   const { t } = useI18n()
+  const dp = useDataProvider()
   const [step, setStep] = useState<Step>('welcome')
   const [consent, setConsent] = useState(false)
   const [wizardResult, setWizardResult] = useState<WizardResult | null>(null)
+  const [firstCode, setFirstCode] = useState<string | null>(null)
   const [session, setSession] = useState<ActiveSession | null>(null)
 
-  function handleWizardDone(r: WizardResult) {
+  /* First run: the check-in picks a LIBRARY audio to listen to right away.
+     It does not start a pathway — nobody has written one yet, and writing one
+     is the therapist's job in the first session, not the app's. */
+  async function handleWizardDone(r: WizardResult) {
     setWizardResult(r)
-    startProgram(r) // the whole family pathway starts here
-    // remember the ALTERNATIVE for the "didn't resonate?" card on the home
     try {
-      localStorage.setItem('gl.wizard.last', JSON.stringify({
-        primaryCode: r.protocolCode,
-        alternativeCode: r.alternativeCode,
-        alternativeTitle: r.alternativeTitle,
-        intensity: r.intensity,
-        cluster: r.cluster,
-        at: Date.now(),
-      }))
-    } catch { /* private mode — fine */ }
+      const all = await dp.listProtocols()
+      const chosen = pickFromLibrary(libraryEntries(all), r.cluster as LibraryTag, r.duration)
+      setFirstCode(chosen?.item.code ?? null)
+    } catch {
+      setFirstCode(null) // library unreachable — the stereo check still follows
+    }
     setStep('stereo')
   }
 
   function startSession() {
     if (!wizardResult) return
-    const protocol = getProtocol(wizardResult.protocolCode) ?? getProtocol('GL-ANX 1.1')!
-    const version = protocol.versions.find((v) => v.duration === wizardResult.duration)
+    const protocol = (firstCode ? getProtocol(firstCode) : undefined) ?? getProtocol('GL-ANX 1.1')!
+    const version = protocol.versions.find((v) => v.duration === wizardResult.duration) ?? protocol.versions[0]
     const audioUrl = version?.audioUrl?.['pt-BR']
-    const fullLength = versionLengthSeconds(protocol, wizardResult.duration)
+    const fullLength = versionLengthSeconds(protocol, version?.duration ?? wizardResult.duration)
     setSession({
       protocol,
       totalSeconds: demoSeconds ?? fullLength,
@@ -100,7 +102,7 @@ export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: On
           </div>
         )
       case 'wizard':
-        return <SessionWizard onDone={handleWizardDone} onCancel={() => setStep('consent')} />
+        return <SessionWizard mode="library" onDone={(r) => void handleWizardDone(r)} onCancel={() => setStep('consent')} />
       case 'stereo':
         return <StereoCheck onContinue={startSession} />
       case 'player':

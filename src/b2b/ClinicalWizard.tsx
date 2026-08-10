@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useProtocols } from '../admin/hooks'
+import { clinicalEntries } from '../data/catalog'
 import { PRESETS, type Patient } from './data'
 import type { ComposeSettings } from '../compose/types'
 import type { Duration } from '../types/domain'
@@ -21,7 +22,9 @@ const GOAL_PRESETS = ['Ridurre l’ansia acuta', 'Distensione / sonno', 'Recuper
 
 export function ClinicalWizard({ patient, onLaunch, onCancel }: ClinicalWizardProps) {
   const { data: catalog, loading } = useProtocols()
-  const protocols = (catalog ?? []).filter((p) => p.enabled)
+  // clinical only: the family presets below are keyed by clinical family, and
+  // library audio is never prescribed
+  const protocols = clinicalEntries(catalog ?? [])
   const [protocolCode, setProtocolCode] = useState<string>('')
   const [goal, setGoal] = useState('')
   const [stereoOk, setStereoOk] = useState(false)

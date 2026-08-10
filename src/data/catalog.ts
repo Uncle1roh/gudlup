@@ -17,8 +17,19 @@ import type { Datasheet } from '../admin/datasheet'
 import type { PlainTimeline } from '../admin/plainTimeline'
 import type { AssetMap } from '../admin/assets'
 import { PROTOCOLS } from './protocols'
+import { libraryProtocols, type LibraryMeta } from './library'
 
 export type ProtocolSource = 'seed' | 'imported'
+
+/** WHO an entry is for, and therefore how it may be named and offered.
+    'clinical' — part of a therapist-authored pathway; keeps its GL code, family
+      and clinical title, and is only ever reached through a plan or a session
+      with the therapist.
+    'library'  — a general wellbeing audio the person browses and picks alone.
+      Named after the moment it serves, never after a condition or treatment.
+    The two lists are never merged in a query: this field is the legal boundary
+    between supervised material and self-service material. */
+export type Audience = 'clinical' | 'library'
 
 /** 'all' = available to every company; otherwise the list of company ids. */
 export type TenantScope = 'all' | string[]
@@ -48,12 +59,32 @@ export interface CatalogProtocol extends Protocol {
       "open in the Studio" resume the real work instead of re-deriving the bed
       from the Excel. */
   studio?: import('../compose/types').StudioProject
+  /** Clinical pathway material or self-service library audio. Absent on rows
+      written before the split — those are clinical. */
+  audience?: Audience
+  /** Browse metadata: only on `audience: 'library'` entries. */
+  library?: LibraryMeta
+}
+
+/** The audience of an entry, tolerating rows written before the split. */
+export function audienceOf(p: Pick<CatalogProtocol, 'audience' | 'family'>): Audience {
+  return p.audience ?? (p.family === 'GL-LIB' ? 'library' : 'clinical')
+}
+
+/** Entries a person may browse and start on their own. */
+export function libraryEntries(all: CatalogProtocol[]): CatalogProtocol[] {
+  return all.filter((p) => p.enabled && audienceOf(p) === 'library')
+}
+
+/** Entries a therapist may put in a pathway. Never shown to a person browsing. */
+export function clinicalEntries(all: CatalogProtocol[]): CatalogProtocol[] {
+  return all.filter((p) => p.enabled && audienceOf(p) === 'clinical')
 }
 
 /** Lift the seeded domain protocols into catalog entries. */
 export function seedCatalog(): CatalogProtocol[] {
   const now = Date.now()
-  return PROTOCOLS.map((p: Protocol) => ({
+  const clinical: CatalogProtocol[] = PROTOCOLS.map((p: Protocol) => ({
     ...p,
     enabled: true,
     source: 'seed',
@@ -62,7 +93,20 @@ export function seedCatalog(): CatalogProtocol[] {
     // seed protocols are honestly marked not-yet-rendered.
     audioReady: false,
     updatedAt: now,
+    audience: 'clinical',
   }))
+  // the starter library: real titles, no rendered audio yet — the POs produce
+  // each mixdown in the Studio and publish over these
+  const library: CatalogProtocol[] = libraryProtocols().map((p) => ({
+    ...p,
+    enabled: true,
+    source: 'seed',
+    tenants: 'all',
+    audioReady: false,
+    updatedAt: now,
+    audience: 'library',
+  }))
+  return [...clinical, ...library]
 }
 
 /** True when a catalog protocol is visible to a given company. */

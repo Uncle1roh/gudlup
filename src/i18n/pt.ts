@@ -1,6 +1,44 @@
 /* Portuguese (pt-BR) dictionary. Keys are the English source strings. */
 
 export const PT: Record<string, string> = {
+  /* ---- library (self-service catalog) + therapist-written pathway ---- */
+  'Library': 'Biblioteca',
+  'Audio sessions to use on your own, whenever they help.': 'Áudios para usar por conta própria, quando ajudarem.',
+  'Choose one for me': 'Escolha por mim',
+  'Three questions and we pick the audio for right now': 'Três perguntas e escolhemos o áudio para agora',
+  'Search — a flight, a meeting, the night…': 'Buscar — um voo, uma reunião, a noite…',
+  '{n} results': '{n} resultados',
+  'Nothing with that name yet.': 'Ainda nada com esse nome.',
+  'The library is being prepared — your therapist’s pathway is on the home screen.': 'A biblioteca está sendo preparada — o percurso do seu terapeuta está na tela inicial.',
+  'These audio sessions support general wellbeing. They are not a treatment and do not replace care from a health professional. If you are following a pathway, you will find it on the home screen.': 'Estes áudios apoiam o bem-estar geral. Não são tratamento e não substituem o cuidado de um profissional de saúde. Se você segue um percurso, ele está na tela inicial.',
+  'The library has no audio to suggest yet.': 'A biblioteca ainda não tem áudio para sugerir.',
+  'Could not reach the library — pick an audio yourself.': 'Não foi possível abrir a biblioteca — escolha um áudio.',
+  'We pick the audio from the library.': 'Escolhemos o áudio na biblioteca.',
+  'Browse the library': 'Ver a biblioteca',
+  'Audio sessions for a specific moment — pick one, or let us choose': 'Áudios para um momento específico — escolha um, ou deixe conosco',
+  'from the library': 'da biblioteca',
+  'week {n}': 'semana {n}',
+  '{done} of {total} sessions of your pathway': '{done} de {total} sessões do seu percurso',
+  'From your therapist': 'Do seu terapeuta',
+  'Pathway complete': 'Percurso concluído',
+  'You finished all {n} sessions. Book a session to review it together and set the next one.': 'Você concluiu as {n} sessões. Agende um atendimento para rever juntos e definir o próximo.',
+  'Build your pathway with a therapist': 'Monte seu percurso com um terapeuta',
+  'In the first session your therapist writes the three-month pathway you will follow here.': 'Na primeira sessão o terapeuta escreve o percurso de três meses que você seguirá aqui.',
+
+  /* ---- library shelves (authored in Italian in data/library.ts) ---- */
+  'Prima di un momento importante': 'Antes de um momento importante',
+  'Da ascoltare poco prima': 'Para ouvir pouco antes',
+  'Ritrovare la calma': 'Recuperar a calma',
+  'Quando serve rallentare': 'Quando é preciso desacelerar',
+  'Staccare la spina': 'Desligar',
+  'Chiudere e lasciare andare': 'Fechar o dia e soltar',
+  'Riposo e notte': 'Descanso e noite',
+  'Per la sera e i risvegli': 'Para a noite e os despertares',
+  'Concentrazione': 'Concentração',
+  'Per rientrare in quello che stai facendo': 'Para voltar ao que você está fazendo',
+  'Rimettersi in moto': 'Voltar a se mover',
+  'Quando la spinta manca': 'Quando falta impulso',
+
   /* ---- common ---- */
   'Loading…': 'Carregando…',
   'Loading': 'Carregando',
@@ -97,7 +135,6 @@ export const PT: Record<string, string> = {
   /* ---- app tabs ---- */
   'Session': 'Sessão',
   'Progress': 'Progresso',
-  'Explore': 'Explorar',
   'Profile': 'Perfil',
 
   /* ---- home ---- */

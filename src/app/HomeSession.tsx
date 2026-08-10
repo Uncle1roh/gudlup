@@ -3,7 +3,8 @@ import { BreathingOrb } from '../components/BreathingOrb'
 import { useDataProvider } from '../data/provider'
 import { greeting, lastSession } from '../data/seed'
 import { getProtocol } from '../data/protocols'
-import { currentProgramStep, programComplete, switchProgramTo } from '../data/program'
+import { nextPlanItem, planComplete, planProgress, type Plan, type PlanItem } from '../data/plan'
+import { isLibraryCode } from '../data/library'
 import { ScheduleModal } from './ScheduleModal'
 import { fmtDay, fmtTime, isUpcoming, joinWindowOpen, type Appointment } from '../data/scheduling'
 import { useI18n } from '../i18n'
@@ -11,34 +12,51 @@ import type { SessionRecord, Duration } from '../types/domain'
 
 interface HomeSessionProps {
   history: SessionRecord[]
-  onStart: (launch: { protocolCode: string; duration: Duration }) => void
+  plan: Plan | null
+  onStart: (launch: { protocolCode: string; duration: Duration; planItemId?: string }) => void
   /** Join the therapist's consultation room (a booked appointment). */
   onJoin: (appointment: Appointment) => void
-  onWizard: () => void
-  onExplore: () => void
+  onLibrary: () => void
   onAssess: () => void
 }
 
-/** The wizard's remembered ALTERNATIVE — the spec's fallback "if the primary
-    does not resonate after listening", surfaced as the recommendation card. */
-function lastWizardAlternative(): { code: string; title: string; primaryCode: string } | null {
-  try {
-    const raw = localStorage.getItem('gl.wizard.last')
-    if (!raw) return null
-    const v = JSON.parse(raw) as { primaryCode?: string; alternativeCode?: string; alternativeTitle?: string }
-    if (!v.alternativeCode) return null
-    return { code: v.alternativeCode, title: v.alternativeTitle ?? v.alternativeCode, primaryCode: v.primaryCode ?? '' }
-  } catch {
-    return null
-  }
+/** The name to show for something that was played. Library audio keeps its own
+    consumer title; pathway material keeps the clinical one it was prescribed
+    under — the person is supervised there, so the two registers never mix. */
+function titleOf(code: string): string {
+  return getProtocol(code)?.title ?? code
 }
 
-/** B9: one large CTA — the protocol project when one is running (next
-    sub-protocol of the family pathway), the 3–4 question wizard otherwise. */
-export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onAssess }: HomeSessionProps) {
+function PlanCta({ item, total, done, onStart }: { item: PlanItem; total: number; done: number; onStart: HomeSessionProps['onStart'] }) {
+  const { t } = useI18n()
+  return (
+    <>
+      <button className="start-cta" onClick={() => onStart({ protocolCode: item.protocolCode, duration: item.duration, planItemId: item.id })}>
+        <span className="start-cta__label">{t('Next session')}</span>
+        <span className="start-cta__sub">
+          {titleOf(item.protocolCode)} · {t('week {n}', { n: item.week })} · {item.duration} {t('min')}
+        </span>
+      </button>
+      <div className="plan-strip">
+        <div className="plan-strip__bar"><div className="plan-strip__fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></div>
+        <span className="plan-strip__txt">{t('{done} of {total} sessions of your pathway', { done, total })}</span>
+      </div>
+      {item.note && (
+        <div className="plan-note">
+          <span className="plan-note__who">{t('From your therapist')}</span>
+          <span>{item.note}</span>
+        </div>
+      )}
+    </>
+  )
+}
+
+/** One large CTA. With a pathway written by the therapist, it is that
+    pathway's next session. Without one, the app does NOT invent a plan: it
+    offers the library and the way to book a first session. */
+export function HomeSession({ history, plan, onStart, onJoin, onLibrary, onAssess }: HomeSessionProps) {
   const { t, locale } = useI18n()
   const dp = useDataProvider()
-  const [toast] = useState<string | null>(null)
 
   /* scheduling: the upcoming appointment + a minute tick so the "enter"
      window opens by itself */
@@ -52,12 +70,12 @@ export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onA
     const id = window.setInterval(() => { setTick((n) => n + 1); load() }, 30_000)
     return () => { alive = false; window.clearInterval(id) }
   }, [dp])
+
   const last = lastSession(history)
-  const lastProtocol = getProtocol(last.protocolCode)
-  const step = currentProgramStep()
-  const complete = programComplete()
-  const wizardAlt = lastWizardAlternative()
-  const altProtocol = wizardAlt && step && step.step === 1 ? getProtocol(wizardAlt.code) : null
+  const lastKnown = history.length > 0 && !!getProtocol(last.protocolCode)
+  const item = nextPlanItem(plan)
+  const { done, total } = planProgress(plan)
+  const finished = planComplete(plan)
 
   return (
     <div className="screen home">
@@ -69,52 +87,33 @@ export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onA
         <BreathingOrb size={64} rings={false} />
       </header>
 
-      {/* the one big button: the next session of the plan, already decided —
-          protocol, sub-protocol and length come from the programme */}
-      {step ? (
-        <button className="start-cta" onClick={() => onStart({ protocolCode: step.code, duration: step.duration })}>
-          <span className="start-cta__label">{t('Next session')}</span>
-          <span className="start-cta__sub">
-            {step.protocol?.title ?? step.code} · {t('session {n} of {total}', { n: step.step, total: step.total })} · {step.duration} {t('min')}
-          </span>
-        </button>
-      ) : (
-        <button className="start-cta" onClick={onWizard}>
-          <span className="start-cta__label">{t('Start session')}</span>
-          <span className="start-cta__sub">{complete ? t('Path complete — check in to begin the next one') : t('A few quick questions find the right session for now')}</span>
+      {item && <PlanCta item={item} total={total} done={done} onStart={onStart} />}
+
+      {finished && (
+        <div className="plan-note">
+          <span className="plan-note__who">{t('Pathway complete')}</span>
+          <span>{t('You finished all {n} sessions. Book a session to review it together and set the next one.', { n: total })}</span>
+        </div>
+      )}
+
+      {/* no pathway: the app never writes one by itself — that is the
+          therapist's work, agreed in the first session */}
+      {!plan && (
+        <button className="start-cta" onClick={onLibrary}>
+          <span className="start-cta__label">{t('Browse the library')}</span>
+          <span className="start-cta__sub">{t('Audio sessions for a specific moment — pick one, or let us choose')}</span>
         </button>
       )}
 
       {/* directly under it: play the last session again */}
-      {history.length > 0 && lastProtocol && (
+      {lastKnown && (
         <button className="rec-card rec-card--repeat" onClick={() => onStart(last)}>
           <span className="rec-card__eyebrow">{t('Repeat')}</span>
-          <span className="rec-card__title">{lastProtocol.title}</span>
-          <span className="rec-card__reason">{t('The session you did last time')} · {last.duration} {t('min')}</span>
-        </button>
-      )}
-
-      {step && (
-        <button className="rec-card" onClick={onWizard}>
-          <span className="rec-card__eyebrow">{t('Feeling different?')}</span>
-          <span className="rec-card__title">{t('Check in again')}</span>
-          <span className="rec-card__reason">{t('A new check-in restarts your path from today’s answers')}</span>
-        </button>
-      )}
-
-      {altProtocol && wizardAlt && (
-        <button
-          className="rec-card"
-          onClick={() => {
-            // the spec's fallback: the primary didn't resonate — the path
-            // restarts from the ALTERNATIVE protocol
-            switchProgramTo(altProtocol.code)
-            onStart({ protocolCode: altProtocol.code, duration: step?.duration ?? 12 })
-          }}
-        >
-          <span className="rec-card__eyebrow">{t('Didn’t resonate?')}</span>
-          <span className="rec-card__title">{altProtocol.title}</span>
-          <span className="rec-card__reason">{t('The alternative to your last choice')}</span>
+          <span className="rec-card__title">{titleOf(last.protocolCode)}</span>
+          <span className="rec-card__reason">
+            {t('The session you did last time')} · {last.duration} {t('min')}
+            {isLibraryCode(last.protocolCode) ? ` · ${t('from the library')}` : ''}
+          </span>
         </button>
       )}
 
@@ -141,8 +140,8 @@ export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onA
         <button className="assess-card" onClick={() => setScheduling(true)}>
           <span className="assess-card__icon">🩺</span>
           <span className="assess-card__text">
-            <strong>{t('Schedule a session')}</strong>
-            <span>{t('Pick a therapist and a time that works for you.')}</span>
+            <strong>{plan ? t('Schedule a session') : t('Build your pathway with a therapist')}</strong>
+            <span>{plan ? t('Pick a therapist and a time that works for you.') : t('In the first session your therapist writes the three-month pathway you will follow here.')}</span>
           </span>
           <span className="assess-card__arrow">→</span>
         </button>
@@ -164,11 +163,11 @@ export function HomeSession({ history, onStart, onJoin, onWizard, onExplore, onA
         <span className="assess-card__arrow">→</span>
       </button>
 
-      <button className="btn btn--quiet" style={{ alignSelf: 'center', marginTop: 'auto' }} onClick={onExplore}>
-        {t('Explore other sessions')}
-      </button>
-
-      {toast && <div className="toast">{toast}</div>}
+      {plan && (
+        <button className="btn btn--quiet" style={{ alignSelf: 'center', marginTop: 'auto' }} onClick={onLibrary}>
+          {t('Browse the library')}
+        </button>
+      )}
     </div>
   )
 }

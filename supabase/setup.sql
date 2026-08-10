@@ -156,6 +156,25 @@ create table if not exists patient_notes (
 );
 create index if not exists patient_notes_patient_idx on patient_notes (patient_id, at desc);
 
+-- the PERCORSO: the three-month pathway the THERAPIST writes in the first
+-- session. The app never composes one — it shows the next item and records
+-- what was done. The patient reads their own plan and may only ever tick an
+-- item off (done_at); everything else is the therapist's.
+create table if not exists plan_items (
+  id            uuid primary key default gen_random_uuid(),
+  patient_id    uuid not null references patients(id) on delete cascade,
+  position      int not null,
+  protocol_code text not null,
+  duration_min  int not null,
+  week          int not null default 1,
+  note          text,
+  done_at       timestamptz,
+  created_at    timestamptz not null default now()
+);
+create index if not exists plan_items_patient_idx on plan_items (patient_id, position);
+-- the therapist's framing of the whole pathway
+alter table patients add column if not exists plan_title text;
+
 create table if not exists messages (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,
@@ -210,6 +229,14 @@ alter table protocols  add column if not exists plain jsonb;
 alter table protocols  add column if not exists asset_map jsonb;
 -- the Sound Studio session saved onto a protocol (all multitrack edits)
 alter table protocols  add column if not exists studio jsonb;
+-- WHO the entry is for. 'clinical' = therapist-authored pathway material, kept
+-- with its GL code and clinical title. 'library' = a general wellbeing audio a
+-- person browses and starts alone, named after the moment it serves and never
+-- presented as treatment. The two are never mixed in a query: this column is
+-- the boundary between supervised and self-service material.
+alter table protocols  add column if not exists audience text not null default 'clinical';
+-- browse metadata for library entries (category, cover, tags)
+alter table protocols  add column if not exists library jsonb;
 
 create table if not exists audit_events (
   id        uuid primary key default gen_random_uuid(),
@@ -282,6 +309,15 @@ create or replace function my_company_id() returns text
   language sql stable security definer set search_path = public as
   $$ select company_id from profiles where auth_uid = auth.uid() $$;
 
+-- The patient rows that BELONG to the signed-in consumer (their own record in
+-- some therapist's roster). SECURITY DEFINER on purpose: a policy's subquery is
+-- itself subject to RLS, and a consumer cannot read `patients` — without this
+-- the pathway policies below would always match zero rows. It returns ids only,
+-- so nothing clinical leaks through it.
+create or replace function my_patient_ids() returns setof uuid
+  language sql stable security definer set search_path = public as
+  $$ select id from patients where b2c_profile_id = current_profile() $$;
+
 -- ---------------------------------------------------------------------------
 -- 4. Row-level security — enable everywhere, then per-table policies.
 --    Policies are dropped and recreated so this file stays re-runnable.
@@ -296,6 +332,7 @@ alter table sessions               enable row level security;
 alter table rapid_notes            enable row level security;
 alter table messages               enable row level security;
 alter table patient_notes          enable row level security;
+alter table plan_items             enable row level security;
 alter table reports                enable row level security;
 alter table clinical_events        enable row level security;
 alter table companies              enable row level security;
@@ -354,6 +391,22 @@ drop policy if exists patient_notes_via_patient on patient_notes;
 create policy patient_notes_via_patient on patient_notes
   for all using (patient_id in (select id from patients where therapist_id = current_profile()))
   with check (patient_id in (select id from patients where therapist_id = current_profile()));
+
+-- the pathway: the therapist who owns the patient writes it…
+drop policy if exists plan_items_via_patient on plan_items;
+create policy plan_items_via_patient on plan_items
+  for all using (patient_id in (select id from patients where therapist_id = current_profile()))
+  with check (patient_id in (select id from patients where therapist_id = current_profile()));
+-- …and the person it was written for reads it. They may update a row (to tick
+-- an item off) but never insert or delete one: the pathway's content stays the
+-- clinician's, only its progress is the patient's.
+drop policy if exists plan_items_patient_reads on plan_items;
+create policy plan_items_patient_reads on plan_items
+  for select using (patient_id in (select my_patient_ids()));
+drop policy if exists plan_items_patient_ticks on plan_items;
+create policy plan_items_patient_ticks on plan_items
+  for update using (patient_id in (select my_patient_ids()))
+  with check (patient_id in (select my_patient_ids()));
 
 drop policy if exists messages_via_patient on messages;
 create policy messages_via_patient on messages

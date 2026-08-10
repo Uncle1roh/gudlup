@@ -1,6 +1,30 @@
 /* Italian dictionary. Keys are the English source strings (see i18n/index.tsx). */
 
 export const IT: Record<string, string> = {
+  /* ---- library (self-service catalog) + therapist-written pathway ---- */
+  'Library': 'Libreria',
+  'Audio sessions to use on your own, whenever they help.': 'Sessioni audio da usare in autonomia, quando ti servono.',
+  'Choose one for me': 'Scegli tu per me',
+  'Three questions and we pick the audio for right now': 'Tre domande e scegliamo noi l’audio giusto per adesso',
+  'Search — a flight, a meeting, the night…': 'Cerca — un volo, una riunione, la notte…',
+  '{n} results': '{n} risultati',
+  'Nothing with that name yet.': 'Ancora niente con questo nome.',
+  'The library is being prepared — your therapist’s pathway is on the home screen.': 'La libreria è in preparazione — il percorso del tuo terapeuta è nella schermata iniziale.',
+  'These audio sessions support general wellbeing. They are not a treatment and do not replace care from a health professional. If you are following a pathway, you will find it on the home screen.': 'Queste sessioni audio favoriscono il benessere generale. Non sono un trattamento e non sostituiscono le cure di un professionista sanitario. Se stai seguendo un percorso, lo trovi nella schermata iniziale.',
+  'The library has no audio to suggest yet.': 'La libreria non ha ancora audio da proporre.',
+  'Could not reach the library — pick an audio yourself.': 'Libreria non raggiungibile — scegli tu un audio.',
+  'We pick the audio from the library.': 'Scegliamo noi l’audio dalla libreria.',
+  'Browse the library': 'Sfoglia la libreria',
+  'Audio sessions for a specific moment — pick one, or let us choose': 'Sessioni audio per un momento preciso — scegli tu, o lascia scegliere a noi',
+  'from the library': 'dalla libreria',
+  'week {n}': 'settimana {n}',
+  '{done} of {total} sessions of your pathway': '{done} di {total} sessioni del tuo percorso',
+  'From your therapist': 'Dal tuo terapeuta',
+  'Pathway complete': 'Percorso completato',
+  'You finished all {n} sessions. Book a session to review it together and set the next one.': 'Hai completato tutte le {n} sessioni. Prenota un appuntamento per rivederlo insieme e impostare il prossimo.',
+  'Build your pathway with a therapist': 'Costruisci il tuo percorso con un terapeuta',
+  'In the first session your therapist writes the three-month pathway you will follow here.': 'Nella prima seduta il terapeuta scrive il percorso di tre mesi che seguirai qui.',
+
   /* ---- common ---- */
   'Loading…': 'Caricamento…',
   'Loading': 'Caricamento',
@@ -97,7 +121,6 @@ export const IT: Record<string, string> = {
   /* ---- app tabs ---- */
   'Session': 'Sessione',
   'Progress': 'Progressi',
-  'Explore': 'Esplora',
   'Profile': 'Profilo',
 
   /* ---- home ---- */

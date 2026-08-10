@@ -26,16 +26,23 @@ type Step = 'pinpoint' | 'tired' | 'scale' | 'clarify' | 'duration'
 interface SessionWizardProps {
   onDone: (result: WizardResult) => void
   onCancel: () => void
+  /** 'library' — the check-in is picking a general wellbeing audio for right
+      now: it asks how you feel, how strongly and how long you have, and stops.
+      The per-cluster CLARIFY question exists to choose between sub-protocols of
+      a clinical family, so it is skipped, and no protocol title is ever shown.
+      'clinical' keeps the full four-question routing for supervised use. */
+  mode?: 'clinical' | 'library'
 }
 
-export function SessionWizard({ onDone, onCancel }: SessionWizardProps) {
+export function SessionWizard({ onDone, onCancel, mode = 'clinical' }: SessionWizardProps) {
   const { t } = useI18n()
+  const library = mode === 'library'
   const [step, setStep] = useState<Step>('pinpoint')
   const [cluster, setCluster] = useState<WizardCluster | null>(null)
   const [intensity, setIntensity] = useState<number | null>(null)
   const [choice, setChoice] = useState<ClarifyOption | null>(null)
 
-  const totalSteps = cluster === 'maintenance' ? 2 : 4
+  const totalSteps = cluster === 'maintenance' ? 2 : library ? 3 : 4
   const stepIndex = step === 'pinpoint' || step === 'tired' ? 1 : step === 'scale' ? 2 : step === 'clarify' ? 3 : totalSteps
 
   function pickPinpoint(id: WizardCluster | 'tired') {
@@ -57,7 +64,9 @@ export function SessionWizard({ onDone, onCancel }: SessionWizardProps) {
 
   function pickScale(n: number) {
     setIntensity(n)
-    setStep('clarify')
+    // the library only needs the cluster: which sub-protocol of a family fits
+    // is a clinical distinction, and there is no family to choose from here
+    setStep(library ? 'duration' : 'clarify')
   }
 
   function pickClarify(opt: ClarifyOption) {
@@ -66,14 +75,17 @@ export function SessionWizard({ onDone, onCancel }: SessionWizardProps) {
   }
 
   function pickDuration(duration: Duration) {
-    if (!cluster || !choice) return
+    if (!cluster) return
+    if (!library && !choice) return
     onDone({
       cluster,
       intensity: cluster === 'maintenance' ? null : intensity,
-      protocolCode: choice.primary.code,
-      protocolTitle: choice.primary.title,
-      alternativeCode: choice.alternative.code,
-      alternativeTitle: choice.alternative.title,
+      // in library mode the caller routes on the CLUSTER alone; the protocol
+      // fields stay empty rather than carrying a clinical code into the library
+      protocolCode: choice?.primary.code ?? '',
+      protocolTitle: choice?.primary.title ?? '',
+      alternativeCode: choice?.alternative.code ?? '',
+      alternativeTitle: choice?.alternative.title ?? '',
       duration,
     })
   }
@@ -86,6 +98,7 @@ export function SessionWizard({ onDone, onCancel }: SessionWizardProps) {
       case 'clarify': setStep(cluster === 'maintenance' ? 'pinpoint' : 'scale'); return
       case 'duration':
         if (cluster === 'maintenance') { setStep('pinpoint'); setCluster(null); setChoice(null) }
+        else if (library) { setStep('scale') }
         else { setStep('clarify'); setChoice(null) }
         return
     }
@@ -166,10 +179,11 @@ export function SessionWizard({ onDone, onCancel }: SessionWizardProps) {
         </div>
       )}
 
-      {step === 'duration' && choice && (
+      {step === 'duration' && (choice || library) && (
         <div className="wizard__body">
           <h1 className="wizard__q">{t('How much time do you have right now?')}</h1>
-          <p className="wizard__sub">{t(choice.primary.title)}</p>
+          {/* a clinical protocol title has no place in the library flow */}
+          <p className="wizard__sub">{library ? t('We pick the audio from the library.') : t(choice!.primary.title)}</p>
           <div className="wizard__opts">
             {DURATIONS.map((d) => (
               <button key={d.duration} className={`wizard__opt wizard__opt--dur${d.standard ? ' is-std' : ''}`} onClick={() => pickDuration(d.duration)}>

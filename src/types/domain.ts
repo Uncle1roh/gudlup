@@ -7,8 +7,12 @@
 
 export type Language = 'pt-BR' | 'en' | 'de' | 'es' | 'it'
 
-/** The 5 clinical families. Each has 5 sub-protocols (x.1 .. x.5). */
-export type ProtocolFamily = 'GL-ANX' | 'GL-DEP' | 'GL-BURN' | 'GL-STRESS' | 'GL-RESIL'
+/** The 5 clinical families (each has 5 sub-protocols, x.1 .. x.5) plus GL-LIB,
+    the non-clinical library: general wellbeing audios a person picks by
+    themselves, named after a moment rather than a condition. GL-LIB entries
+    never appear in a therapist's clinical pathway and carry no sub-protocol
+    numbering — see src/data/library.ts. */
+export type ProtocolFamily = 'GL-ANX' | 'GL-DEP' | 'GL-BURN' | 'GL-STRESS' | 'GL-RESIL' | 'GL-LIB'
 
 /** Quick / Standard / Deep — the three version configs. */
 export type Duration = 6 | 12 | 24

@@ -2,6 +2,8 @@ import { fmtDate, relWhen, type Patient, type Score } from './data'
 import { getProtocol } from '../data/protocols'
 import { LINKED_PATIENT_ID } from '../data/mock'
 import { PatientNotes } from './PatientNotes'
+import { PlanEditor } from './PlanEditor'
+import { isLibraryCode } from '../data/library'
 
 interface PatientCardProps {
   patient: Patient
@@ -142,17 +144,25 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
           <h2 className="b2b-card__title">Pratica in autonomia {linked && <span className="link-badge">● account collegato · in diretta</span>}</h2>
           <ul className="chron">
             {p.b2cSessions.length === 0 && <li className="b2b-sub">Nessuna pratica in autonomia registrata</li>}
-            {[...p.b2cSessions].reverse().slice(0, 4).map((s, i) => (
+            {[...p.b2cSessions].reverse().slice(0, 6).map((s, i) => (
               <li key={i} className="chron__item">
                 <div>
                   <strong>{getProtocol(s.protocolCode)?.title ?? s.protocolCode}</strong>
-                  <span className="b2b-sub">{fmtDate(s.date)} · {s.duration} min</span>
+                  <span className="b2b-sub">
+                    {fmtDate(s.date)} · {s.duration} min
+                    {/* where it came from: the pathway you wrote, or the free
+                        library the patient browses on their own */}
+                    {' · '}{isLibraryCode(s.protocolCode) ? 'libreria' : 'percorso'}
+                  </span>
                 </div>
                 <span className="chron__delta">+{(s.vasPost - s.vasPre).toFixed(0)}</span>
               </li>
             ))}
           </ul>
         </section>
+
+        {/* the three-month pathway — written here, followed in the patient's app */}
+        <PlanEditor patientId={p.id} patientName={p.name} />
 
         {/* clinical diary (therapist-only) — searchable, editable, per-entry */}
         <PatientNotes patientId={p.id} notes={p.notes} onChanged={onRefetch} />

@@ -3,6 +3,7 @@ import type { DataProvider, SessionRequest } from './provider'
 import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
+import { repositioned, type Plan, type PlanItem } from './plan'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from '../admin/types'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
@@ -19,12 +20,44 @@ const delay = <T,>(value: T, ms = 130) => new Promise<T>((r) => setTimeout(() =>
  */
 export const LINKED_PATIENT_ID = 'p1'
 
+/* The pathway "Dra. Helena" wrote for the demo patient in their first session:
+   three months, one session a week, her own pacing. The app did not compose
+   it and cannot — this is what a therapist's plan looks like in the data. */
+const DEMO_PLAN_ITEMS: PlanItem[] = [
+  { id: 'pi-1', position: 0, protocolCode: 'GL-ANX 1.1', duration: 12, week: 1, note: 'Iniziamo da qui, anche solo tre volte questa settimana.', doneAt: Date.now() - 6 * 86_400_000 },
+  { id: 'pi-2', position: 1, protocolCode: 'GL-ANX 1.1', duration: 12, week: 2, doneAt: Date.now() - 2 * 86_400_000 },
+  { id: 'pi-3', position: 2, protocolCode: 'GL-ANX 1.3', duration: 12, week: 3, note: 'Questa lavora sul respiro: falla quando senti il corpo attivato.' },
+  { id: 'pi-4', position: 3, protocolCode: 'GL-ANX 1.3', duration: 24, week: 4 },
+  { id: 'pi-5', position: 4, protocolCode: 'GL-ANX 1.4', duration: 12, week: 5 },
+  { id: 'pi-6', position: 5, protocolCode: 'GL-ANX 1.4', duration: 12, week: 6 },
+  { id: 'pi-7', position: 6, protocolCode: 'GL-ANX 1.2', duration: 12, week: 7 },
+  { id: 'pi-8', position: 7, protocolCode: 'GL-ANX 1.2', duration: 24, week: 8 },
+  { id: 'pi-9', position: 8, protocolCode: 'GL-ANX 1.5', duration: 12, week: 9 },
+  { id: 'pi-10', position: 9, protocolCode: 'GL-ANX 1.5', duration: 24, week: 10 },
+  { id: 'pi-11', position: 10, protocolCode: 'GL-ANX 1.1', duration: 12, week: 11 },
+  { id: 'pi-12', position: 11, protocolCode: 'GL-ANX 1.4', duration: 12, week: 12 },
+  { id: 'pi-13', position: 12, protocolCode: 'GL-ANX 1.5', duration: 24, week: 13, note: 'Ultima del percorso: ci rivediamo per rivedere insieme come è andata.' },
+]
+
+const DEMO_PLAN: Plan = {
+  patientId: LINKED_PATIENT_ID,
+  title: 'Percorso di tre mesi — ansia',
+  items: DEMO_PLAN_ITEMS,
+  updatedAt: Date.now() - 6 * 86_400_000,
+}
+
 /**
  * Module-level store — ONE in-memory database shared for the whole browser
  * session, so B2C and B2B (and trips through the Studio) all see the same data.
  * Mutable on purpose: writes are reflected when screens refetch, proving the
  * seam handles writes, not just reads. Replaced wholesale by Supabase later.
  */
+/* Therapist-authored pathways, keyed by patient. The demo patient starts with
+   one already written, so the B2C home has a plan to follow without a round
+   trip through the therapist console. */
+const plans = new Map<string, Plan>([[LINKED_PATIENT_ID, DEMO_PLAN]])
+const clonePlan = (p: Plan | null): Plan | null => (p ? { ...p, items: p.items.map((i) => ({ ...i })) } : null)
+
 let sessions: SessionRecord[] = [...SEED_HISTORY]
 const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
   ...p,
@@ -247,9 +280,28 @@ export function createMockProvider(): DataProvider {
       await wait()
     },
 
+    getMyPlan: () => delay(clonePlan(plans.get(LINKED_PATIENT_ID) ?? null)),
+    markPlanItemDone: async (itemId) => {
+      for (const plan of plans.values()) {
+        const item = plan.items.find((i) => i.id === itemId)
+        if (item) { item.doneAt = Date.now(); plan.updatedAt = Date.now() }
+      }
+      await wait()
+    },
+
     // --- B2B ---
     getTherapist: () => delay(DEMO_THERAPIST),
     listPatients: () => delay(patients),
+    getPlan: (patientId) => delay(clonePlan(plans.get(patientId) ?? null)),
+    savePlan: async (patientId, items, title) => {
+      plans.set(patientId, {
+        patientId,
+        title,
+        items: repositioned(items).map((i, n) => ({ ...i, id: i.id.startsWith('new-') ? `pi-${Date.now()}-${n}` : i.id })),
+        updatedAt: Date.now(),
+      })
+      await wait()
+    },
     requestSession: async (note) => {
       sessionRequests.push({ id: `sr-${Date.now()}`, requesterName: 'You', note, company: NR1_COMPANY, status: 'open', createdAt: Date.now() })
       await wait()

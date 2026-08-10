@@ -18,8 +18,10 @@ export interface ComposeResult {
 const FAMILY_CODE: Record<ProtocolFamily, string> = {
   'GL-ANX': 'GL-ANX 1.1', 'GL-DEP': 'GL-DEP 2.4', 'GL-BURN': 'GL-BURN 3.1',
   'GL-STRESS': 'GL-STRESS 4.1', 'GL-RESIL': 'GL-RESIL 5.1',
+  'GL-LIB': 'GL-LIB respiro',
 }
-const FAMILIES = Object.keys(FAMILY_LABEL) as ProtocolFamily[]
+// the composer builds CLINICAL beds; library audio is authored in the Studio
+const FAMILIES = (Object.keys(FAMILY_LABEL) as ProtocolFamily[]).filter((f) => f !== 'GL-LIB')
 const LENGTHS: Length[] = ['quick', 'standard', 'deep']
 const SOUNDSCAPES: Soundscape[] = ['lake', 'air', 'deep']
 const WAVES: Brainwave[] = ['delta', 'theta', 'alpha', 'smr']

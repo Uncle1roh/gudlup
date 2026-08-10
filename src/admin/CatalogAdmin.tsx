@@ -10,7 +10,9 @@ import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
-import type { CatalogProtocol } from '../data/catalog'
+import { audienceOf, type CatalogProtocol } from '../data/catalog'
+import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
+import { LIBRARY_CATEGORIES } from '../data/library'
 
 function tenantsLabel(p: CatalogProtocol): string {
   return p.tenants === 'all' ? 'Tutte le aziende' : `${p.tenants.length} aziend${p.tenants.length === 1 ? 'a' : 'e'}`
@@ -49,6 +51,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   const [imported, setImported] = useState<{ timeline: PlainTimeline; fileName: string } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
+  /* Clinical material and library audio are two different products with two
+     different naming rules — the console keeps them on separate tabs so they
+     can never be edited as if they were the same thing. */
+  const [shelf, setShelf] = useState<'clinical' | 'library'>('clinical')
+  const [draft, setDraft] = useState<LibraryDraft | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   /* Import Excel straight from the list: file dialog → parse → workscreen.
@@ -123,28 +131,75 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     )
   }
 
-  const protocols = data ?? []
+  const all = data ?? []
+  const protocols = all.filter((p) => audienceOf(p) === shelf)
+
+  async function saveDraft() {
+    if (!draft) return
+    setSavingDraft(true)
+    setImportError(null)
+    try {
+      const existing = draft.code ? all.find((p) => p.code === draft.code) : undefined
+      const entry = applyDraft(draft, existing)
+      await dp.saveProtocol(entry)
+      await dp.logAudit({ actor, action: existing ? 'library.updated' : 'library.created', target: entry.code }).catch(() => undefined)
+      setDraft(null)
+      refetch()
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      setSavingDraft(false)
+    }
+  }
 
   return (
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Catalogo protocolli</h1>
-          <p className="b2b-sub">L’unico catalogo condiviso da cui attingono tutte le aziende. {protocols.length} protocoll{protocols.length === 1 ? 'o' : 'i'}.</p>
+          <h1 className="b2b-h1">Catalogo</h1>
+          <p className="b2b-sub">
+            {shelf === 'clinical'
+              ? `Materiale clinico: entra solo nei percorsi scritti dai terapeuti. ${protocols.length} protocoll${protocols.length === 1 ? 'o' : 'i'}.`
+              : `Libreria a uso libero: audio che le persone sfogliano e scelgono da sole, nominati per il momento che servono. ${protocols.length} audio.`}
+          </p>
+          <div className="mt-seg" style={{ marginTop: 8 }}>
+            <button className={shelf === 'clinical' ? 'is-on' : ''} onClick={() => { setShelf('clinical'); setDraft(null) }}>Percorsi clinici</button>
+            <button className={shelf === 'library' ? 'is-on' : ''} onClick={() => { setShelf('library'); setDraft(null) }}>Libreria</button>
+          </div>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => fileRef.current?.click()}>
-          ⬆ Importa Excel
-        </button>
+        {shelf === 'clinical' ? (
+          <button className="b2b-btn b2b-btn--primary" onClick={() => fileRef.current?.click()}>
+            ⬆ Importa Excel
+          </button>
+        ) : (
+          <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(EMPTY_DRAFT)}>
+            ＋ Nuovo audio
+          </button>
+        )}
         <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />
         {importError && <span className="adm-plain__status adm-plain__status--err" style={{ marginLeft: 10 }}>{importError}</span>}
       </header>
 
+      {draft && (
+        <LibraryEditor
+          draft={draft}
+          busy={savingDraft}
+          onChange={setDraft}
+          onSave={() => void saveDraft()}
+          onCancel={() => setDraft(null)}
+        />
+      )}
+
       {loading && <p className="b2b-sub">Caricamento del catalogo…</p>}
+
+      {!loading && shelf === 'library' && protocols.length === 0 && !draft && (
+        <p className="b2b-sub">Ancora nessun audio in libreria. «＋ Nuovo audio» crea la scheda; l’audio si produce nello Studio e si collega come per i protocolli.</p>
+      )}
 
       {!loading && (
         <div className="adm-table adm-table--catalog">
           <div className="adm-tr adm-tr--head">
-            <div>Codice</div><div>Titolo</div><div>Famiglia</div><div>Audio</div><div>Disponibilità</div><div>Origine</div><div className="adm-tr__right">Stato</div>
+            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Audio</div><div>Disponibilità</div><div>Origine</div><div className="adm-tr__right">Stato</div>
           </div>
           {protocols.map((p) => (
             <div className={`adm-tr${p.plain ? ' adm-tr--click' : ''}`} key={p.code}
@@ -153,7 +208,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
             >
               <div className="adm-mono">{p.code}</div>
               <div>{p.title}</div>
-              <div>{FAMILY_LABEL[p.family]}</div>
+              <div>
+                {shelf === 'library'
+                  ? (LIBRARY_CATEGORIES.find((c) => c.id === p.library?.category)?.label ?? '—')
+                  : FAMILY_LABEL[p.family]}
+              </div>
               <div>
                 {p.audioReady
                   ? <span className="adm-pill adm-pill--ok">Renderizzato</span>
@@ -162,6 +221,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               <div>{tenantsLabel(p)}</div>
               <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}</div>
               <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
+                {shelf === 'library' && (
+                  <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setDraft(draftFrom(p))} title="Titolo, descrizione, scaffale, copertina">
+                    ✎ Scheda
+                  </button>
+                )}
                 <button
                   className="adm-editbtn"
                   disabled={busyCode === p.code}
