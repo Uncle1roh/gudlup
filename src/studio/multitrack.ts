@@ -680,6 +680,8 @@ export class MultitrackPlayer {
   private trackGains = new Map<string, GainNode>()
   private trackPans = new Map<string, StereoPannerNode>()
   private sources: AudioBufferSourceNode[] = []
+  /** the one-off buffer being auditioned (voice preview), outside the timeline */
+  private auditionSrc: AudioBufferSourceNode | null = null
   private startCtxTime = 0
   private startOffset = 0
   playing = false
@@ -772,6 +774,20 @@ export class MultitrackPlayer {
   /** Decode encoded audio bytes (mp3/wav from a TTS API) into an AudioBuffer. */
   async decode(bytes: ArrayBuffer): Promise<AudioBuffer> {
     return this.ctx.decodeAudioData(bytes.slice(0))
+  }
+
+  /** Audition ONE buffer outside the timeline (the voice preview), through the
+      same master so it is heard at the same level as the mix. Stops the
+      previous audition; leaves transport playback alone. */
+  async audition(buffer: AudioBuffer): Promise<void> {
+    if (this.ctx.state === 'suspended') await this.ctx.resume()
+    try { this.auditionSrc?.stop() } catch { /* already finished */ }
+    const src = this.ctx.createBufferSource()
+    src.buffer = buffer
+    src.connect(this.master)
+    src.start()
+    this.auditionSrc = src
+    src.onended = () => { if (this.auditionSrc === src) this.auditionSrc = null }
   }
 }
 

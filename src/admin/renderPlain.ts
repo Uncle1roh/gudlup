@@ -121,13 +121,17 @@ export async function renderPlainWav(
   const ttsCache = new Map<string, AudioBuffer>()
 
   let voiceClips = 0
+  let overran = 0
   const mix: MixTrack[] = []
+  /* §8.3 ducking windows, collected from what is ACTUALLY rendered: a voice
+     clip's real length is its TTS length, not the Excel window (see below). */
+  const voiceWindows: { start: number; end: number }[] = []
   try {
     for (const t of seed.tracks) {
       const clips: MixTrack['clips'] = []
       for (const c of t.clips) {
         if (c.startSec >= lengthSec) continue
-        const dur = Math.min(c.durationSec, lengthSec - c.startSec)
+        let dur = Math.min(c.durationSec, lengthSec - c.startSec)
         let buffer: AudioBuffer | null = null
         if (t.type === 'voice') {
           const vp = c.params as VoiceParams
@@ -142,10 +146,19 @@ export async function renderPlainWav(
             decoded = await decoder.decodeAudioData(bytes.slice(0))
             ttsCache.set(key, decoded)
           }
-          let baked = await bakeVoiceBuffer(decoded, vp.pan, dur, vp.speed ?? 1)
+          /* The spoken line is never cut to fit its Excel window — only to the
+             end of the session. The window is a placement hint; the real length
+             is how long the voice takes to say it (exactly what the Studio does
+             on synthesis). Cutting it here was why a whispered fragment ended
+             mid-phrase in the WAV but not in the Studio. */
+          const room = lengthSec - c.startSec
+          let baked = await bakeVoiceBuffer(decoded, vp.pan, room, vp.speed ?? 1)
           baked = shapeClipBuffer(baked, c)
+          if (baked.duration > c.durationSec + 0.05) overran++
+          dur = Math.min(room, baked.duration)
           buffer = baked
           voiceClips++
+          if (t.duck !== 'whisper') voiceWindows.push({ start: c.startSec, end: Math.min(lengthSec, c.startSec + dur) })
         } else {
           const sp = t.type === 'sample' ? (c.params as SampleParams) : null
           if (sp && !sp.url) continue // undrawn lane — silent by design
@@ -166,13 +179,12 @@ export async function renderPlainWav(
       })
     }
 
-    /* §8.3 ducking: voice windows from the SEED (only clips that will really
-       sound — i.e. with text — count; silent voice lanes don't duck the bed). */
-    const voiceWindows = seed.tracks
-      .filter((t) => t.type === 'voice' && t.duck !== 'whisper') // the ostinato itself never ducks anyone
-      .flatMap((t) => t.clips
-        .filter((c) => (c.text ?? '').trim() && c.startSec < lengthSec && canVoice)
-        .map((c) => ({ start: c.startSec, end: Math.min(lengthSec, c.startSec + c.durationSec) })))
+    if (overran) {
+      notes.push(`${overran} voice clip${overran === 1 ? '' : 's'} speak${overran === 1 ? 's' : ''} past the window written in the Excel — rendered in full (the window is a placement hint; shortening the line or widening the window in the sheet removes the overlap).`)
+    }
+
+    /* §8.3 ducking: the windows collected above from the rendered voice (the
+       ostinato lane never ducks anyone — it is the one being ducked). */
     if (voiceWindows.length) {
       seed.tracks.forEach((t: SeedTrack, i: number) => {
         if (t.duck === 'music' || t.duck === 'soundscape' || t.duck === 'whisper') {

@@ -119,15 +119,68 @@ function pick<T>(arr: T[], rnd: () => number): T {
   return arr[Math.min(arr.length - 1, Math.floor(rnd() * arr.length))]
 }
 
+/* ------------------------------------------------------- no-repeat ledger */
+
+/* A protocol must never play the same music file twice while its phase pool
+   still holds an unused one (PO decision): six clips drawing independently
+   from a four-file pool used to land the same track three times. The ledger
+   is the draw memory of ONE protocol — pass the same instance to every draw
+   of a seed/render and the draws become sampling WITHOUT replacement, falling
+   back to the least-used file (never the immediately previous one) once the
+   pool is exhausted. Soundscapes share the mechanism but tolerate reuse: a
+   tag pool is often a single file, and repeating a texture across phases is
+   frequently the intent. */
+export interface DrawLedger {
+  /** asset path → how many clips of this protocol already drew it */
+  counts: Map<string, number>
+  /** pool key → the path the previous clip of that pool got */
+  last: Map<string, string>
+}
+
+export function newDrawLedger(): DrawLedger {
+  return { counts: new Map(), last: new Map() }
+}
+
+/** Draw from `cands` preferring files this protocol has not used yet; among
+    equally-used files, never return the one the previous clip of the same pool
+    got (unless it is the only candidate). `reused` = the pool was exhausted and
+    a file had to come round again. */
+function pickFresh(
+  cands: AudioAsset[],
+  rnd: () => number,
+  ledger: DrawLedger | undefined,
+  poolKey: string,
+): { asset: AudioAsset; reused: boolean } {
+  if (!ledger) return { asset: pick(cands, rnd), reused: false }
+  let fewest = Infinity
+  for (const a of cands) fewest = Math.min(fewest, ledger.counts.get(a.path) ?? 0)
+  let tier = cands.filter((a) => (ledger.counts.get(a.path) ?? 0) === fewest)
+  const prev = ledger.last.get(poolKey)
+  if (tier.length > 1 && prev) {
+    const noRepeat = tier.filter((a) => a.path !== prev)
+    if (noRepeat.length) tier = noRepeat
+  }
+  const asset = pick(tier, rnd)
+  ledger.counts.set(asset.path, (ledger.counts.get(asset.path) ?? 0) + 1)
+  ledger.last.set(poolKey, asset.path)
+  return { asset, reused: fewest > 0 }
+}
+
+function poolNote(n: number, reused: boolean): string {
+  return `${n} file${n === 1 ? '' : 's'}${reused ? ' — pool exhausted, file reused' : ''}`
+}
+
 export interface DrawResult { asset: AudioAsset; how: string }
 
 /** Soundscape draw by `ambiente` tag. Best tag-overlap wins; ties draw at
-    random. "heartbeat …" goes to the heartbeat pool (Dec. H). */
-export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => number): DrawResult | null {
+    random, preferring files this protocol has not used yet (`ledger`).
+    "heartbeat …" goes to the heartbeat pool (Dec. H). */
+export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => number, ledger?: DrawLedger): DrawResult | null {
   const want = normalizeTags(ambiente)
   if (want.includes('heartbeat')) {
     if (!pools.heartbeat.length) return null
-    return { asset: pick(pools.heartbeat, rnd), how: `heartbeat pool (${pools.heartbeat.length} file${pools.heartbeat.length === 1 ? '' : 's'})` }
+    const d = pickFresh(pools.heartbeat, rnd, ledger, 'ss:heartbeat')
+    return { asset: d.asset, how: `heartbeat pool (${poolNote(pools.heartbeat.length, d.reused)})` }
   }
   // score every soundscape by tag overlap
   const scored = new Map<AudioAsset, number>()
@@ -137,20 +190,24 @@ export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => n
   if (scored.size) {
     const best = Math.max(...scored.values())
     const cands = [...scored.entries()].filter(([, s]) => s === best).map(([a]) => a)
-    return { asset: pick(cands, rnd), how: `tag "${ambiente}" → ${cands.length} candidate${cands.length === 1 ? '' : 's'}` }
+    const d = pickFresh(cands, rnd, ledger, `ss:${want.join('+')}`)
+    return { asset: d.asset, how: `tag "${ambiente}" → ${poolNote(cands.length, d.reused)}` }
   }
   if (pools.soundscapes.length) {
-    return { asset: pick(pools.soundscapes, rnd), how: `no tag match for "${ambiente}" — drawn from ALL soundscapes` }
+    const d = pickFresh(pools.soundscapes, rnd, ledger, 'ss:*')
+    return { asset: d.asset, how: `no tag match for "${ambiente}" — drawn from ALL soundscapes (${poolNote(pools.soundscapes.length, d.reused)})` }
   }
   return null
 }
 
-/** Music draw from the GLOBAL phase pool (fase 1–6). */
-export function drawMusic(pools: AssetPools, fase: number, rnd: () => number): DrawResult | null {
+/** Music draw from the GLOBAL phase pool (fase 1–6). With a `ledger` the same
+    file never comes back while the pool still has an unused one. */
+export function drawMusic(pools: AssetPools, fase: number, rnd: () => number, ledger?: DrawLedger): DrawResult | null {
   const key = PHASE_KEYS[Math.min(5, Math.max(0, fase - 1))]
   const pool = pools.musicByPhase[key] ?? []
   if (!pool.length) return null
-  return { asset: pick(pool, rnd), how: `phase pool ${key} (${pool.length} file${pool.length === 1 ? '' : 's'})` }
+  const d = pickFresh(pool, rnd, ledger, `music:${key}`)
+  return { asset: d.asset, how: `phase pool ${key} (${poolNote(pool.length, d.reused)})` }
 }
 
 /* ------------------------------------------------ asset_meta (Supabase) */

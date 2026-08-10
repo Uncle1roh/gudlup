@@ -36,10 +36,10 @@ import {
 } from './multitrack'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
-import { ARCHETYPES, defaultPrimary, voicesByArchetype } from '../tts/voiceCatalog'
+import { ARCHETYPES, defaultPrimary, voiceById, voicesByArchetype, type CatalogVoice } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
-import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, type AssetPools } from '../admin/assetPools'
+import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
@@ -436,6 +436,7 @@ function StudioDesktop() {
   const [exporting, setExporting] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [ttsBusy, setTtsBusy] = useState<string | null>(null)
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null)
   const [ttsError, setTtsError] = useState<string | null>(null)
   const [ttsTick, setTtsTick] = useState(0)
   const [voiceSetupOpen, setVoiceSetupOpen] = useState(false)
@@ -550,7 +551,10 @@ function StudioDesktop() {
     try {
       const pools = await getStudioPools()
       const rnd = mulberry32(Math.floor(Math.random() * 0xffffffff))
-      const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd) : drawMusic(pools, p.drawPhase ?? 1, rnd)
+      // a re-roll must not hand back a file another clip of this protocol is
+      // already playing (this clip itself doesn't count — it is being replaced)
+      const ledger = projectLedger(pools, tracksRef.current, clipId)
+      const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd, ledger) : drawMusic(pools, p.drawPhase ?? 1, rnd, ledger)
       if (!drawn) {
         setDrawMsg(p.drawTag !== undefined
           ? `No library file matches the tag "${p.drawTag}" — upload one in the Asset Library (or add the tag to an existing file there).`
@@ -572,6 +576,9 @@ function StudioDesktop() {
     try {
       const pools = await getStudioPools()
       const rnd = mulberry32(Math.floor(Math.random() * 0xffffffff))
+      // ONE ledger for the whole sweep: the files already in the project count,
+      // and each draw excludes the ones this sweep has just made
+      const ledger = projectLedger(pools, tracksRef.current)
       let filled = 0
       let empty = 0
       for (const t of tracksRef.current) {
@@ -579,7 +586,7 @@ function StudioDesktop() {
         for (const c of t.clips) {
           const p = c.params as SampleParams
           if (p.url || (p.drawTag === undefined && p.drawPhase === undefined)) continue
-          const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd) : drawMusic(pools, p.drawPhase ?? 1, rnd)
+          const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd, ledger) : drawMusic(pools, p.drawPhase ?? 1, rnd, ledger)
           if (!drawn) { empty++; continue }
           patchClipParams(t.id, c.id, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · ${p.drawTag !== undefined ? `tag "${p.drawTag}"` : `F${p.drawPhase} pool`}` })
           filled++
@@ -611,10 +618,37 @@ function StudioDesktop() {
     })))
   }, [])
 
-  const previewVoice = useCallback(async (text: string, voiceId?: string) => {
-    if (!text.trim()) return
+  /* Preview used to hand the provider whatever `voiceId` the clip happened to
+     carry — undefined on hand-added clips, and stale on clips imported before
+     the catalog was narrowed to the POs' voices. Either way the engine quietly
+     substituted its own default (or, with no key at all, the OPERATING SYSTEM
+     voice), so what you auditioned was not the voice the picker showed.
+     Now the voice is resolved once, explicitly, and the preview plays the SAME
+     baked buffer the clip will get — pan and speed included. */
+  const previewVoice = useCallback(async (clip: Clip) => {
+    const text = (clip.text ?? '').trim()
+    if (!text) return
+    const vp = clip.params as VoiceParams
+    const voice = effectiveVoice(vp)
+    const player = playerRef.current
     setTtsError(null)
-    try { await getTtsProvider().speak(text, { lang: 'pt-BR', voiceId }) } catch (e) { setTtsError((e as Error).message) }
+    setPreviewBusy(clip.id)
+    try {
+      const provider = getTtsProvider()
+      if (!provider.canRender || !player) {
+        // no key: the browser engine can only speak in an OS voice — say so
+        await provider.speak(text, { lang: 'it', voiceId: voice.id, rate: vp.speed })
+        return
+      }
+      const bytes = await provider.render(text, { lang: 'it', voiceId: voice.id })
+      const decoded = await player.decode(bytes)
+      const baked = await bakeVoiceBuffer(decoded, vp.pan, decoded.duration / Math.max(0.5, vp.speed ?? 1) + 1, vp.speed ?? 1)
+      await player.audition(baked)
+    } catch (e) {
+      setTtsError((e as Error).message)
+    } finally {
+      setPreviewBusy(null)
+    }
   }, [])
 
   const synthesizeVoice = useCallback(async (trackId: string, clipId: string) => {
@@ -633,7 +667,7 @@ function StudioDesktop() {
     try {
       const provider = getTtsProvider()
       const vp = cl.params as VoiceParams
-      const bytes = await provider.render(text, { lang: 'pt-BR', voiceId: vp.voiceId })
+      const bytes = await provider.render(text, { lang: 'it', voiceId: effectiveVoice(vp).id })
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
@@ -663,7 +697,7 @@ function StudioDesktop() {
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: vp.voiceId, startSec: c.startSec, shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
     if (!jobs.length) { setTtsError('Nessuna clip vocale con testo da sintetizzare.'); return }
@@ -680,7 +714,7 @@ function StudioDesktop() {
         const key = `${j.voiceId ?? ''}|${j.text}`
         let decoded = cache.get(key)
         if (!decoded) {
-          const bytes = await provider.render(j.text, { lang: 'pt-BR', voiceId: j.voiceId })
+          const bytes = await provider.render(j.text, { lang: 'it', voiceId: j.voiceId })
           decoded = await player.decode(bytes)
           cache.set(key, decoded)
         }
@@ -1305,9 +1339,10 @@ function StudioDesktop() {
         ttsLabel={ttsInfo.label}
         ttsCanRender={ttsInfo.canRender}
         ttsBusy={!!selected && ttsBusy === selected.clipId}
+        previewBusy={!!selected && previewBusy === selected.clipId}
         ttsError={ttsError}
         onVoiceText={(text) => selected && setVoiceText(selected.trackId, selected.clipId, text)}
-        onVoicePreview={() => selClip && previewVoice(selClip.text ?? '', (selClip.params as VoiceParams).voiceId)}
+        onVoicePreview={() => selClip && void previewVoice(selClip)}
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
         onEq={(eq) => selected && setClipEq(selected.trackId, selected.clipId, eq)}
@@ -1724,7 +1759,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
+function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -1734,6 +1769,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   ttsLabel: string
   ttsCanRender: boolean
   ttsBusy: boolean
+  previewBusy: boolean
   ttsError: string | null
   onVoiceText: (text: string) => void
   onVoicePreview: () => void
@@ -1860,7 +1896,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           </div>
         </> })()}
 
-        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); return <>
+        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); const voice = effectiveVoice(p); const stale = staleVoiceId(p); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
               <span className="mt-tts__lbl">Affermazione</span>
@@ -1874,12 +1910,25 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
               rows={2}
             />
             <div className="mt-tts__btns">
-              <button className="mt-tts__btn" onClick={onVoicePreview} disabled={ttsBusy || !hasText}>▶ Anteprima</button>
+              <button
+                className="mt-tts__btn"
+                onClick={onVoicePreview}
+                disabled={ttsBusy || previewBusy || !hasText || !ttsCanRender}
+                title={ttsCanRender ? `Ascolta questa battuta con ${voice.name} — pan e velocità della clip inclusi` : 'Senza chiave TTS l’anteprima userebbe una voce di sistema, non quella scelta'}
+              >
+                {previewBusy ? 'Anteprima…' : `▶ Anteprima — ${voice.name}`}
+              </button>
               <button className="mt-tts__btn mt-tts__btn--go" onClick={onVoiceSynthesize} disabled={ttsBusy || !ttsCanRender || !hasText} title={ttsCanRender ? '' : 'Set an ElevenLabs or Azure key to render real voice'}>
                 {ttsBusy ? 'Synthesizing…' : rendered ? '↻ Re-synthesize' : '✓ Synthesize into clip'}
               </button>
             </div>
-            {!ttsCanRender && <div className="mt-tts__hint">L’anteprima usa la voce del browser. Per renderizzare e montare la voce reale, aggiungi una chiave TTS (docs/TTS_SETUP.md).</div>}
+            {!ttsCanRender && <div className="mt-tts__hint">Nessuna chiave TTS: l’anteprima è disattivata — la voce del browser è una voce di sistema, non quella scelta qui. Aggiungi una chiave (🎙) per ascoltare e renderizzare la voce reale (docs/TTS_SETUP.md).</div>}
+            {stale && (
+              <div className="mt-tts__hint">
+                ⚠ Questa clip è stata importata con una voce che non è più nel catalogo (<code>{stale}</code>). Verrà parlata da {voice.name}.{' '}
+                <button className="mt-tts__btn" onClick={() => onVoiceChange('')}>Usa la predefinita</button>
+              </div>
+            )}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
           <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
@@ -1897,14 +1946,34 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
 }
 
 
+/* ---- which voice a clip is REALLY spoken in ----
+
+   One resolver for preview, synthesis and the picker's label: the clip's own
+   voice when that id is still in the catalog, otherwise the engine default.
+   Everything that speaks must agree — a preview that resolves differently from
+   the render is exactly the bug the POs reported. */
+function effectiveVoice(p: VoiceParams): CatalogVoice {
+  return (p.voiceId ? voiceById(p.voiceId) : undefined) ?? defaultPrimary()
+}
+
+/** An id the clip still carries but the catalog no longer offers (imported
+    before the roster was narrowed to the POs' voices). */
+function staleVoiceId(p: VoiceParams): string | null {
+  return p.voiceId && !voiceById(p.voiceId) ? p.voiceId : null
+}
+
 /* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
 function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
   void rendered
+  const known = !value || !!voiceById(value)
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
       <span className="mt-tts__lbl">Voce</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Predefinita — {defaultPrimary().name} (voce del motore)</option>
+        {/* an id that left the catalog stays visible instead of silently
+            showing "Predefinita" while the clip still uses the old voice */}
+        {!known && <option value={value}>⚠ Voce fuori catalogo — {value}</option>}
         {ARCHETYPES.map((a) => {
           const list = voicesByArchetype(a.id)
           return list.length ? (
@@ -1920,6 +1989,29 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
 
 /* ---- library file picker for sample clips (music by phase, soundscapes) ---- */
 let assetListPromise: Promise<AudioAsset[]> | null = null
+
+/** Draw memory built from the files the project ALREADY plays, so a late draw
+    or a manual re-roll can't hand back one that is in use elsewhere in the
+    protocol. `skipClipId` is the clip being redrawn — its own file doesn't
+    count against it. */
+function projectLedger(pools: AssetPools, tracks: Track[], skipClipId?: string): DrawLedger {
+  const inUse = new Set<string>()
+  for (const t of tracks) {
+    if (t.type !== 'sample') continue
+    for (const c of t.clips) {
+      if (c.id === skipClipId) continue
+      const url = (c.params as SampleParams).url
+      if (url) inUse.add(url)
+    }
+  }
+  const all: AudioAsset[] = [...pools.soundscapes, ...pools.heartbeat]
+  for (const arr of Object.values(pools.musicByPhase)) if (arr) all.push(...arr)
+  const ledger = newDrawLedger()
+  for (const a of all) {
+    if (inUse.has(a.publicUrl)) ledger.counts.set(a.path, (ledger.counts.get(a.path) ?? 0) + 1)
+  }
+  return ledger
+}
 
 /** Lazy shared pools for late draws (a seeded project whose library wasn't
     reachable at import time — or a deliberate re-roll). */

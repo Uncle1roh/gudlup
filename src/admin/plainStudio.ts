@@ -40,7 +40,7 @@ import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from 
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
 import { ANCHOR_LUFS } from '../studio/multitrack'
-import { drawMusic, drawSoundscape, mulberry32, type AssetPools } from './assetPools'
+import { drawMusic, drawSoundscape, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
 export interface PlainSeedOptions {
@@ -93,6 +93,40 @@ function levelLabel(v: number, mode: 'lufs' | 'offset'): string {
   return mode === 'lufs' ? `${(v + ANCHOR_LUFS).toFixed(0)} LUFS` : `${v} dB`
 }
 
+/* ---------------------------------------------------------- speech speed --
+
+   `speed` is the engine's pitch-preserving rate: >1 talks FASTER (the buffer
+   gets shorter), <1 slower. The format states cadence in words per minute;
+   130 wpm is the spoken baseline the mapping is normalized to.
+
+   A whispered line is authored slower than a spoken one, and the ASMR/Whisper
+   ElevenLabs voices do NOT slow down on their own — so `sussurrato` rows whose
+   sheet leaves velocita_wpm empty get the whisper baseline instead of the
+   voice's natural (spoken) cadence. Before this, whisper lanes ran at ×1.00
+   and the POs heard them as rushed. */
+const SPOKEN_WPM = 130
+const WHISPER_WPM = 110
+/** The ostinato tail dissolves into the phase fade: 15% SLOWER, i.e. the
+    speed is divided — not multiplied — by this factor. */
+const TAIL_SLOWDOWN = 1.15
+
+const clampSpeed = (v: number): number => +Math.min(1.4, Math.max(0.7, v)).toFixed(3)
+
+/** Speech rate for a voice row: the sheet's wpm when present, else the whisper
+    baseline for `sussurrato`, else the voice's own cadence (undefined). */
+function clipSpeed(c: PlainClip): number | undefined {
+  if (c.velocitaWpm !== undefined) return clampSpeed(c.velocitaWpm / SPOKEN_WPM)
+  if (c.modalita === 'sussurrato') return clampSpeed(WHISPER_WPM / SPOKEN_WPM)
+  return undefined
+}
+
+/** How a row's rate came about, for the import notes. */
+function speedWhy(c: PlainClip, speed: number | undefined): string | null {
+  if (speed === undefined) return null
+  if (c.velocitaWpm !== undefined) return `velocità ${c.velocitaWpm} wpm → ×${speed.toFixed(2)} (${SPOKEN_WPM} wpm baseline)`
+  return `sussurrato senza velocita_wpm → ×${speed.toFixed(2)} (${WHISPER_WPM} wpm whisper baseline)`
+}
+
 /** Dec. 6 (developer's mapping): archetype+modalità → catalog voice.
     sussurrato prefers a Whisper voice of the same gender as the archetype. */
 export function resolvePlainVoice(archetipo: string | undefined, modalita: 'normale' | 'sussurrato' | undefined): { voice: CatalogVoice; why: string } {
@@ -125,6 +159,9 @@ export function plainToStudioTracks(
   const affById = new Map(timeline.affirmations.map((a) => [a.id, a]))
   const rnd = mulberry32(opts.seed ?? Math.floor(Math.random() * 0xffffffff))
   const pools = opts.pools
+  /* one ledger for the whole protocol: no music file is drawn twice while its
+     phase pool still has an unused one */
+  const ledger = newDrawLedger()
 
   /* Lanes keyed by final track name, created in file order so the Studio
      shows the same top-to-bottom structure as the Excel. */
@@ -203,8 +240,8 @@ export function plainToStudioTracks(
         : `F${c.faseFrom ?? '?'} pool — no pool available`
       if (pools) {
         const drawn = c.tipo === 'soundscape'
-          ? drawSoundscape(pools, c.ambiente ?? '', rnd)
-          : drawMusic(pools, c.faseFrom ?? 1, rnd)
+          ? drawSoundscape(pools, c.ambiente ?? '', rnd, ledger)
+          : drawMusic(pools, c.faseFrom ?? 1, rnd, ledger)
         if (drawn) {
           url = drawn.asset.publicUrl
           label = `${drawn.asset.name} · ${c.tipo === 'soundscape' ? `tag "${c.ambiente}"` : `F${c.faseFrom} pool`}`
@@ -286,6 +323,14 @@ export function plainToStudioTracks(
           const BREATH = 9       // s of breathing silence after a pass [DESIGN ~8–10 s]
           const cycleLen = fragments.length * SPACING + BREATH // 4 frags → 29 s (≠ 24 s main interval)
           const tailStart = Math.max(c.startS, c.endS - 90)
+          /* the window only has to HOLD the whispered fragment — the real
+             length comes from the TTS (the Studio resizes the clip on synthesis
+             and the renderer no longer truncates). 3 s used to cut whispered
+             fragments mid-phrase, which is what read as "too fast". */
+          const FRAG_WINDOW = SPACING - 0.5
+          // sussurrato by definition here, so clipSpeed() always answers
+          const baseSpeed = clipSpeed(c) ?? clampSpeed(WHISPER_WPM / SPOKEN_WPM)
+          const tailSpeed = clampSpeed(baseSpeed / TAIL_SLOWDOWN)
           l.track.duck = 'whisper' // sidechain: dips under the MAIN voice, never masks it
           let placedW = 0
           for (let cy = 0; ; cy++) {
@@ -294,13 +339,19 @@ export function plainToStudioTracks(
             for (let i = 0; i < fragments.length; i++) {
               const start = cycleStart + i * SPACING
               const inTail = start >= tailStart // per-FRAGMENT: the whole last ~90 s dissolves
-              const dur = Math.min(4, SPACING - 1) * (inTail ? 1.15 : 1) // slight slowdown
-              if (start + dur > c.endS - 0.5) { done = true; break }
+              if (start + FRAG_WINDOW > c.endS - 0.5) { done = true; break }
               l.track.clips.push({
                 startSec: start,
-                durationSec: dur,
+                durationSec: FRAG_WINDOW,
                 // diffuse, never dry-center: gentle alternating spread
-                params: { pan: ((i % 2 === 0 ? -1 : 1) * 0.15), pulseHz: 0.35, toneHz: 320, voiceId: voice.id } as VoiceParams,
+                params: {
+                  pan: ((i % 2 === 0 ? -1 : 1) * 0.15),
+                  pulseHz: 0.35,
+                  toneHz: 320,
+                  // the tail really slows DOWN: speed is divided, not multiplied
+                  speed: inTail ? tailSpeed : baseSpeed,
+                  voiceId: voice.id,
+                } as VoiceParams,
                 text: fragments[i],
                 fadeInSec: 1,
                 fadeOutSec: inTail ? 3 : 1.5, // the tail dissolves, no hard cut
@@ -310,7 +361,7 @@ export function plainToStudioTracks(
             }
             if (done || c.startS + (cy + 1) * cycleLen >= c.endS) break
           }
-          notes.push(`Whisper-ostinato ${c.clipId} (${ids[0]}): ${placedW} fragment clips ("${fragments.join(' / ')}") — ${SPACING}s cadence + ${BREATH}s breath = ${cycleLen}s cycle, offset from the affirmation interval; the last ~90 s stretches ×1.15 and drops −2.5 dB into the ${secToMmss(c.endS)} fade; ducks −2.5 dB under the main voice (never masks the −16 LUFS anchor).`)
+          notes.push(`Whisper-ostinato ${c.clipId} (${ids[0]}): ${placedW} fragment clips ("${fragments.join(' / ')}") — ${SPACING}s cadence + ${BREATH}s breath = ${cycleLen}s cycle, offset from the affirmation interval; spoken at ×${baseSpeed.toFixed(2)} (${speedWhy(c, baseSpeed)}); the last ~90 s slows to ×${tailSpeed.toFixed(2)} and drops −2.5 dB into the ${secToMmss(c.endS)} fade; ducks −2.5 dB under the main voice (never masks the −16 LUFS anchor).`)
           continue
         }
       }
@@ -318,6 +369,9 @@ export function plainToStudioTracks(
       const interval = c.intervalloS ?? 20
       const cycles = Math.max(1, c.cicli ?? 1)
       const att = c.attenuazioneCicloDb ?? -3
+      // loop rows used to drop velocita_wpm entirely — whisper loops ran at the
+      // voice's own (spoken) cadence
+      const loopSpeed = clipSpeed(c)
       let placed = 0
       let skipped = 0
       for (let cy = 0; cy < cycles; cy++) {
@@ -330,7 +384,7 @@ export function plainToStudioTracks(
           l.track.clips.push({
             startSec: start,
             durationSec: dur,
-            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, voiceId: voice.id } as VoiceParams,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: loopSpeed, voiceId: voice.id } as VoiceParams,
             text: aff.testo,
             fadeInSec: 1, // Rules doc: per-affirmation envelope is an app default
             fadeOutSec: 2,
@@ -339,7 +393,7 @@ export function plainToStudioTracks(
           placed++
         }
       }
-      notes.push(`Loop ${c.clipId} (${c.setAffermazioni}): ${placed} affirmation clips on "${l.track.name}" — every ${interval}s × ${cycles} cycle${cycles === 1 ? '' : 's'}${cycles > 1 ? ` (${att} dB per cycle)` : ''}, 1s/2s default envelope${c.eco ? `, Emotional Echo +${c.ecoRitardoS ?? 2}s ${c.ecoVolumeDb ?? -8}dB` : ''}${skipped ? ` · ${skipped} skipped (window ends ${secToMmss(c.endS)})` : ''}.`)
+      notes.push(`Loop ${c.clipId} (${c.setAffermazioni}): ${placed} affirmation clips on "${l.track.name}" — every ${interval}s × ${cycles} cycle${cycles === 1 ? '' : 's'}${cycles > 1 ? ` (${att} dB per cycle)` : ''}, 1s/2s default envelope${loopSpeed !== undefined ? `, ${speedWhy(c, loopSpeed)}` : ''}${c.eco ? `, Emotional Echo +${c.ecoRitardoS ?? 2}s ${c.ecoVolumeDb ?? -8}dB` : ''}${skipped ? ` · ${skipped} skipped (window ends ${secToMmss(c.endS)})` : ''}.`)
       if (c.sequenza) notes.push(`Loop ${c.clipId}: "sequenza" column present but not expanded (non-uniform loops are a later slice).`)
       continue
     }
@@ -361,8 +415,8 @@ export function plainToStudioTracks(
     if (c.riverberoPct !== undefined && c.riverberoPct > 0) {
       l.track.effects = withReverb(l.track.effects, c.riverberoPct)
     }
-    const speed = c.velocitaWpm !== undefined ? Math.min(1.4, Math.max(0.7, c.velocitaWpm / 130)) : undefined
-    if (speed !== undefined) notes.push(`${c.clipId}: velocità ${c.velocitaWpm} wpm → ×${speed.toFixed(2)} speed (130 wpm baseline — MVP mapping).`)
+    const speed = clipSpeed(c)
+    if (speed !== undefined) notes.push(`${c.clipId}: ${speedWhy(c, speed)}.`)
     l.track.clips.push({
       startSec: c.startS,
       durationSec: c.endS - c.startS,
