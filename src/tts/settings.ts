@@ -60,3 +60,18 @@ export function elevenLabsSource(): 'settings' | 'env' | 'none' {
 
 /* The voice list itself is no longer stored here: it is synced from the
    ElevenLabs account and cached by tts/voiceSync.ts (key 'gl.tts.voices'). */
+
+
+/* ---- spoken language of the voice lines --------------------------------
+   The language a protocol is WRITTEN IN — deliberately NOT the UI locale. A
+   therapist can browse the app in Portuguese and render a protocol authored in
+   Italian; tying the two together would mislabel the text and reintroduce
+   exactly the accent drift this setting exists to prevent.
+
+   One place to change when a protocol moves to pt-BR (`VITE_TTS_LANG=pt-BR`),
+   and `TtsOptions.lang` still overrides per call. When protocols become
+   multi-language this should move onto the protocol record itself. */
+export function ttsLanguage(): string {
+  const env = (import.meta.env.VITE_TTS_LANG as string | undefined)?.trim()
+  return env || 'it'
+}

@@ -305,6 +305,20 @@ export function plainToStudioTracks(
       const params: BinauralParams = c.tipo === 'binaural'
         ? { carrierHz: ((c.carrierLHz ?? 200) + (c.carrierRHz ?? 210)) / 2, beatHz: (c.carrierRHz ?? 210) - (c.carrierLHz ?? 200) }
         : { carrierHz: c.frequenzaHz ?? 432, beatHz: 0 }
+      /* BUTT-JOIN, never overlap. Two carrier pairs sounding together beat at
+         the difference BETWEEN the pairs, not at either clip's intended rate:
+         a 10 Hz clip (200/210 Hz) bleeding into a 6 Hz one (200/206 Hz) puts
+         210 and 206 Hz in the same ear and wobbles at 4 Hz — the "binaural beat
+         too fast, as if compressed" the POs heard once and could not reproduce,
+         because it needs the sheet's own timings to overlap.
+         The predecessor is cut short rather than the newcomer delayed: each
+         clip's START is a phase boundary and has to stay put. plainTimeline
+         warns about the same overlap so the Excel can be tidied. */
+      const prev = l.track.clips[l.track.clips.length - 1]
+      if (prev && prev.startSec < c.startS && prev.startSec + prev.durationSec > c.startS + 0.001) {
+        prev.durationSec = c.startS - prev.startSec
+        notes.push(`${c.clipId} (${c.traccia}): la clip precedente si sovrapponeva — accorciata a ${secToMmss(c.startS)} per giuntarle senza sovrapposizione (portanti sovrapposte = battimento sbagliato).`)
+      }
       l.track.clips.push({ startSec: c.startS, durationSec: c.endS - c.startS, params, fadeInSec: c.fadeInS, fadeOutSec: c.fadeOutS })
       l.clipDbs.push(nominalDb)
       continue

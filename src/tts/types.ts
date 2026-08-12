@@ -19,6 +19,19 @@ export interface TtsOptions {
   voice?: 'primary' | 'secondary'
   /** Explicit provider voice id (from the roster) — overrides `voice`. */
   voiceId?: string
+  /** The lines immediately before/after this one in the protocol. A protocol is
+      rendered as one API request PER LINE, so without them every line is
+      generated in isolation: prosody restarts each time, and a two-word
+      fragment carries too little evidence for the engine to place the language
+      ("pace" alone is also an English word, and was read as one). Providers
+      that support request stitching pass these as conditioning context. */
+  previousText?: string
+  nextText?: string
+  /** Force a specific sampling seed. Omitted → the provider derives one
+      deterministically from the request, so the same line in the same context
+      always renders identically and a re-rendered session is reproducible.
+      Pass a fresh value to deliberately ask for a DIFFERENT take. */
+  seed?: number
 }
 
 export interface TtsProvider {

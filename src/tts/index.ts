@@ -40,4 +40,4 @@ export function getTtsProvider(): TtsProvider {
 }
 
 export type { TtsProvider, TtsOptions } from './types'
-export { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource } from './settings'
+export { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, ttsLanguage } from './settings'

@@ -597,7 +597,29 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
       const ov = overlap(sorted[i - 1], sorted[i])
       const xf = sorted[i].crossfadePrecS ?? 0
       if (ov > 0 && ov > xf + 0.01) {
-        issues.push({ level: 'warning', sheet: S, clipId: sorted[i].clipId, message: `Overlaps ${sorted[i - 1].clipId} by ${ov.toFixed(1)} s on track "${name}" beyond its crossfade (${xf} s).` })
+        /* On a pure-tone lane an overlap is not untidy, it is WRONG audio: two
+           binaural clips sounding at once put both of their right-ear carriers
+           in the same ear, which then beats at the difference between the two
+           carriers instead of at either clip's intended rate — a 10 Hz clip
+           (200/210 Hz) running into a 6 Hz one (200/206 Hz) produces a 4 Hz
+           wobble belonging to neither. Reported once as "a binaural beat too
+           fast, as if compressed", and never reproducible afterwards because it
+           needs the sheet's timings to line up that way.
+
+           Still a WARNING, not an error: an error blocks the import outright
+           (PlainImport gates on it), and locking the POs out of their own
+           workbook over a rounding overlap is worse than the artifact. The
+           render is made correct instead — plainStudio butt-joins these lanes,
+           so the audio is right whether or not the Excel gets tidied. */
+        const tone = sorted[i].tipo === 'binaural' || sorted[i].tipo === 'solfeggio'
+        issues.push({
+          level: 'warning',
+          sheet: S,
+          clipId: sorted[i].clipId,
+          message: tone
+            ? `${PLAIN_TIPO_LABEL[sorted[i].tipo]} ${sorted[i].clipId} overlaps ${sorted[i - 1].clipId} by ${ov.toFixed(1)} s on track "${name}". Overlapping carriers beat against each other in the same ear instead of producing the intended rate, so the render butt-joins them: ${sorted[i - 1].clipId} is cut short at ${secToMmss(sorted[i].startS)}. Tidy the Excel to make that explicit (crossfade is Soundscape/Music only, §7).`
+            : `Overlaps ${sorted[i - 1].clipId} by ${ov.toFixed(1)} s on track "${name}" beyond its crossfade (${xf} s).`,
+        })
       }
     }
   }

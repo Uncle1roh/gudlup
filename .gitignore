@@ -3,4 +3,9 @@ dist
 *.local
 .DS_Store
 
+# Rendered sessions are build output, not source. A 24-min master is ~250 MB —
+# past GitHub's hard 100 MB per-file limit — and PO reference renders land in
+# the project root while they are being analysed.
+*.wav
+
 .vercel

@@ -106,67 +106,139 @@ export function measureLufs(buf: AudioBuffer): number {
 
 /* -------------------------------------------------------------- true peak */
 
-/** 4× oversampled peak estimate (dBTP) via a 24-tap Hann-windowed sinc
-    interpolator per phase (BS.1770 Annex 2 approximation). */
-export function measureTruePeakDb(buf: AudioBuffer): number {
-  const TAPS = 24
-  const HALF = TAPS / 2
-  // 3 fractional phases (1/4, 2/4, 3/4) — phase 0 is the sample itself
-  const phases: Float32Array[] = []
+const TP_TAPS = 24
+const TP_HALF = TP_TAPS / 2
+
+/** The 3 fractional phases (1/4, 2/4, 3/4) of a 24-tap Hann-windowed sinc
+    interpolator. Phase 0 is the sample itself. Built once. */
+const TP_PHASES: Float32Array[] = (() => {
+  const out: Float32Array[] = []
   for (let p = 1; p < 4; p++) {
     const frac = p / 4
-    const h = new Float32Array(TAPS)
-    for (let i = 0; i < TAPS; i++) {
-      const t = i - (HALF - 1) - frac
+    const h = new Float32Array(TP_TAPS)
+    for (let i = 0; i < TP_TAPS; i++) {
+      const t = i - (TP_HALF - 1) - frac
       const sinc = t === 0 ? 1 : Math.sin(Math.PI * t) / (Math.PI * t)
-      const win = 0.5 * (1 + Math.cos((Math.PI * (i - (HALF - 0.5))) / HALF))
+      const win = 0.5 * (1 + Math.cos((Math.PI * (i - (TP_HALF - 0.5))) / TP_HALF))
       h[i] = sinc * win
     }
-    phases.push(h)
+    out.push(h)
   }
+  return out
+})()
+
+/** Largest L1 norm across the phases. An interpolated sample is a weighted sum
+    of TP_TAPS neighbours, so |interpolated| ≤ L1 × (largest neighbour). That
+    bound is what makes the screening below exact rather than a heuristic. */
+const TP_L1 = Math.max(...TP_PHASES.map((h) => h.reduce((a, v) => a + Math.abs(v), 0)))
+
+/** Block maxima of |x| over non-overlapping TP_TAPS-sample blocks. Two adjacent
+    blocks always cover any single interpolation window, so screening on
+    max(block[b], block[b+1]) can never skip a window that mattered. */
+function blockMaxima(x: Float32Array): Float32Array {
+  const blocks = Math.ceil(x.length / TP_TAPS)
+  const m = new Float32Array(blocks)
+  for (let b = 0; b < blocks; b++) {
+    const s = b * TP_TAPS
+    const e = Math.min(x.length, s + TP_TAPS)
+    let mx = 0
+    for (let i = s; i < e; i++) { const a = Math.abs(x[i]); if (a > mx) mx = a }
+    m[b] = mx
+  }
+  return m
+}
+
+/** Interpolated magnitude at position `i`, phase `h`. */
+function interpAt(x: Float32Array, i: number, h: Float32Array): number {
+  let acc = 0
+  const base = i - (TP_HALF - 1)
+  for (let k = 0; k < TP_TAPS; k++) {
+    const idx = base + k
+    if (idx >= 0 && idx < x.length) acc += x[idx] * h[k]
+  }
+  return Math.abs(acc)
+}
+
+/** 4× oversampled peak estimate (dBTP), BS.1770 Annex 2 approximation.
+    Only windows that could possibly beat the running peak are interpolated —
+    the L1 bound above makes that exact, and it turns a 24-minute session from
+    ~9 billion multiply-adds into a few million. */
+export function measureTruePeakDb(buf: AudioBuffer): number {
   let peak = 0
   for (let ch = 0; ch < buf.numberOfChannels; ch++) {
     const x = buf.getChannelData(ch)
-    for (let i = 0; i < x.length; i++) {
-      const a = Math.abs(x[i])
-      if (a > peak) peak = a
-    }
-    // oversampled phases (strided for speed on long sessions: every sample
-    // near local maxima matters, but a full pass is still fast enough)
-    for (const h of phases) {
-      for (let i = 0; i < x.length; i++) {
-        let acc = 0
-        for (let k = 0; k < TAPS; k++) {
-          const idx = i + k - (HALF - 1)
-          if (idx >= 0 && idx < x.length) acc += x[idx] * h[k]
+    for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > peak) peak = a }
+  }
+  if (peak <= 0) return -Infinity
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const x = buf.getChannelData(ch)
+    const bm = blockMaxima(x)
+    for (let b = 0; b < bm.length; b++) {
+      // can anything in this window reach the current peak at all?
+      const local = Math.max(bm[b], b + 1 < bm.length ? bm[b + 1] : 0)
+      if (local * TP_L1 <= peak) continue
+      const s = b * TP_TAPS
+      const e = Math.min(x.length, s + TP_TAPS)
+      for (let i = s; i < e; i++) {
+        for (const h of TP_PHASES) {
+          const a = interpAt(x, i, h)
+          if (a > peak) peak = a
         }
-        const a = Math.abs(acc)
-        if (a > peak) peak = a
       }
     }
   }
-  return peak > 0 ? 20 * Math.log10(peak) : -Infinity
+  return 20 * Math.log10(peak)
+}
+
+/** Per-sample TRUE-peak envelope (max across channels and interpolation
+    phases), so the limiter can act on inter-sample peaks instead of only the
+    sample peaks it can see. Windows provably under `floorLinear` are left at
+    their sample magnitude — they are never the ones being limited. */
+function truePeakEnvelope(buf: AudioBuffer, floorLinear: number): Float32Array {
+  const n = buf.length
+  const env = new Float32Array(n)
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const x = buf.getChannelData(ch)
+    for (let i = 0; i < n; i++) { const a = Math.abs(x[i]); if (a > env[i]) env[i] = a }
+  }
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const x = buf.getChannelData(ch)
+    const bm = blockMaxima(x)
+    for (let b = 0; b < bm.length; b++) {
+      const local = Math.max(bm[b], b + 1 < bm.length ? bm[b + 1] : 0)
+      if (local * TP_L1 <= floorLinear) continue
+      const s = b * TP_TAPS
+      const e = Math.min(n, s + TP_TAPS)
+      for (let i = s; i < e; i++) {
+        for (const h of TP_PHASES) {
+          const a = interpAt(x, i, h)
+          if (a > env[i]) env[i] = a
+        }
+      }
+    }
+  }
+  return env
 }
 
 /* ---------------------------------------------------------------- limiter */
 
-/** Look-ahead peak limiter: gain-reduction envelope from the (approximate)
-    true peak, 5 ms lookahead attack, 200 ms release. Applied in place. */
-function limitBuffer(buf: AudioBuffer, ceilingLinear: number): number {
+/** Look-ahead peak limiter: gain-reduction envelope from the true peak, 5 ms
+    lookahead attack, 200 ms release. Applied in place. `peakEnv` is the
+    per-sample true-peak envelope; without it the sample peaks are used (which
+    leaves inter-sample overshoot behind). */
+function limitBuffer(buf: AudioBuffer, ceilingLinear: number, peakEnv?: Float32Array): number {
   const fs = buf.sampleRate
   const look = Math.round(0.005 * fs)
   const relCoef = Math.exp(-1 / (0.2 * fs))
   const n = buf.length
-  // per-sample max across channels, with a small safety for inter-sample
-  // peaks (the final measure/verify step catches the residue)
-  const peak = new Float32Array(n)
-  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
-    const x = buf.getChannelData(ch)
-    for (let i = 0; i < n; i++) {
-      const a = Math.abs(x[i])
-      if (a > peak[i]) peak[i] = a
+  const peak = peakEnv ?? (() => {
+    const p = new Float32Array(n)
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const x = buf.getChannelData(ch)
+      for (let i = 0; i < n; i++) { const a = Math.abs(x[i]); if (a > p[i]) p[i] = a }
     }
-  }
+    return p
+  })()
   // needed gain per sample, spread backwards over the lookahead (attack)
   const need = new Float32Array(n).fill(1)
   for (let i = 0; i < n; i++) {
@@ -207,7 +279,19 @@ export const SESSION_TARGET_LUFS = -16
 export const SESSION_CEILING_DBTP = -1
 
 /** Normalize a rendered session to the target integrated loudness and cap
-    true peaks at the ceiling. Mutates `buf` in place; returns the report. */
+    true peaks at the ceiling. Mutates `buf` in place; returns the report.
+
+    ORDERING MATTERS, and it used to be wrong. The old pass normalized to the
+    target, limited against the SAMPLE peaks, then — because inter-sample peaks
+    were still over — turned the whole session down by up to 3 dB to satisfy the
+    ceiling. The ceiling therefore decided the loudness: the GL-ANX 1.1 mix,
+    whose voice the POs deliberately set at −6 LUFS, landed at −18.5 LUFS,
+    2.5 LU under its own target, with the peaks paid for by everybody.
+
+    Now the limiter is given the TRUE-peak envelope, so it reduces gain only
+    where a peak actually is, and the loudness lost to that is added back and
+    re-limited. The output converges on both numbers instead of trading one
+    away, and a peaky mix keeps its level. */
 export function masterizeBuffer(
   buf: AudioBuffer,
   targetLufs: number = SESSION_TARGET_LUFS,
@@ -215,37 +299,65 @@ export function masterizeBuffer(
 ): MasterizeResult {
   const preLufs = measureLufs(buf)
   let gainDb = 0
-  if (Number.isFinite(preLufs)) {
-    gainDb = Math.max(-24, Math.min(24, targetLufs - preLufs))
-    const g = Math.pow(10, gainDb / 20)
+
+  const applyGain = (db: number): void => {
+    if (!Number.isFinite(db) || Math.abs(db) < 0.005) return
+    const g = Math.pow(10, db / 20)
     for (let ch = 0; ch < buf.numberOfChannels; ch++) {
       const x = buf.getChannelData(ch)
       for (let i = 0; i < x.length; i++) x[i] *= g
     }
   }
-  // limit against the ceiling with a small margin for inter-sample overshoot
-  const ceilingLinear = Math.pow(10, ceilingDbTp / 20) * 0.985
-  const maxRed = limitBuffer(buf, ceilingLinear)
-  // verification: pathological transients (hard steps) can still overshoot
-  // between samples after limiting — measure the REAL true peak and trim the
-  // residue globally (fractions of a dB; inaudible, deterministic ceiling)
-  let tp = measureTruePeakDb(buf)
-  let trimDb = 0
-  if (tp > ceilingDbTp) {
-    trimDb = Math.max(-3, ceilingDbTp - tp)
-    const tg = Math.pow(10, trimDb / 20)
-    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
-      const x = buf.getChannelData(ch)
-      for (let i = 0; i < x.length; i++) x[i] *= tg
-    }
-    tp = measureTruePeakDb(buf)
+
+  if (Number.isFinite(preLufs)) {
+    gainDb = Math.max(-24, Math.min(24, targetLufs - preLufs))
+    applyGain(gainDb)
   }
-  const postLufs = measureLufs(buf)
+
+  const ceilingLinear = Math.pow(10, ceilingDbTp / 20)
+  let deepest = 1
+
+  /** One limiting pass driven by the true-peak envelope, then verify. Returns
+      the measured true peak; repeats with a tighter internal ceiling if the
+      interpolator still finds an overshoot (rare, and always small). */
+  const limitToCeiling = (): number => {
+    let ceil = ceilingLinear
+    let tp = -Infinity
+    for (let pass = 0; pass < 3; pass++) {
+      // screen at a little under the ceiling: anything provably quieter than
+      // that can never be the sample being limited
+      const env = truePeakEnvelope(buf, ceil * 0.7)
+      const red = limitBuffer(buf, ceil, env)
+      if (red < deepest) deepest = red
+      tp = measureTruePeakDb(buf)
+      if (tp <= ceilingDbTp + 0.02) break
+      ceil *= Math.pow(10, (ceilingDbTp - tp) / 20)
+    }
+    return tp
+  }
+
+  let truePeakDb = limitToCeiling()
+
+  /* Limiting costs loudness. Give back what the ceiling allows and re-limit,
+     so the result lands on the target rather than wherever the peaks left it.
+     Bounded: each round can only ask for what is still missing, and heavy
+     limiting makes loudness saturate, so this converges in two or three. */
+  for (let round = 0; round < 3; round++) {
+    const now = measureLufs(buf)
+    if (!Number.isFinite(now)) break
+    const missing = targetLufs - now
+    if (missing <= 0.1) break
+    const makeup = Math.min(3, missing)
+    applyGain(makeup)
+    gainDb += makeup
+    truePeakDb = limitToCeiling()
+  }
+
   return {
     preLufs,
     gainDb,
-    postLufs,
-    truePeakDb: tp,
-    limiterDb: (maxRed >= 1 ? 0 : 20 * Math.log10(maxRed)) + trimDb,
+    postLufs: measureLufs(buf),
+    truePeakDb,
+    limiterDb: deepest >= 1 ? 0 : 20 * Math.log10(deepest),
   }
 }

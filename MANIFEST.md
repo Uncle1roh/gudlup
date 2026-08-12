@@ -1,7 +1,121 @@
 # Good Loop — build manifest
 
+**Slice: GL-ANX 1.1 voice cluster — language, identity, preview, §9 on
+every output** (current)
+- Diagnosed against the PO's own render (`GL-ANX_1.1_Deep(1) - Voce a
+  -6LUFS.wav`, 44.1 kHz/16-bit, exactly 24:00) rather than by inspection.
+- **Root cause of the accent/identity drift** (`src/tts/elevenlabs.ts`):
+  the request carried only `text`, `model_id` and two voice settings, on
+  the file's own stated assumption that the multilingual model "auto-
+  detects the language from the text, so no language flag is needed".
+  Language is inferred PER REQUEST and a protocol is one request per
+  line, so short Italian fragments landed in the wrong language — "pace"
+  read as the English word, "profumo dentro calma" with a Brazilian
+  accent. `TtsOptions.lang` already existed and every caller passed
+  `{lang:'it'}`; `fetchBytes` never read it. Now: `lang` honored,
+  `stability` 0.5 → 0.8 with `use_speaker_boost` (0.5 is the loose end of
+  the range — the same voice id came back as a different person),
+  `style` pinned at 0, a deterministic FNV-1a `seed` (a session
+  re-renders identically), and `previous_text`/`next_text` request
+  stitching so a two-word fragment inherits the surrounding sentences.
+- **`MODEL_CAPS` table**: `language_code` is a 422 on multilingual_v2 and
+  is withheld there; `apply_text_normalization:'on'` is only requested
+  when the language is ALSO enforced (expanding "1, 2, 3" into number
+  words while the model still guesses the language is how a counting line
+  counts in Portuguese). One constant (`MODEL_ID`) switches engine when
+  the POs re-audition for turbo/flash/v3.
+- **Ellipsis**: the PO hypothesis was right — nothing touched `…`.
+  `shapeTtsText` maps U+2026 to the documented `...`, normalizes spacing,
+  collapses doubled ellipses and adds terminal punctuation. Deliberately
+  NOT `<break>` tags: the docs warn they make the model speed up or add
+  artifacts.
+- **Spoken language is now first-class** (`ttsLanguage()`, `VITE_TTS_LANG`)
+  and deliberately NOT the UI locale — a therapist can browse in one
+  language and render a protocol authored in another.
+- **Preview** (`SoundStudio.tsx`): re-requested the API every time, so
+  previewing a synthesized clip played a brand-new take — a different
+  performance from the timeline's, and billed for it. A rendered clip is
+  auditioned from its own `ttsSource` (no network, no charge), re-baked
+  for pan/speed but without the protocol's calibration so a −34 LUFS
+  whisper lane is still audible. New `ttsText` tracks staleness, since
+  clearing `ttsSource` on a text edit would make the clip re-render as
+  the placeholder TONE; the Inspector now asks for a re-synthesis instead.
+  "↻ Re-synthesize" bumps the seed so it can escape a bad take.
+- **Batch cache** keyed on the whole request, not on text alone — keying
+  on text is what stamped ONE bad take onto all four repeats of a LOOP
+  block.
+- **§9 mastering reached only the PLAIN auto-render.** "⬇ Esporta WAV",
+  publish and attach wrote the raw mixdown — no −16 LUFS normalization
+  and no −1 dBTP limiter, on the copy patients stream. Measured in the
+  reference file: −14.85 LUFS, and 35 777 samples pinned at full scale in
+  L (7 945 runs of ≥2, longest 166 samples flat) for +0.18 dBTP. All
+  three paths now go through `masterSessionBuffer`.
+- **Binaural**: measured the hard-panned carrier pair across all 24 min —
+  L 200.00/R 210.00 Hz (10.00 Hz beat) to ~11:56, then L 200.00/R 206.00
+  Hz (6.00 Hz) to ~19:20, dead steady through the flagged 14:27–14:46 at
+  up to 65 dB channel separation. The reported artifact is NOT in this
+  render, matching the PO's inability to reproduce it. Mechanism found
+  instead: overlapping clips on a pure-tone lane put both right-ear
+  carriers in one ear, beating at the difference BETWEEN pairs (210 vs
+  206 = a 4 Hz wobble belonging to neither). `plainStudio` now butt-joins
+  those lanes — the predecessor is cut short, since each start is a phase
+  boundary — and `plainTimeline` warns. Left a WARNING, not an error: an
+  error blocks the import outright, and locking the POs out of their own
+  workbook over a rounding overlap is worse than the artifact.
+- **§9 ordering was ALSO wrong, and it mattered.** The old pass normalized
+  to −16, limited against SAMPLE peaks, then turned the whole session down
+  by up to 3 dB because inter-sample peaks were still over — so the ceiling
+  decided the loudness. On the POs' file (voice deliberately at −6 LUFS,
+  which they chose by ear) that landed at −18.50 LUFS, 2.5 LU under target,
+  with the peaks paid for by every quiet passage equally. `limitBuffer` now
+  takes a TRUE-peak envelope so it reduces gain only where a peak is, and
+  the loudness limiting costs is added back and re-limited. Measured on the
+  same file: **−16.08 LUFS / −1.00 dBTP, 71 549 clipped samples → 0**, with
+  the limiter taking −0.00 dB in quiet passages and −0.38 dB on the hottest
+  moment. The approved balance survives; only the peaks were capped.
+  `measureTruePeakDb` gained an exact screening bound (|interp| ≤ L1 ×
+  largest neighbour, checked on block maxima) — without it the iteration
+  would have been ~9 billion multiply-adds per pass; the whole 24-min
+  master now runs in ~35 s.
+- **Verified against the live API**, not asserted (`tools/check-voice-drift.ts`
+  — synthesizes each reported line old-vs-new and transcribes both with
+  scribe_v1, so the detected LANGUAGE is a measurement):
+  · 3:10 counting — OLD was spoken in **ENGLISH** ("One, two, three, four,
+    five", eng p=0.79), worse than the "a little too fast" reported. NEW:
+    "Uno, due, tre, quattro, cinque", ita p=0.85. **Fixed** — by the
+    stitched context, not by normalization. 2.28 s for the five numbers.
+  · "profumo dentro calma" — OLD actually said "**Profundo**" (a Portuguese
+    word). NEW says "Profumo". Word fixed; the language label still leans
+    pt for that phrase (p 0.36 → 0.26).
+  · "pace" — OLD transcribed "**Taste**". NEW "Pace". Word fixed.
+  · 8:12 and 9:10 measured ita p=0.99–1.00 BEFORE the fix, so those two
+    complaints are NOT language errors — they are delivery. Unchanged here.
+- **The model switch is a dead end, and now we know instead of guessing.**
+  Isolated one-word whisper fragments came back 0/3 Italian across FIVE
+  configurations — multilingual_v2 with short and with long stitching,
+  turbo_v2_5 and flash_v2_5 both with `language_code=it`, and v3. v3 also
+  400s on `previous_text`/`next_text` ("not yet supported"), i.e. adopting
+  it would LOSE the stitching that fixed the counting line, and it produced
+  outright garbage twice ("Peace.", "靠吗？"). Hard language enforcement does
+  not rescue a one-word request.
+- **What does work for the LOOP lane** (measured, not built): synthesizing
+  the block as ONE utterance — "Sono al sicuro. Pace. Protetto. Calma." —
+  reads ita p=0.96–0.98 on every take, and scribe returns per-word timings
+  precise enough to slice it back into the four clips. The residual whisper
+  drift is an architectural consequence of asking for one word at a time,
+  and that is the fix. NOT implemented in this slice.
+- The remaining content item: the counting line at 3:10 can be slowed with
+  `velocita_wpm` in the sheet (a row with no wpm and modalità ≠ sussurrato
+  resolves to ×1.00) now that it says the right words.
+- `tools/test-tts-request.ts` (esbuild-bundled, 27 assertions): ellipsis
+  shaping, stitching, seed determinism vs. context/language, explicit-seed
+  reroll, rate clamping, `language_code` withheld, and a 422 that points
+  at MODEL_CAPS. tsc + prod build clean; test-shape / test-mastering /
+  test-bilateral-sound / test-library-plan / test-whisper-draws unchanged
+  and passing. (`tools/test-wizard.ts` was already broken before this
+  slice — it imports a non-existent `src/data/program`.)
+
 **Slice: REF-xx parser + whisper-ostinato (triple stacking, mini-spec)**
-(current)
 - **Request A (parser)**: `set_affermazioni` now accepts a SINGLE ID
   alongside the unchanged CSI range grammar — `CSI-05` and `REF-01`
   resolve to one Affermazioni row (`^[A-Z]{2,4}-\d{2,}(\.\.\d{2,})?$`).

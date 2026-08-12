@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import {
   MultitrackPlayer,
   renderClipBuffer,
-  renderMixdown,
   renderMixdownBuffer,
   sliceBuffer,
   concatBuffers,
@@ -38,8 +37,10 @@ import {
   resolveBilateralSound,
   type Chord,
 } from './multitrack'
-import { getTtsProvider } from '../tts'
+import { getTtsProvider, ttsLanguage } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
+import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
+import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, voiceById, voicesByArchetype, type CatalogVoice } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
@@ -71,6 +72,12 @@ interface Clip {
   peaks: Float32Array | null
   text?: string
   ttsSource?: AudioBuffer | null
+  /** The text `ttsSource` was actually spoken from. Editing `text` cannot clear
+      ttsSource (a voice clip without it re-renders as the placeholder TONE), so
+      staleness is tracked instead of destroyed: Preview auditions the existing
+      audio only while this still matches, and the Inspector asks for a
+      re-synthesis once it doesn't. */
+  ttsText?: string
   /** A cut/glued piece: its audio is frozen — parameter edits don't
       re-render it (glue pieces back together to re-edit parameters). */
   frozen?: boolean
@@ -396,7 +403,8 @@ function StudioDesktop() {
         clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
       }))
       const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
-      setAttachMsg('Caricamento della copia per lo streaming…')
+      const mastered = masterSessionBuffer(buffer)
+      setAttachMsg(`Caricamento della copia per lo streaming… (${mastered})`)
       const { protocol } = await attachRenderedAudio(dp, target.code, target.duration, buffer)
       if (!protocol.enabled) {
         await saveProtocolVerified(dp, { ...protocol, enabled: true, updatedAt: Date.now() })
@@ -426,8 +434,9 @@ function StudioDesktop() {
         clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
       }))
       const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
+      const mastered = masterSessionBuffer(buffer)
       const { url } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
-      setAttachMsg(`Attached — ${attachTarget.code} · ${attachTarget.duration} min now streams this edit. (${url.split('/').pop()})`)
+      setAttachMsg(`Attached — ${attachTarget.code} · ${attachTarget.duration} min now streams this edit. ${mastered} (${url.split('/').pop()})`)
     } catch (e) {
       setAttachMsg(`Attach failed: ${(e as Error).message}`)
     } finally {
@@ -456,6 +465,10 @@ function StudioDesktop() {
      pulsed tone and — finishing after the voice arrived — overwrite it. That
      is the "one clip suddenly sounds like anything but the plan" bug. */
   const ttsInFlight = useRef<Set<string>>(new Set())
+  /* How many times each clip has been RE-synthesized, so "↻ Re-synthesize" can
+     ask ElevenLabs for a genuinely different take instead of resampling the
+     same deterministic seed. */
+  const rerollRef = useRef<Map<string, number>>(new Map())
   const dragRef = useRef<{ mode: 'move' | 'trim-l' | 'trim-r'; trackId: string; trackType: TrackType; clipId: string; startClientX: number; origStart: number; origDur: number } | null>(null)
   const lanesRef = useRef<HTMLDivElement | null>(null)
 
@@ -628,7 +641,17 @@ function StudioDesktop() {
      substituted its own default (or, with no key at all, the OPERATING SYSTEM
      voice), so what you auditioned was not the voice the picker showed.
      Now the voice is resolved once, explicitly, and the preview plays the SAME
-     baked buffer the clip will get — pan and speed included. */
+     baked buffer the clip will get — pan and speed included.
+
+     That fix settled WHICH VOICE resolves, but not WHICH AUDIO you hear, which
+     is why the POs kept reporting Preview as wrong: it re-requested the API
+     every time, so previewing an already-synthesized clip played a brand-new
+     take — a different performance from the one in the timeline, and billed for
+     it. A rendered clip is now auditioned from its own `ttsSource`, which is
+     the exact generation the clip was built from, re-baked for pan and speed
+     but WITHOUT the protocol's calibration (so a whisper lane sitting at
+     −34 LUFS is still audible at audition level). Only an unrendered clip
+     needs the network. */
   const previewVoice = useCallback(async (clip: Clip) => {
     const text = (clip.text ?? '').trim()
     if (!text) return
@@ -638,13 +661,20 @@ function StudioDesktop() {
     setTtsError(null)
     setPreviewBusy(clip.id)
     try {
-      const provider = getTtsProvider()
-      if (!provider.canRender || !player) {
-        // no key: the browser engine can only speak in an OS voice — say so
-        await provider.speak(text, { lang: 'it', voiceId: voice.id, rate: vp.speed })
+      if (clip.ttsSource && clip.ttsText === text && player) {
+        const src = clip.ttsSource
+        const baked = await bakeVoiceBuffer(src, vp.pan, src.duration / Math.max(0.5, vp.speed ?? 1) + 1, vp.speed ?? 1)
+        await player.audition(baked)
         return
       }
-      const bytes = await provider.render(text, { lang: 'it', voiceId: voice.id })
+      const provider = getTtsProvider()
+      const lang = ttsLanguage()
+      if (!provider.canRender || !player) {
+        // no key: the browser engine can only speak in an OS voice — say so
+        await provider.speak(text, { lang, voiceId: voice.id, rate: vp.speed })
+        return
+      }
+      const bytes = await provider.render(text, { lang, voiceId: voice.id, ...voiceContext(tracksRef.current, clip.id) })
       const decoded = await player.decode(bytes)
       const baked = await bakeVoiceBuffer(decoded, vp.pan, decoded.duration / Math.max(0.5, vp.speed ?? 1) + 1, vp.speed ?? 1)
       await player.audition(baked)
@@ -671,13 +701,29 @@ function StudioDesktop() {
     try {
       const provider = getTtsProvider()
       const vp = cl.params as VoiceParams
-      const bytes = await provider.render(text, { lang: 'it', voiceId: effectiveVoice(vp).id })
+      /* Renders are deterministic now (same line + voice + context = same
+         audio), which is what makes a session reproducible — but it would also
+         mean "↻ Re-synthesize" handed back the SAME bad take forever. An
+         explicit re-render of an already-rendered clip therefore asks for a
+         fresh seed; a first render keeps the reproducible one. */
+      let seed: number | undefined
+      if (cl.ttsSource) {
+        const n = (rerollRef.current.get(clipId) ?? 0) + 1
+        rerollRef.current.set(clipId, n)
+        seed = Math.imul(n, 2654435761) >>> 0
+      }
+      const bytes = await provider.render(text, {
+        lang: ttsLanguage(),
+        voiceId: effectiveVoice(vp).id,
+        ...voiceContext(tracksRef.current, clipId),
+        seed,
+      })
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       if (renderTokens.current.get(clipId) !== token) return
-      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
+      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
     } finally {
@@ -695,17 +741,18 @@ function StudioDesktop() {
     if (!player) return
     const provider = getTtsProvider()
     if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
-    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number; shape?: ClipShape }[] = []
+    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number; shape?: ClipShape; previousText?: string; nextText?: string }[] = []
     for (const t of tracksRef.current) {
       if (t.type !== 'voice') continue
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, ...voiceContext(tracksRef.current, c.id), shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
     if (!jobs.length) { setTtsError('Nessuna clip vocale con testo da sintetizzare.'); return }
     setTtsError(null)
+    const lang = ttsLanguage()
     const cache = new Map<string, AudioBuffer>()
     let done = 0
     let failed = 0
@@ -715,10 +762,16 @@ function StudioDesktop() {
       const token = (renderTokens.current.get(j.clipId) ?? 0) + 1
       renderTokens.current.set(j.clipId, token)
       try {
-        const key = `${j.voiceId ?? ''}|${j.text}`
+        /* The cache exists to bill one render per repeated line (a whisper LOOP
+           lane says the same four words over and over). It must therefore key on
+           the WHOLE request: the same words with different neighbours are a
+           different generation now that the neighbours condition the result.
+           Keying on text alone is also what stamped ONE bad take onto all four
+           repeats of a loop block. */
+        const key = `${j.voiceId ?? ''}|${lang}|${j.text}|${j.previousText ?? ''}|${j.nextText ?? ''}`
         let decoded = cache.get(key)
         if (!decoded) {
-          const bytes = await provider.render(j.text, { lang: 'it', voiceId: j.voiceId })
+          const bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
           decoded = await player.decode(bytes)
           cache.set(key, decoded)
         }
@@ -726,7 +779,7 @@ function StudioDesktop() {
         let buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
         if (j.shape) buf = shapeClipBuffer(buf, j.shape)
         if (renderTokens.current.get(j.clipId) !== token) continue
-        setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, durationSec: buf.duration })
+        setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, ttsText: j.text, durationSec: buf.duration })
         done++
       } catch (e) {
         failed++
@@ -1148,7 +1201,9 @@ function StudioDesktop() {
     try {
       const solo = tracks.some((t) => t.soloed)
       const mix: MixTrack[] = tracks.map((t) => ({ gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume, pan: CHANNEL_PAN[t.channel ?? 'C'], effects: t.effects, clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })) }))
-      const blob = await renderMixdown(mix, lengthSec, masterGain, sessionFades)
+      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
+      masterSessionBuffer(buffer)
+      const blob = audioBufferToWav(buffer)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `${projectName.replace(/[^\w.-]+/g, '_') || 'session'}.wav`; a.click()
@@ -1918,11 +1973,11 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           </div>
         </> })()}
 
-        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const rendered = !!clip.ttsSource; const hasText = !!(clip.text ?? '').trim(); const voice = effectiveVoice(p); const stale = staleVoiceId(p); return <>
+        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const txt = (clip.text ?? '').trim(); const staleText = !!clip.ttsSource && clip.ttsText !== txt; const rendered = !!clip.ttsSource && !staleText; const hasText = !!txt; const voice = effectiveVoice(p); const stale = staleVoiceId(p); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
               <span className="mt-tts__lbl">Affermazione</span>
-              <span className="mt-tts__eng">{rendered ? 'voce renderizzata ✓' : `voce: ${ttsLabel}`}</span>
+              <span className="mt-tts__eng">{rendered ? 'voce renderizzata ✓' : staleText ? 'testo modificato — da risintetizzare' : `voce: ${ttsLabel}`}</span>
             </div>
             <textarea
               className="mt-tts__text"
@@ -1945,6 +2000,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
               </button>
             </div>
             {!ttsCanRender && <div className="mt-tts__hint">Nessuna chiave TTS: l’anteprima è disattivata — la voce del browser è una voce di sistema, non quella scelta qui. Aggiungi una chiave (🎙) per ascoltare e renderizzare la voce reale (docs/TTS_SETUP.md).</div>}
+            {staleText && <div className="mt-tts__hint">⚠ Il testo è cambiato dopo la sintesi: la clip contiene ancora la battuta precedente. Risintetizza per aggiornarla (l’anteprima richiederà una nuova voce).</div>}
             {stale && (
               <div className="mt-tts__hint">
                 ⚠ Questa clip è stata importata con una voce che non è più nel catalogo (<code>{stale}</code>). Verrà parlata da {voice.name}.{' '}
@@ -1976,6 +2032,27 @@ async function auditionBilateral(id: BilateralSoundId): Promise<void> {
   await bilateralAudio.play().catch(() => { /* autoplay policy — the click already unlocked it */ })
 }
 
+/* ---- §9 mastering on the way out ----
+
+   Every route out of the Studio has to carry it. Only the PLAIN auto-render
+   (admin/renderPlain.ts) used to: "⬇ Esporta WAV", "publish" and "attach" wrote
+   the raw mixdown straight to a file or to the streaming copy, with no loudness
+   normalization and — the part that bit — no true-peak limiter.
+
+   The GL-ANX 1.1 reference render is what that produces: −14.85 LUFS against
+   the −16 target, and 35 777 samples pinned at full scale in the left channel
+   (7 945 runs of two or more, the longest 166 samples flat) for an inter-sample
+   peak of +0.18 dBTP against a −1 dBTP ceiling. Hard clipping, on the copy
+   patients stream.
+
+   `masterizeBuffer` mutates the buffer in place; the returned string is for the
+   status line. */
+function masterSessionBuffer(buffer: AudioBuffer): string {
+  const m = masterizeBuffer(buffer)
+  const lufs = Number.isFinite(m.postLufs) ? m.postLufs.toFixed(1) : '−∞'
+  return `§9: ${lufs} LUFS (target ${SESSION_TARGET_LUFS}), true peak ${m.truePeakDb.toFixed(1)} dBTP (ceiling ${SESSION_CEILING_DBTP})${m.limiterDb < -0.1 ? `, limiter ${m.limiterDb.toFixed(1)} dB` : ''}`
+}
+
 /* ---- which voice a clip is REALLY spoken in ----
 
    One resolver for preview, synthesis and the picker's label: the clip's own
@@ -1990,6 +2067,35 @@ function effectiveVoice(p: VoiceParams): CatalogVoice {
     before the roster was narrowed to the POs' voices). */
 function staleVoiceId(p: VoiceParams): string | null {
   return p.voiceId && !voiceById(p.voiceId) ? p.voiceId : null
+}
+
+/* ---- the lines around a voice clip, for TTS request stitching ----
+
+   ElevenLabs renders one API request per line, so by default every line is
+   generated in isolation: prosody restarts, and a fragment too short to place
+   in a language gets placed in the wrong one. Handing it the neighbouring lines
+   fixes both.
+
+   Neighbours are taken across the WHOLE project by time, not just within the
+   clip's own lane, and that is the point: the lanes that produce short
+   fragments (whisper loops, echo ostinati — "pace", "calma", "calore… sole…
+   pelle") are precisely the ones whose own neighbours are equally short and
+   contextless. The nearest lines anywhere in the protocol are real sentences. */
+function voiceContext(tracks: Track[], clipId: string): { previousText?: string; nextText?: string } {
+  const lines: { startSec: number; id: string; text: string }[] = []
+  for (const t of tracks) {
+    if (t.type !== 'voice') continue
+    for (const c of t.clips) {
+      const text = (c.text ?? '').trim()
+      if (text) lines.push({ startSec: c.startSec, id: c.id, text })
+    }
+  }
+  // stable order: clips starting together must not swap between renders, or the
+  // deterministic seed stops being deterministic
+  lines.sort((a, b) => a.startSec - b.startSec || a.id.localeCompare(b.id))
+  const i = lines.findIndex((l) => l.id === clipId)
+  if (i < 0) return {}
+  return { previousText: lines[i - 1]?.text, nextText: lines[i + 1]?.text }
 }
 
 /* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
