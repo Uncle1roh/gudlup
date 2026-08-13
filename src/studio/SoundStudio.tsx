@@ -37,7 +37,7 @@ import {
   resolveBilateralSound,
   type Chord,
 } from './multitrack'
-import { getTtsProvider, ttsLanguage } from '../tts'
+import { getTtsProvider, ttsLanguage, type TtsSpan } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
@@ -63,6 +63,9 @@ const HEADER_W = 254
 const MIN_CLIP = 1
 
 /* ---- model ---- */
+/** The per-clip level/tone shaping baked into a rendered buffer. */
+type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
+
 interface Clip {
   id: string
   startSec: number
@@ -489,7 +492,6 @@ function StudioDesktop() {
     })))
   }, [])
 
-  type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
 
   const doRender = useCallback(async (trackId: string, clipId: string, type: TrackType, params: ClipParams, dur: number, shape?: ClipShape) => {
     const token = (renderTokens.current.get(clipId) ?? 0) + 1
@@ -741,7 +743,7 @@ function StudioDesktop() {
     if (!player) return
     const provider = getTtsProvider()
     if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
-    const jobs: { trackId: string; clipId: string; text: string; pan: number; speed: number; voiceId?: string; startSec: number; shape?: ClipShape; previousText?: string; nextText?: string }[] = []
+    const jobs: VoiceJob[] = []
     for (const t of tracksRef.current) {
       if (t.type !== 'voice') continue
       for (const c of t.clips) {
@@ -754,38 +756,78 @@ function StudioDesktop() {
     setTtsError(null)
     const lang = ttsLanguage()
     const cache = new Map<string, AudioBuffer>()
+    /* One joined render serves every clip in its block, and repeats of the same
+       block (a LOOP lane cycles the same four words all phase) reuse it — so the
+       whole ostinato costs ONE request and every cycle is identical. */
+    const blockCache = new Map<string, { decoded: AudioBuffer; spans: TtsSpan[] }>()
+    const groups = groupVoiceJobs(jobs, provider.canRenderJoined === true && typeof provider.renderJoined === 'function')
+    const total = jobs.length
     let done = 0
     let failed = 0
-    for (const j of jobs) {
-      setSynthAll(`Sintesi delle voci ${done + 1}/${jobs.length}…`)
-      ttsInFlight.current.add(j.clipId)
-      const token = (renderTokens.current.get(j.clipId) ?? 0) + 1
-      renderTokens.current.set(j.clipId, token)
+
+    /** Bake one job from already-decoded audio and put it in its clip. */
+    const place = async (j: VoiceJob, source: AudioBuffer, token: number): Promise<boolean> => {
+      const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
+      let buf = await bakeVoiceBuffer(source, j.pan, maxDur, j.speed)
+      if (j.shape) buf = shapeClipBuffer(buf, j.shape)
+      if (renderTokens.current.get(j.clipId) !== token) return false
+      setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: source, ttsText: j.text, durationSec: buf.duration })
+      return true
+    }
+
+    for (const group of groups) {
+      const tokens = new Map<string, number>()
+      for (const j of group) {
+        ttsInFlight.current.add(j.clipId)
+        const t = (renderTokens.current.get(j.clipId) ?? 0) + 1
+        renderTokens.current.set(j.clipId, t)
+        tokens.set(j.clipId, t)
+      }
       try {
-        /* The cache exists to bill one render per repeated line (a whisper LOOP
-           lane says the same four words over and over). It must therefore key on
-           the WHOLE request: the same words with different neighbours are a
-           different generation now that the neighbours condition the result.
-           Keying on text alone is also what stamped ONE bad take onto all four
-           repeats of a loop block. */
-        const key = `${j.voiceId ?? ''}|${lang}|${j.text}|${j.previousText ?? ''}|${j.nextText ?? ''}`
-        let decoded = cache.get(key)
-        if (!decoded) {
-          const bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
-          decoded = await player.decode(bytes)
-          cache.set(key, decoded)
+        if (group.length > 1) {
+          /* A block: spoken as ONE utterance, then cut apart on the character
+             timings ElevenLabs returns. Asking for "pace" on its own has no
+             right answer — the word is Italian AND English, and every model
+             tried guessed, including turbo/flash with an explicit
+             language_code. Inside a sentence the same model is correct every
+             time. See TtsProvider.renderJoined. */
+          setSynthAll(`Sintesi del blocco (${group.length} frasi) ${done + 1}/${total}…`)
+          const texts = group.map((j) => j.text)
+          const key = `BLOCK|${group[0].voiceId ?? ''}|${lang}|${texts.join('')}`
+          let block = blockCache.get(key)
+          if (!block) {
+            const r = await provider.renderJoined!(texts, { lang, voiceId: group[0].voiceId })
+            block = { decoded: await player.decode(r.bytes), spans: r.spans }
+            blockCache.set(key, block)
+          }
+          for (let i = 0; i < group.length; i++) {
+            const j = group[i]
+            const span = block.spans[i]
+            const piece = sliceBuffer(block.decoded, span.startSec, span.endSec)
+            if (await place(j, piece, tokens.get(j.clipId)!)) done++
+          }
+        } else {
+          const j = group[0]
+          setSynthAll(`Sintesi delle voci ${done + 1}/${total}…`)
+          /* The single-line cache bills one render per repeated line. It keys on
+             the WHOLE request: the same words with different neighbours are a
+             different generation now that the neighbours condition the result.
+             Keying on text alone is what stamped ONE bad take onto every repeat
+             of a loop block. */
+          const key = `${j.voiceId ?? ''}|${lang}|${j.text}|${j.previousText ?? ''}|${j.nextText ?? ''}`
+          let decoded = cache.get(key)
+          if (!decoded) {
+            const bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
+            decoded = await player.decode(bytes)
+            cache.set(key, decoded)
+          }
+          if (await place(j, decoded, tokens.get(j.clipId)!)) done++
         }
-        const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
-        let buf = await bakeVoiceBuffer(decoded, j.pan, maxDur, j.speed)
-        if (j.shape) buf = shapeClipBuffer(buf, j.shape)
-        if (renderTokens.current.get(j.clipId) !== token) continue
-        setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: decoded, ttsText: j.text, durationSec: buf.duration })
-        done++
       } catch (e) {
-        failed++
-        setTtsError(`Voce a ${fmtTime(j.startSec)}: ${(e as Error).message}`)
+        failed += group.length
+        setTtsError(`Voce a ${fmtTime(group[0].startSec)}: ${(e as Error).message}`)
       } finally {
-        ttsInFlight.current.delete(j.clipId)
+        for (const j of group) ttsInFlight.current.delete(j.clipId)
       }
     }
     setSynthAll(null)
@@ -2081,6 +2123,76 @@ function staleVoiceId(p: VoiceParams): string | null {
    fragments (whisper loops, echo ostinati — "pace", "calma", "calore… sole…
    pelle") are precisely the ones whose own neighbours are equally short and
    contextless. The nearest lines anywhere in the protocol are real sentences. */
+interface VoiceJob {
+  trackId: string
+  clipId: string
+  text: string
+  pan: number
+  speed: number
+  voiceId?: string
+  startSec: number
+  shape?: ClipShape
+  previousText?: string
+  nextText?: string
+}
+
+/* ---- which lines are too short to survive on their own ----
+
+   A one-word request has no language to detect. "pace" is Italian and English;
+   "calma" is Italian, Portuguese and Spanish. Measured: isolated fragments came
+   back non-Italian on 0-of-3 takes across FIVE configurations, including
+   turbo_v2_5 and flash_v2_5 with an explicit language_code=it, and v3. Spoken
+   inside a sentence, the same model is right every time.
+
+   So short lines are batched into one utterance and cut apart afterwards.
+   Anything long enough to carry its own language is left alone — a sentence
+   already works, and grouping it would only risk the cut. */
+const JOIN_MAX_CHARS = 34
+const JOIN_MAX_WORDS = 4
+const JOIN_MAX_LINES = 6
+const JOIN_MAX_TOTAL_CHARS = 400
+
+function isShortLine(text: string): boolean {
+  return text.length <= JOIN_MAX_CHARS && text.split(/\s+/).filter(Boolean).length <= JOIN_MAX_WORDS
+}
+
+/**
+ * Partition jobs into render groups. A group of 2+ is spoken as one utterance;
+ * a group of 1 is rendered on its own as before.
+ *
+ * Only ADJACENT short lines on the SAME lane with the SAME voice are grouped:
+ * the cut has to land in real silence between neighbours, and mixing lanes or
+ * voices would put unrelated material into one breath.
+ */
+function groupVoiceJobs(jobs: VoiceJob[], canJoin: boolean): VoiceJob[][] {
+  if (!canJoin) return jobs.map((j) => [j])
+  const out: VoiceJob[][] = []
+  let run: VoiceJob[] = []
+  let chars = 0
+  const flush = () => {
+    if (run.length) out.push(run)
+    run = []
+    chars = 0
+  }
+  // lane order, then time order — the order the cut relies on
+  const ordered = [...jobs].sort((a, b) => (a.trackId < b.trackId ? -1 : a.trackId > b.trackId ? 1 : a.startSec - b.startSec))
+  for (const j of ordered) {
+    const head = run[0]
+    const compatible = head !== undefined
+      && head.trackId === j.trackId
+      && head.voiceId === j.voiceId
+      && Math.abs(head.speed - j.speed) < 0.001
+      && run.length < JOIN_MAX_LINES
+      && chars + j.text.length + 1 <= JOIN_MAX_TOTAL_CHARS
+    if (!isShortLine(j.text)) { flush(); out.push([j]); continue }
+    if (!compatible) flush()
+    run.push(j)
+    chars += j.text.length + 1
+  }
+  flush()
+  return out
+}
+
 function voiceContext(tracks: Track[], clipId: string): { previousText?: string; nextText?: string } {
   const lines: { startSec: number; id: string; text: string }[] = []
   for (const t of tracks) {

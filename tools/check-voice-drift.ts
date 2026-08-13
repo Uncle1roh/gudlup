@@ -147,6 +147,44 @@ console.log(`lines tested                       : ${counted}`)
 console.log(`detected as NOT Italian — OLD path : ${oldWrong}`)
 console.log(`detected as NOT Italian — NEW path : ${newWrong}`)
 console.log('')
+
+/* ---- the LOOP block, spoken whole and cut apart ----
+   The residual failures above are all ONE-WORD lines, and no model fixes them:
+   isolated "pace"/"calma" came back non-Italian on 0-of-3 takes across
+   multilingual_v2 (short and long stitching), turbo_v2_5 and flash_v2_5 with
+   language_code=it, and v3. The fix is not to ask for one word at a time.
+   This renders the block through the shipped renderJoined() and checks that
+   each line's spoken words really do fall inside the span we cut for it. */
+console.log('=== LOOP block as ONE utterance, then cut apart ===')
+const BLOCK = ['sono al sicuro', 'pace', 'protetto', 'calma']
+try {
+  const joined = await tts.renderJoined!(BLOCK, { lang: 'it', voiceId: ASMR_F })
+  const s = await transcribe(joined.bytes)
+  if ('error' in s) {
+    console.log(`  ${s.error}`)
+  } else {
+    const lc = (s.language_code ?? '??').toLowerCase()
+    console.log(`  block detected: ${lc.startsWith('it') ? 'ita' : `>>> ${lc.toUpperCase()} <<<`} p=${(s.language_probability ?? 0).toFixed(2)}  "${(s.text ?? '').trim()}"`)
+    const words = (s.words ?? []).filter((w) => w.type !== 'spacing' && w.start !== undefined)
+    let allIn = true
+    for (let i = 0; i < BLOCK.length; i++) {
+      const span = joined.spans[i]
+      const inSpan = words
+        .filter((w) => { const mid = (w.start! + (w.end ?? w.start!)) / 2; return mid >= span.startSec && mid <= span.endSec })
+        .map((w) => w.text.replace(/[.,!?]/g, '').toLowerCase())
+      const want = BLOCK[i].split(/\s+/).map((w) => w.toLowerCase())
+      const ok = inSpan.length === want.length && want.every((w) => inSpan.includes(w))
+      if (!ok) allIn = false
+      console.log(`  ${ok ? 'ok  ' : 'FAIL'} "${BLOCK[i]}" → ${span.startSec.toFixed(2)}-${span.endSec.toFixed(2)}s contains [${inSpan.join(' ')}]`)
+    }
+    console.log(allIn
+      ? '  → every line sits cleanly inside its own slice; the cuts land in the silence.'
+      : '  → a slice does not match its line: do NOT ship this cut.')
+  }
+} catch (e) {
+  console.log(`  block render failed: ${(e as Error).message}`)
+}
+console.log('')
 console.log('Caveat worth stating: speech-to-text detects the LANGUAGE of the words,')
 console.log('which catches "pace"-as-English and pt-BR pronunciation, but a native')
 console.log('Italian speaker with a mild Brazilian colouring can still transcribe as')

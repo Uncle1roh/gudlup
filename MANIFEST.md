@@ -98,12 +98,33 @@ every output** (current)
   it would LOSE the stitching that fixed the counting line, and it produced
   outright garbage twice ("Peace.", "靠吗？"). Hard language enforcement does
   not rescue a one-word request.
-- **What does work for the LOOP lane** (measured, not built): synthesizing
-  the block as ONE utterance — "Sono al sicuro. Pace. Protetto. Calma." —
-  reads ita p=0.96–0.98 on every take, and scribe returns per-word timings
-  precise enough to slice it back into the four clips. The residual whisper
-  drift is an architectural consequence of asking for one word at a time,
-  and that is the fix. NOT implemented in this slice.
+- **The LOOP lane fix, now BUILT.** The residual drift is an architectural
+  consequence of asking for one word at a time, so the Studio stops doing
+  that. `TtsProvider.renderJoined()` speaks a block as ONE utterance and
+  reports where each line landed; `SoundStudio.groupVoiceJobs()` batches
+  ADJACENT short lines (≤34 chars, ≤4 words, ≤6 per block, same lane + voice
+  + speed) and cuts the result apart with `sliceBuffer`. Long lines are left
+  alone — a sentence already works and grouping it would only risk the cut.
+  · ElevenLabs `/with-timestamps` returns character-level alignment that
+    matches the sent text exactly (verified), so each line maps to a real
+    time span. Each span is widened to the MIDPOINT of the silence between
+    neighbours, so cuts land in the gap and not on a consonant, and the spans
+    TILE the audio — no gap, no overlap, nothing discarded.
+  · A missing or mismatched alignment REFUSES to cut rather than slicing
+    mid-word.
+  · `MODEL_CAPS` gained `timestamps` and `stitching`. v3 has neither, so the
+    joined path degrades to per-line rendering instead of breaking on a model
+    swap; stitching is now gated too, since v3 400s on previous_text.
+  · One joined render serves every clip in the block AND every later repeat
+    of it (`blockCache`), so an 8-minute ostinato costs ONE request and every
+    cycle is identical.
+  Verified live end-to-end: the block reads **ita p=0.96** where the same
+  words alone were 0/3 Italian, and each line's spoken words fall inside its
+  own slice (`tools/check-voice-drift.ts` now asserts this, comparing scribe
+  word timings against the spans we cut). `tools/test-tts-block.ts` (19
+  assertions) locks the span maths and the refuse-to-cut guards.
+- `ClipShape` promoted to module scope (it was declared inside the component
+  and the new job type needed it).
 - The remaining content item: the counting line at 3:10 can be slowed with
   `velocita_wpm` in the sheet (a row with no wpm and modalità ≠ sussurrato
   resolves to ×1.00) now that it says the right words.

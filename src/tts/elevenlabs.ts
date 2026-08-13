@@ -24,7 +24,7 @@
    browser — fine for a closed test, NOT for production. Move this call behind a
    server proxy (e.g. a Supabase Edge Function) before any public release. */
 
-import type { TtsOptions, TtsProvider } from './types'
+import type { TtsJoinedRender, TtsOptions, TtsProvider, TtsSpan } from './types'
 import { ttsLanguage } from './settings'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
@@ -52,17 +52,24 @@ interface ModelCaps {
       language is how a counting line ends up counting in Portuguese. Left at
       'auto' otherwise. */
   textNormalization: boolean
+  /** Serves `/with-timestamps` (character-level alignment), which is what lets
+      a block of short lines be spoken as one utterance and cut back apart. */
+  timestamps: boolean
+  /** Accepts `previous_text`/`next_text`. v3 rejects them outright ("not yet
+      supported"), so adopting it would LOSE the stitching that fixed the
+      counting line. */
+  stitching: boolean
 }
 
 const MODEL_CAPS: Record<string, ModelCaps> = {
-  eleven_multilingual_v2: { languageCode: false, textNormalization: true },
-  eleven_turbo_v2_5: { languageCode: true, textNormalization: false },
-  eleven_flash_v2_5: { languageCode: true, textNormalization: false },
-  eleven_v3: { languageCode: true, textNormalization: true },
+  eleven_multilingual_v2: { languageCode: false, textNormalization: true, timestamps: true, stitching: true },
+  eleven_turbo_v2_5: { languageCode: true, textNormalization: false, timestamps: true, stitching: true },
+  eleven_flash_v2_5: { languageCode: true, textNormalization: false, timestamps: true, stitching: true },
+  eleven_v3: { languageCode: true, textNormalization: true, timestamps: false, stitching: false },
 }
 
 function caps(): ModelCaps {
-  return MODEL_CAPS[MODEL_ID] ?? { languageCode: false, textNormalization: false }
+  return MODEL_CAPS[MODEL_ID] ?? { languageCode: false, textNormalization: false, timestamps: false, stitching: false }
 }
 
 /* ---- voice settings ----------------------------------------------------
@@ -106,6 +113,63 @@ export function shapeTtsText(raw: string): string {
   // this is prose in a specific language rather than a loose token.
   if (t && !/[.!?,;:]$/.test(t)) t += '.'
   return t
+}
+
+/** Lines are joined with a single space. shapeTtsText has already given each
+    one terminal punctuation, so the result is a run of complete sentences —
+    "Sono al sicuro. Pace. Protetto. Calma." — which is exactly the form that
+    measured Italian on every take where the words alone did not. */
+const JOIN = ' '
+
+/** base64 → bytes, without assuming a Buffer (this ships to the browser). */
+function base64ToBytes(b64: string): ArrayBuffer {
+  const bin = atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out.buffer
+}
+
+interface Alignment {
+  characters?: string[]
+  character_start_times_seconds?: number[]
+  character_end_times_seconds?: number[]
+}
+
+/**
+ * Turn per-character timings into one span per line.
+ *
+ * Each line's span is widened to the MIDPOINT of the silence between it and its
+ * neighbour, so the cut lands in the gap rather than on a consonant, and the
+ * natural breath before a whispered word is kept with it. The first line starts
+ * at 0 and the last runs to the end of the audio, so the spans tile the whole
+ * render and nothing is thrown away.
+ */
+function spansFromAlignment(shaped: string[], combined: string, a: Alignment): TtsSpan[] {
+  const chars = a.characters ?? []
+  const starts = a.character_start_times_seconds ?? []
+  const ends = a.character_end_times_seconds ?? []
+  if (chars.length !== starts.length || chars.length !== ends.length || !chars.length) {
+    throw new Error('ElevenLabs returned no usable character alignment for the joined render.')
+  }
+  if (chars.join('') !== combined) {
+    // the endpoint aligns against the text we sent; if that ever stops being
+    // true, cutting on these indices would slice mid-word
+    throw new Error('ElevenLabs alignment does not match the text sent — refusing to cut on it.')
+  }
+  const raw: TtsSpan[] = []
+  let cursor = 0
+  for (const frag of shaped) {
+    const idx = combined.indexOf(frag, cursor)
+    if (idx < 0) throw new Error(`Could not locate "${frag.slice(0, 24)}" in the joined text.`)
+    const last = idx + frag.length - 1
+    raw.push({ startSec: starts[idx], endSec: ends[last] })
+    cursor = last + 1
+  }
+  const audioEnd = ends[ends.length - 1]
+  return raw.map((s, i) => ({
+    startSec: i === 0 ? 0 : (raw[i - 1].endSec + s.startSec) / 2,
+    endSec: i === raw.length - 1 ? audioEnd : (s.endSec + raw[i + 1].startSec) / 2,
+  }))
 }
 
 /** FNV-1a over the request's identity: the same line, voice, language and
@@ -195,8 +259,8 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     // Request stitching. Two jobs: it keeps prosody continuous across the many
     // separate generations of one protocol, AND it lends a short fragment the
     // surrounding words it needs to be placed in the right language.
-    if (prev) body.previous_text = prev
-    if (next) body.next_text = next
+    if (c.stitching && prev) body.previous_text = prev
+    if (c.stitching && next) body.next_text = next
 
     const res = await fetch(`${ENDPOINT}/${voice}`, {
       method: 'POST',
@@ -214,13 +278,65 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     return res.arrayBuffer()
   }
 
+  /** Speak a block of lines as ONE utterance and report where each landed. */
+  async function fetchJoined(texts: string[], opts?: TtsOptions): Promise<TtsJoinedRender> {
+    const c = caps()
+    if (!c.timestamps) throw new Error(`Model "${MODEL_ID}" has no character alignment — cannot render a joined block.`)
+    const shaped = texts.map(shapeTtsText).filter((t) => t.length > 0)
+    if (shaped.length !== texts.length) throw new Error('A line in the block is empty.')
+    const voice = resolveVoice(opts)
+    const lang = (opts?.lang ?? ttsLanguage()).trim()
+    const combined = shaped.join(JOIN)
+    const prev = opts?.previousText?.trim() ? shapeTtsText(opts.previousText) : undefined
+    const next = opts?.nextText?.trim() ? shapeTtsText(opts.nextText) : undefined
+
+    const body: Record<string, unknown> = {
+      text: combined,
+      model_id: MODEL_ID,
+      voice_settings: {
+        stability: STABILITY,
+        similarity_boost: SIMILARITY_BOOST,
+        style: 0,
+        use_speaker_boost: true,
+        ...(opts?.rate && Math.abs(opts.rate - 1) > 0.001
+          ? { speed: +Math.min(SPEED_MAX, Math.max(SPEED_MIN, opts.rate)).toFixed(2) }
+          : {}),
+      },
+      seed: opts?.seed ?? seedFrom([voice, lang, combined, prev, next]),
+      apply_text_normalization: c.languageCode && c.textNormalization ? 'on' : 'auto',
+    }
+    if (c.languageCode && lang) body.language_code = iso639(lang)
+    if (c.stitching && prev) body.previous_text = prev
+    if (c.stitching && next) body.next_text = next
+
+    const res = await fetch(`${ENDPOINT}/${voice}/with-timestamps`, {
+      method: 'POST',
+      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      throw new Error(explainError(res.status, detail))
+    }
+    const json = (await res.json()) as { audio_base64?: string; alignment?: Alignment }
+    if (!json.audio_base64) throw new Error('ElevenLabs returned no audio for the joined block.')
+    return {
+      bytes: base64ToBytes(json.audio_base64),
+      spans: spansFromAlignment(shaped, combined, json.alignment ?? {}),
+    }
+  }
+
   return {
     id: 'elevenlabs',
     label: 'ElevenLabs',
     canRender: true,
     hasSecondaryVoice: Boolean(secondary),
+    canRenderJoined: caps().timestamps,
     async render(text: string, opts?: TtsOptions) {
       return fetchBytes(text, opts)
+    },
+    async renderJoined(texts: string[], opts?: TtsOptions) {
+      return fetchJoined(texts, opts)
     },
     async speak(text: string, opts?: TtsOptions) {
       const bytes = await fetchBytes(text, opts)

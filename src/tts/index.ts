@@ -39,5 +39,5 @@ export function getTtsProvider(): TtsProvider {
   return createBrowserTts()
 }
 
-export type { TtsProvider, TtsOptions } from './types'
+export type { TtsProvider, TtsOptions, TtsSpan, TtsJoinedRender } from './types'
 export { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, ttsLanguage } from './settings'
