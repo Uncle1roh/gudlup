@@ -1,5 +1,54 @@
 # Good Loop — build manifest
 
+**Slice: the male-voice distortion — a monitor with no peak protection**
+(current)
+- PO feedback after testing the previous slice: pronunciation and the
+  mid-track voice changes are FIXED; the distortion remains, and only on male
+  voices — with one decisive control, **the child male voice is fine**.
+- That control is what solved it. Measured on the POs' own five voices (real
+  ElevenLabs audio at 24 kHz, engine's own BS.1770 meter):
+
+  | voice | crest | energy <160 Hz | peak @ −6 LUFS | PO |
+  |---|---|---|---|---|
+  | Child (M) | 13.1 dB | 12 % | +9.8 dBFS | fine |
+  | Maternal (F) | 9.8 dB | 55 % | +7.2 dBFS | fine |
+  | ASMR (M) | 11.9 dB | 70 % | +9.7 dBFS | distorts |
+  | Paternal (M) | 8.6 dB | 92 % | +5.1 dBFS | distorts |
+
+  Two hypotheses died here and are recorded so they are not retried: it is
+  NOT headroom (the child voice needs the MOST, +9.8 dB, and is fine) and it
+  is NOT the §9 limiter (THD 0.15 % at 110 Hz, inaudible; and Paternal comes
+  out of mastering with −152 dB of non-gain residue, i.e. pure gain). The one
+  column that orders exactly like the complaint is low-frequency content.
+- **Root cause**: `calibrateBufferToDb` gives a clip whatever gain its
+  protocol level demands, and at −6 LUFS that is +5…+10 dBFS with 12 000 to
+  24 000 samples past full scale. Legitimate inside the engine — buffers are
+  float and §9 brings the EXPORT back under −1 dBTP. But `MultitrackPlayer`
+  wired master straight to `ctx.destination`, which hard-clips at ±1, so the
+  Studio **monitor** was distorting audio that exports clean. Clipped bass
+  buzzes; the child voice's clipping lands on sparse transients nobody hears.
+- **Fix — monitor bus, two stages** (`MultitrackPlayer`): a
+  DynamicsCompressor (−6 dBFS, ratio 10, 2 ms/200 ms) for level riding, then
+  a WaveShaper soft-clip as a GUARANTEED ceiling, because a compressor's
+  attack lets a transient 10 dB over through before the gain moves. The curve
+  is exactly unity below −6 dBFS (ordinary monitoring bit-identical) and its
+  endpoints stop at 0.87, so it cannot emit a sample at the rail whatever
+  arrives. **Monitoring only** — exports and published audio go through
+  `renderMixdownBuffer` + `masterizeBuffer`, not through here.
+- `bufferPeakDb()` added; `renderPlain` now NOTES when a lane asks for a level
+  it cannot physically hold, naming the track and the overshoot, and explains
+  that the same voice/bed ratio is available without overload by lowering the
+  other lanes — §9 normalises the finished mix to −16 LUFS either way, so what
+  reaches the listener is the RATIO, not the absolute number.
+- `tools/check-monitor-clipping.ts` (15 assertions): the old path clips, the
+  new one emits zero rail samples, and the curve is unity below the knee.
+  Deliberately does NOT assert that bass clipping is more audible — that is
+  psychoacoustics, not something this file can measure.
+- Still outstanding: `renderPlain.ts:145` and `renderDatasheet.ts:506` each
+  have their OWN voice loop with a hardcoded `lang`, no request stitching and
+  no block grouping. The Studio path has all three. Those two paths have not
+  been brought in line.
+
 **Slice: GL-ANX 1.1 voice cluster — language, identity, preview, §9 on
 every output** (current)
 - Diagnosed against the PO's own render (`GL-ANX_1.1_Deep(1) - Voce a

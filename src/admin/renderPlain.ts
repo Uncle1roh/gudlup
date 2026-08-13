@@ -25,6 +25,7 @@ import {
   renderClipBuffer,
   renderMixdownBuffer,
   shapeClipBuffer,
+  bufferPeakDb,
   type MixTrack,
   type SampleParams,
   type VoiceParams,
@@ -122,6 +123,10 @@ export async function renderPlainWav(
 
   let voiceClips = 0
   let overran = 0
+  /* Voice clips whose calibrated level puts them past full scale. */
+  let overLevel = 0
+  let worstOverDb = 0
+  let worstOverTrack = ''
   const mix: MixTrack[] = []
   /* §8.3 ducking windows, collected from what is ACTUALLY rendered: a voice
      clip's real length is its TTS length, not the Excel window (see below). */
@@ -154,6 +159,16 @@ export async function renderPlainWav(
           const room = lengthSec - c.startSec
           let baked = await bakeVoiceBuffer(decoded, vp.pan, room, vp.speed ?? 1)
           baked = shapeClipBuffer(baked, c)
+          /* A calibrated clip can legitimately sit above full scale — the
+             buffers are float and §9 brings the finished mix back under the
+             ceiling. But it is worth SAYING, because a lane asking for a level
+             it cannot physically hold is invisible otherwise, and it is what
+             made the deep male voices sound broken. */
+          const pk = bufferPeakDb(baked)
+          if (pk > 0) {
+            overLevel++
+            if (pk > worstOverDb) { worstOverDb = pk; worstOverTrack = t.name }
+          }
           if (baked.duration > c.durationSec + 0.05) overran++
           dur = Math.min(room, baked.duration)
           buffer = baked
@@ -181,6 +196,16 @@ export async function renderPlainWav(
 
     if (overran) {
       notes.push(`${overran} voice clip${overran === 1 ? '' : 's'} speak${overran === 1 ? 's' : ''} past the window written in the Excel — rendered in full (the window is a placement hint; shortening the line or widening the window in the sheet removes the overlap).`)
+    }
+
+    if (overLevel) {
+      notes.push(
+        `Livello: ${overLevel} clip vocali superano il fondo scala dopo la calibrazione (max +${worstOverDb.toFixed(1)} dB su "${worstOverTrack}"). ` +
+        `Il file esportato resta pulito — il §9 lo riporta sotto −1 dBTP senza distorsione — ma una voce non può stare a −6 LUFS senza superare il fondo scala: ` +
+        `il parlato ha 9–13 dB di fattore di cresta, quindi −6 LUFS significa picchi sopra 0 dBFS per QUALSIASI voce. ` +
+        `Si sente soprattutto sulle voci maschili profonde (la Paterna ha il 92% dell'energia sotto i 160 Hz, e la distorsione dei bassi è molto più evidente). ` +
+        `Lo stesso rapporto voce/tappeto si ottiene senza sovraccarico abbassando le altre lane invece di alzare la voce: il §9 normalizza comunque il mix finito a −16 LUFS, quindi conta il RAPPORTO, non il valore assoluto.`,
+      )
     }
 
     /* §8.3 ducking: the windows collected above from the rendered voice (the

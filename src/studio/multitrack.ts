@@ -648,6 +648,18 @@ export function applyClipShape(buf: AudioBuffer, gainDb?: number, fadeInSec?: nu
   return out
 }
 
+/** Sample peak of a buffer in dBFS (−Infinity for silence). Cheap: no
+    oversampling, because callers use it to spot a clip that has been driven
+    PAST full scale, not to certify a true-peak ceiling. */
+export function bufferPeakDb(buf: AudioBuffer): number {
+  let peak = 0
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a }
+  }
+  return peak > 0 ? 20 * Math.log10(peak) : -Infinity
+}
+
 /** Copy a time slice [fromSec, toSec) of a buffer (clamped to its length). */
 export function sliceBuffer(buf: AudioBuffer, fromSec: number, toSec: number): AudioBuffer {
   const s = Math.max(0, Math.min(buf.length, Math.floor(fromSec * buf.sampleRate)))
@@ -703,6 +715,38 @@ export function peakBuckets(durationSec: number): number {
 export interface SchedClip { startSec: number; durationSec: number; buffer: AudioBuffer | null }
 export interface SchedTrack { id: string; effects?: TrackEffect[]; clips: SchedClip[] }
 
+/**
+ * Soft-clip curve for the monitor bus: near-linear where normal material lives,
+ * rounding off towards a ceiling below full scale.
+ *
+ * `SOFT_CLIP_CEILING` is deliberately under 1.0 and the curve's ENDPOINTS carry
+ * it. A WaveShaperNode maps input −1…+1 through the curve and clamps anything
+ * beyond to the end values, so however hot the input, the output cannot reach
+ * the rail. That is the guarantee the compressor alone cannot give, because a
+ * transient arrives before its attack has moved the gain.
+ *
+ * Exported so the node proof can check the same curve the player uses.
+ */
+export const SOFT_CLIP_CEILING = 0.97
+/** Below this the curve is EXACTLY unity — ordinary monitoring is bit-identical. */
+export const SOFT_CLIP_KNEE = 0.5 // −6 dBFS, where the compressor also starts
+
+export function softClipCurve(n = 4096): Float32Array<ArrayBuffer> {
+  const c = new Float32Array(new ArrayBuffer(n * 4))
+  const t = SOFT_CLIP_KNEE
+  const span = SOFT_CLIP_CEILING - t
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1
+    const a = Math.abs(x)
+    // linear below the knee (slope exactly 1, so no level change at all), then
+    // tanh onto the ceiling — continuous in value AND slope at the knee, so
+    // there is no corner to generate harmonics on ordinary material
+    const y = a <= t ? a : t + span * Math.tanh((a - t) / span)
+    c[i] = x < 0 ? -y : y
+  }
+  return c
+}
+
 function makeContext(): AudioContext {
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
   return new AC()
@@ -711,6 +755,9 @@ function makeContext(): AudioContext {
 export class MultitrackPlayer {
   private ctx: AudioContext
   private master: GainNode
+  /** Peak protection on the MONITOR path only — see the constructor. */
+  private limiter: DynamicsCompressorNode
+  private softClip: WaveShaperNode
   private trackGains = new Map<string, GainNode>()
   private trackPans = new Map<string, StereoPannerNode>()
   private sources: AudioBufferSourceNode[] = []
@@ -724,7 +771,50 @@ export class MultitrackPlayer {
     this.ctx = makeContext()
     this.master = this.ctx.createGain()
     this.master.gain.value = masterGain
-    this.master.connect(this.ctx.destination)
+    /* MONITOR LIMITER — what you hear must be peak-safe, because clip buffers
+       legitimately are not.
+
+       `calibrateBufferToDb` gives a clip whatever gain its protocol level asks
+       for, and a voice lane set to −6 LUFS needs a LOT: measured on the POs'
+       own voices, the calibrated clip peaks between +5 and +10 dBFS with 12 000
+       to 24 000 samples past full scale. That is fine inside the engine — the
+       buffers are float, and §9 mastering brings the exported file back under
+       −1 dBTP with no distortion (measured: −152 dB of non-gain residue).
+
+       The REALTIME path had no such protection. Those same buffers went to
+       ctx.destination, which hard-clips at ±1, so the Studio monitor was
+       distorting audio that exports clean. It showed up on the male voices
+       because Paternal carries 92 % of its energy below 160 Hz and clipped bass
+       buzzes, where the child voice (12 % below 160 Hz) clips on sparse
+       transients nobody hears — exactly the pattern the POs reported.
+
+       This changes MONITORING ONLY. Exports and published audio are untouched:
+       they go through renderMixdownBuffer + masterizeBuffer, not through here.
+
+       Two stages, because one is not enough. The compressor does the level
+       riding, but it has an attack time: a transient that arrives 10 dB over
+       the threshold is already through before the gain moves. So a soft
+       clipper follows it as a GUARANTEED ceiling — a WaveShaper curve whose
+       endpoints stop below 1.0, which by construction cannot output a sample at
+       the rail no matter what arrives. Rounded rather than flat-topped, which
+       is the difference between "loud" and "buzzing". */
+    this.limiter = this.ctx.createDynamicsCompressor()
+    this.limiter.threshold.value = -6 // start riding well before the ceiling
+    this.limiter.knee.value = 3
+    this.limiter.ratio.value = 10
+    this.limiter.attack.value = 0.002
+    this.limiter.release.value = 0.2
+    this.softClip = this.ctx.createWaveShaper()
+    this.softClip.curve = softClipCurve()
+    this.softClip.oversample = '4x' // no aliasing from the curve's knee
+    this.master.connect(this.limiter).connect(this.softClip).connect(this.ctx.destination)
+  }
+
+  /** How hard the monitor limiter is working, in dB (0 = untouched). Lets the
+      Studio say "what you are hearing is being held back" instead of leaving a
+      hot lane to sound mysteriously wrong. */
+  monitorReductionDb(): number {
+    return this.limiter.reduction ?? 0
   }
 
   setMasterGain(v: number): void {
