@@ -1,5 +1,44 @@
 # Good Loop — build manifest
 
+**Slice: music clips play a PLAYLIST, not one song on loop** (current)
+- PO report: in phase 4 "a song repeats itself on a single clip".
+- Cause, exactly as described: `plainStudio` drew ONE file per music clip
+  (`drawMusic`), and `buildSampleLayer` looped that single file until the clip
+  window was full. Phase 4's window is minutes long and a song is ~3 min, so
+  the same track audibly started again inside one clip. The `sample` track
+  blurb even documented the looping — correct for a soundscape TEXTURE, wrong
+  for a song.
+- **Model**: `SampleParams.slots?: SampleSlot[]` (ordered, up to
+  `MAX_SAMPLE_SLOTS = 5` — the POs asked for five gaps) plus `loop?: boolean`.
+  `sampleSlots()` / `sampleLoops()` are the single resolvers so renderer,
+  waveform and Inspector cannot disagree. Backward compatible: a clip with no
+  `slots` is still just `url`, and `loop` defaults by inference — a clip
+  carrying `drawPhase` is music and does NOT loop, so projects saved before
+  this slice are fixed too.
+- **Renderer**: `buildSampleLayer` takes the whole playlist and lays it out in
+  sequence with equal-power (sin/cos) crossfades at the joins, cutting the last
+  entry at the end of the clip. A soundscape still loops. If a playlist is
+  shorter than its clip the SEQUENCE repeats rather than any single song, and
+  the shortfall is surfaced instead of hidden.
+- **Drawing**: `drawMusicPlaylist()` keeps drawing DISTINCT songs from the
+  phase pool until the window is covered or the cap/pool runs out.
+  `estimateAssetSeconds()` reads length from `sizeBytes` at an assumed
+  192 kbps — deliberately a high bitrate, so the estimate runs SHORT and errs
+  towards one song too many (harmless, the renderer cuts) rather than too few
+  (a repeat). Both the import and the Studio's 🎲 redraw use it, and
+  `projectLedger` now counts every slot so a redraw cannot hand back a song
+  already queued elsewhere.
+- **Studio**: `SamplePlaylist` in the Inspector — the five slots, each with its
+  REAL decoded length (shared with the render cache, so the bar tells the truth
+  rather than an estimate), a remove button, an add picker, and a fill meter
+  reading green when the songs cover the clip, red with the missing time when
+  they do not, amber when they overrun with a note that the last one is cut.
+- `renderPlain` notes the shortfall per clip, naming the pool to add songs to.
+- `tools/test-music-playlist.ts` (21 assertions): the loop policy per clip
+  type, distinctness within a playlist and across clips, the 5-song cap, a
+  one-file pool that must not queue the same song five times, an empty pool,
+  and the size→seconds estimate.
+
 **Slice: the male-voice distortion — a monitor with no peak protection**
 (current)
 - PO feedback after testing the previous slice: pronunciation and the

@@ -210,6 +210,57 @@ export function drawMusic(pools: AssetPools, fase: number, rnd: () => number, le
   return { asset: d.asset, how: `phase pool ${key} (${poolNote(pool.length, d.reused)})` }
 }
 
+/* ---- how long a file plays, without decoding it ----
+   Listing gives a byte count, not a duration. Estimating at a HIGH bitrate
+   yields a SHORT duration, so the estimate errs towards drawing one song too
+   many — harmless, because the renderer cuts whatever it does not need, where
+   drawing too few would leave the playlist repeating. */
+const ASSUMED_KBPS = 192
+const FALLBACK_SONG_SEC = 150
+
+export function estimateAssetSeconds(a: AudioAsset): number {
+  if (!a.sizeBytes) return FALLBACK_SONG_SEC
+  const sec = (a.sizeBytes * 8) / (ASSUMED_KBPS * 1000)
+  return Math.max(20, Math.min(900, sec))
+}
+
+/**
+ * Draw enough DIFFERENT songs to cover `seconds`, up to `max`.
+ *
+ * One song per music clip was the phase-4 bug: a clip longer than the song
+ * looped it, and the POs heard the same track start again inside one clip.
+ * The ledger keeps the picks distinct across the whole protocol, and the
+ * renderer crossfades them in sequence and cuts the last at the clip end.
+ */
+export function drawMusicPlaylist(
+  pools: AssetPools,
+  fase: number,
+  seconds: number,
+  max: number,
+  rnd: () => number,
+  ledger?: DrawLedger,
+): { assets: AudioAsset[]; how: string; estimatedSec: number; short: boolean } | null {
+  const key = PHASE_KEYS[Math.min(5, Math.max(0, fase - 1))]
+  const pool = pools.musicByPhase[key] ?? []
+  if (!pool.length) return null
+  const assets: AudioAsset[] = []
+  let covered = 0
+  while (covered < seconds && assets.length < max) {
+    const d = pickFresh(pool, rnd, ledger, `music:${key}`)
+    assets.push(d.asset)
+    covered += estimateAssetSeconds(d.asset)
+    // the pool has nothing new left: stop rather than queue the same file twice
+    if (assets.length >= pool.length) break
+  }
+  const short = covered < seconds
+  return {
+    assets,
+    how: `phase pool ${key} (${pool.length} file${pool.length === 1 ? '' : 's'}) — ${assets.length} brano/i per ~${Math.round(seconds)}s${short ? `, stimati solo ~${Math.round(covered)}s` : ''}`,
+    estimatedSec: covered,
+    short,
+  }
+}
+
 /* ------------------------------------------------ asset_meta (Supabase) */
 
 function client(): SupabaseClient {

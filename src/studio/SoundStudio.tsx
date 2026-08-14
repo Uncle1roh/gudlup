@@ -35,6 +35,11 @@ import {
   DEFAULT_BILATERAL_SOUND,
   bilateralSoundUrl,
   resolveBilateralSound,
+  sampleSlots,
+  sampleLoops,
+  sampleDurationSec,
+  MAX_SAMPLE_SLOTS,
+  type SampleSlot,
   type Chord,
 } from './multitrack'
 import { getTtsProvider, ttsLanguage, type TtsSpan } from '../tts'
@@ -44,7 +49,7 @@ import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, voiceById, voicesByArchetype, type CatalogVoice } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
-import { buildAssetPools, drawMusic, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
+import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
@@ -573,15 +578,29 @@ function StudioDesktop() {
       // a re-roll must not hand back a file another clip of this protocol is
       // already playing (this clip itself doesn't count — it is being replaced)
       const ledger = projectLedger(pools, tracksRef.current, clipId)
-      const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd, ledger) : drawMusic(pools, p.drawPhase ?? 1, rnd, ledger)
-      if (!drawn) {
-        setDrawMsg(p.drawTag !== undefined
-          ? `No library file matches the tag "${p.drawTag}" — upload one in the Asset Library (or add the tag to an existing file there).`
-          : `The F${p.drawPhase} music pool is empty — upload files to assets/music/f${p.drawPhase} in the Asset Library.`)
+      if (p.drawTag !== undefined) {
+        const drawn = drawSoundscape(pools, p.drawTag, rnd, ledger)
+        if (!drawn) {
+          setDrawMsg(`No library file matches the tag "${p.drawTag}" — upload one in the Asset Library (or add the tag to an existing file there).`)
+          return
+        }
+        patchClipParams(trackId, clipId, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · tag "${p.drawTag}"`, slots: undefined })
+        setDrawMsg(`Drew "${drawn.asset.name}" — ${drawn.how}.`)
         return
       }
-      patchClipParams(trackId, clipId, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · ${p.drawTag !== undefined ? `tag "${p.drawTag}"` : `F${p.drawPhase} pool`}` })
-      setDrawMsg(`Drew "${drawn.asset.name}" — ${drawn.how}.`)
+      // music: draw a PLAYLIST long enough for the window, not one song to loop
+      const drawn = drawMusicPlaylist(pools, p.drawPhase ?? 1, cl.durationSec, MAX_SAMPLE_SLOTS, rnd, ledger)
+      if (!drawn || !drawn.assets.length) {
+        setDrawMsg(`The F${p.drawPhase} music pool is empty — upload files to assets/music/f${p.drawPhase} in the Asset Library.`)
+        return
+      }
+      const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
+      patchClipParams(trackId, clipId, {
+        url: picked[0].url,
+        label: picked.length > 1 ? picked.map((s) => s.label).join(' → ') : `${picked[0].label} · F${p.drawPhase} pool`,
+        slots: picked,
+      })
+      setDrawMsg(`${picked.length === 1 ? 'Drew' : `Drew ${picked.length} brani`} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.${drawn.short ? ' La sequenza è più corta della clip: aggiungi un brano.' : ''}`)
     } catch (e) {
       setDrawMsg(`Library unreachable: ${(e as Error).message}`)
     } finally {
@@ -605,9 +624,21 @@ function StudioDesktop() {
         for (const c of t.clips) {
           const p = c.params as SampleParams
           if (p.url || (p.drawTag === undefined && p.drawPhase === undefined)) continue
-          const drawn = p.drawTag !== undefined ? drawSoundscape(pools, p.drawTag, rnd, ledger) : drawMusic(pools, p.drawPhase ?? 1, rnd, ledger)
-          if (!drawn) { empty++; continue }
-          patchClipParams(t.id, c.id, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · ${p.drawTag !== undefined ? `tag "${p.drawTag}"` : `F${p.drawPhase} pool`}` })
+          if (p.drawTag !== undefined) {
+            const drawn = drawSoundscape(pools, p.drawTag, rnd, ledger)
+            if (!drawn) { empty++; continue }
+            patchClipParams(t.id, c.id, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · tag "${p.drawTag}"`, slots: undefined })
+            filled++
+            continue
+          }
+          const drawn = drawMusicPlaylist(pools, p.drawPhase ?? 1, c.durationSec, MAX_SAMPLE_SLOTS, rnd, ledger)
+          if (!drawn || !drawn.assets.length) { empty++; continue }
+          const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
+          patchClipParams(t.id, c.id, {
+            url: picked[0].url,
+            label: picked.length > 1 ? picked.map((s) => s.label).join(' → ') : `${picked[0].label} · F${p.drawPhase} pool`,
+            slots: picked,
+          })
           filled++
         }
       }
@@ -2008,10 +2039,16 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
             </div>
           )}
           {drawMsg && <div className="mt-note" style={{ marginBottom: 6 }}>{drawMsg}</div>}
-          <SampleFilePicker value={p.label} onPick={(url, label) => onParam({ url, label })} />
+          <SamplePlaylist
+            params={p}
+            clipDurationSec={clip.durationSec}
+            onChange={(next) => onParam(next)}
+          />
           <div className="mt-note">
-            Riproduce l’asset reale, in loop sulla durata della clip con crossfade sulle giunzioni. Il livello è il fader della traccia a sinistra.
-            Scegliere un file qui cambia SOLO questa clip — la mappatura predefinita per fase resta nella Libreria audio dell’amministrazione.
+            {sampleLoops(p)
+              ? 'Paesaggio sonoro: il file va in loop sulla durata della clip con crossfade sulle giunzioni — è una texture, la ripetizione è voluta.'
+              : 'Musica: i brani suonano IN SEQUENZA, con crossfade fra l’uno e l’altro, e l’ultimo viene tagliato alla fine della clip. Un solo brano in loop si sentirebbe ricominciare a metà clip.'}
+            {' '}Il livello è il fader della traccia a sinistra. Scegliere un file qui cambia SOLO questa clip — la mappatura predefinita per fase resta nella Libreria audio dell’amministrazione.
           </div>
         </> })()}
 
@@ -2248,8 +2285,9 @@ function projectLedger(pools: AssetPools, tracks: Track[], skipClipId?: string):
     if (t.type !== 'sample') continue
     for (const c of t.clips) {
       if (c.id === skipClipId) continue
-      const url = (c.params as SampleParams).url
-      if (url) inUse.add(url)
+      // EVERY entry of a playlist counts, not just the first — otherwise a
+      // redraw happily hands back a song already queued later in the protocol
+      for (const s of sampleSlots(c.params as SampleParams)) inUse.add(s.url)
     }
   }
   const all: AudioAsset[] = [...pools.soundscapes, ...pools.heartbeat]
@@ -2273,7 +2311,110 @@ function getStudioPools(): Promise<AssetPools> {
   }
   return poolsPromise
 }
-function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: string, label: string) => void }) {
+/* ---- a sample clip's playlist: up to five songs, and whether they fill it ----
+
+   The phase-4 bug: a music clip drew ONE song, and the renderer looped it to
+   fill the window, so the POs heard the same track start again inside a single
+   clip. A clip now holds an ordered playlist; this is where it is edited, and
+   the meter answers the question that caused the bug in the first place — is
+   there enough music for this window?
+
+   Lengths are the REAL decoded durations (shared with the render cache), not
+   estimates, so what the bar says is what will be rendered. */
+function SamplePlaylist({ params, clipDurationSec, onChange }: {
+  params: SampleParams
+  clipDurationSec: number
+  onChange: (next: Partial<SampleParams>) => void
+}) {
+  const slots = sampleSlots(params)
+  const loops = sampleLoops(params)
+  const [durations, setDurations] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    let alive = true
+    for (const s of slots) {
+      if (durations[s.url] !== undefined) continue
+      sampleDurationSec(s.url)
+        .then((d) => { if (alive) setDurations((prev) => (prev[s.url] === d ? prev : { ...prev, [s.url]: d })) })
+        .catch(() => { /* unreachable file — the row shows "?" */ })
+    }
+    return () => { alive = false }
+  }, [slots.map((s) => s.url).join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Playing back to back, the seams overlap, so the total is not a plain sum. */
+  const known = slots.filter((s) => durations[s.url] !== undefined)
+  const total = known.reduce((a, s) => a + durations[s.url], 0)
+  const allKnown = known.length === slots.length && slots.length > 0
+  const pct = clipDurationSec > 0 ? Math.min(200, (total / clipDurationSec) * 100) : 0
+  const covered = Math.min(100, pct)
+  const short = allKnown && total < clipDurationSec - 0.5
+  const over = allKnown && total > clipDurationSec + 0.5
+
+  const setSlots = (next: SampleSlot[]) => {
+    const clean = next.filter((s) => s.url).slice(0, MAX_SAMPLE_SLOTS)
+    onChange({
+      slots: clean,
+      // keep url/label as slot 0 so older readers and the track list still work
+      url: clean[0]?.url ?? '',
+      label: clean.length > 1 ? clean.map((s) => s.label).join(' → ') : (clean[0]?.label ?? ''),
+    })
+  }
+
+  return (
+    <div style={{ margin: '6px 0 8px' }}>
+      <div className="mt-tts__row" style={{ marginBottom: 4 }}>
+        <span className="mt-tts__lbl">{loops ? 'File' : 'Brani in sequenza'}</span>
+        <span className="mt-tts__eng">
+          {slots.length}/{MAX_SAMPLE_SLOTS}
+          {allKnown ? ` · ${fmtTime(total)} su ${fmtTime(clipDurationSec)}` : slots.length ? ' · lettura durate…' : ''}
+        </span>
+      </div>
+
+      {slots.map((s, i) => (
+        <div key={`${s.url}-${i}`} className="mt-tts__row" style={{ margin: '3px 0', alignItems: 'center' }}>
+          <span className="mt-tts__lbl" style={{ minWidth: 22, opacity: 0.7 }}>{i + 1}.</span>
+          <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.label}>
+            {s.label || s.url.split('/').pop()}
+          </span>
+          <span style={{ fontSize: 11, opacity: 0.7, minWidth: 46, textAlign: 'right' }}>
+            {durations[s.url] !== undefined ? fmtTime(durations[s.url]) : '—'}
+          </span>
+          <button
+            className="mt-tts__btn"
+            title="Togli questo brano dalla sequenza"
+            onClick={() => setSlots(slots.filter((_, k) => k !== i))}
+          >✕</button>
+        </div>
+      ))}
+
+      {!loops && (
+        <div className="mt-meter" title={`${fmtTime(total)} di musica per una clip di ${fmtTime(clipDurationSec)}`}>
+          <div
+            className="mt-meter__fill"
+            style={{ width: `${covered}%`, background: over ? '#C8A15E' : short ? '#C87F7F' : '#2FA98C' }}
+          />
+        </div>
+      )}
+      {!loops && allKnown && (
+        <div className="mt-note" style={{ marginTop: 4 }}>
+          {short && <>⚠ Mancano <b>{fmtTime(clipDurationSec - total)}</b>: la sequenza si ripeterà per coprire la clip. Aggiungi un brano.</>}
+          {over && <>La sequenza supera la clip di <b>{fmtTime(total - clipDurationSec)}</b> — l’ultimo brano verrà tagliato alla fine della clip.</>}
+          {!short && !over && <>La sequenza copre esattamente la clip.</>}
+        </div>
+      )}
+
+      {slots.length < MAX_SAMPLE_SLOTS && (
+        <SampleFilePicker
+          value=""
+          label={slots.length ? 'Aggiungi un brano…' : 'Scegli un file…'}
+          onPick={(url, label) => setSlots([...slots, { url, label }])}
+        />
+      )}
+    </div>
+  )
+}
+
+function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (url: string, label: string) => void; label?: string }) {
   const [assets, setAssets] = useState<AudioAsset[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
@@ -2296,7 +2437,7 @@ function SampleFilePicker({ value, onPick }: { value: string; onPick: (url: stri
           if (a) { try { onPick(assetPublicUrl(a.path), a.name) } catch (er) { setErr((er as Error).message) } }
         }}
       >
-        <option value="" disabled>{value ? `Change file (now: ${value})…` : 'Pick a library file…'}</option>
+        <option value="" disabled>{label ?? (value ? `Change file (now: ${value})…` : 'Pick a library file…')}</option>
         {PHASE_KEYS.map((k) => {
           const list = music.filter((a) => a.phase === k)
           return list.length ? (

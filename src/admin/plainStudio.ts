@@ -36,7 +36,7 @@
    ============================================================================ */
 
 import type { SeedClip, SeedTrack } from '../compose/types'
-import type { BilateralParams, BinauralParams, SampleParams, VoiceParams } from '../studio/multitrack'
+import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type SampleParams, type SampleSlot, type VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
 import {
@@ -46,7 +46,7 @@ import {
   bilateralSoundById,
   type BilateralSound,
 } from '../studio/multitrack'
-import { drawMusic, drawSoundscape, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
+import { drawMusicPlaylist, drawSoundscape, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
 export interface PlainSeedOptions {
@@ -264,30 +264,53 @@ export function plainToStudioTracks(
         duck: isHeartbeat ? 'none' : c.tipo === 'music' ? 'music' : 'soundscape',
         clips: [],
       }))
-      // random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
-      // pool for music — one draw per clip, every draw reported
+      /* Random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
+         pool for music. A soundscape is one looping texture, so one draw is
+         right. MUSIC is not: a clip longer than a song used to loop that song,
+         and the POs heard it start again mid-clip in phase 4. So a music clip
+         draws a PLAYLIST long enough to cover its window, and the renderer
+         crossfades the songs in sequence and cuts the last one at the end. */
+      const clipDur = c.endS - c.startS
       let url = ''
       let label = c.tipo === 'soundscape'
         ? `tag "${c.ambiente ?? '?'}" — no pool available`
         : `F${c.faseFrom ?? '?'} pool — no pool available`
+      let slots: SampleSlot[] | undefined
       if (pools) {
-        const drawn = c.tipo === 'soundscape'
-          ? drawSoundscape(pools, c.ambiente ?? '', rnd, ledger)
-          : drawMusic(pools, c.faseFrom ?? 1, rnd, ledger)
-        if (drawn) {
-          url = drawn.asset.publicUrl
-          label = `${drawn.asset.name} · ${c.tipo === 'soundscape' ? `tag "${c.ambiente}"` : `F${c.faseFrom} pool`}`
-          notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
+        if (c.tipo === 'soundscape') {
+          const drawn = drawSoundscape(pools, c.ambiente ?? '', rnd, ledger)
+          if (drawn) {
+            url = drawn.asset.publicUrl
+            label = `${drawn.asset.name} · tag "${c.ambiente}"`
+            notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
+          } else {
+            notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${isHeartbeat ? ' (PO heartbeat file pending)' : ''}.`)
+          }
         } else {
-          notes.push(`${c.clipId} (${c.traccia}): NO file for ${c.tipo === 'soundscape' ? `tag "${c.ambiente}"` : `phase pool F${c.faseFrom}`} — clip stays silent${isHeartbeat ? ' (PO heartbeat file pending)' : ''}.`)
+          const drawn = drawMusicPlaylist(pools, c.faseFrom ?? 1, clipDur, MAX_SAMPLE_SLOTS, rnd, ledger)
+          if (drawn && drawn.assets.length) {
+            const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
+            slots = picked
+            url = picked[0].url
+            label = `${drawn.assets.map((a) => a.name).join(' → ')} · F${c.faseFrom} pool`
+            notes.push(`${c.clipId} (${c.traccia}): ${drawn.assets.length === 1 ? 'drew' : 'playlist'} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.`)
+            if (drawn.short) {
+              notes.push(`${c.clipId} (${c.traccia}): ATTENZIONE — i brani disponibili coprono solo ~${Math.round(drawn.estimatedSec)}s dei ${Math.round(clipDur)}s della clip; la sequenza si ripeterà. Aggiungi brani al pool F${c.faseFrom} o accorcia la finestra.`)
+            }
+          } else {
+            notes.push(`${c.clipId} (${c.traccia}): NO file for phase pool F${c.faseFrom} — clip stays silent.`)
+          }
         }
       }
       const clip: SeedClip = {
         startSec: c.startS,
-        durationSec: c.endS - c.startS,
+        durationSec: clipDur,
         params: {
           url,
           label,
+          slots,
+          // a texture loops; a song must not
+          loop: c.tipo === 'soundscape',
           drawTag: c.tipo === 'soundscape' ? (c.ambiente ?? undefined) : undefined,
           drawPhase: c.tipo === 'music' ? (c.faseFrom ?? 1) : undefined,
         } as SampleParams,
