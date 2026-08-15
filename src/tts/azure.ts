@@ -16,6 +16,12 @@ function escapeXml(s: string): string {
 
 export function createAzureTts(key: string, region: string, voice: string): TtsProvider {
   let audio: HTMLAudioElement | null = null
+  /** Object URL of the audition currently held — released on end, replace or
+      stop, not only on end (which leaked an mp3 per interrupted audition). */
+  let current: string | null = null
+  const release = (): void => {
+    if (current) { URL.revokeObjectURL(current); current = null }
+  }
   const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`
 
   function ssml(text: string, lang: string): string {
@@ -51,12 +57,15 @@ export function createAzureTts(key: string, region: string, voice: string): TtsP
       const bytes = await fetchBytes(text, opts?.lang ?? 'pt-BR')
       const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }))
       audio?.pause()
+      release()
       audio = new Audio(url)
-      audio.onended = () => URL.revokeObjectURL(url)
+      current = url
+      audio.onended = release
       await audio.play()
     },
     stop() {
       audio?.pause()
+      release()
     },
   }
 }

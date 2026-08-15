@@ -1047,6 +1047,20 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .mt-tts__hint { font-size: 11px; color: var(--mt-sub); line-height: 1.4; }
 .mt-tts__err { font-size: 11px; color: #ff9b8a; line-height: 1.4; }
 
+/* ==================== error boundary fallback ==================== */
+.eb { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--mist, #eef3f2); }
+.eb__card { max-width: 460px; width: 100%; background: #fff; border-radius: 18px; padding: 28px 26px; box-shadow: 0 12px 40px rgba(20, 50, 45, 0.10); text-align: center; }
+.eb__mark { font-size: 34px; color: #2FA98C; margin-bottom: 6px; }
+.eb__title { font-size: 20px; margin: 0 0 8px; color: #16302b; font-weight: 600; }
+.eb__body { font-size: 14px; line-height: 1.55; color: #5a6d69; margin: 0 0 18px; }
+.eb__actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.eb__btn { flex: 1 1 auto; min-width: 116px; padding: 10px 14px; border-radius: 10px; border: 1px solid #d7e2df; background: #fff; color: #16302b; font-size: 13px; cursor: pointer; }
+.eb__btn:hover { border-color: #2FA98C; }
+.eb__btn--go { background: #2FA98C; border-color: #2FA98C; color: #06241c; font-weight: 600; }
+.eb__det { margin-top: 16px; text-align: left; }
+.eb__det summary { font-size: 12px; color: #849793; cursor: pointer; }
+.eb__pre { margin: 8px 0 0; padding: 10px; background: #f4f7f6; border-radius: 8px; font-size: 11px; line-height: 1.4; color: #5a6d69; max-height: 180px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
 /* playlist fill meter: is there enough music for this clip? */
 .mt-meter { height: 6px; border-radius: 4px; background: var(--mt-panel); border: 1px solid var(--mt-line); overflow: hidden; margin-top: 6px; }
 .mt-meter__fill { height: 100%; transition: width 140ms ease; }

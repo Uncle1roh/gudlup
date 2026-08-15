@@ -10,6 +10,7 @@ import { AuthGate } from './auth/AuthScreen'
 import { I18nProvider } from './i18n'
 import { Hub } from './hub/Hub'
 import { initVoiceSync } from './tts/voiceSync'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash)
@@ -83,7 +84,18 @@ export default function App() {
     )
   }
 
-  // Interface language wraps every surface so the Profile → Language choice
-  // applies live across B2C, therapist, employer, admin, and studio alike.
-  return <I18nProvider>{content()}</I18nProvider>
+  /* Interface language wraps every surface so the Profile → Language choice
+     applies live across B2C, therapist, employer, admin, and studio alike.
+
+     The boundary sits INSIDE the i18n provider (so the fallback can be
+     translated later) and is keyed on the route: navigating away from a broken
+     screen clears the error by itself, instead of stranding the user on the
+     fallback until they reload. */
+  return (
+    <I18nProvider>
+      <ErrorBoundary resetKey={route} label={route || '#home'}>
+        {content()}
+      </ErrorBoundary>
+    </I18nProvider>
+  )
 }

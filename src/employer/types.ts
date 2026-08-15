@@ -26,6 +26,8 @@ export interface DimensionRisk {
   /** One-line description of what the dimension measures. */
   about: string
   split: BandSplit
+  /** Fewer than k people answered this dimension — the split is zeroed. */
+  suppressed?: boolean
 }
 
 export interface OutcomeIndicator {
@@ -35,9 +37,13 @@ export interface OutcomeIndicator {
   elevatedPct: number
   /** Change in that % vs the previous cycle (negative = improving). */
   deltaPct: number
+  /** The whole cycle is below k — the figure is withheld, not zero. */
+  suppressed?: boolean
 }
 
-/** Per-team breakdown. Below the k-anonymity threshold, `split` is withheld. */
+/** Per-team breakdown. Below the k-anonymity threshold, `split` is withheld
+    AND `respondents` is a band ceiling (< k) rather than the exact count — an
+    exact count is one subtraction away from the hidden split. */
 export interface TeamRisk {
   team: string
   respondents: number
@@ -65,6 +71,10 @@ export interface Nr1Report {
   outcomes: OutcomeIndicator[]
   teams: TeamRisk[]
   trend: TrendPoint[]
+  /** The whole cycle had fewer than `minCellSize` respondents, so NOTHING but
+      the headcount is published. The dashboard must say so rather than draw
+      zeroes as if they were findings. */
+  suppressed?: boolean
   generatedAt: number
 }
 

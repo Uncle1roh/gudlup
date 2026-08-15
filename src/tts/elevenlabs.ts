@@ -216,6 +216,11 @@ function explainError(status: number, detail: string): string {
 
 export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSecondary?: string): TtsProvider {
   let audio: HTMLAudioElement | null = null
+  /** Object URL of the audition currently held, so it can always be released. */
+  let current: string | null = null
+  const release = (): void => {
+    if (current) { URL.revokeObjectURL(current); current = null }
+  }
   const secondary = voiceIdSecondary?.trim() || undefined
 
   function resolveVoice(opts?: TtsOptions): string {
@@ -341,13 +346,19 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     async speak(text: string, opts?: TtsOptions) {
       const bytes = await fetchBytes(text, opts)
       const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }))
-      audio?.pause()
+      /* Revoking only on `ended` leaked an entire mp3 per audition that was
+         stopped or replaced mid-play — and auditioning repeatedly is exactly
+         how the Studio is used. The previous blob is released whatever ends
+         it: finishing, being replaced, or stop(). */
+      release()
       audio = new Audio(url)
-      audio.onended = () => URL.revokeObjectURL(url)
+      current = url
+      audio.onended = release
       await audio.play()
     },
     stop() {
       audio?.pause()
+      release()
     },
   }
 }

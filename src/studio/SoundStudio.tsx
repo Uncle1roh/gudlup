@@ -1280,7 +1280,9 @@ function StudioDesktop() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `${projectName.replace(/[^\w.-]+/g, '_') || 'session'}.wav`; a.click()
-      URL.revokeObjectURL(url)
+      // revoking in the same tick can cancel the download before the browser
+      // has read the blob — the other three download helpers already wait
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
     } finally {
       setExporting(false)
     }

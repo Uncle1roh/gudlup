@@ -49,9 +49,38 @@ export function Nr1Dashboard() {
     </div>
   )
 
+  /* The whole cycle is below k: with a handful of respondents an "aggregate"
+     IS the individuals. Nothing but the headcount is published, and the page
+     has to SAY that rather than render zeroes, which read as "no risk found". */
+  if (r.suppressed) {
+    return (
+      <div className="emp-main">
+        <div className="emp-page">
+          <header className="emp-head">
+            <div>
+              <h1 className="b2b-h1">{t('Psychosocial risk — {company}', { company: r.company })}</h1>
+              <p className="b2b-sub">{t('NR-1 aggregate report · {period}', { period: r.period })}</p>
+            </div>
+          </header>
+          <section className="emp-card">
+            <div className="emp-privacy">
+              <span className="emp-privacy__icon" aria-hidden="true">🔒</span>
+              <div>
+                <b>{t('Not enough responses to report anonymously.')}</b>{' '}
+                {t('{r} of {e} eligible employees responded this cycle. A report needs at least {n} so that no figure can point back to a person — no results are shown until then (LGPD · NR-1).', { r: r.respondents, e: r.eligible, n: r.minCellSize })}
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    )
+  }
+
   const responseRate = pct(r.respondents, r.eligible)
   const overallTotal = splitTotal(r.overall)
-  const sortedDims = [...r.dimensions].sort((a, b) => pct(b.split.high, splitTotal(b.split)) - pct(a.split.high, splitTotal(a.split)))
+  // a suppressed dimension has a zeroed split — it must sort last, not first
+  const dimHigh = (d: typeof r.dimensions[number]) => (d.suppressed ? -1 : pct(d.split.high, splitTotal(d.split)))
+  const sortedDims = [...r.dimensions].sort((a, b) => dimHigh(b) - dimHigh(a))
 
   return (
     <div className="emp-main">
@@ -106,8 +135,14 @@ export function Nr1Dashboard() {
                     <div className="emp-dim__label">{t(d.label)}</div>
                     <div className="emp-dim__about">{t(d.about)}</div>
                   </div>
-                  <BandBar split={d.split} />
-                  <div className="emp-dim__high">{t('{n}% high', { n: pct(d.split.high, dimTotal) })}</div>
+                  {d.suppressed || dimTotal === 0 ? (
+                    <div className="emp-suppressed">{t('Hidden — fewer than {n} answered', { n: r.minCellSize })} 🔒</div>
+                  ) : (
+                    <BandBar split={d.split} />
+                  )}
+                  <div className="emp-dim__high">
+                    {d.suppressed || dimTotal === 0 ? '—' : t('{n}% high', { n: pct(d.split.high, dimTotal) })}
+                  </div>
                 </div>
               )
             })}
@@ -137,7 +172,13 @@ export function Nr1Dashboard() {
         <section className="emp-card">
           <h2 className="emp-card__title">{t('High-risk trend')}</h2>
           <p className="b2b-sub" style={{ marginTop: -4, marginBottom: 6 }}>{t('Share of respondents at high overall risk, by assessment cycle.')}</p>
-          <TrendChart report={r} t={t} />
+          {/* cycles below k are dropped from the series upstream: a cycle with
+              one respondent would plot that person at 0 % or 100 % */}
+          {r.trend.length ? (
+            <TrendChart report={r} t={t} />
+          ) : (
+            <div className="emp-suppressed">{t('No cycle yet has enough responses to plot 🔒')}</div>
+          )}
         </section>
 
         {/* teams */}
@@ -150,7 +191,9 @@ export function Nr1Dashboard() {
             {r.teams.map((tm) => (
               <div className="emp-team" key={tm.team}>
                 <div><b>{tm.team}</b></div>
-                <div>{tm.respondents}</div>
+                {/* a suppressed team's count is a band ceiling, not the exact
+                    number — an exact count plus the total gives the cell away */}
+                <div>{tm.suppressed ? `< ${r.minCellSize}` : tm.respondents}</div>
                 {tm.suppressed || !tm.split ? (
                   <div className="emp-suppressed">{t('Hidden — group under {n}', { n: r.minCellSize })} 🔒</div>
                 ) : (

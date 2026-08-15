@@ -1,5 +1,55 @@
 # Good Loop — build manifest
 
+**Slice: hardening pass — privacy, crash-resistance, leaks** (current)
+- **NR-1 k-anonymity had real holes.** CLAUDE.md is binding ("aggregates only,
+  k-anonymity suppression, no individual records reach the client"), and the
+  old `aggregate()` hid a small TEAM's split while publishing everything around
+  it, which is not the same thing. Four attacks, each now closed and tested:
+  · **Tiny cycle.** The report published `overall`, `dimensions`, `outcomes`
+    and `trend` regardless of how few people responded. With one respondent,
+    `overall` WAS that person's risk profile. Below k the whole cycle is now
+    suppressed and only the headcount survives; the dashboard says so instead
+    of drawing zeroes, which read as "no risk found".
+  · **Differencing.** One hidden team + the company total + every other team
+    gives the hidden split by subtraction. Suppression now grows until at least
+    TWO teams and at least k PEOPLE are hidden (two teams of 2 and 1 still
+    leave a 3-person residual), absorbing publishable teams smallest-first; if
+    the company cannot hide anything safely, no team detail is published.
+  · **Exact small counts.** A suppressed team reported its exact size — one
+    subtraction from the cell itself. Every suppressed team now reports the
+    same band ceiling (k−1) and the dashboard renders "< k".
+  · **Unsuppressed cells.** Per-dimension splits and trend points had no k test
+    at all; a one-person cycle plotted that person at 0 % or 100 %. Both are
+    now gated, and an outcome delta is withheld when the PREVIOUS cycle was
+    unpublishable (or it leaks that cycle by subtraction).
+  Also: a response with no dimension data was counted as 'low', quietly pulling
+  company risk down — it is now excluded. `docs/DATA_MODEL.sql`'s `nr1_report()`
+  is explicitly "illustrative" and still needs the same four rules; this file
+  is its stated reference.
+- **No error boundary existed anywhere.** React 18 unmounts the whole tree when
+  a render throws, so any single bad component left a white screen with no way
+  back — including mid-session, in a product people use to calm down. Added
+  `components/ErrorBoundary.tsx` at the root, keyed on the route so navigating
+  away clears it without a reload. The copy is calm and the stack trace is
+  folded away (testers still need it, patients must not meet it).
+- **Object-URL leaks in the TTS providers.** Both revoked only on `ended`, so
+  every audition that was stopped or replaced mid-play leaked an entire mp3 —
+  and repeated auditioning is exactly how the Studio is used. Released now on
+  end, replace AND stop.
+- **`exportWav` revoked its blob URL in the same tick as the click**, which can
+  cancel the download; the other three download helpers already waited. Now
+  consistent.
+- `tools/test-nr1-anonymity.ts` (42 assertions) runs the attacks as tests,
+  including a scan proving no respondent identifier appears anywhere in the
+  payload. Checked separately that the demo population (121 respondents/cycle,
+  6 teams) still publishes fully, so the POs see no regression — only People
+  and Finance now read "< 5" instead of "4" and "3", which is the point.
+- Verified clean and NOT changed: no XSS sinks anywhere (`dangerouslySetInnerHTML`,
+  `eval`, `innerHTML` all absent); every AudioContext render path already closes
+  in a `finally`; the immersive player already clears its interval on unmount;
+  demo-mode auth carries no role, so localStorage tampering cannot escalate
+  privilege, and it only runs when Supabase is absent.
+
 **Slice: music clips play a PLAYLIST, not one song on loop** (current)
 - PO report: in phase 4 "a song repeats itself on a single clip".
 - Cause, exactly as described: `plainStudio` drew ONE file per music clip
