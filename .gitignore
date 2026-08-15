@@ -9,3 +9,6 @@ dist
 *.wav
 
 .vercel
+
+# TypeScript incremental build cache — a build artifact, not source
+*.tsbuildinfo
