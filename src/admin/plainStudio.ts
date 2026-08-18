@@ -36,7 +36,7 @@
    ============================================================================ */
 
 import type { SeedClip, SeedTrack } from '../compose/types'
-import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type SampleParams, type SampleSlot, type VoiceParams } from '../studio/multitrack'
+import { type BilateralParams, type BinauralParams, type SampleParams, type VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
 import {
@@ -46,7 +46,7 @@ import {
   bilateralSoundById,
   type BilateralSound,
 } from '../studio/multitrack'
-import { drawMusicPlaylist, drawSoundscape, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
+import { drawMusic, drawSoundscape, estimateAssetSeconds, mulberry32, newDrawLedger, type AssetPools } from './assetPools'
 import { secToMmss, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 
 export interface PlainSeedOptions {
@@ -265,17 +265,16 @@ export function plainToStudioTracks(
         clips: [],
       }))
       /* Random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
-         pool for music. A soundscape is one looping texture, so one draw is
-         right. MUSIC is not: a clip longer than a song used to loop that song,
-         and the POs heard it start again mid-clip in phase 4. So a music clip
-         draws a PLAYLIST long enough to cover its window, and the renderer
-         crossfades the songs in sequence and cuts the last one at the end. */
+         pool for music. ONE file per clip either way. A soundscape is a texture
+         and loops to fill its window. MUSIC does not: looping a song made it
+         start again mid-clip, which is what the POs heard in phase 4. So a song
+         plays once and a music window longer than the song is short — the note
+         below says so, and the fix is another music row in the Excel. */
       const clipDur = c.endS - c.startS
       let url = ''
       let label = c.tipo === 'soundscape'
         ? `tag "${c.ambiente ?? '?'}" — no pool available`
         : `F${c.faseFrom ?? '?'} pool — no pool available`
-      let slots: SampleSlot[] | undefined
       if (pools) {
         if (c.tipo === 'soundscape') {
           const drawn = drawSoundscape(pools, c.ambiente ?? '', rnd, ledger)
@@ -287,15 +286,14 @@ export function plainToStudioTracks(
             notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${isHeartbeat ? ' (PO heartbeat file pending)' : ''}.`)
           }
         } else {
-          const drawn = drawMusicPlaylist(pools, c.faseFrom ?? 1, clipDur, MAX_SAMPLE_SLOTS, rnd, ledger)
-          if (drawn && drawn.assets.length) {
-            const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
-            slots = picked
-            url = picked[0].url
-            label = `${drawn.assets.map((a) => a.name).join(' → ')} · F${c.faseFrom} pool`
-            notes.push(`${c.clipId} (${c.traccia}): ${drawn.assets.length === 1 ? 'drew' : 'playlist'} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.`)
-            if (drawn.short) {
-              notes.push(`${c.clipId} (${c.traccia}): ATTENZIONE — i brani disponibili coprono solo ~${Math.round(drawn.estimatedSec)}s dei ${Math.round(clipDur)}s della clip; la sequenza si ripeterà. Aggiungi brani al pool F${c.faseFrom} o accorcia la finestra.`)
+          const drawn = drawMusic(pools, c.faseFrom ?? 1, rnd, ledger)
+          if (drawn) {
+            url = drawn.asset.publicUrl
+            label = `${drawn.asset.name} · F${c.faseFrom} pool`
+            notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
+            const songSec = estimateAssetSeconds(drawn.asset)
+            if (songSec < clipDur - 15) {
+              notes.push(`${c.clipId} (${c.traccia}): ATTENZIONE — "${drawn.asset.name}" dura ~${Math.round(songSec)}s ma la clip ne chiede ${Math.round(clipDur)}s. Il brano NON si ripete: il resto della clip resta in silenzio. Spezza la finestra in più righe musica nel Timeline, una per brano.`)
             }
           } else {
             notes.push(`${c.clipId} (${c.traccia}): NO file for phase pool F${c.faseFrom} — clip stays silent.`)
@@ -308,7 +306,6 @@ export function plainToStudioTracks(
         params: {
           url,
           label,
-          slots,
           // a texture loops; a song must not
           loop: c.tipo === 'soundscape',
           drawTag: c.tipo === 'soundscape' ? (c.ambiente ?? undefined) : undefined,

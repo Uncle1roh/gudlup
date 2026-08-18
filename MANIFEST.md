@@ -1,6 +1,39 @@
 # Good Loop — build manifest
 
-**Slice: hardening pass — privacy, crash-resistance, leaks** (current)
+**Slice: back to one song per music clip — the five gaps are gone** (current)
+- The five-slot playlist shipped in the earlier slice did not work as it should
+  in the POs' hands, and the call was to go back to the simple model and accept
+  the limitation instead: **a song is never repeated.**
+- **Model**: `SampleParams.slots` and `MAX_SAMPLE_SLOTS` are removed, and with
+  them `sampleSlots()`. A sample clip is one `url` again. What is KEPT is the
+  rule the playlist existed to enforce — `loop?: boolean`, resolved by
+  `sampleLoops()`: a soundscape is a seamless texture and loops to fill its
+  window, a song does not. Projects saved with `slots` still play their first
+  song; the extra entries are simply ignored.
+- **Renderer**: `buildSampleLayer` takes ONE buffer again. Looping tiles it
+  across the clip with equal-power seams as before; not looping plays it once
+  and cuts it at the clip end. A music clip longer than its song therefore ends
+  in silence — that is the accepted limitation, not a bug.
+- **Drawing**: back to `drawMusic()` (one distinct song per clip, the ledger
+  still keeping the songs of one protocol distinct from each other).
+  `drawMusicPlaylist()` is gone. `estimateAssetSeconds()` is kept for one job
+  only: warning that a clip is longer than its song.
+- **Where the limitation is made visible**, so it is met at import time rather
+  than in a rendered session: the PLAIN import notes name the clip, the song's
+  estimated length and the window it has to fill, and say to split the window
+  into several music rows; the Inspector's `SampleFitNote` shows the file's REAL
+  decoded length against the clip length with the missing time spelled out.
+  `SamplePlaylist` and the `.mt-meter` fill bar are removed.
+- Filling a long music window is a **Timeline Excel** decision now — several
+  music rows, one song each — which is where the canonical format already puts
+  it: one row per clip.
+- `tools/test-music-clip.ts` (15 assertions) replaces `test-music-playlist.ts`:
+  the loop policy per clip type including explicit overrides, the size→seconds
+  estimate and its clamp, the 8-minute-window case the warning exists for, four
+  clips of one protocol drawing four different songs, an exhausted pool that
+  reports its reuse, and an empty pool returning null.
+
+**Slice: hardening pass — privacy, crash-resistance, leaks**
 - **NR-1 k-anonymity had real holes.** CLAUDE.md is binding ("aggregates only,
   k-anonymity suppression, no individual records reach the client"), and the
   old `aggregate()` hid a small TEAM's split while publishing everything around
@@ -50,7 +83,9 @@
   demo-mode auth carries no role, so localStorage tampering cannot escalate
   privilege, and it only runs when Supabase is absent.
 
-**Slice: music clips play a PLAYLIST, not one song on loop** (current)
+**Slice: music clips play a PLAYLIST, not one song on loop**
+(SUPERSEDED — the five gaps were rolled back; see the slice at the top. What
+survives from here is the loop policy: a soundscape loops, a song never does.)
 - PO report: in phase 4 "a song repeats itself on a single clip".
 - Cause, exactly as described: `plainStudio` drew ONE file per music clip
   (`drawMusic`), and `buildSampleLayer` looped that single file until the clip

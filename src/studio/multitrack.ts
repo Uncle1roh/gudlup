@@ -112,17 +112,9 @@ export interface BilateralParams {
       bell can't smear across the next hit. Absent = fit the interval. */
   holdSec?: number
 }
-/** A real audio file (PO library stem / soundscape texture), looped to fill
-    the clip with equal-power seams. `url` is a public URL (Supabase Storage). */
-/** One entry of a sample clip's playlist. */
-export interface SampleSlot {
-  url: string
-  label: string
-}
-
-/** How many songs one music clip can hold (the POs asked for five gaps). */
-export const MAX_SAMPLE_SLOTS = 5
-
+/** A real audio file (PO library stem / soundscape texture). `url` is a public
+    URL (Supabase Storage). One file per clip: a soundscape TEXTURE is looped to
+    fill the clip with equal-power seams, a SONG is not — it plays once. */
 export interface SampleParams {
   url: string
   label: string
@@ -132,27 +124,18 @@ export interface SampleParams {
   drawTag?: string
   /** PLAIN draw intent (music phase 1–6) — same, from the global phase pool. */
   drawPhase?: number
-  /** Ordered playlist, up to MAX_SAMPLE_SLOTS. A MUSIC clip longer than one
-      song must play SEVERAL songs back to back — looping a single one makes it
-      restart inside the clip, which is what the POs heard in phase 4. Absent
-      or empty → the clip is just `url` (every project saved before playlists
-      existed). */
-  slots?: SampleSlot[]
   /** Fill the clip by repeating the material. TRUE for soundscapes, which are
-      seamless textures and are meant to loop. FALSE for music, where a repeat
-      is audible as the same song starting again.
+      seamless textures and are meant to loop. FALSE for music: a repeat is
+      audible as the same song starting again inside one clip, which is what
+      the POs reported in phase 4. A song plays once and the rest of the clip
+      is silent — a music window longer than the pool's songs is split into
+      several clips in the Timeline Excel, one song each.
       Absent → inferred: a clip that carries `drawPhase` is music. */
   loop?: boolean
 }
 
-/** The files a sample clip plays, in order. One resolver so the renderer, the
-    waveform and the Inspector never disagree about what is in a clip. */
-export function sampleSlots(p: SampleParams): SampleSlot[] {
-  if (p.slots?.length) return p.slots.filter((s) => s.url)
-  return p.url ? [{ url: p.url, label: p.label }] : []
-}
-
-/** Whether this clip repeats its material to fill its length. */
+/** Whether this clip repeats its file to fill its length. One resolver so the
+    renderer, the waveform and the Inspector never disagree. */
 export function sampleLoops(p: SampleParams): boolean {
   return p.loop ?? p.drawPhase === undefined
 }
@@ -167,7 +150,7 @@ export const TRACK_META: Record<TrackType, { label: string; icon: string; color:
   voice: { label: 'Voce', icon: '🗣️', color: '#E0995E', blurb: 'Affermazione guidata (TTS o provvisoria)' },
   music: { label: 'Musica', icon: '🎹', color: '#C88FB0', blurb: 'Pad armonico caldo' },
   bilateral: { label: 'Bilaterale', icon: '↔️', color: '#7BA8C4', blurb: 'Impulsi alternati L/R (PAT-05)' },
-  sample: { label: 'File audio', icon: '📼', color: '#8FA86B', blurb: 'Asset reali della libreria — fino a 5 brani in sequenza; i paesaggi sonori vanno in loop, la musica no' },
+  sample: { label: 'File audio', icon: '📼', color: '#8FA86B', blurb: 'Asset reali della libreria — un file per clip; i paesaggi sonori vanno in loop, la musica no' },
 }
 
 export function defaultParams(type: TrackType): ClipParams {
@@ -322,7 +305,7 @@ function buildLayer(ctx: BaseAudioContext, type: TrackType, params: ClipParams, 
 const sampleCache = new Map<string, Promise<AudioBuffer>>()
 
 /** Real length of a library file, in seconds. Shares the decode cache, so the
-    Studio's playlist meter costs nothing beyond the first look at a file. */
+    Studio's fit note costs nothing beyond the first look at a file. */
 export async function sampleDurationSec(url: string): Promise<number> {
   return (await fetchSampleBuffer(url)).duration
 }
@@ -395,46 +378,39 @@ function equalPowerCurves(): { up: Float32Array<ArrayBuffer>; down: Float32Array
 }
 
 /**
- * Lay a sample clip's PLAYLIST across `dur` seconds.
+ * Lay a sample clip's file across `dur` seconds.
  *
- * A soundscape is a texture and repeats happily (`loop`). Music does not: one
- * song looped inside a long clip is heard as the song starting over, which is
- * exactly what the POs reported in phase 4. So a music clip carries several
- * songs and they play in sequence, crossfaded, with the last one CUT at the end
- * of the clip.
- *
- * If the playlist is shorter than the clip, the SEQUENCE repeats rather than
- * any single song — the shortfall is surfaced in the Studio (progress bar) and
- * in the import notes, so it gets fixed by adding a song rather than by
- * silence appearing in a session.
+ * A soundscape is a seamless texture and repeats happily (`loop`): it is tiled
+ * across the window with equal-power seams. Music does not repeat — one song
+ * looped inside a long clip is heard as the song starting over, which is what
+ * the POs reported in phase 4. A song therefore plays ONCE, cut at the end of
+ * the clip if it is longer, and leaving silence if it is shorter. Filling a
+ * long music window is a Timeline Excel decision: several music rows, one song
+ * each.
  */
 function buildSampleLayer(
   ctx: OfflineAudioContext,
-  sources: AudioBuffer[],
+  source: AudioBuffer,
   dest: AudioNode,
   dur: number,
   loop: boolean,
 ): void {
-  if (!sources.length) return
   const { up, down } = equalPowerCurves()
-  // shortest source bounds the seam so a brief file is never all crossfade
-  const shortest = Math.min(...sources.map((s) => s.duration))
-  const seam = Math.max(0.03, Math.min(1.5, shortest / 4))
-  const single = sources.length === 1
+  const bufDur = source.duration
+  if (bufDur < 0.01) return
+  // the file itself bounds the seam so a brief texture is never all crossfade
+  const seam = Math.max(0.03, Math.min(1.5, bufDur / 4))
 
   let t = 0
-  let i = 0
   let guard = 0
   while (t < dur - 0.01 && guard++ < 4096) {
-    const source = sources[i % sources.length]
-    const bufDur = source.duration
     const src = ctx.createBufferSource()
     src.buffer = source
     const g = ctx.createGain()
     const stopAt = Math.min(t + bufDur, dur)
     const isFirst = t === 0
-    // the piece that reaches the end of the clip is the last one — cut it there
-    const isLast = t + bufDur >= dur - seam
+    // the pass that reaches the end of the clip is the last one — cut it there
+    const isLast = !loop || t + bufDur >= dur - seam
     const gIn = isFirst ? 0.03 : seam
     const gOut = isLast ? 0.03 : seam
     const fadeInEnd = t + gIn
@@ -448,10 +424,6 @@ function buildSampleLayer(
     src.stop(stopAt + 0.05)
     if (isLast) break
     t = t + bufDur - seam
-    i++
-    // a single non-looping source cannot fill more than itself: stop rather
-    // than silently repeating the one song (that IS the bug)
-    if (single && !loop) break
   }
 }
 
@@ -459,15 +431,14 @@ function buildSampleLayer(
 export async function renderClipBuffer(type: TrackType, params: ClipParams, durationSec: number): Promise<AudioBuffer> {
   const dur = Math.max(0.1, durationSec)
   const frames = Math.max(1, Math.ceil(SAMPLE_RATE * dur))
-  // real-file clip: fetch/decode EVERY playlist entry before opening the graph
-  let sampleSources: AudioBuffer[] = []
+  // real-file clip: fetch/decode the file before opening the graph
+  let sampleSource: AudioBuffer | null = null
   let sampleLoop = true
   if (type === 'sample') {
     const p = params as SampleParams
-    const slots = sampleSlots(p)
-    if (!slots.length) return new OfflineAudioContext(2, frames, SAMPLE_RATE).startRendering() // silent clip
+    if (!p.url) return new OfflineAudioContext(2, frames, SAMPLE_RATE).startRendering() // silent clip
     sampleLoop = sampleLoops(p)
-    sampleSources = await Promise.all(slots.map((s) => fetchSampleBuffer(s.url)))
+    sampleSource = await fetchSampleBuffer(p.url)
   }
   // the bilateral pulse is a PO file too — same rule, decode it up front
   let bilateralHit: AudioBuffer | null = null
@@ -482,7 +453,7 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
   env.gain.setValueAtTime(1, Math.max(fade, dur - fade))
   env.gain.linearRampToValueAtTime(0, dur)
   env.connect(ctx.destination)
-  if (type === 'sample' && sampleSources.length) buildSampleLayer(ctx, sampleSources, env, dur, sampleLoop)
+  if (type === 'sample' && sampleSource) buildSampleLayer(ctx, sampleSource, env, dur, sampleLoop)
   else buildLayer(ctx, type, params, env, dur, bilateralHit)
   return ctx.startRendering()
 }
