@@ -210,18 +210,86 @@ export function drawMusic(pools: AssetPools, fase: number, rnd: () => number, le
   return { asset: d.asset, how: `phase pool ${key} (${poolNote(pool.length, d.reused)})` }
 }
 
-/* ---- how long a file plays, without decoding it ----
-   Listing gives a byte count, not a duration. This is only used to WARN that a
-   music clip is longer than its song, so the estimate is deliberately made at
-   a high bitrate: it runs short, and errs towards warning about a shortfall
-   that turns out not to exist rather than staying quiet about a real one. */
-const ASSUMED_KBPS = 192
-const FALLBACK_SONG_SEC = 150
+/* ---- how long a file plays, without decoding it -------------------------
+
+   Listing gives a byte count, not a duration, and this estimate decides HOW
+   MANY songs a clip queues. Getting it wrong in the lenient direction is the
+   bug the POs reported as "only one song": a music clip that thinks its single
+   song is long enough stops drawing, and since a song never loops the rest of
+   the phase falls silent.
+
+   The direction that is safe is therefore the SHORT one — under-estimate, queue
+   one song too many, and let the renderer cut what it does not need. So assume
+   the HIGHEST bitrate a file plausibly carries: dividing by a big number yields
+   a small duration. The library is ripped albums at 256–320 kbps, so the old
+   192 assumption computed durations ~1.7× too LONG and starved the draw. A
+   19 MB track came out at 13 minutes and "covered" a whole phase on its own.
+
+   Uncompressed formats are not a bitrate guess at all — they are arithmetic,
+   and guessing them as MP3 was off by a factor of three or more (a 48 MB WAV
+   is ~4½ minutes, not the 15 the old code clamped it to). */
+const ASSUMED_KBPS = 320
+/** 44.1 kHz · 2 ch · 16-bit — the shape of everything in the PO library. */
+const PCM_BYTES_PER_SEC = 44100 * 2 * 2
+const FALLBACK_SONG_SEC = 120
+/** Nothing in a music pool is a 20-second sting or a 15-minute set. */
+const MIN_SONG_SEC = 20
+const MAX_SONG_SEC = 900
 
 export function estimateAssetSeconds(a: AudioAsset): number {
   if (!a.sizeBytes) return FALLBACK_SONG_SEC
-  const sec = (a.sizeBytes * 8) / (ASSUMED_KBPS * 1000)
-  return Math.max(20, Math.min(900, sec))
+  const ext = /\.([a-z0-9]+)$/i.exec(a.name)?.[1]?.toLowerCase() ?? ''
+  let sec: number
+  if (ext === 'wav' || ext === 'aif' || ext === 'aiff') sec = a.sizeBytes / PCM_BYTES_PER_SEC
+  // FLAC/ALAC land around half of PCM; still arithmetic, not a bitrate guess
+  else if (ext === 'flac' || ext === 'alac' || ext === 'm4a') sec = a.sizeBytes / (PCM_BYTES_PER_SEC * 0.6)
+  else sec = (a.sizeBytes * 8) / (ASSUMED_KBPS * 1000)
+  return Math.max(MIN_SONG_SEC, Math.min(MAX_SONG_SEC, sec))
+}
+
+/** Queue past the window before stopping. The estimate is a byte count, not a
+    decode, so it is only ever approximately right — and the two errors are not
+    symmetric. One song too many costs a fetch the renderer then cuts; one too
+    few is audible silence in the middle of a phase. */
+const OVERDRAW = 1.25
+
+/**
+ * Draw enough DIFFERENT songs to cover `seconds`, up to `max`.
+ *
+ * One song per music clip was the phase-4 bug: a clip longer than the song
+ * looped it, and the POs heard the same track start again inside one clip.
+ * The ledger keeps the picks distinct across the whole protocol, and the
+ * renderer crossfades them in sequence and cuts the last at the clip end.
+ */
+export function drawMusicPlaylist(
+  pools: AssetPools,
+  fase: number,
+  seconds: number,
+  max: number,
+  rnd: () => number,
+  ledger?: DrawLedger,
+): { assets: AudioAsset[]; how: string; estimatedSec: number; short: boolean } | null {
+  const key = PHASE_KEYS[Math.min(5, Math.max(0, fase - 1))]
+  const pool = pools.musicByPhase[key] ?? []
+  if (!pool.length) return null
+  const target = seconds * OVERDRAW
+  const assets: AudioAsset[] = []
+  let covered = 0
+  while (covered < target && assets.length < max) {
+    const d = pickFresh(pool, rnd, ledger, `music:${key}`)
+    assets.push(d.asset)
+    covered += estimateAssetSeconds(d.asset)
+    // the pool has nothing new left: stop rather than queue the same file twice
+    if (assets.length >= pool.length) break
+  }
+  // "short" is measured against the REAL window, not the padded target
+  const short = covered < seconds
+  return {
+    assets,
+    how: `phase pool ${key} (${pool.length} file${pool.length === 1 ? '' : 's'}) — ${assets.length} brano/i per ~${Math.round(seconds)}s${short ? `, stimati solo ~${Math.round(covered)}s` : ''}`,
+    estimatedSec: covered,
+    short,
+  }
 }
 
 /* ------------------------------------------------ asset_meta (Supabase) */

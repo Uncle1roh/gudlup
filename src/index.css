@@ -1061,6 +1061,10 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .eb__det summary { font-size: 12px; color: #849793; cursor: pointer; }
 .eb__pre { margin: 8px 0 0; padding: 10px; background: #f4f7f6; border-radius: 8px; font-size: 11px; line-height: 1.4; color: #5a6d69; max-height: 180px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
 
+/* playlist fill meter: is there enough music for this clip? */
+.mt-meter { height: 6px; border-radius: 4px; background: var(--mt-panel); border: 1px solid var(--mt-line); overflow: hidden; margin-top: 6px; }
+.mt-meter__fill { height: 100%; transition: width 140ms ease; }
+
 /* ============================ Auth ============================ */
 .auth { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--mist); }
 .auth--b2c { background: radial-gradient(120% 120% at 50% 0%, #eaf5f3 0%, var(--mist) 60%); }

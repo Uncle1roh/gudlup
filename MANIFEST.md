@@ -1,37 +1,40 @@
 # Good Loop — build manifest
 
-**Slice: back to one song per music clip — the five gaps are gone** (current)
-- The five-slot playlist shipped in the earlier slice did not work as it should
-  in the POs' hands, and the call was to go back to the simple model and accept
-  the limitation instead: **a song is never repeated.**
-- **Model**: `SampleParams.slots` and `MAX_SAMPLE_SLOTS` are removed, and with
-  them `sampleSlots()`. A sample clip is one `url` again. What is KEPT is the
-  rule the playlist existed to enforce — `loop?: boolean`, resolved by
-  `sampleLoops()`: a soundscape is a seamless texture and loops to fill its
-  window, a song does not. Projects saved with `slots` still play their first
-  song; the extra entries are simply ignored.
-- **Renderer**: `buildSampleLayer` takes ONE buffer again. Looping tiles it
-  across the clip with equal-power seams as before; not looping plays it once
-  and cuts it at the clip end. A music clip longer than its song therefore ends
-  in silence — that is the accepted limitation, not a bug.
-- **Drawing**: back to `drawMusic()` (one distinct song per clip, the ledger
-  still keeping the songs of one protocol distinct from each other).
-  `drawMusicPlaylist()` is gone. `estimateAssetSeconds()` is kept for one job
-  only: warning that a clip is longer than its song.
-- **Where the limitation is made visible**, so it is met at import time rather
-  than in a rendered session: the PLAIN import notes name the clip, the song's
-  estimated length and the window it has to fill, and say to split the window
-  into several music rows; the Inspector's `SampleFitNote` shows the file's REAL
-  decoded length against the clip length with the missing time spelled out.
-  `SamplePlaylist` and the `.mt-meter` fill bar are removed.
-- Filling a long music window is a **Timeline Excel** decision now — several
-  music rows, one song each — which is where the canonical format already puts
-  it: one row per clip.
-- `tools/test-music-clip.ts` (15 assertions) replaces `test-music-playlist.ts`:
-  the loop policy per clip type including explicit overrides, the size→seconds
-  estimate and its clamp, the 8-minute-window case the warning exists for, four
-  clips of one protocol drawing four different songs, an exhausted pool that
-  reports its reuse, and an empty pool returning null.
+**Slice: the music queued ONE song — a bad duration estimate** (current)
+- PO report, after the playlist slice shipped: "the music still plays only one
+  song instead of filling the phase time with different songs".
+- **The playlist machinery was fine; the arithmetic that feeds it was not.**
+  `estimateAssetSeconds()` decides how many songs a clip queues, and it assumed
+  **192 kbps**. The library is ripped albums at 256–320 kbps, so every estimate
+  came out ~1.7× too LONG: `1-02 Coming Home.mp3` (19 MB) was called 13 minutes
+  when it plays for ~8, and `Essence of Kryon.mp3` clamped to the 900 s ceiling.
+  One song therefore "covered" a whole phase, the draw stopped at one, and —
+  because a song must never loop — the rest of the window fell silent.
+- The old comment had the direction backwards: it claimed 192 was a HIGH bitrate
+  that would yield a short estimate and over-draw. Assuming a bitrate BELOW the
+  real one yields a LONG estimate and starves the draw. The safe direction is
+  the short one: under-estimate, queue one song too many, let the renderer cut.
+- **Fixes**: `ASSUMED_KBPS = 320` (the top of what the library carries, so the
+  estimate runs short); uncompressed formats are computed as arithmetic rather
+  than guessed as MP3 (`.wav/.aif` ÷ 44 100·2·2 — the one WAV in the library is
+  ~4½ min, which the old code called 15); and `OVERDRAW = 1.25` queues past the
+  window before stopping, because one song too many costs a fetch the renderer
+  discards while one too few is audible silence mid-phase.
+- **The five editable gaps are gone.** Choosing songs by hand was the part that
+  did not work, and the draw covers the window on its own. `SamplePlaylist` is
+  replaced by `SampleQueue`: the same readout — numbered songs, REAL decoded
+  lengths, the fill meter — but read-only. The library picker remains as a
+  single-song override that replaces the queue, and 🎲 redraws it.
+- `slots` / `MAX_SAMPLE_SLOTS` / `sampleSlots()` stay in the MODEL: the renderer
+  needs an ordered list to sequence and crossfade. Only the editor is gone.
+- `tools/test-music-playlist.ts` grows to 38 assertions, built from the REAL
+  byte counts in `assets/music`: each file's estimate against what it actually
+  plays for, the WAV case, and the regression itself — an 8-minute phase drawn
+  from the four LONGEST f4 files must queue ≥ 2 distinct songs on every seed.
+- Known edge: with unusually short songs the 5-song cap can still leave a window
+  uncovered; the draw reports `short` and the Inspector says so. Raising the cap
+  was deliberately not done — each queued song is decoded in full, so the memory
+  cost is real.
 
 **Slice: hardening pass — privacy, crash-resistance, leaks**
 - **NR-1 k-anonymity had real holes.** CLAUDE.md is binding ("aggregates only,
@@ -83,9 +86,7 @@
   demo-mode auth carries no role, so localStorage tampering cannot escalate
   privilege, and it only runs when Supabase is absent.
 
-**Slice: music clips play a PLAYLIST, not one song on loop**
-(SUPERSEDED — the five gaps were rolled back; see the slice at the top. What
-survives from here is the loop policy: a soundscape loops, a song never does.)
+**Slice: music clips play a PLAYLIST, not one song on loop** (current)
 - PO report: in phase 4 "a song repeats itself on a single clip".
 - Cause, exactly as described: `plainStudio` drew ONE file per music clip
   (`drawMusic`), and `buildSampleLayer` looped that single file until the clip
