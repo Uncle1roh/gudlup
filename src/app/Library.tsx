@@ -20,6 +20,7 @@ import { LIBRARY_CATEGORIES, type LibraryCategory } from '../data/library'
 import { versionLengthSeconds } from '../data/protocols'
 import { useI18n } from '../i18n'
 import type { CatalogProtocol } from '../data/catalog'
+import { patientBlurb, patientTitle } from '../types/domain'
 import type { Duration } from '../types/domain'
 
 interface LibraryProps {
@@ -45,8 +46,8 @@ function Card({ p, onStart }: { p: CatalogProtocol; onStart: LibraryProps['onSta
   return (
     <button className="libcard" onClick={() => onStart({ protocolCode: p.code, duration: firstDuration(p) })}>
       <span className="libcard__cover" aria-hidden="true">{p.library?.emoji ?? '🎧'}</span>
-      <span className="libcard__title">{p.title}</span>
-      <span className="libcard__blurb">{p.blurb}</span>
+      <span className="libcard__title">{patientTitle(p)}</span>
+      <span className="libcard__blurb">{patientBlurb(p)}</span>
       <span className="libcard__meta">{minutesOf(p)} {t('min')}</span>
     </button>
   )
@@ -61,7 +62,7 @@ export function Library({ onStart, onChooseForMe }: LibraryProps) {
   const found = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return null
-    return items.filter((p) => `${p.title} ${p.blurb}`.toLowerCase().includes(q))
+    return items.filter((p) => `${patientTitle(p)} ${patientBlurb(p)} ${p.title}`.toLowerCase().includes(q))
   }, [items, query])
 
   const shelves: { id: LibraryCategory; label: string; blurb: string; items: CatalogProtocol[] }[] =

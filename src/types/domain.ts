@@ -45,13 +45,46 @@ export interface Protocol {
   /** Human code, e.g. "GL-ANX 1.1". */
   code: string
   family: ProtocolFamily
-  /** Patient-facing title, e.g. "Calm and Inner Safety". */
+  /** CLINICAL title, e.g. "Calm and Inner Safety". The therapist's and the
+      admin's name for the material; it names a therapeutic intent. */
   title: string
-  /** One-line patient-facing description. */
+  /** One-line clinical description. */
   blurb: string
+  /**
+   * NON-THERAPEUTIC name, shown to the person listening when it is set.
+   * The clinical title says what the protocol treats; this one says what the
+   * moment feels like ("Un respiro prima di dormire"), never a condition, a
+   * diagnosis or a treatment. Setting it does NOT change the code, the family
+   * or the pathway: it changes the label only, so the same material can be
+   * offered without clinical vocabulary. Absent → the clinical title is used,
+   * which is the behavior everything had before this field existed.
+   */
+  publicTitle?: string
+  /** Non-therapeutic one-liner that goes with `publicTitle`. */
+  publicBlurb?: string
+  /**
+   * Free-form catalog tags (ids from `src/data/tags.ts`). Editorial metadata
+   * for finding and grouping published material — never a clinical claim and
+   * never a routing decision on its own.
+   */
+  tags?: string[]
   /** The 6 phases; fractions scale to each version's length. */
   phases: SessionPhase[]
   versions: ProtocolVersion[]
+}
+
+/** The title to print where a PERSON reads it (player, home, history). */
+export function patientTitle(p: Pick<Protocol, 'title' | 'publicTitle'>): string {
+  const pub = p.publicTitle?.trim()
+  return pub && pub.length ? pub : p.title
+}
+
+/** The blurb to print where a PERSON reads it. Falls back to the clinical one
+    only when no public blurb was written — a public TITLE with no public blurb
+    still shows the clinical blurb, so the pair is worth writing together. */
+export function patientBlurb(p: Pick<Protocol, 'blurb' | 'publicBlurb'>): string {
+  const pub = p.publicBlurb?.trim()
+  return pub && pub.length ? pub : p.blurb
 }
 
 /* --- B2C onboarding ("micro-intake", UC-B2C-02) -------------------------- */

@@ -8,6 +8,7 @@ import { isLibraryCode } from '../data/library'
 import { ScheduleModal } from './ScheduleModal'
 import { fmtDay, fmtTime, isUpcoming, joinWindowOpen, type Appointment } from '../data/scheduling'
 import { useI18n } from '../i18n'
+import { patientTitle } from '../types/domain'
 import type { SessionRecord, Duration } from '../types/domain'
 
 interface HomeSessionProps {
@@ -21,10 +22,12 @@ interface HomeSessionProps {
 }
 
 /** The name to show for something that was played. Library audio keeps its own
-    consumer title; pathway material keeps the clinical one it was prescribed
-    under — the person is supervised there, so the two registers never mix. */
+    consumer title. Pathway material shows its PUBLIC name when the catalog
+    carries one and its clinical title otherwise — the code, the plan and the
+    clinical record are unaffected either way, only the label changes. */
 function titleOf(code: string): string {
-  return getProtocol(code)?.title ?? code
+  const p = getProtocol(code)
+  return p ? patientTitle(p) : code
 }
 
 function PlanCta({ item, total, done, onStart }: { item: PlanItem; total: number; done: number; onStart: HomeSessionProps['onStart'] }) {

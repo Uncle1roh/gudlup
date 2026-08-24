@@ -1,6 +1,72 @@
 # Good Loop — build manifest
 
-**Slice: the music queued ONE song — a bad duration estimate** (current)
+**Slice: publishing overwrote the other time signatures** (current)
+- PO report: "the same protocol has a 6-, 12- and 24-minute version, and when
+  we publish it overwrites the other time signatures".
+- **Reproduced and true.** `publishToCatalog()` rebuilt `versions` from the
+  workbook ON SCREEN (`durations.map(...)`, so any duration not in that file
+  disappeared) and replaced `plain` with it wholesale. Publishing the 12-minute
+  file therefore deleted the 6- and 24-minute version rows **and the
+  `audioUrl` attached to them** — the streaming copy was silently detached and
+  the protocol fell back to the placeholder bed. Nothing said so.
+- Second, quieter instance of the same bug: `SoundStudio.saveToProtocol()`
+  wrote ONE `studio` session per CODE, so editing the 24-minute mix discarded
+  the 6-minute session. `ensureCatalogProtocol()` also rebuilt the entry field
+  by field instead of spreading it, which dropped `audience` and `library` —
+  a Studio save on a library audio quietly turned it into clinical material.
+- **Model** (`data/catalog.ts`): `plainByDuration` and `studioByDuration`,
+  `Partial<Record<Duration, …>>`. `plain` / `studio` stay as last-written
+  mirrors so a row from before the split still opens, and readers go through
+  `plainFor` / `studioFor` / `mergedPlain` / `plainDurations` — never the raw
+  fields. `mergeVersions()` is the union that replaced the rebuild: every
+  duration already in the catalog survives with its `audioUrl` intact.
+  `narrowTimeline()` stores one sheet per slot rather than the whole workbook
+  three times. Rows written before the split MIGRATE on read (their single
+  `plain` is split per sheet), so nothing has to be re-imported.
+- **UI**: the catalog gains a **Durate** column — one pill per time signature,
+  green (audio in linea) / amber (timeline pubblicata, audio non collegato) /
+  grey, and clicking one opens the workscreen on that version. The workscreen's
+  chips mark published (`·`) and live (`✓`) per duration, "in linea ✓" is now
+  computed for the SELECTED chip instead of "any version has audio", and the
+  publish confirmation names what it left alone ("Le versioni da 6 e 24 min
+  restano invariate").
+- **Two names.** `publicTitle` / `publicBlurb` on the domain `Protocol`:
+  `title` stays the CLINICAL name (therapist, admin, clinical record), the
+  public one is what the PERSON reads — the moment, never the condition, the
+  same register `data/library.ts` already uses. Resolved through
+  `patientTitle()` / `patientBlurb()` and wired into the player, the home card,
+  the history, the library card and the consultation call. Empty → the clinical
+  title, i.e. every screen behaves exactly as before until a PO writes one.
+  Setting it changes the LABEL only: code, family, pathway, plan, audio and
+  clinical record are untouched.
+- **Tags** (`data/tags.ts`): 32 curated ids in four groups (need · moment ·
+  delivery · setting), Italian labels, ASCII slugs, max 12 per protocol, and an
+  open "Altro" field so the POs are never blocked on a missing word. Three
+  rules enforced in the code and the doc: a tag is never a clinical claim, it
+  never routes a session, and DURATION IS NOT A TAG (the duration chips in the
+  filter row resolve against `versions`). Catalog filter row lists the tags
+  actually in use, most-used first; several chips AND together.
+- New `admin/ProtocolCard.tsx` — the public card editor (name + tags), on the
+  clinical shelf's ✎ Scheda and folded into the workscreen's Dettagli. It owns
+  naming and tags and NOTHING else: versions, timelines, sessions and audio are
+  carried through untouched (asserted).
+- SQL: `plain_by_duration`, `studio_by_duration`, `public_title`,
+  `public_blurb`, `tags` as defensive `add column if not exists`; the existing
+  `notify pgrst, 'reload schema'` at the end of setup.sql covers them.
+- `docs/PROTOCOL_CATALOG.md` is the reference for all three (the rule, the
+  vocabulary, how to write a public name, what NOT to read directly).
+- `tools/test-publish-versions.ts` (68 assertions) replays the bug as the POs
+  hit it — publish 24 → attach → publish 12 → publish 6, all three still live
+  with their own clip counts — plus the legacy-row migration, the multi-sheet
+  workbook, the 15-minute fallback, per-duration Studio sessions, both naming
+  fallbacks and the tag filter. `tsc --noEmit` + `npm run build` clean; all
+  prior proofs re-run and pass (pools 18, shape 19, mastering 14, library-plan
+  51, bilateral 31, whisper 15, music-playlist 38, nr1 42, tts-request 27,
+  tts-block 19). The workbook-driven proofs (test-plain, test-plain-lufs,
+  test-plain-studio, test-plain-deep) need the PO's .xlsx passed as argv and
+  were not run here — unchanged by this slice.
+
+**Slice: the music queued ONE song — a bad duration estimate**
 - PO report, after the playlist slice shipped: "the music still plays only one
   song instead of filling the phase time with different songs".
 - **The playlist machinery was fine; the arithmetic that feeds it was not.**

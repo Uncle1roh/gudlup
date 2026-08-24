@@ -55,7 +55,7 @@ import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import type { Duration, ProtocolFamily } from '../types/domain'
-import type { CatalogProtocol } from '../data/catalog'
+import { mergeVersions, mergedPlain, type CatalogProtocol } from '../data/catalog'
 import type { StudioProject } from '../compose/types'
 import { useDataProvider } from '../data/provider'
 import { attachRenderedAudio } from '../admin/attachAudio'
@@ -343,32 +343,40 @@ function StudioDesktop() {
     const versions = existing?.versions?.length
       ? existing.versions
       : base?.versions?.length ? base.versions : []
-    const withTarget = versions.some((v) => v.duration === target.duration)
-      ? versions
-      : [...versions, { duration: target.duration }]
     return {
+      // spread FIRST so nothing the Studio does not know about is dropped:
+      // audience, library metadata, the public name, the tags and the other
+      // time signatures' timelines and sessions all survive a Studio save.
+      ...(existing ?? {}),
       code: target.code,
-      family: (base?.family ?? familyFromCode(target.code)),
+      family: existing?.family ?? base?.family ?? familyFromCode(target.code),
       title: existing?.title ?? base?.title ?? projectName,
       blurb: existing?.blurb ?? base?.blurb ?? '',
       phases: existing?.phases?.length ? existing.phases : base?.phases ?? [],
-      versions: withTarget,
+      // merge, never replace — a 24-minute save must not delete the 6- and
+      // 12-minute versions or the audio already attached to them
+      versions: mergeVersions(versions, [target.duration]),
       enabled: existing?.enabled ?? true,
       source: existing?.source ?? 'imported',
       tenants: existing?.tenants ?? 'all',
       audioReady: existing?.audioReady ?? false,
-      spec: existing?.spec,
-      datasheet: existing?.datasheet,
-      plain: existing?.plain,
-      assetMap: existing?.assetMap,
       updatedAt: Date.now(),
     }
   }
 
-  /** Persist every Studio edit onto the protocol, creating it if needed. */
+  /** Persist every Studio edit onto the protocol, creating it if needed.
+      The session is stored against the TIME SIGNATURE being edited, so working
+      on the 24-minute mix leaves the 6- and 12-minute sessions untouched. */
   async function saveToProtocol(target: StudioAttachTarget): Promise<CatalogProtocol> {
     const entry = await ensureCatalogProtocol(target)
-    const stored = await saveProtocolVerified(dp, { ...entry, studio: toStudioProject() })
+    const project = toStudioProject()
+    const stored = await saveProtocolVerified(dp, {
+      ...entry,
+      studioByDuration: { ...(entry.studioByDuration ?? {}), [target.duration]: project },
+      // legacy mirror: the session saved last, for readers written before the
+      // per-duration split
+      studio: project,
+    })
     setDirty(false)
     return stored
   }
@@ -380,7 +388,7 @@ function StudioDesktop() {
     setAttachMsg(null)
     try {
       const stored = await saveToProtocol(target)
-      const created = !stored.audioReady && !stored.plain
+      const created = !stored.audioReady && !mergedPlain(stored)
       setAttachMsg(
         `Salvato in ${target.code}${created ? ' (nuovo protocollo nel catalogo)' : ''} — riaprendolo ritrovi esattamente questa sessione.${persistenceNote() ?? ''}`,
       )

@@ -22,6 +22,7 @@ import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, Message, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
+import { normalizeTags } from './tags'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -139,8 +140,17 @@ function mapCatalog(r: any): CatalogProtocol {
     spec: r.spec ?? undefined,
     datasheet: r.datasheet ?? undefined,
     plain: r.plain ?? undefined,
+    // per-time-signature material: publishing or editing one duration must not
+    // disturb the others (see data/catalog.ts)
+    plainByDuration: r.plain_by_duration ?? undefined,
     assetMap: r.asset_map ?? undefined,
     studio: r.studio ?? undefined,
+    studioByDuration: r.studio_by_duration ?? undefined,
+    // naming: `title` is the clinical name, `public_title` the non-therapeutic
+    // one a person reads. Absent → the clinical title is shown, as before.
+    publicTitle: r.public_title ?? undefined,
+    publicBlurb: r.public_blurb ?? undefined,
+    tags: Array.isArray(r.tags) ? (r.tags as string[]) : undefined,
     // rows written before the clinical/library split are clinical
     audience: r.audience === 'library' ? 'library' : 'clinical',
     library: r.library ?? undefined,
@@ -675,10 +685,15 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         spec: p.spec ?? null,
         datasheet: p.datasheet ?? null,
         plain: p.plain ?? null,
+        plain_by_duration: p.plainByDuration ?? null,
         asset_map: p.assetMap ?? null,
         studio: p.studio ?? null,
+        studio_by_duration: p.studioByDuration ?? null,
         audience: p.audience ?? 'clinical',
         library: p.library ?? null,
+        public_title: p.publicTitle ?? null,
+        public_blurb: p.publicBlurb ?? null,
+        tags: normalizeTags(p.tags),
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })
       if (error) throw error

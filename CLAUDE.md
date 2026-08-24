@@ -17,6 +17,13 @@ ElevenLabs TTS, Vercel (hash routing — no SPA rewrite config needed).
   assessment or employer risk-register output.
 - NR-1 reporting: aggregates only, k-anonymity suppression. No individual
   records reach the client (NR-1 + LGPD requirement).
+- Publishing or editing ONE time signature (6/12/24 min) of a protocol must
+  never disturb the others — their timeline, Studio session and attached audio.
+  Read per-duration material through `plainFor` / `studioFor` / `mergedPlain`,
+  never the legacy `plain` / `studio` fields. See `docs/PROTOCOL_CATALOG.md`.
+- `title` is the CLINICAL name; `publicTitle` is the non-therapeutic one a
+  person reads. Patient-facing screens print `patientTitle()`. Tags are
+  editorial only — never a clinical claim, never a routing decision.
 
 ## Audio engine
 

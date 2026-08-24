@@ -10,6 +10,7 @@ import { makeMoodFromVas } from '../lib/vas'
 import { useI18n } from '../i18n'
 import type { ControlAction } from '../b2b/webrtc/signaling'
 import type { Appointment } from '../data/scheduling'
+import { patientTitle } from '../types/domain'
 import type { Duration, MoodCheck, SessionRecord } from '../types/domain'
 
 interface PatientCallProps {
@@ -183,7 +184,7 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
     <div className="pcall">
       <div className="pcall__bar">
         <span className="pcall__who">{appointment.therapistName ?? t('Your therapist')}</span>
-        {playingCode && <span className="pcall__proto">{protocol?.title ?? playingCode}</span>}
+        {playingCode && <span className="pcall__proto">{protocol ? patientTitle(protocol) : playingCode}</span>}
         {intervening && <span className="pcall__flag">🔴 {t('your therapist is speaking')}</span>}
       </div>
 

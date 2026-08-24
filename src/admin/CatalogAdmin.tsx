@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
@@ -10,27 +10,35 @@ import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
-import { audienceOf, type CatalogProtocol } from '../data/catalog'
+import { audienceOf, mergedPlain, plainDurations, plainFor, studioFor, type CatalogProtocol } from '../data/catalog'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
+import { ProtocolCardEditor, applyCardDraft, cardDraftFrom, type ProtocolCardDraft } from './ProtocolCard'
 import { LIBRARY_CATEGORIES } from '../data/library'
+import { DURATION_TAG_IDS, durationTagLabel, filterByTags, tagLabel, tagsInUse, tagsOf } from '../data/tags'
+import { CATALOG_DURATIONS } from '../data/catalog'
+import type { Duration } from '../types/domain'
 
 function tenantsLabel(p: CatalogProtocol): string {
   return p.tenants === 'all' ? 'Tutte le aziende' : `${p.tenants.length} aziend${p.tenants.length === 1 ? 'a' : 'e'}`
 }
 
-/** Open a protocol in the Sound Studio. A saved Studio session is restored
-    as-is; otherwise the PLAIN timeline is converted into one, so "edit" always
-    lands on the real material instead of an empty project. */
-async function openInStudio(p: CatalogProtocol): Promise<void> {
-  const duration = (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
+/** Open ONE time signature of a protocol in the Sound Studio. A saved Studio
+    session for that duration is restored as-is; otherwise that duration's PLAIN
+    timeline is converted into one, so "edit" always lands on the real material
+    instead of an empty project — and never on another duration's mix. */
+async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> {
+  const duration = (want != null && p.versions.some((v) => v.duration === want) ? want : undefined)
+    ?? (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
   const attach = duration ? { code: p.code, duration } : undefined
-  if (p.studio) {
-    setStudioProject(p.studio, attach, '#admin')
+  const saved = duration ? studioFor(p, duration) : undefined
+  if (saved) {
+    setStudioProject(saved, attach, '#admin')
     window.location.hash = '#studio'
     return
   }
-  if (!p.plain) throw new Error(`"${p.code}" non ha né una sessione salvata né una timeline PLAIN da aprire.`)
-  const version = p.plain.versions.find((v) => v.durationMin === duration) ?? p.plain.versions[0]
+  const timeline = (duration ? plainFor(p, duration) : undefined) ?? mergedPlain(p)
+  if (!timeline) throw new Error(`"${p.code}" non ha né una sessione salvata né una timeline PLAIN da aprire.`)
+  const version = timeline.versions.find((v) => v.durationMin === duration) ?? timeline.versions[0]
   if (!version) throw new Error(`"${p.code}" non ha versioni nella timeline.`)
   let pools: AssetPools | undefined
   try {
@@ -39,7 +47,7 @@ async function openInStudio(p: CatalogProtocol): Promise<void> {
       pools = buildAssetPools(assets, meta)
     }
   } catch { /* library unreachable — the seed just leaves sample clips undrawn */ }
-  const seed = plainToStudioTracks(p.plain, version, { pools })
+  const seed = plainToStudioTracks(timeline, version, { pools })
   setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin' })
   window.location.hash = '#studio'
 }
@@ -48,6 +56,9 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   const dp = useDataProvider()
   const { data, loading, refetch } = useProtocols()
   const [opened, setOpened] = useState<CatalogProtocol | null>(null)
+  /* which TIME SIGNATURE the workscreen should land on (a duration pill was
+     clicked); null = its first version */
+  const [openAt, setOpenAt] = useState<Duration | null>(null)
   const [imported, setImported] = useState<{ timeline: PlainTimeline; fileName: string } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
@@ -57,7 +68,19 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   const [shelf, setShelf] = useState<'clinical' | 'library'>('clinical')
   const [draft, setDraft] = useState<LibraryDraft | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
+  /* the public card (non-therapeutic name + tags) of a clinical protocol */
+  const [card, setCard] = useState<ProtocolCardDraft | null>(null)
+  const [savingCard, setSavingCard] = useState(false)
+  /* tag filter — real tags and the three time signatures in one row of chips */
+  const [picked, setPicked] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const all = data ?? []
+  /* The workscreen opens ONE timeline carrying every published time signature,
+     so its chips are 6 · 12 · 24 and each one is that duration's own material.
+     Memoized: PlainImport takes the timeline as a prop. */
+  const openedPlain = useMemo(() => (opened ? mergedPlain(opened) : undefined), [opened])
+  const filterChips = useMemo(() => tagsInUse(all.filter((p) => audienceOf(p) === shelf)), [data, shelf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Import Excel straight from the list: file dialog → parse → workscreen.
      (The old multi-format import page is gone — PO decision.) */
@@ -117,22 +140,41 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     )
   }
 
-  if (opened?.plain) {
+  if (opened && openedPlain) {
     return (
       <PlainImport
-        timeline={opened.plain}
+        timeline={openedPlain}
+        initialDuration={openAt ?? undefined}
         fileName={`catalog · ${opened.code}`}
         actor={actor}
-        onCancel={() => { setOpened(null); refetch() }}
-        onDone={() => { setOpened(null); refetch() }}
+        onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
+        onDone={() => { setOpened(null); setOpenAt(null); refetch() }}
         onImportExcel={() => fileRef.current?.click()}
         fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
       />
     )
   }
 
-  const all = data ?? []
-  const protocols = all.filter((p) => audienceOf(p) === shelf)
+  const protocols = filterByTags(all.filter((p) => audienceOf(p) === shelf), picked)
+
+  async function saveCard() {
+    if (!card) return
+    const existing = all.find((p) => p.code === card.code)
+    if (!existing) return
+    setSavingCard(true)
+    setImportError(null)
+    try {
+      const entry = applyCardDraft(card, existing)
+      await dp.saveProtocol(entry)
+      await dp.logAudit({ actor, action: 'protocol.card.updated', target: entry.code, detail: entry.publicTitle ?? '(nessun nome pubblico)' }).catch(() => undefined)
+      setCard(null)
+      refetch()
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      setSavingCard(false)
+    }
+  }
 
   async function saveDraft() {
     if (!draft) return
@@ -163,8 +205,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               : `Libreria a uso libero: audio che le persone sfogliano e scelgono da sole, nominati per il momento che servono. ${protocols.length} audio.`}
           </p>
           <div className="mt-seg" style={{ marginTop: 8 }}>
-            <button className={shelf === 'clinical' ? 'is-on' : ''} onClick={() => { setShelf('clinical'); setDraft(null) }}>Percorsi clinici</button>
-            <button className={shelf === 'library' ? 'is-on' : ''} onClick={() => { setShelf('library'); setDraft(null) }}>Libreria</button>
+            <button className={shelf === 'clinical' ? 'is-on' : ''} onClick={() => { setShelf('clinical'); setDraft(null); setCard(null); setPicked([]) }}>Percorsi clinici</button>
+            <button className={shelf === 'library' ? 'is-on' : ''} onClick={() => { setShelf('library'); setDraft(null); setCard(null); setPicked([]) }}>Libreria</button>
           </div>
         </div>
         {shelf === 'clinical' ? (
@@ -180,6 +222,33 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         {importError && <span className="adm-plain__status adm-plain__status--err" style={{ marginLeft: 10 }}>{importError}</span>}
       </header>
 
+      {/* Tag filter — the curated words actually in use, plus the three time
+          signatures. Selecting several narrows (AND). */}
+      {!loading && (filterChips.length > 0 || picked.length > 0) && (
+        <div className="mt-seg mt-seg--wrap" style={{ marginBottom: 12 }}>
+          {CATALOG_DURATIONS.map((d) => {
+            const id = DURATION_TAG_IDS[d]
+            const on = picked.includes(id)
+            return (
+              <button key={id} className={on ? 'is-on' : ''}
+                onClick={() => setPicked(on ? picked.filter((x) => x !== id) : [...picked, id])}>
+                {durationTagLabel(d)}
+              </button>
+            )
+          })}
+          {filterChips.map(({ id, count }) => {
+            const on = picked.includes(id)
+            return (
+              <button key={id} className={on ? 'is-on' : ''}
+                onClick={() => setPicked(on ? picked.filter((x) => x !== id) : [...picked, id])}>
+                {tagLabel(id)} <span className="adm-tag">{count}</span>
+              </button>
+            )
+          })}
+          {picked.length > 0 && <button onClick={() => setPicked([])}>✕ Azzera</button>}
+        </div>
+      )}
+
       {draft && (
         <LibraryEditor
           draft={draft}
@@ -187,6 +256,16 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           onChange={setDraft}
           onSave={() => void saveDraft()}
           onCancel={() => setDraft(null)}
+        />
+      )}
+
+      {card && (
+        <ProtocolCardEditor
+          draft={card}
+          busy={savingCard}
+          onChange={setCard}
+          onSave={() => void saveCard()}
+          onCancel={() => setCard(null)}
         />
       )}
 
@@ -199,30 +278,56 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       {!loading && (
         <div className="adm-table adm-table--catalog">
           <div className="adm-tr adm-tr--head">
-            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Audio</div><div>Disponibilità</div><div>Origine</div><div className="adm-tr__right">Stato</div>
+            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Durate</div><div>Disponibilità</div><div>Origine</div><div className="adm-tr__right">Stato</div>
           </div>
-          {protocols.map((p) => (
-            <div className={`adm-tr${p.plain ? ' adm-tr--click' : ''}`} key={p.code}
-              onClick={p.plain ? () => setOpened(p) : undefined}
-              title={p.plain ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)' : undefined}
+          {protocols.map((p) => {
+            const openable = !!mergedPlain(p)
+            const withTimeline = new Set(plainDurations(p))
+            const withAudio = new Set(p.versions.filter((v) => v.audioUrl?.['pt-BR']).map((v) => v.duration))
+            const tags = tagsOf(p)
+            return (
+            <div className={`adm-tr${openable ? ' adm-tr--click' : ''}`} key={p.code}
+              onClick={openable ? () => { setOpenAt(null); setOpened(p) } : undefined}
+              title={openable ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)' : undefined}
             >
               <div className="adm-mono">{p.code}</div>
-              <div>{p.title}</div>
+              <div>
+                {p.title}
+                {p.publicTitle && <div className="adm-muted">«{p.publicTitle}»</div>}
+                {tags.length > 0 && (
+                  <div className="adm-tag">{tags.map((id) => tagLabel(id)).join(' · ')}</div>
+                )}
+              </div>
               <div>
                 {shelf === 'library'
                   ? (LIBRARY_CATEGORIES.find((c) => c.id === p.library?.category)?.label ?? '—')
                   : FAMILY_LABEL[p.family]}
               </div>
-              <div>
-                {p.audioReady
-                  ? <span className="adm-pill adm-pill--ok">Renderizzato</span>
-                  : <span className="adm-pill adm-pill--warn">Provvisorio</span>}
+              {/* One pill per TIME SIGNATURE: green = audio in linea, amber =
+                  timeline pubblicata senza audio, grey = non pubblicata. */}
+              <div className="adm-durs" onClick={(e) => e.stopPropagation()}>
+                {CATALOG_DURATIONS.filter((d) => p.versions.some((v) => v.duration === d) || withTimeline.has(d)).map((d) => (
+                  <button
+                    key={d}
+                    className={`adm-pill adm-pill--btn ${withAudio.has(d) ? 'adm-pill--ok' : withTimeline.has(d) ? 'adm-pill--warn' : 'adm-pill--idle'}`}
+                    title={`${withAudio.has(d) ? `${d} min — audio in linea` : withTimeline.has(d) ? `${d} min — timeline pubblicata, audio non collegato` : `${d} min — nessuna timeline`} · apri questa versione`}
+                    disabled={!openable}
+                    onClick={() => { setOpenAt(d); setOpened(p) }}
+                  >
+                    {d}m
+                  </button>
+                ))}
+                {!p.versions.length && !withTimeline.size && <span className="adm-tag">—</span>}
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}</div>
               <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
-                {shelf === 'library' && (
+                {shelf === 'library' ? (
                   <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setDraft(draftFrom(p))} title="Titolo, descrizione, scaffale, copertina">
+                    ✎ Scheda
+                  </button>
+                ) : (
+                  <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setCard(cardDraftFrom(p))} title="Nome pubblico (non terapeutico) e tag — il titolo clinico non cambia">
                     ✎ Scheda
                   </button>
                 )}
@@ -230,7 +335,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                   className="adm-editbtn"
                   disabled={busyCode === p.code}
                   onClick={() => void openInStudio(p).catch((e) => setImportError((e as Error).message))}
-                  title={p.studio ? 'Apri nello Studio la sessione salvata' : 'Apri nello Studio dalla timeline del protocollo'}
+                  title={studioFor(p, 24) || studioFor(p, 12) || studioFor(p, 6) ? 'Apri nello Studio la sessione salvata' : 'Apri nello Studio dalla timeline del protocollo'}
                 >
                   🎚 Modifica
                 </button>
@@ -253,7 +358,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

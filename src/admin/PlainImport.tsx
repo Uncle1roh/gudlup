@@ -16,7 +16,15 @@ import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { setStudioSeed } from '../compose/handoff'
 import { attachRenderedAudio } from './attachAudio'
 import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
-import type { CatalogProtocol } from '../data/catalog'
+import {
+  CATALOG_DURATIONS,
+  catalogDuration,
+  mergeVersions,
+  narrowTimeline,
+  timelinesByDuration,
+  type CatalogProtocol,
+} from '../data/catalog'
+import { ProtocolCardEditor, cardDraftFrom, applyCardDraft, type ProtocolCardDraft } from './ProtocolCard'
 import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
@@ -25,6 +33,9 @@ import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimelin
 
 interface Props {
   timeline: PlainTimeline
+  /** Time signature to land on (a duration pill was clicked in the catalog).
+      Falls back to the timeline's first version. */
+  initialDuration?: Duration
   fileName: string
   actor: string
   onCancel: () => void
@@ -60,7 +71,7 @@ function downloadBlob(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, onImportExcel, fileInput }: Props) {
+export function PlainImport({ timeline: t, initialDuration, fileName, actor, onCancel, onDone, onImportExcel, fileInput }: Props) {
   const dp = useDataProvider()
   const [ttsTick, setTtsTick] = useState(0)
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
@@ -68,9 +79,15 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
   const errors = t.issues.filter((i) => i.level === 'error')
   const nonErrors = t.issues.filter((i) => i.level !== 'error')
 
-  /* one selected version (chips only when the workbook has several) */
-  const [sheet, setSheet] = useState<string>(t.versions[0]?.sheet ?? '')
+  /* one selected version — the TIME SIGNATURE being worked on. Chips appear
+     whenever the workbook (or the catalog entry it reopens) carries more than
+     one, and every action below applies to this one alone. */
+  const [sheet, setSheet] = useState<string>(
+    (initialDuration != null ? t.versions.find((v) => v.durationMin === initialDuration)?.sheet : undefined)
+    ?? t.versions[0]?.sheet ?? '',
+  )
   const version = t.versions.find((v) => v.sheet === sheet) ?? t.versions[0]
+  const versionDuration = version ? catalogDuration(version.durationMin) : null
 
   /* ---- asset pools (draw happens at seed/render — gate until ready) ---- */
   const [pools, setPools] = useState<AssetPools | null>(null)
@@ -101,24 +118,34 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [notes, setNotes] = useState<string[]>([])
 
-  /* ---- published state (auto-detected for catalog reopens) ---- */
+  /* ---- published state (auto-detected for catalog reopens) ----
+     Tracked PER TIME SIGNATURE: "in linea" means this duration's audio is
+     attached, not that some other duration's is. */
   const [published, setPublished] = useState<CatalogProtocol | null>(null)
-  const [live, setLive] = useState(false)
   useEffect(() => {
     if (!t.code) return
     let alive = true
     void dp.listProtocols()
       .then((ps) => {
         const existing = ps.find((p) => p.code === t.code)
-        if (alive && existing?.plain) {
-          setPublished(existing)
-          setLive(existing.versions.some((v) => v.audioUrl?.['pt-BR']))
-        }
+        if (alive && existing) setPublished(existing)
       })
       .catch(() => undefined)
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.code])
+
+  /** Durations of this protocol that already stream audio. */
+  const liveDurations = useMemo(() => {
+    const set = new Set<Duration>()
+    for (const v of published?.versions ?? []) if (v.audioUrl?.['pt-BR']) set.add(v.duration)
+    return set
+  }, [published])
+  const live = versionDuration != null && liveDurations.has(versionDuration)
+  const publishedDurations = useMemo(
+    () => (published ? new Set(Object.keys(timelinesByDuration(published)).map(Number) as Duration[]) : new Set<Duration>()),
+    [published],
+  )
 
   function explain(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
@@ -162,6 +189,28 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
     }
   }
 
+  /* ---- public card (non-therapeutic name + tags) ---- */
+  const [card, setCard] = useState<ProtocolCardDraft | null>(null)
+  const [savingCard, setSavingCard] = useState(false)
+  useEffect(() => { if (published && !card) setCard(cardDraftFrom(published)) }, [published]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveCard() {
+    if (!card || !published) return
+    setSavingCard(true)
+    setError(null)
+    try {
+      const stored = await saveProtocolVerified(dp, applyCardDraft(card, published))
+      setPublished(stored)
+      setCard(cardDraftFrom(stored))
+      await dp.logAudit({ actor, action: 'protocol.card.updated', target: stored.code, detail: stored.publicTitle ?? '(nessun nome pubblico)' }).catch(() => undefined)
+      setStatus('Scheda pubblica salvata.')
+    } catch (e) {
+      setError(explain(e))
+    } finally {
+      setSavingCard(false)
+    }
+  }
+
   /* ---- actions ------------------------------------------------------- */
 
   function editInStudio() {
@@ -177,54 +226,79 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
     }
   }
 
+  /**
+   * Write the catalog entry for the workbook on screen WITHOUT disturbing the
+   * other time signatures.
+   *
+   * The same protocol ships as a 6-, a 12- and a 24-minute session, and each
+   * one is its own workbook. This used to rebuild `versions` from the workbook
+   * being published and replace `plain` with it, so publishing the 12-minute
+   * file deleted the 6- and 24-minute rows — and the audio already attached to
+   * them. Now: the incoming durations are MERGED into whatever the catalog
+   * already has, and each duration's timeline lands in its own slot.
+   */
   async function publishToCatalog(): Promise<CatalogProtocol> {
     if (!t.code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
-    const durations = t.versions
-      .map((v) => v.durationMin)
-      .filter((d): d is Duration => d === 6 || d === 12 || d === 24)
     const phased = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
     const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
-    const versions = (durations.length ? durations : [12 as Duration]).map((d) => {
-      const prev = existing?.versions.find((v) => v.duration === d)
-      return prev?.audioUrl ? { duration: d, audioUrl: prev.audioUrl } : { duration: d }
-    })
+
+    // every duration this workbook carries, each with its own slice of it
+    const incoming: Partial<Record<Duration, PlainTimeline>> = {}
+    for (const v of t.versions) {
+      const d = catalogDuration(v.durationMin)
+      if (d) incoming[d] = narrowTimeline(t, v)
+    }
+    const durations = CATALOG_DURATIONS.filter((d) => !!incoming[d])
+    // the per-duration store: what was already published, then this workbook
+    const plainByDuration = { ...timelinesByDuration(existing), ...incoming }
+    const versions = mergeVersions(existing?.versions, durations.length ? durations : [12])
+
     const proto: CatalogProtocol = {
+      ...(existing ?? {}),
       code: t.code,
-      family: familyFromCode(t.code),
+      family: existing?.family ?? familyFromCode(t.code),
       title: (t.title ?? t.code).trim(),
       blurb: existing?.blurb ?? '',
-      phases: phasesForCatalog(phased),
+      phases: phasesForCatalog(phased).length ? phasesForCatalog(phased) : existing?.phases ?? [],
       versions,
       enabled: true,
       source: 'imported',
-      tenants: 'all',
+      tenants: existing?.tenants ?? 'all',
       audioReady: existing?.audioReady ?? false,
       spec: existing?.spec,
       datasheet: existing?.datasheet,
-      plain: t,
+      // legacy mirror: the sheet just published. `plainByDuration` is the
+      // authority — readers go through mergedPlain()/plainFor().
+      plain: incoming[versionDuration ?? durations[0] ?? 12] ?? t,
+      plainByDuration,
       assetMap: existing?.assetMap,
       updatedAt: Date.now(),
     }
     // verified: a write rejected by RLS used to leave a protocol that looked
     // published until the next screen change
     const stored = await saveProtocolVerified(dp, proto)
-    await dp.logAudit({ actor, action: 'protocol.plain.imported', target: proto.code, detail: fileName }).catch(() => undefined)
+    await dp.logAudit({
+      actor,
+      action: 'protocol.plain.imported',
+      target: proto.code,
+      detail: `${fileName} · ${durations.length ? durations.map((d) => `${d}m`).join('+') : 'nessuna durata di catalogo'}`,
+    }).catch(() => undefined)
     setPublished(stored)
     return stored
   }
 
-  /** Publish = the WHOLE pipeline: catalog entry → render (with voice) →
-      upload & attach → live in the app. */
+  /** Publish = the WHOLE pipeline for the SELECTED time signature: catalog
+      entry → render (with voice) → upload & attach → live in the app. The other
+      durations of this protocol are left exactly as they are. */
   async function publish() {
     if (!version) return
     setBusy(true)
     setError(null)
-    setLive(false)
     try {
       setStatus('Pubblicazione nel catalogo…')
       const proto = await publishToCatalog()
-      const dur = version.durationMin as Duration
-      if (dur !== 6 && dur !== 12 && dur !== 24) throw new Error(`${version.durationMin} min non è una durata di catalogo (6/12/24).`)
+      const dur = versionDuration
+      if (dur == null) throw new Error(`${version.durationMin} min non è una durata di catalogo (6/12/24).`)
       let audioBuffer: AudioBuffer
       if (mastered) {
         // the externally-mastered upload IS the published audio
@@ -244,10 +318,15 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         audioBuffer = result.buffer
       }
       setStatus('Caricamento della copia per lo streaming…')
-      await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
+      const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
+      setPublished(attached.protocol)
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
-      setLive(true)
-      setStatus(`In linea — ${proto.code} ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.${persistenceNote() ?? ''}`)
+      const others = [...liveDurations].filter((d) => d !== dur).sort((a, b) => a - b)
+      setStatus(
+        `In linea — ${proto.code} · ${dur} min ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
+        (others.length ? ` Le versioni da ${others.map((d) => `${d}`).join(' e ')} min restano invariate.` : '') +
+        (persistenceNote() ?? ''),
+      )
     } catch (e) {
       setStatus(null)
       setError(explain(e))
@@ -288,18 +367,30 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         <div className="adm-plain__id">
           <span className="adm-plain__code">{t.code ?? fileName}</span>
           {t.title && <span className="adm-plain__title">{t.title}</span>}
+          {published?.publicTitle && <span className="adm-plain__title">· «{published.publicTitle}»</span>}
           <span className="adm-plain__meta">
             {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clip` : ''}
-            {live ? ' · in linea ✓' : published ? ' · pubblicato' : ''}
+            {live ? ' · in linea ✓' : versionDuration != null && publishedDurations.has(versionDuration) ? ' · pubblicato' : ''}
           </span>
         </div>
+        {/* One chip per TIME SIGNATURE. Every action on this screen applies to
+            the selected one only — publishing 12 min never touches 6 or 24. */}
         {t.versions.length > 1 && (
           <div className="adm-plain__chips">
-            {t.versions.map((v) => (
-              <button key={v.sheet} className={`b2b-btn${sheet === v.sheet ? ' b2b-btn--primary' : ''}`} onClick={() => setSheet(v.sheet)}>
-                {v.durationMin}m
-              </button>
-            ))}
+            {t.versions.map((v) => {
+              const d = catalogDuration(v.durationMin)
+              const mark = d != null && liveDurations.has(d) ? ' ✓' : d != null && publishedDurations.has(d) ? ' ·' : ''
+              return (
+                <button
+                  key={v.sheet}
+                  className={`b2b-btn${sheet === v.sheet ? ' b2b-btn--primary' : ''}`}
+                  onClick={() => setSheet(v.sheet)}
+                  title={d != null && liveDurations.has(d) ? `${v.durationMin} min — audio in linea` : d != null && publishedDurations.has(d) ? `${v.durationMin} min — pubblicato, audio non ancora collegato` : `${v.durationMin} min — non ancora pubblicato`}
+                >
+                  {v.durationMin}m{mark}
+                </button>
+              )
+            })}
           </div>
         )}
       </header>
@@ -355,6 +446,17 @@ export function PlainImport({ timeline: t, fileName, actor, onCancel, onDone, on
         </button>
         {detailsOpen && (
           <div className="adm-plain__detailbody">
+            {card && published ? (
+              <ProtocolCardEditor
+                draft={card}
+                busy={savingCard}
+                inline
+                onChange={setCard}
+                onSave={() => void saveCard()}
+              />
+            ) : (
+              <p className="b2b-sub">Nome pubblico e tag si impostano dopo la prima pubblicazione.</p>
+            )}
             <VoiceEnginePanel onChanged={() => setTtsTick((n) => n + 1)} />
             {nonErrors.length > 0 && (
               <ul className="adm-spec__issues">

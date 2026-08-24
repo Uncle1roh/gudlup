@@ -5,6 +5,7 @@ import { PostSession } from '../screens/PostSession'
 import { makeMoodFromVas } from '../lib/vas'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { useI18n } from '../i18n'
+import { patientTitle } from '../types/domain'
 import type { MoodCheck, SessionRecord, Duration } from '../types/domain'
 
 interface SessionRunnerProps {
@@ -54,7 +55,7 @@ export function SessionRunner({ protocolCode, duration, demoSeconds, onDone, onC
           </button>
           <div className="screen__body" style={{ justifyContent: 'center', gap: 28 }}>
             <div className="stack-md" style={{ textAlign: 'center' }}>
-              <span className="eyebrow">{protocol.title}</span>
+              <span className="eyebrow">{patientTitle(protocol)}</span>
               <h2 className="display">{t('How are you right now?')}</h2>
               <p className="muted small">{t('0 = not well at all · 10 = very well')}</p>
             </div>

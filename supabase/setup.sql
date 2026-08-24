@@ -238,6 +238,30 @@ alter table protocols  add column if not exists audience text not null default '
 -- browse metadata for library entries (category, cover, tags)
 alter table protocols  add column if not exists library jsonb;
 
+-- TIME SIGNATURES. One protocol ships as a 6-, a 12- and a 24-minute session,
+-- and each one is its own workbook and its own Studio session. They used to
+-- share the single `plain` / `studio` columns, so publishing the 12-minute file
+-- overwrote the other two — and rebuilding `versions` from that one workbook
+-- deleted their attached audio with them. Each duration now has its own slot,
+-- keyed "6" / "12" / "24"; `plain` and `studio` stay as the last-written mirror
+-- so a client from before this change still finds something to open.
+alter table protocols  add column if not exists plain_by_duration jsonb;
+alter table protocols  add column if not exists studio_by_duration jsonb;
+
+-- NAMING. `title` is the CLINICAL name (therapist- and admin-facing, it names a
+-- therapeutic intent). `public_title` is the non-therapeutic name the PERSON
+-- reads in the player: it says the moment, never a condition or a treatment.
+-- Null → the clinical title is shown, which is what every row did before.
+-- Setting it changes the LABEL only: the code, the family, the pathway and the
+-- clinical record are untouched.
+alter table protocols  add column if not exists public_title text;
+alter table protocols  add column if not exists public_blurb text;
+
+-- TAGS. Editorial metadata for finding and grouping published material (what it
+-- is for, when it is used, how it is delivered). Never a clinical claim and
+-- never a routing decision — the vocabulary lives in src/data/tags.ts.
+alter table protocols  add column if not exists tags jsonb not null default '[]';
+
 create table if not exists audit_events (
   id        uuid primary key default gen_random_uuid(),
   at        timestamptz not null default now(),
