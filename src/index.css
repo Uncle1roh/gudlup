@@ -49,7 +49,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root { height: 100%; }
+html, body { height: 100%; }
+
+/* Long words with nowhere to break — an email address, a company code, a
+   storage URL — used to run straight out of their container. Breaking them
+   is uglier than not breaking them; overflowing is worse than both. */
+body { overflow-wrap: break-word; }
 
 body {
   font-family: var(--sans);
@@ -69,13 +74,29 @@ a { color: var(--aura-deep); }
 #root {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   /* Center a phone-width column even on desktop. */
+  min-height: 100dvh;
 }
+
+/* A flex ITEM is sized by its content on the main axis, so a full-bleed
+   surface dropped into the centering #root above came out shrink-to-fit:
+   narrower than the viewport on desktop, and wider than it on a phone,
+   which is what made the desktop surfaces scroll sideways on mobile. */
+#root > * { width: 100%; }
 
 .app-frame {
   width: 100%;
   max-width: 460px;
-  min-height: 100dvh;
+  /* A fixed viewport height, not a minimum.
+
+     With `min-height` the frame grew with its content while `overflow:
+     hidden` clipped it, so any screen taller than the phone — the
+     four-question intake, a pathway detail, Profile — simply lost its
+     bottom with no way to reach it. Pinning the frame to the viewport
+     makes the INNER surfaces the scroll containers, which is also what
+     keeps the tab bar on screen instead of scrolling away with the page. */
+  height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -86,15 +107,23 @@ a { color: var(--aura-deep); }
 /* A standard centered onboarding screen */
 .screen {
   flex: 1;
+  min-height: 0;          /* let it shrink inside the fixed-height frame */
+  overflow-y: auto;       /* ...and scroll when the content is taller */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   padding: max(28px, env(safe-area-inset-top)) 26px max(26px, env(safe-area-inset-bottom));
   animation: screen-in 480ms var(--ease) both;
 }
 
-.screen--center { justify-content: center; align-items: center; text-align: center; }
-.screen__body { flex: 1; display: flex; flex-direction: column; }
-.screen__footer { padding-top: 18px; }
+/* `safe` centring keeps the content centred while it fits and switches to
+   start-aligned once it overflows. Plain `center` in a scroll container
+   pushes the top of tall content above the scrollable area, where it can
+   never be reached. */
+.screen--center { justify-content: safe center; align-items: center; text-align: center; }
+.screen__body { flex: 1 0 auto; min-height: 0; display: flex; flex-direction: column; }
+.screen__footer { padding-top: 18px; flex-shrink: 0; }
 
 @keyframes screen-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -590,7 +619,16 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
    ============================================================================ */
 
 .app-frame--tabs { display: flex; flex-direction: column; }
-.tabview { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.tabview {
+  flex: 1;
+  min-height: 0;          /* without this a flex child refuses to shrink,
+                             and overflow-y never engages */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column;
+}
+.tabbar { flex-shrink: 0; }
 
 .dev-bar { position: absolute; top: 8px; right: 8px; z-index: 40; display: flex; gap: 6px; }
 
@@ -681,7 +719,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
    Best viewed on a laptop/desktop; the monitored session is a 3-panel layout.
    ============================================================================ */
 
-.b2b-app { min-height: 100dvh; background: #eef2e6; color: var(--ink); }
+.b2b-app { min-height: 100dvh; width: 100%; background: #eef2e6; color: var(--ink); }
 .b2b-topbar {
   display: flex; align-items: center; justify-content: space-between;
   height: 60px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--line);
@@ -1380,7 +1418,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   --risk-mod: #e0a13c;
   --risk-high: #c0564a;
 }
-.emp-app { min-height: 100vh; background: var(--mist); color: var(--ink); font-family: var(--sans); }
+.emp-app { min-height: 100dvh; width: 100%; background: var(--mist); color: var(--ink); font-family: var(--sans); }
 .emp-topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
 .emp-brand { display: flex; align-items: center; gap: 10px; }
 .emp-brand__mark { font-size: 18px; color: var(--aura); letter-spacing: -2px; }
@@ -2142,3 +2180,42 @@ img, svg, video, canvas { max-width: 100%; }
   .plan-row { grid-template-columns: 1fr 1fr; }
   .plan-row__ops { grid-column: 1 / -1; justify-content: flex-end; }
 }
+
+
+/* ============================================================================
+   Overflow hardening
+
+   Three failure modes kept recurring across all four surfaces, and each has one
+   cause worth naming rather than patching per component:
+
+   1. A flex item defaults to `min-width: auto`, which means it refuses to
+      shrink below its content. One long word in a flex row therefore pushes the
+      whole row wider than the screen instead of wrapping. `min-width: 0` on the
+      flexible children is the fix, and it has to be applied deliberately —
+      there is no way to set it globally without breaking intentional sizing.
+
+   2. Tables have no intrinsic wrapping. A long email in a cell widens the
+      column until the table leaves the page.
+
+   3. Anything monospaced with letter-spacing (a company code, a connection
+      code) is much wider than it looks and overflows its box on a phone.
+   ============================================================================ */
+
+/* Flex rows whose text half must be allowed to shrink and wrap. */
+.card-head__id > div,
+.thr-card__id > div,
+.consent-row__text,
+.msgrow__body,
+.upcoming__body,
+.profile__id > div,
+.home__today,
+.teaser,
+.menu__row > span:first-child { min-width: 0; }
+
+/* Tables: let cells wrap, and never let one push the table off the page. */
+table { table-layout: auto; width: 100%; }
+td, th { overflow-wrap: anywhere; }
+
+/* A wide block that genuinely cannot wrap scrolls INSIDE its own box rather
+   than taking the page with it. */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }

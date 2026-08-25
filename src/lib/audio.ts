@@ -49,6 +49,15 @@ export interface SessionPlayerOptions {
   /** Pre-rendered audio URL (MVP). If omitted, a placeholder bed is synthesized. */
   audioUrl?: string
   volume?: number // 0..1
+  /**
+   * Called when a real file was requested but could not be played, and the
+   * synthesized bed took over. A 404, a CORS refusal or an expired signed
+   * URL used to leave the session in SILENCE — the timer ran, the phases
+   * advanced, and the person listened to nothing for twelve minutes. The
+   * bed is a poor substitute for a rendered voice, but it is audibly a
+   * session; silence is a broken product nobody reports.
+   */
+  onFallback?: (reason: string) => void
 }
 
 /**
@@ -57,9 +66,14 @@ export interface SessionPlayerOptions {
  * while real files run to their exact length.
  */
 export class SessionPlayer {
+  /** True when NO file was supplied — the caller knew it was a placeholder. */
   readonly isPlaceholder: boolean
+  /** True once a requested file failed and the bed took over. */
+  get fellBack(): boolean { return this.didFallBack }
+  private didFallBack = false
   private volume: number
   private audioUrl?: string
+  private onFallback?: (reason: string) => void
 
   // file mode
   private el?: HTMLAudioElement
@@ -73,11 +87,21 @@ export class SessionPlayer {
     this.audioUrl = opts.audioUrl
     this.isPlaceholder = !opts.audioUrl
     this.volume = opts.volume ?? 0.5
+    this.onFallback = opts.onFallback
   }
 
   async play(): Promise<void> {
     if (this.isPlaceholder) return this.playSynth()
-    return this.playFile()
+    try {
+      await this.playFile()
+    } catch (e) {
+      // The file is unreachable or the browser refused it. Fall back to the
+      // bed rather than running a silent session.
+      this.el = undefined
+      this.didFallBack = true
+      this.onFallback?.(describeAudioError(e))
+      await this.playSynth()
+    }
   }
 
   pause(): void {
@@ -86,7 +110,19 @@ export class SessionPlayer {
   }
 
   async resume(): Promise<void> {
-    if (this.el) await this.el.play()
+    if (this.el) {
+      // A resume can fail the same way a start can (the tab lost the media
+      // session, the URL expired mid-session). Same answer: keep sound.
+      try {
+        await this.el.play()
+      } catch (e) {
+        this.el = undefined
+        this.didFallBack = true
+        this.onFallback?.(describeAudioError(e))
+        await this.playSynth()
+        return
+      }
+    }
     if (this.ctx && this.master) {
       if (this.ctx.state === 'suspended') await this.ctx.resume()
       this.fadeMaster(this.bedLevel(), 0.4)
@@ -123,11 +159,28 @@ export class SessionPlayer {
   // --- file mode -----------------------------------------------------------
   private async playFile(): Promise<void> {
     if (!this.el) {
-      this.el = new Audio(this.audioUrl)
-      this.el.preload = 'auto'
-      this.el.volume = this.volume
+      const el = new Audio()
+      // crossOrigin matters for a bucket on another origin: without it the
+      // element loads but the audio graph cannot touch it, and some browsers
+      // refuse outright.
+      el.crossOrigin = 'anonymous'
+      el.preload = 'auto'
+      el.volume = this.volume
+      el.src = this.audioUrl as string
+      this.el = el
     }
-    await this.el.play()
+    const el = this.el
+    // `play()` resolves as soon as playback STARTS, which for a src that
+    // 404s never happens — it rejects on some browsers and hangs on others.
+    // Racing it against the element's own error event covers both.
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      const done = (fn: () => void) => { if (!settled) { settled = true; cleanup(); fn() } }
+      const onError = () => done(() => reject(new Error(mediaErrorText(el))))
+      const cleanup = () => { el.removeEventListener('error', onError) }
+      el.addEventListener('error', onError)
+      el.play().then(() => done(resolve), (e) => done(() => reject(e)))
+    })
   }
 
   // --- synth placeholder ---------------------------------------------------
@@ -192,4 +245,27 @@ export class SessionPlayer {
 
     this.fadeMaster(this.bedLevel(), 2.5) // gentle fade-in
   }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/** What an <audio> element's MediaError actually means, in words. */
+function mediaErrorText(el: HTMLAudioElement): string {
+  switch (el.error?.code) {
+    case MediaError.MEDIA_ERR_ABORTED: return 'loading was aborted'
+    case MediaError.MEDIA_ERR_NETWORK: return 'the network dropped'
+    case MediaError.MEDIA_ERR_DECODE: return 'the file could not be decoded'
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: return 'the file is missing or unreadable'
+    default: return 'the file could not be played'
+  }
+}
+
+/** A short, non-technical reason for a playback failure. */
+export function describeAudioError(e: unknown): string {
+  const name = (e as { name?: string } | undefined)?.name
+  // A browser that blocks autoplay is a DIFFERENT problem from a missing
+  // file, and the person can fix one of them by tapping.
+  if (name === 'NotAllowedError') return 'playback needs a tap to start'
+  const message = (e as { message?: string } | undefined)?.message
+  return message && message.length < 120 ? message : 'the file could not be played'
 }

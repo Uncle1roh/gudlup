@@ -30,7 +30,7 @@ import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
 import { useI18n } from '../i18n'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
-import { audioUrlFor } from '../data/liveCatalog'
+import { audioUrlFor, useCatalog } from '../data/liveCatalog'
 import { useVideoCall, type VideoCall as Call } from '../b2b/webrtc/useVideoCall'
 import type { ControlAction } from '../b2b/webrtc/signaling'
 import type { TherapistProfile } from './therapyStore'
@@ -345,11 +345,19 @@ function TreatmentMode({
   onEndNow: () => void
 }) {
   const { t, locale } = useI18n()
-  const protocol = getProtocol(treatment.protocolCode) ?? getProtocol('GL-ANX 1.1')!
-  const fractions = protocol.phases.map((p) => p.fraction)
+  const catalog = useCatalog()
+  /* The catalog row wins over the runtime registry: the registry is hydrated
+     asynchronously and, until it lands, returns a static seed that carries no
+     published audio at all. */
+  const entry = catalog.all.find((p) => p.code === treatment.protocolCode)
+  const protocol = entry ?? getProtocol(treatment.protocolCode) ?? getProtocol('GL-ANX 1.1')!
+  const fractions = protocol.phases.length
+    ? protocol.phases.map((p) => p.fraction)
+    : [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
   /* THIS device plays the published mixdown for the version the therapist
      chose. Nothing about the treatment audio travels over the call. */
   const audioUrl = audioUrlFor(protocol, treatment.duration, locale)
+  const [audioFailed, setAudioFailed] = useState<string | null>(null)
   const total = demoSeconds ?? versionLengthSeconds(protocol, treatment.duration)
 
   const [elapsed, setElapsed] = useState(0)
@@ -359,7 +367,11 @@ function TreatmentMode({
   pausedRef.current = paused
 
   useEffect(() => {
-    const p = new SessionPlayer({ audioUrl, volume: 0.55 })
+    const p = new SessionPlayer({
+      audioUrl,
+      volume: 0.55,
+      onFallback: (reason) => setAudioFailed(reason),
+    })
     playerRef.current = p
     void p.play()
     let last = Date.now()
@@ -411,6 +423,11 @@ function TreatmentMode({
         <TherapistThumb call={call} name={therapist.name} />
 
         {intervening && <div className="guided__speaking">🔴 {t('Your therapist is speaking')}</div>}
+        {audioFailed && !intervening && (
+          <div className="guided__speaking guided__speaking--warn">
+            {t('The recorded audio could not be played, so this is the ambient bed.')}
+          </div>
+        )}
 
         <div className="guided__hud">
           <div className="guided__phase">

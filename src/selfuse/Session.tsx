@@ -28,6 +28,11 @@ import { durationLabel } from '../data/selfuse'
 import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
 import type { Duration } from '../types/domain'
 
+/* A catalog row can arrive without phases (an import that only carried a
+   timeline). The standard six-phase split keeps the player's screen
+   behaviour correct rather than dividing by an empty list. */
+const STANDARD_FRACTIONS = [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
+
 export type PostFeedback = 'relaxed' | 'neutral' | 'restless' | 'support'
 
 export interface SessionOutcome {
@@ -235,13 +240,22 @@ function ImmersiveSession({
   onEnd: (completed: boolean) => void
 }) {
   const { t, locale } = useI18n()
-  const protocol = getProtocol(session.protocolCode) ?? getProtocol('GL-ANX 1.1')!
-  /* The rendered file for THIS duration in the best available language. When a
-     PO has not published audio for this version yet, the player falls back to
-     the synthesized bed and says so — it never plays another duration's file. */
+  /*
+   * The CATALOG ROW the session already carries is the authority, not the
+   * runtime registry.
+   *
+   * `getProtocol()` reads a registry that is hydrated asynchronously from the
+   * catalog. Until that lands — and for anything the hydration filtered out —
+   * it returns the STATIC SEED, which has no `audioUrl` at all. Resolving
+   * audio through it therefore played the placeholder bed even when a PO had
+   * published a real mixdown, which is exactly the bug this fixes.
+   */
+  const protocol = session.entry ?? getProtocol(session.protocolCode) ?? getProtocol('GL-ANX 1.1')!
   const audioUrl = audioUrlFor(protocol, duration, locale)
   const total = demoSeconds ?? versionLengthSeconds(protocol, duration)
-  const fractions = protocol.phases.map((p) => p.fraction)
+  const fractions = protocol.phases.length ? protocol.phases.map((p) => p.fraction) : STANDARD_FRACTIONS
+  /* Set when a published file existed but would not play. */
+  const [audioFailed, setAudioFailed] = useState<string | null>(null)
 
   const [started, setStarted] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -300,7 +314,11 @@ function ImmersiveSession({
 
   async function begin() {
     setStarted(true)
-    const p = new SessionPlayer({ audioUrl, volume })
+    const p = new SessionPlayer({
+      audioUrl,
+      volume,
+      onFallback: (reason) => setAudioFailed(reason),
+    })
     playerRef.current = p
     await p.play()
     playingRef.current = true
@@ -360,7 +378,7 @@ function ImmersiveSession({
             <button className="btn btn--light player__begin" onClick={begin}>▶ {t('Begin')}</button>
             {!audioUrl && (
               <p className="small player__placeholder">
-                {t('Placeholder ambient audio — the recorded voice is produced separately.')}
+                {t('No recorded voice is published for this length yet — this plays an ambient bed.')}
               </p>
             )}
           </div>
@@ -381,7 +399,12 @@ function ImmersiveSession({
         )}
         <div className="player__veil" style={{ opacity: veil }} />
 
-        {isBreath && controls && <div className="player__hint">{t('Breathe in…')}</div>}
+        {isBreath && controls && !audioFailed && <div className="player__hint">{t('Breathe in…')}</div>}
+        {audioFailed && controls && (
+          <div className="player__hint player__hint--warn">
+            {t('The recorded audio could not be played, so this is the ambient bed.')}
+          </div>
+        )}
 
         <div
           className="hud"

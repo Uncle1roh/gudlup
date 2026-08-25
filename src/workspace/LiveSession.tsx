@@ -812,12 +812,18 @@ function TreatmentMonitor({
   onEnded: () => void
 }) {
   const { t, locale } = useI18n()
-  const protocol = getProtocol(state.code)
-  const fractions = protocol?.phases.map((p) => p.fraction) ?? [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
+  const catalog = useCatalog()
+  const entry = catalog.all.find((p) => p.code === state.code)
+  const protocol = entry ?? getProtocol(state.code)
+  const fractions = protocol?.phases.length
+    ? protocol.phases.map((p) => p.fraction)
+    : [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
   /* The therapist HEARS what the patient hears — including the real mixdown
      when one is published. Monitoring a placeholder while the patient listens
-     to a rendered voice would make the observation worthless. */
+     to a rendered voice would make the observation worthless, so a failure to
+     load it is reported here rather than passed over. */
   const audioUrl = audioUrlFor(protocol, state.version, locale)
+  const [audioFailed, setAudioFailed] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const playerRef = useRef<SessionPlayer | null>(null)
   const stateRef = useRef(state)
@@ -829,7 +835,11 @@ function TreatmentMonitor({
   /* The therapist HEARS the treatment audio — that is what makes monitoring
      possible at all, so the player runs on this side too. */
   useEffect(() => {
-    const p = new SessionPlayer({ audioUrl, volume: 0.4 })
+    const p = new SessionPlayer({
+      audioUrl,
+      volume: 0.4,
+      onFallback: (reason) => setAudioFailed(reason),
+    })
     playerRef.current = p
     void p.play()
     return () => p.stop()
@@ -946,6 +956,11 @@ function TreatmentMonitor({
 
       {state.intervening && (
         <p className="w-warnbox">{t('Two-way audio is open. The patient can hear you. Tap Resume when you are done.')}</p>
+      )}
+      {audioFailed && (
+        <p className="w-warnbox">
+          {t('Your monitor audio fell back to the ambient bed ({reason}). Check with the patient what they can hear.', { reason: audioFailed })}
+        </p>
       )}
 
       {confirmStop && (

@@ -227,6 +227,7 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
     if (p) {
       return (
         <div className="w-app">
+          <TooSmall />
           <Sidebar
             nav={nav}
             setNav={(n) => { setNav(n); setView({ kind: 'nav' }) }}
@@ -267,14 +268,7 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
 
   return (
     <div className="w-app">
-      <div className="w-toosmall">
-        <div>
-          <h2 className="w-h2">{t('Please use a desktop')}</h2>
-          <p className="w-lead">
-            {t('The therapist workspace runs a live video call, a clinical panel and treatment controls at once. It needs a screen at least 1024px wide.')}
-          </p>
-        </div>
-      </div>
+      <TooSmall />
 
       <Sidebar
         nav={nav}
@@ -357,6 +351,30 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
 }
 
 /* ------------------------------------------------------------------------- */
+
+/**
+ * Below 1024px the workspace refuses rather than shrinking — it runs a live
+ * video call, a clinical panel and treatment transport at once, and a
+ * phone-sized version would be unsafe to hold a session in.
+ *
+ * It is a component rather than markup repeated per view because the CSS hides
+ * every sibling of it inside `.w-app`: a `.w-app` that forgets this element
+ * renders a blank page on a phone, which is exactly what the session-report
+ * view used to do.
+ */
+function TooSmall() {
+  const { t } = useI18n()
+  return (
+    <div className="w-toosmall">
+      <div>
+        <h2 className="w-h2">{t('Please use a desktop')}</h2>
+        <p className="w-lead">
+          {t('The therapist workspace runs a live video call, a clinical panel and treatment controls at once. It needs a screen at least 1024px wide.')}
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function labelFor(n: Nav): string {
   return GROUPS.flatMap((g) => g.items).find((i) => i.id === n)?.label ?? 'Patients'

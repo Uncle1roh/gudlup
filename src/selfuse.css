@@ -598,3 +598,264 @@
   background: rgba(178, 59, 59, 0.92); color: #fff; font-size: 12px; font-weight: 700;
 }
 .guided__paused { font-size: 12px; color: rgba(255,255,255,0.6); }
+
+/* ============================================================================
+   Overflow hardening — Self Use
+
+   The mobile column is 460px at most and often 360, so anything that cannot
+   wrap has nowhere to go. Each rule below fixes a real overflow rather than
+   pre-empting an imagined one.
+   ============================================================================ */
+
+/* The page sits inside a scrolling frame now, so it must not also try to be
+   one — a nested scroller on a phone traps the gesture. */
+.su-page { min-height: 0; }
+
+/* Flex rows: the text half has to be allowed to shrink so it can wrap. */
+.home__head > div,
+.thr-card > div,
+.thr-card__id > div,
+.rx-card__top,
+.chron__row > span,
+.goals li,
+.msgs__compose,
+.scorelist li,
+.consent-row__main,
+.sess-card,
+.pw-card__head { min-width: 0; }
+
+.pw-card__name,
+.sess-card__name,
+.home__pwname,
+.consent-row__title { overflow-wrap: anywhere; }
+
+/* An address or a code is one long token; wrap it rather than let it push the
+   card wider than the screen. */
+.profile__id,
+.menu__row,
+.safety-card { overflow-wrap: anywhere; }
+.profile__id > div { min-width: 0; }
+
+/* Monospace with tracking is far wider than it looks. Let it step down. */
+.ob-input--code { font-size: clamp(14px, 4vw, 16px); }
+
+/* Chip rows and duration pickers: three chips at 360px is tight. */
+.chip-row { flex-wrap: wrap; }
+.chip-row > * { min-width: 0; }
+.chip__label, .chip__hint { overflow-wrap: anywhere; }
+
+/* Fixed-count grids get their own narrow-phone treatment rather than letting
+   the labels spill out of their boxes. */
+@media (max-width: 380px) {
+  .chron__row { grid-template-columns: 1fr auto; row-gap: 2px; }
+  .chron__row > span:nth-child(2) { grid-column: 1 / -1; }
+  .daylist__row { grid-template-columns: 44px 1fr auto; }
+  .mood-grid { gap: 8px; }
+  .mood-card { min-height: 74px; padding: 12px; }
+  .post__row { grid-template-columns: 1fr 1fr; }
+}
+
+.mood-opt__label { font-size: 10px; line-height: 1.15; overflow-wrap: anywhere; }
+.scale5__btn { min-width: 0; }
+
+/* A pasted URL must not widen the message thread. */
+.msg { overflow-wrap: anywhere; }
+.msgs__compose .ob-input { min-width: 0; }
+
+.filter-row, .teaser-row { -webkit-overflow-scrolling: touch; }
+
+/* Overlays sit over a fixed-height frame; keep them inside it. */
+.player__confirmbox { max-height: 80dvh; overflow-y: auto; }
+.sheet { max-height: 88dvh; overflow-y: auto; }
+.sheet__title { overflow-wrap: anywhere; }
+
+/* ============================================================================
+   The session catalog — hero, rails, covers
+
+   Built to be browsed with a thumb. Two decisions do most of the work:
+
+   · The rails scroll with `scroll-snap`, so a flick lands on a card edge
+     instead of halfway across one. A half-visible card is the difference
+     between a catalog that feels designed and one that feels like a list that
+     happens to be sideways.
+   · Card width is a clamp, not a media query. At 360px two cards and a sliver
+     of the third are visible — the sliver is what tells you the rail scrolls.
+   ============================================================================ */
+
+.cat { display: flex; flex-direction: column; gap: 4px; }
+
+/* ---------------------------------------------------------------- hero --- */
+
+.cat-hero {
+  position: relative;
+  display: flex; align-items: flex-end;
+  min-height: 232px;
+  margin: 0 -22px 6px;              /* full-bleed inside the padded page */
+  padding: 20px 22px 22px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.cat-hero__glyph {
+  position: absolute; right: -8px; top: -22px; z-index: -1;
+  font-size: 190px; line-height: 1; opacity: 0.16;
+  pointer-events: none; user-select: none;
+}
+/* A scrim so the copy stays legible over the lighter end of the gradient. */
+.cat-hero::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(6, 23, 16, 0.62), transparent 62%);
+}
+.cat-hero__body { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.cat-hero__eyebrow {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  opacity: 0.85;
+}
+.cat-hero__title {
+  font-family: var(--display); font-size: clamp(23px, 7vw, 30px); font-weight: 500;
+  line-height: 1.1; overflow-wrap: anywhere;
+}
+.cat-hero__blurb { font-size: 13.5px; line-height: 1.4; opacity: 0.88; max-width: 34ch; }
+.cat-hero__actions { display: flex; gap: 9px; margin-top: 6px; flex-wrap: wrap; }
+.cat-hero__actions .btn { width: auto; padding: 11px 18px; }
+.btn--outline { background: transparent; border: 1px solid rgba(255,255,255,0.4); }
+
+/* ------------------------------------------------------------- filters --- */
+
+.cat__filters { display: flex; flex-direction: column; gap: 2px; padding: 12px 0 4px; }
+
+.cat__resulthead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  margin: 10px 0 4px;
+}
+.cat__railtitle {
+  font-family: var(--display); font-size: 17px; font-weight: 500; line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- rail --- */
+
+.cat-rail { margin: 18px 0 2px; }
+.cat-rail__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin-bottom: 10px;
+}
+.cat-rail__head > div { min-width: 0; }
+.cat-rail__arrows { display: none; gap: 4px; flex-shrink: 0; }
+.cat-rail__arrows button {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--mist-2); color: var(--slate); font-size: 15px; line-height: 1;
+}
+.cat-rail__arrows button:hover { background: var(--line); color: var(--ink); }
+/* Arrows only where there is a pointer — on a touch screen the gesture is
+   already there and an arrow would only cover a card. */
+@media (hover: hover) and (pointer: fine) {
+  .cat-rail__arrows { display: flex; }
+}
+
+.cat-rail__track {
+  display: flex; gap: 12px;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Bleed to the page edge so a card can sit under the margin and signal that
+     there is more to the right. */
+  margin: 0 -22px; padding: 2px 22px 6px;
+}
+.cat-rail__track::-webkit-scrollbar { display: none; }
+
+/* ---------------------------------------------------------------- card --- */
+
+.cat-card {
+  flex: 0 0 auto;
+  width: clamp(132px, 40vw, 168px);
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 6px;
+  text-align: left; min-width: 0;
+  transition: transform 160ms var(--ease);
+}
+.cat-card:active { transform: scale(0.975); }
+
+.cat-card__cover {
+  position: relative;
+  display: block; width: 100%; aspect-ratio: 3 / 4;
+  border-radius: var(--r-md); overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+.cat-card__glyph {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 54px; line-height: 1; opacity: 0.9;
+}
+.cat-card__lengths {
+  position: absolute; left: 8px; bottom: 8px;
+  display: flex; gap: 4px;
+}
+.cat-card__lengths span {
+  padding: 2px 6px; border-radius: var(--r-pill);
+  background: rgba(6, 23, 16, 0.45); backdrop-filter: blur(3px);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+}
+.cat-card__soon {
+  position: absolute; right: 8px; top: 8px;
+  padding: 2px 7px; border-radius: var(--r-pill);
+  background: rgba(6, 23, 16, 0.5);
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+}
+.cat-card__title {
+  font-size: 13.5px; font-weight: 600; line-height: 1.25; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.cat-card__blurb {
+  font-size: 11.5px; line-height: 1.35; color: var(--slate);
+  /* Two lines, then ellipsis — a rail of cards with different heights reads as
+     broken, and the full text is one tap away on the detail screen. */
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- grid --- */
+
+/* With a filter on, the rails collapse into one grid: rails of one item each
+   would be worse than a list. */
+.cat__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 14px 12px; padding: 6px 0 10px;
+}
+.cat__grid .cat-card { width: auto; }
+
+/* -------------------------------------------------------------- detail --- */
+
+.sess-detail__cover {
+  display: grid; place-items: center;
+  width: 100%; height: 150px; margin: 0 0 14px;
+  border-radius: var(--r-md); font-size: 62px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-rail__track { scroll-behavior: auto; }
+  .cat-card { transition: none; }
+}
+
+/* ----------------------------------------------------------------------------
+   Scroll containers inside the fixed-height frame
+
+   `.app-frame` is now exactly the viewport, so every direct child that holds
+   content has to be its own scroll container or its bottom is unreachable.
+   `.screen` and `.tabview` already are; the call screens were not, and the
+   waiting room is the tallest thing in the app — heading, self-view, mic and
+   camera controls, permission warnings, the headphone notice and two buttons.
+   ---------------------------------------------------------------------------- */
+
+.call__waiting,
+.call__transition,
+.call__ended {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* The video surface is the one child that must NOT scroll: it is a feed with
+   controls pinned over it, and a scrollbar there would be a bug. */
+.call__video { min-height: 0; overflow: hidden; }

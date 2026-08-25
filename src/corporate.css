@@ -398,3 +398,57 @@
   .c-app { background: #fff; }
   .c-card { break-inside: avoid; }
 }
+
+/* ============================================================================
+   Overflow hardening — Corporate Dashboard
+
+   Designed at 1440px, but opened on laptops and, for a quick check, on phones.
+   These are the rules that stop it running off the side.
+   ============================================================================ */
+
+.c-app { width: 100%; overflow-x: hidden; }
+.c-main { min-width: 0; }
+
+/* The nav is the first thing to overflow: six items plus a company name. */
+.c-topbar { flex-wrap: wrap; row-gap: 4px; }
+.c-topbar__left { min-width: 0; flex-shrink: 1; }
+.c-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.c-nav::-webkit-scrollbar { display: none; }
+.c-nav button { white-space: nowrap; flex-shrink: 0; }
+
+/* Tables of emails and report names wrap; the widest one scrolls inside its
+   own card rather than widening the page. */
+.c-card { min-width: 0; overflow-x: auto; }
+.c-table { min-width: 0; }
+.c-table td, .c-table th { overflow-wrap: anywhere; }
+
+/* Monospace with tracking has to step down on a narrow screen. */
+.c-code { flex-wrap: wrap; row-gap: 10px; }
+.c-code__value { font-size: clamp(17px, 5vw, 26px); overflow-wrap: anywhere; min-width: 0; }
+
+.c-kpi, .c-metric, .c-dim { min-width: 0; }
+.c-kpi__value, .c-bignum, .c-support__num { overflow-wrap: anywhere; }
+.c-summary > div { flex-wrap: wrap; row-gap: 2px; }
+.c-summary dd { overflow-wrap: anywhere; min-width: 0; }
+.c-alerts li { flex-wrap: wrap; row-gap: 4px; }
+.c-alerts__text { min-width: 0; overflow-wrap: anywhere; }
+.c-inviterow { flex-wrap: wrap; }
+.c-inviterow .c-input { min-width: 0; }
+.c-invitelist li { flex-wrap: wrap; row-gap: 4px; }
+.c-invitelist__mail { min-width: 0; overflow-wrap: anywhere; }
+.c-switches li { flex-wrap: wrap; row-gap: 8px; }
+.c-preview__card { overflow-wrap: anywhere; }
+
+/* Charts get shorter below the breakpoint rather than squashing their labels
+   into each other. */
+@media (max-width: 720px) {
+  .c-chart svg { height: 170px; }
+  .c-donut { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .c-h1 { font-size: 23px; }
+  .c-pagehead { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .c-setup__card { padding: 24px 20px; }
+  .c-barlist li { grid-template-columns: 1fr 60px; }
+}
+
+/* A modal must never be taller than the screen with its actions off-frame. */
+.c-modal { max-height: 88dvh; }

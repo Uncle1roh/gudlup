@@ -24,6 +24,8 @@ import { seedCatalog } from '../src/data/catalog'
 import { Onboarding } from '../src/selfuse/Onboarding'
 import { Home } from '../src/selfuse/Home'
 import { Explore } from '../src/selfuse/Explore'
+import { Catalog } from '../src/selfuse/Catalog'
+import { coverFor } from '../src/selfuse/artwork'
 import { ProgressTab } from '../src/selfuse/ProgressTab'
 import { ProfileTab } from '../src/selfuse/ProfileTab'
 import { TherapistTab } from '../src/selfuse/TherapistTab'
@@ -68,6 +70,7 @@ const mem = new Map<string, string>()
    catalog rather than waiting on a round-trip means the assertions below run
    against real material instead of a loading state. */
 const CATALOG = resolveCatalog(seedCatalog(), 'en')
+const EMPTY = resolveCatalog([], 'en')
 
 function shell(el: ReactElement): ReactElement {
   return (
@@ -155,6 +158,12 @@ renders('HOME · D  pathway complete', <Home {...homeProps} pathway={{ ...popula
 renders('EXP-1 Pathways', <Explore pathway={null} completed={[]} initialTab="pathways" onStartPathway={noop} onStart={noop} />)
 renders('EXP-2 All sessions', <Explore pathway={null} completed={[]} initialTab="sessions" onStartPathway={noop} onStart={noop} />)
 renders('EXP  active pathway', <Explore pathway={populated.pathway} completed={['focus-performance']} onStartPathway={noop} onStart={noop} />)
+
+/* The catalog replaced the wireframe's vertical list. It has to render its
+   hero, its rails and its cards — and still work with nothing published. */
+renders('CATALOG rails', <Catalog catalog={CATALOG} onOpen={noop} onQuickStart={noop} />)
+renders('CATALOG with a pathway hero', <Catalog catalog={CATALOG} featuredSlug="calm-safety" onOpen={noop} onQuickStart={noop} />)
+renders('CATALOG empty library', <Catalog catalog={EMPTY} onOpen={noop} onQuickStart={noop} />)
 
 const progressProps = {
   therapy: emptyTherapy(),
@@ -255,6 +264,29 @@ renders('TH-PERF, no sessions', <Performance state={wsEmpty} />)
 renders('TH-SETTINGS', <WorkspaceSettings state={ws} update={noop} onOpenAvailability={noop} />)
 
 /* ------------------------------------------- the catalog reached the UI --- */
+console.log('\n--- the catalog view ---')
+
+const catalogHtml = renderToString(shell(<Catalog catalog={CATALOG} onOpen={noop} onQuickStart={noop} />))
+assert(catalogHtml.includes('cat-rail__track'), 'the catalog renders horizontal rails')
+assert(catalogHtml.includes('cat-card__cover'), 'the catalog renders cover cards')
+assert(catalogHtml.includes('cat-hero'), 'the catalog leads with a hero')
+assert((catalogHtml.match(/cat-rail__track/g) ?? []).length >= 5, 'there are at least five rails to browse')
+assert(!catalogHtml.includes('GL-'), 'no protocol code appears on a cover card')
+
+/* Covers must be stable: a catalog that reshuffles its colours between renders
+   makes a session unrecognisable, which is the whole point of having art. */
+const a1 = coverFor('calm-safety', 'calm')
+const a2 = coverFor('calm-safety', 'calm')
+assert(
+  a1.from === a2.from && a1.glyph === a2.glyph && a1.angle === a2.angle,
+  'a cover is deterministic for a given session',
+)
+assert(coverFor('focus-clarity', 'focus').from !== a1.from, 'different themes get visibly different covers')
+assert(
+  CATALOG.browsable.every((s) => coverFor(s.slug, s.theme).glyph.length > 0),
+  'every browsable session has a glyph',
+)
+
 console.log('\n--- the resolved catalog reached the screens ---')
 
 assert(CATALOG.browsable.length >= 19, 'the seeded catalog resolves at least the 19 Self Use sessions')

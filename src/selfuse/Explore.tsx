@@ -12,16 +12,11 @@
    session has a clinical identity, and the person listening never sees it.
    ============================================================================ */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useI18n } from '../i18n'
-import {
-  SELF_USE_THEMES,
-  DURATIONS,
-  durationLabel,
-  durationTag,
-  type PathwayId,
-  type SelfUseTheme,
-} from '../data/selfuse'
+import { durationLabel, durationTag, type PathwayId } from '../data/selfuse'
+import { Catalog } from './Catalog'
+import { coverFor, coverStyle } from './artwork'
 import {
   useCatalog,
   findPathway,
@@ -53,6 +48,14 @@ export function Explore({ pathway, completed, initialTab = 'pathways', onStartPa
   const catalog = useCatalog()
   const [tab, setTab] = useState<'pathways' | 'sessions'>(initialTab)
   const [view, setView] = useState<View>({ kind: 'list' })
+
+  /* The catalog's hero leads with what the person is already doing, so the
+     library opens on something relevant rather than on whatever sorts first. */
+  const activePathway = pathway ? findPathway(catalog.pathways, pathway.id) : undefined
+  const todaySlug =
+    pathway && activePathway
+      ? activePathway.plan.find((w) => w.week === currentWeek(pathway, activePathway))?.slug
+      : undefined
 
   if (catalog.loading) {
     return <div className="su-page"><p className="small muted">{t('Loading…')}</p></div>
@@ -105,7 +108,12 @@ export function Explore({ pathway, completed, initialTab = 'pathways', onStartPa
           onContinue={() => setView({ kind: 'weekly' })}
         />
       ) : (
-        <SessionList catalog={catalog} onOpen={(slug) => setView({ kind: 'session', slug })} />
+        <Catalog
+          catalog={catalog}
+          featuredSlug={todaySlug}
+          onOpen={(slug) => setView({ kind: 'session', slug })}
+          onQuickStart={(slug, duration) => onStart({ slug, duration })}
+        />
       )}
     </div>
   )
@@ -158,71 +166,6 @@ function PathwayList({
               </>
             )}
           </article>
-        )
-      })}
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------- EXP-2 ----- */
-
-function SessionList({ catalog, onOpen }: { catalog: LiveCatalog; onOpen: (slug: string) => void }) {
-  const { t } = useI18n()
-  const [dur, setDur] = useState<Duration | 'all'>('all')
-  const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
-
-  const list = useMemo(
-    () =>
-      catalog.browsable.filter(
-        (s) => (dur === 'all' || s.durations.includes(dur)) && (theme === 'all' || s.theme === theme),
-      ),
-    [catalog.browsable, dur, theme],
-  )
-
-  const pathwayOf = (slug: string): ResolvedPathway | undefined =>
-    catalog.pathways.find((p) => p.plan.some((w) => w.slug === slug))
-
-  return (
-    <div className="sess-list">
-      <div className="filter-row" role="group" aria-label={t('Duration')}>
-        <button className="filter-chip" aria-pressed={dur === 'all'} onClick={() => setDur('all')}>{t('All')}</button>
-        {DURATIONS.map((d) => (
-          <button key={d} className="filter-chip" aria-pressed={dur === d} onClick={() => setDur(d)}>
-            {t(durationLabel(d))} {d}m
-          </button>
-        ))}
-      </div>
-      <div className="filter-row" role="group" aria-label={t('Theme')}>
-        <button className="filter-chip" aria-pressed={theme === 'all'} onClick={() => setTheme('all')}>{t('All')}</button>
-        {SELF_USE_THEMES.map((th) => (
-          <button key={th.id} className="filter-chip" aria-pressed={theme === th.id} onClick={() => setTheme(th.id)}>
-            {t(th.label)}
-          </button>
-        ))}
-      </div>
-
-      {!list.length && (
-        <div className="empty">
-          <p>{t('No sessions match.')}</p>
-          <button className="btn btn--ghost" onClick={() => { setDur('all'); setTheme('all') }}>
-            {t('Clear filters')}
-          </button>
-        </div>
-      )}
-
-      {list.map((s) => {
-        const p = pathwayOf(s.slug)
-        return (
-          <button key={s.slug} className="card sess-card" onClick={() => onOpen(s.slug)}>
-            <div className="sess-card__name">{t(s.name)}</div>
-            <p className="small muted">{t(s.blurb)}</p>
-            <div className="sess-card__tags">
-              {s.durations.map((d) => (
-                <span key={d} className="tag">{t(durationLabel(d))} {d}m</span>
-              ))}
-            </div>
-            {p && <div className="small muted sess-card__part">{t('Part of:')} {t(p.name)}</div>}
-          </button>
         )
       })}
     </div>
@@ -389,11 +332,21 @@ function SessionDetail({
   )
   const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.slug === session.slug))
 
+  const cover = coverFor(session.slug, session.theme)
+
   return (
     <div className="su-page sess-detail">
       <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
+      <div className="sess-detail__cover" style={coverStyle(cover)}>
+        <span aria-hidden="true">{cover.glyph}</span>
+      </div>
       <h1 className="display su-h1">{t(session.name)}</h1>
       <p className="lead">{t(session.about)}</p>
+      {!session.audioReady && (
+        <p className="small muted">
+          {t('No recorded voice is published for this session yet — it plays an ambient bed.')}
+        </p>
+      )}
 
       <div className="sheet__label">{t('Duration')}</div>
       <div className="chip-row">

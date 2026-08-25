@@ -1,6 +1,96 @@
 # Good Loop — build manifest
 
-**Slice: the three gaps closed — video, PDF, the live catalog** (current)
+**Slice: the player was ignoring published audio, and the frame could not scroll** (current)
+- PO report: "there are places with wrong mobile width, there are places with no
+  scroll, there are words breaking out of boxes… also when I start an audio file,
+  we still get a generic test version."
+
+- **The audio report is true, and it was ours.** `Session.tsx` resolved the file
+  through `getProtocol()` — the RUNTIME REGISTRY — when the session already
+  carried its catalog row in `session.entry`. The registry is hydrated
+  asynchronously from the catalog, so until that landed (and for anything the
+  hydration filtered out) it answered with the STATIC SEED, and the seeds carry
+  no `audioUrl` at all. `audioUrlFor()` therefore found nothing and the player
+  fell back to the synthesized bed **even where a PO had published a real
+  mixdown**. The catalog row is now the authority in all three players — Self
+  Use, the patient's treatment mode, and the therapist's monitor.
+  · Not verified against the live catalog: `protocols` is `for select using
+    (auth.uid() is not null)`, so an anonymous read returns zero rows and says
+    nothing. Whether a mixdown exists is visible in `#admin` → catalog →
+    **Durate**: green = audio attached, amber = timeline published without
+    audio, grey = neither.
+  · **A second, worse one.** `SessionPlayer.playFile()` did `await el.play()`
+    with no error path. A 404, a CORS refusal or an expired signed URL left the
+    session in SILENCE — the timer ran, the phases advanced, and the person
+    listened to nothing for twelve minutes. `play()` now races the promise
+    against the element's own `error` event (it rejects on some browsers and
+    hangs on others), falls back to the bed, and reports why. `resume()` gets
+    the same treatment, because a URL can expire mid-session.
+  · The pre-session screen now says "no recorded voice is published for this
+    length yet" instead of the vaguer placeholder note, and a mid-session
+    fallback says so on the player. The therapist's monitor says it too — a
+    clinician monitoring a bed while the patient hears a voice is worse than
+    either alone.
+
+- **Two structural layout bugs, not styling.**
+  · **No scroll.** `.app-frame` had `min-height: 100dvh` AND `overflow: hidden`.
+    Content taller than the phone grew the frame, which then clipped itself, so
+    the bottom was simply unreachable — the four-question intake, pathway
+    detail, Profile, the call waiting room. The frame is now pinned to the
+    viewport (`height: 100dvh`) and the INNER surfaces are the scroll
+    containers, which is also what keeps the tab bar on screen instead of
+    scrolling away with the page. `.screen`, `.tabview` and the three call
+    screens each got `min-height: 0` — without it a flex child refuses to
+    shrink and `overflow-y` never engages.
+  · **Wrong width.** `#root` is a centering flex container, so every full-bleed
+    surface was a flex ITEM sized by its content: narrower than the viewport on
+    desktop, wider than it on a phone. That is what made the desktop surfaces
+    scroll sideways on mobile. `#root > * { width: 100% }`.
+  · `.screen--center` uses `justify-content: safe center` — plain `center` in a
+    scroll container pushes the top of tall content above the scrollable area
+    where it can never be reached. `align-items` stays plain `center` on
+    purpose: `safe` there degrades to `stretch` on older browsers and would
+    silently change horizontal centring.
+
+- **Words out of boxes** were nearly all one cause: a flex child defaults to
+  `min-width: auto` and refuses to shrink below its content, so one long token —
+  an email, a company code, a storage URL — pushed its whole row off screen.
+  `min-width: 0` on the flexible halves, `overflow-wrap: anywhere` on the text,
+  wrapping tables, and `clamp()` on the monospace code readouts, which are much
+  wider than they look because of their tracking.
+
+- **A blank page found while re-reading.** The workspace session-report view
+  built a second `.w-app` without the "please use a desktop" notice — and the
+  CSS hides every SIBLING of that notice below 1024px, so the whole view came up
+  empty on a phone. It is a `<TooSmall />` component now, so a new view cannot
+  forget it.
+
+- **The library is a catalog, not a list.** The wireframe drew a vertical list of
+  text cards; browsing 19+ sessions that way is a chore, and the PO asked for
+  something closer to a streaming catalog. `selfuse/Catalog.tsx`: a hero leading
+  with today's pathway session (or the shortest calm session when no pathway is
+  running), then horizontal snap-scrolling rails — Six minutes, the five themes,
+  Longer sessions, New in the library. Filters switch the whole view to a grid,
+  because rails of one item each are worse than a list.
+  · There is no cover art in the repo, so `selfuse/artwork.ts` GENERATES one per
+    session, deterministically from the slug: tonal bands inside the brand
+    palette keyed on theme, one large glyph, no baked-in text (a title belongs
+    under the card where it can wrap). Same session, same cover, every render —
+    a catalog that reshuffles its colours makes a session unrecognisable, which
+    defeats the point of having art. Designed to be deleted the moment real
+    covers exist.
+  · A session whose audio is not rendered yet is still browsable but is badged
+    "Ambient bed", so nobody puts headphones on expecting a voice.
+
+- `tools/test-render-surfaces.tsx` grows to 87: the catalog's rails, hero and
+  cards, cover determinism, and that no protocol code reaches a cover.
+  `tsc --noEmit`, `vite build` and all three harnesses clean (251 · 87 · 67).
+- **Not visually verified.** No browser tooling was available in the session
+  that made these changes, so the layout fixes are reasoned and asserted but not
+  seen. Worth an eye on: the catalog rails at 360px, the intake questions
+  scrolling, and the corporate top nav on a phone.
+
+**Slice: the three gaps closed — video, PDF, the live catalog**
 - The previous slice shipped the three wireframe surfaces and named three gaps.
   This closes them.
 

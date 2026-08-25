@@ -616,3 +616,91 @@
 }
 
 .w-call__waitmain .w-warnbox { max-width: 420px; }
+
+/* ============================================================================
+   Overflow hardening — Therapist Workspace
+
+   Below 1024px this surface asks for a desktop, so these rules are about the
+   1024–1440 band: a sidebar plus a dense table plus a 30% panel is where the
+   columns start fighting each other.
+   ============================================================================ */
+
+.w-app { width: 100%; }
+.w-content { min-width: 0; overflow-x: hidden; }
+.w-main { min-width: 0; }
+
+/* Tables wrap rather than widen, and scroll inside the section if a row
+   genuinely cannot fit. */
+.w-section__body { min-width: 0; overflow-x: auto; }
+.w-table { min-width: 0; }
+.w-table td, .w-table th { overflow-wrap: anywhere; }
+.w-truncate { max-width: 100%; }
+
+/* Flex rows whose text half must shrink. */
+.w-idcell,
+.w-pathead,
+.w-pathead > div,
+.w-msgrow__body,
+.w-upcoming__body,
+.w-reflist li,
+.w-goals li,
+.w-summary > div,
+.w-sidebar__name,
+.w-crumbs { min-width: 0; }
+
+.w-crumbs { flex-wrap: wrap; row-gap: 2px; }
+.w-crumbs span { overflow-wrap: anywhere; }
+.w-summary dd,
+.w-notes p,
+.w-quicknotes li,
+.w-bubble,
+.w-signature { overflow-wrap: anywhere; }
+
+/* The connection code: monospace with tracking inside a 520px modal. */
+.w-code { flex-wrap: wrap; row-gap: 10px; }
+.w-code__value { font-size: clamp(16px, 3vw, 22px); overflow-wrap: anywhere; min-width: 0; }
+
+/* The three-tab panel is 30% of the workspace — at 1024px that is ~300px, and
+   the protocol rows and the transport have to survive it. */
+.w-panel { min-width: 0; }
+.w-panel__body { min-width: 0; }
+.w-proto { min-width: 0; }
+.w-proto > span { overflow-wrap: anywhere; min-width: 0; }
+.w-transport { gap: 6px; }
+.w-tbtn { min-width: 0; padding: 10px 2px; font-size: 10.5px; }
+.w-tbtn span { overflow-wrap: anywhere; }
+.w-vasrow { gap: 2px; }
+.w-vasdot { font-size: 9.5px; }
+.w-ticks span { overflow-wrap: anywhere; }
+
+/* Modals scroll internally rather than pushing their actions off screen. */
+.w-modal { max-height: 88dvh; }
+.w-protolist { overscroll-behavior: contain; }
+
+/* The availability editor is a two-column grid that needs to stack. */
+@media (max-width: 1280px) {
+  .w-availlist li { grid-template-columns: 1fr; row-gap: 6px; }
+  .w-form { grid-template-columns: 1fr; }
+}
+
+/* The roster's VAS sparkline is the first column worth dropping when the table
+   is squeezed — it is a nicety; the name and the time are not. */
+@media (max-width: 1180px) {
+  .w-table--roster th:nth-child(4),
+  .w-table--roster td:nth-child(4) { display: none; }
+}
+
+/* ----------------------------------------------------------------------------
+   The live session below the desktop threshold
+
+   The rest of the workspace refuses under 1024px, and the call is only
+   reachable from inside it, so this should never be seen. It is here anyway:
+   a 70/30 split of a phone screen is a broken panel next to a useless video,
+   and degrading to a stack costs three rules.
+   ---------------------------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .w-call__body { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 40vh) 1fr; }
+  .w-call__wait { grid-template-columns: 1fr; }
+  .w-panel { border-left: none; border-top: 1px solid var(--w-line); }
+}
