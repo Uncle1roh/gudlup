@@ -13,7 +13,7 @@
    ============================================================================ */
 
 import { useMemo, useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { fmtWhen, initials } from './Patients'
 import type { AvailabilityDay, WorkspaceState } from './data'
 
@@ -85,8 +85,8 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
           <div className="w-navarrows">
             <button onClick={() => setOffset((o) => o - 1)} aria-label={t('Previous week')}>‹</button>
             <span className="w-small">
-              {new Date(monday).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
-              {new Date(monday + 6 * DAY).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              {fmtDate(monday, { month: 'short', day: 'numeric' })} –{' '}
+              {fmtDate(monday + 6 * DAY, { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
             <button onClick={() => setOffset((o) => o + 1)} aria-label={t('Next week')}>›</button>
           </div>
@@ -121,7 +121,7 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
                       {session && (
                         <button className="w-block" onClick={() => setPopover({ patientId: session.patientId, at: session.at })}>
                           <strong>{session.name}</strong>
-                          <em>{new Date(session.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</em>
+                          <em>{fmtDate(session.at, { hour: '2-digit', minute: '2-digit' })}</em>
                         </button>
                       )}
                     </span>
@@ -165,9 +165,9 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
                 <li key={r.id}>
                   <strong>{r.patientName}</strong>
                   <span className="w-small">
-                    {t('Requested')} {new Date(r.slotAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {t('Requested')} {fmtDate(r.slotAt, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span className="w-small w-muted">{t('Sent')} {new Date(r.requestedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span className="w-small w-muted">{t('Sent')} {fmtDate(r.requestedAt, { month: 'short', day: 'numeric' })}</span>
                   <div className="w-inline">
                     <button
                       className="w-btn w-btn--sm w-btn--primary"

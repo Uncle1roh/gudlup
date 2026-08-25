@@ -17,7 +17,7 @@
    ============================================================================ */
 
 import { useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { durationLabel, primaryBlock, weekCount } from '../data/selfuse'
 import { useCatalog, findPathway, type ResolvedSession } from '../data/liveCatalog'
 import { currentWeek, type PathwayState, type SelfUseLog } from '../data/selfUseStore'
@@ -51,7 +51,7 @@ function greeting(now = new Date()): string {
 }
 
 function longDate(now = new Date()): string {
-  return now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  return fmtDate(now.getTime(), { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
 export function Home(props: HomeProps) {

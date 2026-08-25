@@ -40,7 +40,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { useVideoCall, type VideoCall } from '../b2b/webrtc/useVideoCall'
 import { PeerVideo, SelfVideo } from './Video'
 import { getProtocol } from '../data/protocols'
@@ -198,7 +198,7 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
             {patient.sessions[0] && (
               <div className="w-prepblock">
                 <div className="w-field__label">
-                  {t('Last session')} · {new Date(patient.sessions[0].at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  {t('Last session')} · {fmtDate(patient.sessions[0].at, { month: 'short', day: 'numeric' })}
                 </div>
                 {patient.sessions[0].protocolCode && (
                   <p className="w-mono w-small">{patient.sessions[0].protocolCode} · {versionShort(patient.sessions[0].version)}</p>
@@ -422,7 +422,7 @@ function NotesTab({
       <div className="w-noteblock">
         <div className="w-noteblock__head">
           <span className="w-tag">{t('Session #{n}', { n: sessionNumber })}</span>
-          {savedAt && <span className="w-small">{t('Saved')} {new Date(savedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>}
+          {savedAt && <span className="w-small">{t('Saved')} {fmtDate(savedAt, { hour: '2-digit', minute: '2-digit' })}</span>}
         </div>
         <textarea
           className="w-input w-notearea"
@@ -434,7 +434,7 @@ function NotesTab({
           <ul className="w-quicknotes">
             {quickNotes.map((q, i) => (
               <li key={i}>
-                <span className="w-mono w-small">{new Date(q.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} P{q.phase}</span>
+                <span className="w-mono w-small">{fmtDate(q.at, { hour: '2-digit', minute: '2-digit' })} P{q.phase}</span>
                 {' — '}{q.text}
               </li>
             ))}

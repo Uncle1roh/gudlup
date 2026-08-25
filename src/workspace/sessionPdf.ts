@@ -15,18 +15,19 @@
      because pages get separated.
    ============================================================================ */
 
+import { fmtDate as localeDate } from '../i18n'
 import { PdfDoc } from '../lib/pdf'
 import { versionShort } from './Patients'
 import type { SessionRow, TherapistAccount, WorkspacePatient } from './data'
 
 function fmtDateTime(ms: number): string {
-  return new Date(ms).toLocaleString(undefined, {
+  return localeDate(ms, {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 }
 
 function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return localeDate(ms, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function goalStatusLabel(s: SessionRow['goalStatus']): string {

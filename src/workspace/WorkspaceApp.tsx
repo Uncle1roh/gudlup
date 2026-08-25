@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { useMessages, unreadFor } from '../data/messageStore'
 import { useDataProvider } from '../data/provider'
 import { LiveCatalogProvider } from '../data/liveCatalog'
@@ -176,7 +176,7 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
     // "Session #N" — the notes list is unified and searchable.
     const noteText = [
       row.note,
-      ...quickNotes.map((q) => `${new Date(q.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} P${q.phase} — ${q.text}`),
+      ...quickNotes.map((q) => `${fmtDate(q.at, { hour: '2-digit', minute: '2-digit' })} P${q.phase} — ${q.text}`),
     ]
       .filter(Boolean)
       .join('\n')
@@ -196,7 +196,7 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
                   id: `n-${row.id}`,
                   at: row.at,
                   tag: `Session #${row.noteNumber}`,
-                  time: new Date(row.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+                  time: fmtDate(row.at, { hour: '2-digit', minute: '2-digit' }),
                   text: noteText,
                 },
               ],

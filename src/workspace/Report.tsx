@@ -17,7 +17,7 @@
    ============================================================================ */
 
 import { useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { fmtClock } from './LiveSession'
 import { versionShort } from './Patients'
 import { adherencePct, assessmentDueLabel, type SessionRow, type TherapistAccount, type WorkspacePatient } from './data'
@@ -64,7 +64,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
           <dl className="w-summary">
             <div>
               <dt>{t('Date & time')}</dt>
-              <dd>{new Date(draft.at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd>
+              <dd>{fmtDate(draft.at, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd>
             </div>
             <div><dt>{t('Call duration')}</dt><dd>{draft.minutes} min</dd></div>
             <div><dt>{t('Good Loop treatment')}</dt><dd>{draft.kind === 'gl-video' ? `${t('Yes')} · ${draft.protocolCode}` : t('No')}</dd></div>
@@ -240,7 +240,7 @@ function PostSession({
             <h3>{t('Schedule next session')}</h3>
             <p className="w-small">{t('Suggested from recurring pattern + your availability.')}</p>
             <button className="w-btn w-btn--primary" onClick={() => dismiss('schedule')}>
-              {t('Confirm {date}', { date: new Date(suggested).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) })}
+              {t('Confirm {date}', { date: fmtDate(suggested, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) })}
             </button>
             <button className="w-link" onClick={() => dismiss('schedule')}>{t('Choose different time')}</button>
             <p className="w-note">{t('Adds to your connected calendar.')}</p>

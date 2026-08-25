@@ -17,7 +17,7 @@
    ============================================================================ */
 
 import { useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { Sparkline } from './Charts'
 import { graceEndsAt } from '../data/convention'
 import {
@@ -100,14 +100,14 @@ function UsersTab({ state, agg }: { state: CorporateState; agg: Aggregates }) {
         <header className="c-card__head"><h2>{t('Convention status')}</h2></header>
         <dl className="c-summary">
           <div><dt>{t('Status')}</dt><dd><span className="c-dot" aria-hidden="true" /> {days > 0 ? t('Active') : t('Expired')}</dd></div>
-          <div><dt>{t('Start date')}</dt><dd>{new Date(state.conventionStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
-          <div><dt>{t('End date')}</dt><dd>{new Date(state.conventionEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
+          <div><dt>{t('Start date')}</dt><dd>{fmtDate(state.conventionStart, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
+          <div><dt>{t('End date')}</dt><dd>{fmtDate(state.conventionEnd, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
           <div><dt>{t('Days remaining')}</dt><dd>{days}</dd></div>
           <div>
             <dt>{t('Grace period')}</dt>
             <dd className="c-small">
               {t('Employees retain access until {d}.', {
-                d: new Date(graceEndsAt(state.conventionEnd)).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }),
+                d: fmtDate(graceEndsAt(state.conventionEnd), { month: 'long', day: 'numeric', year: 'numeric' }),
               })}
             </dd>
           </div>

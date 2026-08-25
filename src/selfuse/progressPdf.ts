@@ -5,15 +5,17 @@
 
    · The MONTHLY REPORT is what the person did on their own. Sessions,
      check-ins, mood. It is theirs, it is not clinical, and it says so.
-   · The THERAPY REPORT is what happened under a clinician. It carries VAS
-     points and clinical scale scores, so it states plainly who administered
-     them and that reading them is a conversation to have with the therapist,
-     not something to do alone with a PDF.
+   · The THERAPY REPORT is what happened under a clinician. It carries the
+     session VAS — which the person taps themselves, one before and one after —
+     and the clinical scale scores, which a therapist administers. It states
+     plainly which is which, and that reading a scale is a conversation to have
+     with the therapist rather than something to do alone with a PDF.
 
    Neither carries an interpretation. A number and a direction is the whole of
    what this product says about a person's wellbeing, on screen and on paper.
    ============================================================================ */
 
+import { fmtDate as localeDate } from '../i18n'
 import { PdfDoc } from '../lib/pdf'
 import {
   GL_CHECK_QUESTIONS,
@@ -28,11 +30,11 @@ import type { ResolvedPathway, ResolvedSession } from '../data/liveCatalog'
 import type { TherapyLink } from './therapyStore'
 
 function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return localeDate(ms, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function monthName(ms: number): string {
-  return new Date(ms).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  return localeDate(ms, { month: 'long', year: 'numeric' })
 }
 
 function header(name: string) {
@@ -198,8 +200,9 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
   doc.paragraph(`With ${link.therapist.name} · generated ${fmtDate(Date.now())}`, 9.5, 0.45)
   doc.space(4)
   doc.note(
-    'This summary is yours. The scores in it were recorded by your therapist during your ' +
-      'sessions - they are clinical measures and are best read together with them, not alone.',
+    'This summary is yours. The before-and-after check is your own, one tap either side of a ' +
+      'session. The clinical scales were administered by your therapist - they are clinical ' +
+      'measures and are best read together with them, not alone.',
   )
 
   doc.section('Overview')
@@ -228,7 +231,7 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
     )
   }
 
-  doc.section('VAS, recorded by your therapist')
+  doc.section('How you felt, before and after')
   if (!link.vas.length) {
     doc.paragraph('Not recorded.', 9.5, 0.45)
   } else {
@@ -244,14 +247,21 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
         return [fmtDate(v.at), String(v.pre), String(v.post), `${delta > 0 ? '+' : ''}${delta}`]
       }),
     )
+    /* The old wording said these were taken verbally by the therapist and
+       never collected through the app. They are one tap in the app now, before
+       and after each session, so the sentence describing them changed too. */
     doc.paragraph(
-      'These are recorded by your therapist from what you tell them during the session. ' +
-        'They are never collected through the app.',
+      'One tap before each session and one after, on a five-point scale. ' +
+        'A positive change means you finished the session feeling better than you started it. ' +
+        'Your therapist sees the same figures.',
       8.5,
       0.45,
     )
   }
 
+  /* Questionnaire results appear here only because a therapist administers
+     them and goes through them with the person. They are never shown beside a
+     questionnaire at the moment it is answered — see `Assessment.tsx`. */
   doc.section('Clinical scales')
   if (!link.scores.length) {
     doc.paragraph('None administered yet.', 9.5, 0.45)

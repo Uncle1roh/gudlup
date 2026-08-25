@@ -22,7 +22,7 @@
    ============================================================================ */
 
 import { useMemo, useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate as localeDate } from '../i18n'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
 import {
@@ -365,7 +365,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
               <span className={`w-status w-status--${patient.status}`}>
                 {patient.status === 'active' ? t('Active') : patient.status === 'new' ? t('New') : t('Inactive 30+ days')}
               </span>
-              <span>{t('Member since')} {new Date(patient.memberSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+              <span>{t('Member since')} {localeDate(patient.memberSince, { month: 'short', year: 'numeric' })}</span>
               {patient.company && <span>{t('Company')} · {patient.company}</span>}
               <span>{t('Linked')} {new Date(patient.linkedAt).toLocaleDateString()}</span>
             </div>
@@ -515,7 +515,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
             {(showAllNotes ? notes : notes.slice(0, 3)).map((n) => (
               <li key={n.id}>
                 <div className="w-notes__meta">
-                  <span>{new Date(n.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span>{localeDate(n.at, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   <span className="w-tag">{n.tag}</span>
                   {n.time && <span className="w-small">{n.time}</span>}
                 </div>
@@ -677,7 +677,7 @@ function AssessmentQueue({ rows }: { rows: AssessmentRecord[] }) {
             </span>
             <span className="w-queue__state">
               {r.status === 'completed'
-                ? new Date(r.completedAt ?? 0).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                ? localeDate(r.completedAt ?? 0, { month: 'short', day: 'numeric' })
                 : r.status === 'in_progress'
                   ? t('Started')
                   : r.status === 'postponed'
@@ -1037,7 +1037,7 @@ export function initials(name: string): string {
 }
 
 export function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return localeDate(ms, { month: 'short', day: 'numeric' })
 }
 
 export function fmtWhen(ms: number): string {
@@ -1045,10 +1045,10 @@ export function fmtWhen(ms: number): string {
   const today = new Date()
   const isToday = d.toDateString() === today.toDateString()
   const isTomorrow = new Date(today.getTime() + DAY).toDateString() === d.toDateString()
-  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  const time = localeDate(d.getTime(), { hour: '2-digit', minute: '2-digit' })
   if (isToday) return `Today · ${time}`
   if (isTomorrow) return `Tomorrow · ${time}`
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`
+  return `${localeDate(d.getTime(), { month: 'short', day: 'numeric' })} · ${time}`
 }
 
 export function versionShort(d?: Duration): string {

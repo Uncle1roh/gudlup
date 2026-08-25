@@ -315,9 +315,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Session chronology': 'Cronologia delle sedute',
   'Video session': 'Seduta in video',
   'notes shared': 'note condivise',
-  'VAS pre/post scores are recorded by your therapist from their desktop — never collected via your app.':
-    'I punteggi VAS pre e post sono registrati dal tuo terapeuta dal suo computer — non vengono mai raccolti dalla tua app.',
-  'Clinical assessment trends': 'Andamento delle valutazioni cliniche',
+    'Clinical assessment trends': 'Andamento delle valutazioni cliniche',
   'Latest VAS': 'Ultimo VAS',
   'Clinical scales are used in Therapist Guided only, administered under therapist supervision.':
     'Le scale cliniche si usano solo nel percorso con il terapeuta, sotto la sua supervisione.',
@@ -547,4 +545,6 @@ export const IT_SELF_USE: Record<string, string> = {
     'Per questa durata non è ancora pubblicata una voce registrata: senti un tappeto sonoro.',
   'The recorded audio could not be played, so this is the ambient bed.':
     'Non è stato possibile riprodurre l’audio registrato: senti il tappeto sonoro.',
+  'The check you tap before and after each session is shared with your therapist.':
+    'Il check che tocchi prima e dopo ogni sessione viene condiviso con il tuo terapeuta.',
 }

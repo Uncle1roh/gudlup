@@ -19,6 +19,7 @@
    two screenshots is comparing the UI, not noise.
    ============================================================================ */
 
+import { fmtDate as localeDate } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
 import {
   cell,
@@ -130,7 +131,7 @@ function monthLabels(n: number): string[] {
   const out: string[] = []
   const now = new Date()
   for (let i = n - 1; i >= 0; i -= 1) {
-    out.push(new Date(now.getFullYear(), now.getMonth() - i, 1).toLocaleDateString(undefined, { month: 'short' }))
+    out.push(localeDate(new Date(now.getFullYear(), now.getMonth() - i, 1).getTime(), { month: 'short' }))
   }
   return out
 }
@@ -269,7 +270,7 @@ export function buildAggregates(state: CorporateState, respondents = state.conse
     alerts.push({
       id: 'a-renewal',
       kind: 'renewal',
-      text: `Your convention expires on ${new Date(state.conventionEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} — ${days} days remaining`,
+      text: `Your convention expires on ${localeDate(state.conventionEnd, { month: 'short', day: 'numeric', year: 'numeric' })} — ${days} days remaining`,
       at: now - DAY,
       action: 'View',
     })

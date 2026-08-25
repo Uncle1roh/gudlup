@@ -26,12 +26,12 @@ import { Home } from '../src/selfuse/Home'
 import { Explore } from '../src/selfuse/Explore'
 import { Catalog } from '../src/selfuse/Catalog'
 import { coverFor } from '../src/selfuse/artwork'
-import { ProgressTab } from '../src/selfuse/ProgressTab'
+import { ProgressTab, GuidedProgress } from '../src/selfuse/ProgressTab'
 import { ProfileTab } from '../src/selfuse/ProfileTab'
 import { TherapistTab } from '../src/selfuse/TherapistTab'
 import { GlCheckFlow, Who5Flow, DailyMoodFlow } from '../src/selfuse/Measures'
 import { SafetyLevel1, SafetyLevel2, SafetyLevel3 } from '../src/selfuse/Safety'
-import { emptyTherapy, seedLink, DEMO_THERAPISTS } from '../src/selfuse/therapyStore'
+import { emptyTherapy, seedLink, DEMO_THERAPISTS, vasDelta, VAS_DELTA_RANGE } from '../src/selfuse/therapyStore'
 import { Assessment } from '../src/selfuse/Assessment'
 import { SessionFlow } from '../src/selfuse/Session'
 import { send as sendAssessment, complete as completeAssessment } from '../src/data/assessmentStore'
@@ -257,6 +257,30 @@ assert(!vasHtml.includes('who5-opt'), 'and offers no options')
 
 const asmtItems = DASS21.items.length
 assert(asmtItems === 21, 'the runner is walking all 21 DASS-21 items')
+
+/* --- one VAS scale, one direction -----------------------------------------
+   The therapy link used to seed VAS on a 0-10 distress scale while the
+   confirmed instrument is 1-5 the other way up. One measure, two scales, two
+   directions. */
+const seeded = seedLink(DEMO_THERAPISTS[0])
+assert(
+  seeded.vas.every((v) => v.pre >= 1 && v.pre <= 5 && v.post >= 1 && v.post <= 5),
+  'every seeded VAS reading sits on the confirmed 1-5 scale',
+)
+assert(
+  seeded.vas.every((v) => vasDelta(v) === v.post - v.pre),
+  'and improvement is post minus pre, the same direction the session records use',
+)
+assert(VAS_DELTA_RANGE === 4, 'a 1-5 delta spans 4, which is what a chart of it must be scaled to')
+
+/* The Progress tab told the person the VAS was never collected in the app.
+   It is, now: one tap either side of every session. */
+const progHtml = renderToString(
+  shell(<GuidedProgress {...progressProps} state={populated} therapy={{ link: seeded, request: null }} />),
+)
+const progText = progHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+assert(!/mai raccolt|never collected/i.test(progText), 'the Progress tab no longer denies collecting the VAS in the app')
+assert(/prima e dopo|before and after/i.test(progText), 'and says what the check actually is')
 
 /* --- the Therapist tab, reviewed as a page ---------------------------------
    Three defects it used to ship with, each asserted against here. */

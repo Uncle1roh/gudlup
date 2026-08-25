@@ -19,6 +19,7 @@
      dashboard would refuse to.
    ============================================================================ */
 
+import { fmtDate as localeDate } from '../i18n'
 import { PdfDoc } from '../lib/pdf'
 import { cellValue, movement, pct, type CorporateState } from './metrics'
 import type { Aggregates } from './data'
@@ -41,7 +42,7 @@ const WHO5_NOTE =
   'descriptive indicator - it does not constitute a clinical assessment.'
 
 function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  return localeDate(ms, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 interface Options {

@@ -22,7 +22,10 @@
    ============================================================================ */
 
 import { useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
+import { VAS_DELTA_RANGE, vasDelta } from './therapyStore'
+import { useAssessments, vasSeries, completedFor, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
+import { SCORE_RANGE } from '../data/assessments'
 import {
   GL_CHECK_QUESTIONS,
   glCheckAverage,
@@ -228,7 +231,7 @@ function SelfUseProgress({ state, onGlCheck, onWho5, onMood, onExportSelfUse }: 
         <h3 className="home__sect">{t('Monthly report')}</h3>
         <p className="small muted">{t('A summary of your sessions and check-ins for this month.')}</p>
         <button className="btn btn--ghost" onClick={onExportSelfUse}>
-          {t('View your {month} report', { month: new Date().toLocaleDateString(undefined, { month: 'long' }) })}
+          {t('View your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}
         </button>
       </section>
     </>
@@ -237,7 +240,9 @@ function SelfUseProgress({ state, onGlCheck, onWho5, onMood, onExportSelfUse }: 
 
 /* ------------------------------------------------------ PRG-2 / PRG-3 ---- */
 
-function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressProps) {
+/* Exported so the render harness can reach it: it lives behind a sub-tab that
+   a server render never switches. */
+export function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressProps) {
   const { t } = useI18n()
   const catalog = useCatalog()
   const link = therapy.link
@@ -252,7 +257,37 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
     )
   }
 
-  const lastVas = link.vas[link.vas.length - 1]
+  const { rows: assessments } = useAssessments()
+
+  /* The real readings the person tapped before and after their sessions. The
+     link's seeded points are the fallback for a demo link that predates any
+     of them — never a second source running alongside. */
+  const recorded = vasSeries(assessments, SELF_USE_PATIENT_ID)
+  const vas = recorded.length ? recorded : link.vas.map((v) => ({ ...v, delta: vasDelta(v) }))
+  const lastVas = vas[vas.length - 1]
+
+  /* Same rule for the scales: what was actually completed, or the seed. */
+  const completed = completedFor(assessments, SELF_USE_PATIENT_ID).filter((r) => r.instrumentId !== 'VAS')
+  const scales = completed.length
+    ? [...new Set(completed.map((r) => r.instrumentId))].map((id) => {
+        const series = completed.filter((r) => r.instrumentId === id).reverse()
+        const value = (r: (typeof series)[number]): number => {
+          const sc = r.scores
+          if (!sc) return 0
+          if (sc.kind === 'DASS21') return sc.scaled.stress
+          if (sc.kind === 'PSS10') return sc.total
+          if (sc.kind === 'BRS') return sc.mean
+          if (sc.kind === 'CBI') return sc.workRelated
+          return 0
+        }
+        const key = id === 'DASS21' ? 'DASS21.scaled' : id
+        return {
+          label: id === 'DASS21' ? 'DASS-21' : id === 'PSS10' ? 'PSS-10' : id,
+          max: SCORE_RANGE[key]?.max ?? 100,
+          points: series.map((r) => ({ at: r.completedAt ?? r.administeredAt, value: value(r) })),
+        }
+      })
+    : link.scores
 
   return (
     <>
@@ -265,9 +300,9 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
           <div>
             <strong>
               {link.nextSessionAt
-                ? new Date(link.nextSessionAt).toLocaleDateString(undefined, { weekday: 'short' }) +
+                ? fmtDate(link.nextSessionAt, { weekday: 'short' }) +
                   ' ' +
-                  new Date(link.nextSessionAt).toLocaleTimeString(undefined, { hour: 'numeric' })
+                  fmtDate(link.nextSessionAt, { hour: 'numeric' })
                 : '—'}
             </strong>
             <span className="small muted">{t('next session')}</span>
@@ -282,7 +317,7 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
             const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
             return (
               <li key={s.id} className="chron__row">
-                <span>{new Date(s.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                <span>{fmtDate(s.at, { month: 'short', day: 'numeric' })}</span>
                 <span>{name ? t(name) : t('Video session')}</span>
                 <span className="small muted">{s.minutes} min</span>
                 <span className="small muted">{s.notesShared ? t('notes shared') : ''}</span>
@@ -290,8 +325,11 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
             )
           })}
         </ul>
+        {/* This used to say the VAS was recorded by the therapist and never
+            collected in the app. It is collected in the app now — one tap
+            before a session and one after — so the line had to change with it. */}
         <p className="small muted">
-          {t('VAS pre/post scores are recorded by your therapist from their desktop — never collected via your app.')}
+          {t('The check you tap before and after each session is shared with your therapist.')}
         </p>
       </section>
 
@@ -302,9 +340,12 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
             {t('Latest VAS')} · {lastVas.pre} → {lastVas.post}
           </p>
         )}
-        <Sparkline values={link.vas.map((v) => v.pre - v.post)} max={10} />
+        {/* Post minus pre, on the 1–5 scale. The old line subtracted the other
+            way against a max of 10, so an improvement drew downwards on a
+            chart scaled to a range the measure does not have. */}
+        <Sparkline values={vas.map((v) => v.delta)} max={VAS_DELTA_RANGE} signed />
         <ul className="scorelist">
-          {link.scores.map((s) => {
+          {scales.map((s) => {
             const first = s.points[0]?.value
             const last = s.points[s.points.length - 1]?.value
             const tr = trend(last ?? null, first ?? null, 0.01, 1)
@@ -359,16 +400,25 @@ function GuidedProgress({ therapy, onGoTherapist, onExportTherapy }: ProgressPro
 
 /* ------------------------------------------------------------ helpers ---- */
 
-function Sparkline({ values, max }: { values: number[]; max: number }) {
+/**
+ * `signed` matters. A VAS delta can be negative — a session someone came out of
+ * feeling worse — and clamping at zero drew that identically to no change at
+ * all, which is the one reading a person should not be given by accident. A
+ * signed sparkline maps −max…+max across the height and rules the zero line.
+ */
+function Sparkline({ values, max, signed = false }: { values: number[]; max: number; signed?: boolean }) {
   if (values.length < 2) return null
   const w = 240
   const h = 54
   const step = w / (values.length - 1)
-  const pts = values
-    .map((v, i) => `${(i * step).toFixed(1)},${(h - Math.max(0, Math.min(1, v / max)) * h).toFixed(1)}`)
-    .join(' ')
+  const norm = (v: number) => (signed ? (v / max + 1) / 2 : v / max)
+  const y = (v: number) => (h - Math.max(0, Math.min(1, norm(v))) * h).toFixed(1)
+  const pts = values.map((v, i) => `${(i * step).toFixed(1)},${y(v)}`).join(' ')
   return (
     <svg className="spark" viewBox={`0 0 ${w} ${h}`} role="img" aria-hidden="true" preserveAspectRatio="none">
+      {signed && (
+        <line x1="0" y1={y(0)} x2={w} y2={y(0)} stroke="currentColor" strokeWidth="1" opacity="0.25" />
+      )}
       <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )

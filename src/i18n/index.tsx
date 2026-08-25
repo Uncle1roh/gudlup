@@ -67,6 +67,36 @@ export interface I18n {
     list row on the narrowest phone. */
 const DATE_DEFAULT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
 
+/**
+ * The locale the app is currently running in, for code that has no hook.
+ *
+ * PDF builders and pure data modules format dates too, and they cannot call
+ * `useI18n`. Threading a locale through every one of their signatures would
+ * put the parameter in a dozen places that have nothing else to do with
+ * language. The locale is genuinely process-global — one provider, one value,
+ * persisted in one key — so it is read from here instead, and the provider
+ * keeps it in step. It is seeded from storage at module load so a PDF built
+ * before the provider mounts is still right.
+ */
+let current: Locale = (() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (isLocale(saved)) return saved
+  } catch {
+    /* storage unavailable */
+  }
+  return defaultLocale()
+})()
+
+export function currentLocale(): Locale {
+  return current
+}
+
+/** `formatDate` for code outside React. Same rules, implicit locale. */
+export function fmtDate(ms: number, opts?: Intl.DateTimeFormatOptions): string {
+  return formatDate(current, ms, opts)
+}
+
 export function formatDate(locale: Locale, ms: number, opts?: Intl.DateTimeFormatOptions): string {
   try {
     return new Date(ms).toLocaleString(locale, opts ?? DATE_DEFAULT)
@@ -97,12 +127,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   })
 
   function setLocale(l: Locale) {
+    current = l
     setLocaleState(l)
     try { localStorage.setItem(STORAGE_KEY, l) } catch { /* storage unavailable */ }
   }
 
   useEffect(() => {
     document.documentElement.lang = locale
+    current = locale
   }, [locale])
 
   const value = useMemo<I18n>(() => ({

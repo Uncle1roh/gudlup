@@ -28,7 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { audioUrlFor, useCatalog } from '../data/liveCatalog'
 import { useVideoCall, type VideoCall as Call } from '../b2b/webrtc/useVideoCall'
@@ -119,7 +119,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
           {startsAt && (
             <p className="lead">
               {t('starts at {time}', {
-                time: new Date(startsAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+                time: fmtDate(startsAt, { hour: 'numeric', minute: '2-digit' }),
               })}
             </p>
           )}
@@ -197,7 +197,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
         <div className="call__ended">
           <h2 className="display">{t('Session ended')}</h2>
           <p className="small muted">
-            {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
+            {fmtDate(Date.now(), { month: 'long', day: 'numeric' })}
           </p>
           <button className="btn btn--primary" onClick={onLeave}>{t('Back to Home')}</button>
         </div>

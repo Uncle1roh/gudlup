@@ -77,18 +77,47 @@ export interface TherapyMessage {
   at: number
 }
 
-/** The clinical instruments the THERAPIST administers. Read-only here. */
+/**
+ * A clinical scale as the patient's Progress tab shows it.
+ *
+ * Read-only on this side, and shown only as a therapist-mediated trend. It is
+ * NOT the same thing as a score beside a questionnaire the person has just
+ * filled in: `Assessment.tsx` deliberately shows nothing at all, because a
+ * fresh number with no one to read it invites self-diagnosis. Once a therapist
+ * has been through the results, the trend is theirs to see.
+ *
+ * Real records live in `assessmentStore`; these are the seeded fallback for a
+ * link that predates any completed questionnaire.
+ */
 export interface ClinicalScore {
   label: string
   points: { at: number; value: number }[]
   max: number
 }
 
+/**
+ * One session's VAS pair, on the confirmed 1–5 emoji scale.
+ *
+ * 1 is very distressed and 5 is very good, so an IMPROVEMENT is post minus pre
+ * — positive. This used to be seeded on a 0–10 distress scale where the sign
+ * ran the other way, which meant one measure with two scales and two
+ * directions inside a single product.
+ */
 export interface VasPoint {
   at: number
+  /** 1–5. */
   pre: number
+  /** 1–5. */
   post: number
 }
+
+/** Post minus pre: positive is an improvement. */
+export function vasDelta(v: VasPoint): number {
+  return v.post - v.pre
+}
+
+/** The widest a 1–5 delta can be, for anything drawing it to scale. */
+export const VAS_DELTA_RANGE = 4
 
 export interface PatientIntake {
   reason: string
@@ -327,10 +356,11 @@ export function seedLink(therapist: TherapistProfile, now = Date.now()): Therapy
     messages: [
       { id: 'm1', from: 'therapist', text: "Let's build on the breathing work in our next session.", at: now - 2 * DAY },
     ],
+    /* 1–5, in the confirmed direction: pre low, post higher. */
     vas: [
-      { at: now - 20 * DAY, pre: 7, post: 5 },
-      { at: now - 13 * DAY, pre: 7, post: 4 },
-      { at: now - 6 * DAY, pre: 6, post: 3 },
+      { at: now - 20 * DAY, pre: 2, post: 3 },
+      { at: now - 13 * DAY, pre: 2, post: 4 },
+      { at: now - 6 * DAY, pre: 3, post: 5 },
     ],
     scores: [
       { label: 'DASS-21', max: 42, points: [{ at: now - 60 * DAY, value: 22 }, { at: now - 20 * DAY, value: 18 }] },

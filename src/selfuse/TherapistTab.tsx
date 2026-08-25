@@ -18,7 +18,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import {
   expandOpenings,
@@ -576,12 +576,12 @@ function TherapistProfileScreen({
       {[...byDay.entries()].map(([key, times]) => (
         <div key={key} className="slotday">
           <div className="small muted">
-            {new Date(times[0]).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+            {fmtDate(times[0], { weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
           <div className="slotday__row">
             {times.map((ms) => (
               <button key={ms} className="slot" aria-pressed={slot === ms} onClick={() => setSlot(ms)}>
-                {new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                {fmtDate(ms, { hour: '2-digit', minute: '2-digit' })}
               </button>
             ))}
           </div>

@@ -18,7 +18,7 @@
    ============================================================================ */
 
 import { useState } from 'react'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { BarList, Donut, GroupedBars, LineChart, NotEnoughData, PairedBars, StackedArea } from './Charts'
 import { cellValue, movement, movementText, suppressed } from './metrics'
 import type { Aggregates } from './data'
@@ -525,7 +525,7 @@ export function Reports({ state, agg, onGenerate, onView }: ReportsProps) {
                 {!r.viewed && <span className="c-badge c-badge--new">{t('NEW')}</span>}
               </div>
               <span className="c-small">
-                {t('Generated {d}', { d: new Date(r.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) })}
+                {t('Generated {d}', { d: fmtDate(r.generatedAt, { month: 'short', day: 'numeric', year: 'numeric' }) })}
               </span>
               <button className="c-btn c-btn--ghost" onClick={() => download(r)}>{t('Download PDF')}</button>
             </article>
@@ -554,10 +554,10 @@ export function Reports({ state, agg, onGenerate, onView }: ReportsProps) {
                   <td>{r.name}</td>
                   <td>{r.kind === 'auto' ? t('Auto') : t('On-demand')}</td>
                   <td className="c-small">
-                    {new Date(r.periodFrom).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
-                    {new Date(r.periodTo).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {fmtDate(r.periodFrom, { month: 'short', day: 'numeric' })} –{' '}
+                    {fmtDate(r.periodTo, { month: 'short', day: 'numeric' })}
                   </td>
-                  <td className="c-small">{new Date(r.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className="c-small">{fmtDate(r.generatedAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                   <td><button className="c-link" onClick={() => download(r)}>{t('Download')}</button></td>
                 </tr>
               ))}
@@ -605,8 +605,8 @@ function GeneratorModal({
       id: `r-${Date.now()}`,
       name:
         kind === 'Custom'
-          ? `Custom — ${new Date(from).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-          : `${new Date(from).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} — ${kind} Report`,
+          ? `Custom — ${fmtDate(new Date(from).getTime(), { month: 'short', day: 'numeric' })}`
+          : `${fmtDate(new Date(from).getTime(), { month: 'long', year: 'numeric' })} — ${kind} Report`,
       kind: 'on-demand',
       periodFrom: new Date(from).getTime(),
       periodTo: new Date(to).getTime(),
