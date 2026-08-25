@@ -26,7 +26,16 @@ import { useI18n } from '../i18n'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
 import {
+  useMessages,
+  threadFor,
+  unreadFor,
+  markRead,
+  send as postMessage,
+  type ChatMessage,
+} from '../data/messageStore'
+import {
   NOTIFICATION_ROWS,
+  threadIdFor as threadId,
   adherenceBand,
   adherencePct,
   performance,
@@ -43,46 +52,75 @@ interface ToolProps {
 
 const HOUR = 3_600_000
 
+/**
+ * The fixture messages a demo patient was seeded with, in the shared thread's
+ * shape, so one list renders both. They are read-only history: everything
+ * written from here on goes to the store.
+ */
+function fixtureRows(p: { id: string; bridged: boolean; messages: { id: string; from: 'patient' | 'therapist'; text: string; at: number; read: boolean }[] }): ChatMessage[] {
+  return p.messages.map((m) => ({
+    id: `fx-${m.id}`,
+    patientId: threadId(p),
+    from: m.from,
+    text: m.text,
+    at: m.at,
+    readByPatient: true,
+    readByTherapist: m.read,
+  }))
+}
+
 /* --------------------------------------------------------------- TH-MSG -- */
 
 export function Messages({ state, update, onOpenPatient, initialPatientId }: ToolProps & { initialPatientId?: string }) {
-  const { t } = useI18n()
-  const withMessages = state.patients.filter((p) => p.messages.length)
+  const { t, d } = useI18n()
+  const { rows, update: updateMessages } = useMessages()
+
+  /* A conversation counts as existing if EITHER side has written — the store
+     or the seeded fixtures. Filtering on the fixtures alone hid every patient
+     who had only ever written from their own app. */
+  const withMessages = state.patients.filter((p) => p.messages.length || threadFor(rows, threadId(p)).length)
   const [selected, setSelected] = useState<string | null>(initialPatientId ?? withMessages[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
   const [templatesOpen, setTemplatesOpen] = useState(false)
 
+  /** One patient's whole conversation: seeded history plus the live thread. */
+  function conversation(p: (typeof state.patients)[number]): ChatMessage[] {
+    return [...fixtureRows(p), ...threadFor(rows, threadId(p))].sort((a, b) => a.at - b.at)
+  }
+
+  function lastAt(p: (typeof state.patients)[number]): number {
+    const conv = conversation(p)
+    return conv[conv.length - 1]?.at ?? 0
+  }
+
   const list = withMessages
     .filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => (b.messages[b.messages.length - 1]?.at ?? 0) - (a.messages[a.messages.length - 1]?.at ?? 0))
+    .sort((a, b) => lastAt(b) - lastAt(a))
 
   const patient = state.patients.find((p) => p.id === selected)
+  const thread = patient ? conversation(patient) : []
 
   function send() {
     const text = draft.trim()
     if (!text || !patient) return
+    /* Both ends read this store. Writing into the workspace's own state was
+       what made the therapist's replies invisible to the patient. */
+    updateMessages((rs) => markRead(postMessage(rs, threadId(patient), 'therapist', text), threadId(patient), 'therapist'))
     update((s) => ({
       ...s,
-      patients: s.patients.map((p) =>
-        p.id === patient.id
-          ? {
-              ...p,
-              messages: [
-                ...p.messages.map((m) => ({ ...m, read: true })),
-                { id: `m-${Date.now()}`, from: 'therapist' as const, text, at: Date.now(), read: true },
-              ],
-            }
-          : p,
-      ),
+      patients: s.patients.map((p) => (p.id === patient.id ? { ...p, messages: p.messages.map((m) => ({ ...m, read: true })) } : p)),
     }))
     setDraft('')
   }
 
-  function markRead(id: string) {
+  function openThread(id: string) {
+    setSelected(id)
+    const p = state.patients.find((x) => x.id === id)
+    if (p) updateMessages((rs) => markRead(rs, threadId(p), 'therapist'))
     update((s) => ({
       ...s,
-      patients: s.patients.map((p) => (p.id === id ? { ...p, messages: p.messages.map((m) => ({ ...m, read: true })) } : p)),
+      patients: s.patients.map((x) => (x.id === id ? { ...x, messages: x.messages.map((m) => ({ ...m, read: true })) } : x)),
     }))
   }
 
@@ -103,22 +141,25 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
           <input className="w-input w-input--sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search messages…')} />
           <ul>
             {list.map((p) => {
-              const last = p.messages[p.messages.length - 1]
-              const unread = p.messages.some((m) => m.from === 'patient' && !m.read)
+              const conv = conversation(p)
+              const last = conv[conv.length - 1]
+              const unread =
+                p.messages.some((m) => m.from === 'patient' && !m.read) ||
+                unreadFor(rows, threadId(p), 'therapist') > 0
               const sla = slaBand(p)
               return (
                 <li key={p.id}>
                   <button
                     className={`w-msgrow${selected === p.id ? ' is-on' : ''}${unread ? ' is-unread' : ''}`}
-                    onClick={() => { setSelected(p.id); markRead(p.id) }}
+                    onClick={() => openThread(p.id)}
                   >
                     <span className="w-avatar" aria-hidden="true">{initials(p.name)}</span>
                     <span className="w-msgrow__body">
                       <strong>{p.name}</strong>
-                      <em className="w-small">{last.text}</em>
+                      <em className="w-small">{last?.text ?? ''}</em>
                     </span>
                     <span className="w-msgrow__meta">
-                      <span className="w-small">{rel(last.at)}</span>
+                      <span className="w-small">{last ? rel(last.at, t) : ''}</span>
                       {sla !== 'none' && <span className={`w-sla w-sla--${sla}`} title={t('Awaiting your reply')} />}
                       {unread && <span className="w-unreaddot" aria-hidden="true" />}
                     </span>
@@ -136,11 +177,12 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
               <button className="w-link" onClick={() => onOpenPatient(patient.id)}>{t('View patient card')}</button>
             </header>
             <div className="w-thread__body">
-              {patient.messages.map((m) => (
+              {!thread.length && <p className="w-small">{t('No messages yet.')}</p>}
+              {thread.map((m) => (
                 <div key={m.id} className={`w-bubble w-bubble--${m.from}`}>
                   <p>{m.text}</p>
                   <span className="w-small">
-                    {new Date(m.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {d(m.at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}
@@ -159,8 +201,11 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
                 ))}
               </ul>
             )}
+            {/* The encryption claim that used to sit here was not true of this
+                build, and a privacy promise the product does not keep is worse
+                than no promise. What IS true is who can see the SLA. */}
             <p className="w-note">
-              🔒 {t('End-to-end encrypted. The 48-hour SLA indicator is visible to you only — never to the patient or an administrator.')}
+              {t('The 48-hour SLA indicator is visible to you only — never to the patient or an administrator.')}
             </p>
           </div>
         )}
@@ -169,11 +214,12 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
   )
 }
 
-function rel(at: number): string {
+/* "5m ago" was hard-coded English on an Italian-default interface. */
+function rel(at: number, t: (k: string, v?: Record<string, string | number>) => string): string {
   const diff = Date.now() - at
-  if (diff < HOUR) return `${Math.max(1, Math.round(diff / 60_000))}m ago`
-  if (diff < 24 * HOUR) return `${Math.round(diff / HOUR)}h ago`
-  return `${Math.round(diff / (24 * HOUR))}d ago`
+  if (diff < HOUR) return t('{n}m ago', { n: Math.max(1, Math.round(diff / 60_000)) })
+  if (diff < 24 * HOUR) return t('{n}h ago', { n: Math.round(diff / HOUR) })
+  return t('{n}d ago', { n: Math.round(diff / (24 * HOUR)) })
 }
 
 /* ---------------------------------------------------------------- TH-RX -- */

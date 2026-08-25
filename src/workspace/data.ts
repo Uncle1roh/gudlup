@@ -497,6 +497,18 @@ export function vasDirection(p: WorkspacePatient): 'up' | 'down' | 'flat' | null
   return Math.abs(diff) < 0.5 ? 'flat' : diff > 0 ? 'up' : 'down'
 }
 
+/**
+ * Which message thread and assessment queue belong to this patient.
+ *
+ * A bridged patient is the one whose Self Use app this build actually drives,
+ * so their rows live under the Self Use id; everyone else keeps their own. It
+ * is defined once here because three surfaces ask the question and two of them
+ * getting different answers would split a conversation in half.
+ */
+export function threadIdFor(p: Pick<WorkspacePatient, 'id' | 'bridged'>): string {
+  return p.bridged ? 'me' : p.id
+}
+
 export function unreadCount(state: WorkspaceState): number {
   return state.patients.reduce((n, p) => n + p.messages.filter((m) => m.from === 'patient' && !m.read).length, 0)
 }

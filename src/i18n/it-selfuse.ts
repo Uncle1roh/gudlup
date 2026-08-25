@@ -505,4 +505,46 @@ export const IT_SELF_USE: Record<string, string> = {
   'Version': 'Versione',
   'Good Loop combines guided voice, stereo sound design and structured session phases into short audio practices you can fit into a working day.':
     'Good Loop unisce voce guidata, progettazione sonora stereo e fasi strutturate in pratiche audio brevi, da inserire in una giornata di lavoro.',
+  /* --- Therapist tab: scheduling, questionnaires, messages --------------- */
+  'No session is scheduled yet.': 'Nessuna seduta in programma.',
+  'Your therapist will propose a time.': 'Sarà il tuo terapeuta a proporti un orario.',
+  'Notes shared': 'Note condivise',
+  'Questionnaires': 'Questionari',
+  'Start': 'Inizia',
+  'Sent': 'Inviato',
+  '{name} asked you to fill this in. Take it when you have a quiet few minutes.':
+    '{name} ti ha chiesto di compilarlo. Fallo quando hai qualche minuto di tranquillità.',
+  'Your therapist reads these between sessions. For anything urgent, use the emergency numbers in your profile.':
+    'Il tuo terapeuta legge i messaggi tra una seduta e l’altra. Per le urgenze usa i numeri di emergenza che trovi nel profilo.',
+  'No messages yet. Write to {name} whenever something is worth saying between sessions.':
+    'Ancora nessun messaggio. Scrivi a {name} quando c’è qualcosa da dire tra una seduta e l’altra.',
+  '{n} characters left': '{n} caratteri rimasti',
+
+  /* --- Assessment runner ------------------------------------------------- */
+  'Close': 'Chiudi',
+  'This measure is recorded by your therapist during your session.':
+    'Questa misura viene registrata dal tuo terapeuta durante la seduta.',
+  'Your answers have been sent to {name}.': 'Le tue risposte sono state inviate a {name}.',
+  'Your answers have been sent to your therapist.': 'Le tue risposte sono state inviate al tuo terapeuta.',
+  'Questionnaires like this one are read alongside everything else your therapist knows about you. You will go through the results together.':
+    'Un questionario come questo si legge insieme a tutto il resto che il tuo terapeuta sa di te. Ne parlerete insieme.',
+  '{n} questions still to answer.': 'Mancano ancora {n} domande.',
+
+  /* --- Booking and availability errors ----------------------------------- */
+  'Could not load the list. Please try again.': 'Non è stato possibile caricare l’elenco. Riprova.',
+  'No therapist is available through your company yet.':
+    'Nessun terapeuta è ancora disponibile tramite la tua azienda.',
+  'Your HR team can invite professionals to your convention.':
+    'Il tuo ufficio HR può invitare dei professionisti alla convenzione.',
+  'Could not load available times.': 'Non è stato possibile caricare gli orari disponibili.',
+  'That time was just taken. Please choose another.': 'Quell’orario è appena stato preso. Scegline un altro.',
+  'No free times in the next three weeks. Try again later.':
+    'Nessun orario libero nelle prossime tre settimane. Riprova più avanti.',
+  'Requesting…': 'Invio in corso…',
+
+  /* --- Player fallbacks --------------------------------------------------- */
+  'No recorded voice is published for this length yet — this plays an ambient bed.':
+    'Per questa durata non è ancora pubblicata una voce registrata: senti un tappeto sonoro.',
+  'The recorded audio could not be played, so this is the ambient bed.':
+    'Non è stato possibile riprodurre l’audio registrato: senti il tappeto sonoro.',
 }

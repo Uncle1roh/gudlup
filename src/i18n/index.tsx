@@ -50,11 +50,40 @@ export interface I18n {
   locale: Locale
   setLocale: (l: Locale) => void
   t: (key: string, vars?: Record<string, string | number>) => string
+  /**
+   * A date in the INTERFACE language.
+   *
+   * `toLocaleDateString(undefined, …)` reads the browser's locale, not the
+   * app's. On an Italian deployment opened in a Brazilian browser that printed
+   * "sáb., 29 de ago." underneath "Prossima seduta" — the one place a person
+   * looks to know when their next appointment is, in a language the rest of
+   * the screen is not written in. This takes the locale the app is actually
+   * running in.
+   */
+  d: (ms: number, opts?: Intl.DateTimeFormatOptions) => string
+}
+
+/** The default shape: "29 ago" — enough to place a day, short enough for a
+    list row on the narrowest phone. */
+const DATE_DEFAULT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+
+export function formatDate(locale: Locale, ms: number, opts?: Intl.DateTimeFormatOptions): string {
+  try {
+    return new Date(ms).toLocaleString(locale, opts ?? DATE_DEFAULT)
+  } catch {
+    // An unsupported option combination must not take a screen down with it.
+    return new Date(ms).toLocaleDateString(locale)
+  }
 }
 
 /* Safe default so components outside the provider (if any) render English
    instead of crashing. */
-const FALLBACK: I18n = { locale: 'en', setLocale: () => {}, t: interpolate }
+const FALLBACK: I18n = {
+  locale: 'en',
+  setLocale: () => {},
+  t: interpolate,
+  d: (ms, opts) => formatDate('en', ms, opts),
+}
 
 const Ctx = createContext<I18n>(FALLBACK)
 
@@ -83,6 +112,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const dict = DICTS[locale]
       return interpolate((dict && dict[key]) ?? key, vars)
     },
+    d: (ms, opts) => formatDate(locale, ms, opts),
   }), [locale])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

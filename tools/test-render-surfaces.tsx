@@ -252,11 +252,42 @@ assert(
 /* VAS has no patient-facing widget. Handed one anyway, the runner says who
    records it rather than inventing a scale. */
 const vasHtml = renderToString(shell(<Assessment record={{ ...asmtRecord, instrumentId: 'VAS' }} onSaveProgress={noop} onSubmit={noop} onClose={noop} />))
-assert(vasHtml.includes('therapist'), 'a VAS record shows who records it, never a scale the patient taps')
+assert(/terapeut|therapist/i.test(vasHtml), 'a VAS record shows who records it, never a scale the patient taps')
 assert(!vasHtml.includes('who5-opt'), 'and offers no options')
 
 const asmtItems = DASS21.items.length
 assert(asmtItems === 21, 'the runner is walking all 21 DASS-21 items')
+
+/* --- the Therapist tab, reviewed as a page ---------------------------------
+   Three defects it used to ship with, each asserted against here. */
+const linked = { link: seedLink(DEMO_THERAPISTS[0]), request: null }
+const thrHtml = renderToString(shell(<TherapistTab {...therapistProps} hasConvention therapy={linked} />))
+const thrText = thrHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+
+/* 1. The card printed a date for the next session and, two lines below it,
+      "No session is scheduled yet." Both cannot be true. */
+assert(
+  !(thrText.includes('Prossima seduta') && thrText.includes('Nessuna seduta in programma')),
+  'the next-session card never prints a date and "nothing is scheduled" at once',
+)
+
+/* 2. Dates came from the BROWSER locale, so an Italian interface printed
+      "sáb., 29 de ago." Every date on the page is now in the interface
+      language: Italian short months have no "de" and no trailing dot. */
+assert(!/\bde (jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b/.test(thrText), 'no Portuguese date survives on an Italian page')
+assert(!/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun),/.test(thrText), 'and no English one either')
+
+/* 3. The session-history column said "Done", which reads as "you attended".
+      It is the notes-sharing flag. */
+assert(thrText.includes('Note condivise'), 'the history column says what it actually means')
+
+/* The messages section no longer claims an encryption this build does not do,
+   and says who reads it and how fast instead. */
+assert(!/end-to-end|cifratura/i.test(thrText), 'no encryption is promised that the product does not provide')
+assert(/tra una seduta e/i.test(thrText), 'the thread says when a therapist actually reads it')
+
+/* A thread the patient can write into exists on the page. */
+assert(thrHtml.includes('msgs__compose'), 'the patient can write a message')
 
 renders('THR · C  active therapy', <TherapistTab {...therapistProps} hasConvention therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />)
 

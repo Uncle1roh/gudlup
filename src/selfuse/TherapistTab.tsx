@@ -17,7 +17,7 @@
      toward the Self Use pathway.
    ============================================================================ */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import {
@@ -52,6 +52,15 @@ import {
   SELF_USE_PATIENT_ID,
 } from '../data/assessmentStore'
 import { INSTRUMENTS } from '../data/assessments'
+import {
+  useMessages,
+  threadFor,
+  unreadFor,
+  markRead,
+  seedThread,
+  send as sendMessage,
+  MAX_LENGTH,
+} from '../data/messageStore'
 
 interface TherapistTabProps {
   hasConvention: boolean
@@ -74,12 +83,13 @@ type View =
   | { kind: 'assessment'; id: string }
 
 export function TherapistTab(props: TherapistTabProps) {
-  const { t } = useI18n()
+  const { t, d } = useI18n()
   const dp = useDataProvider()
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'root' })
   const { therapy, update } = props
   const { rows, update: updateAssessments } = useAssessments()
+  const { update: updateMessages } = useMessages()
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
 
@@ -148,6 +158,17 @@ export function TherapistTab(props: TherapistTabProps) {
               ? rs
               : sendAssessment(rs, SELF_USE_PATIENT_ID, 'DASS21', 'T0', view.therapist.name),
           )
+          /* The therapist writes first, as they would in life. `seedThread`
+             runs only on an empty thread, so this can never land on top of a
+             real conversation. */
+          updateMessages((rs) =>
+            seedThread(
+              rs,
+              SELF_USE_PATIENT_ID,
+              'Welcome. Write to me here between our sessions whenever something is worth saying.',
+              Date.now(),
+            ),
+          )
           setView({ kind: 'root' })
         }}
       />
@@ -190,7 +211,7 @@ export function TherapistTab(props: TherapistTabProps) {
           </div>
           <div className="thr-pending__slot">
             <span className="small muted">{t('Requested')}</span>
-            <strong>{new Date(r.slotMs).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong>
+            <strong>{d(r.slotMs, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong>
           </div>
           <p className="small muted">{t('Waiting for confirmation')}</p>
           <button
@@ -244,20 +265,27 @@ export function TherapistTab(props: TherapistTabProps) {
             <div className="small muted">{t(link.therapist.role)}</div>
           </div>
         </div>
-        {nextAt && (
+        {nextAt ? (
           <div className="small muted">
             {t('Next session:')}{' '}
-            {new Date(nextAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            {d(nextAt, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
           </div>
+        ) : (
+          <div className="small muted">{t('No session is scheduled yet.')}</div>
         )}
         <button className="btn btn--primary" disabled={!joinable} onClick={props.onJoinCall}>
           {t('Join Session')}
         </button>
+        {/* The line under the button explains the DISABLED button, so it has to
+            agree with the line above it. It used to say "no session is
+            scheduled yet" whenever there was no confirmed appointment — printed
+            directly beneath a date, which is the one place a person looks to
+            find out when they are next seen. */}
         {!joinable && (
           <p className="small muted">
-            {props.appointment
+            {nextAt
               ? t('Opens 15 minutes before your session starts.')
-              : t('No session is scheduled yet.')}
+              : t('Your therapist will propose a time.')}
           </p>
         )}
       </article>
@@ -291,7 +319,7 @@ export function TherapistTab(props: TherapistTabProps) {
             <ul className="chron">
               {finished.map((r) => (
                 <li key={r.id} className="chron__row">
-                  <span>{new Date(r.completedAt ?? r.administeredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span>{d(r.completedAt ?? r.administeredAt)}</span>
                   <span>{r.instrumentId === 'VAS' ? 'VAS' : INSTRUMENTS[r.instrumentId].name}</span>
                   <span className="small muted">{t('Sent')}</span>
                   <span />
@@ -333,10 +361,13 @@ export function TherapistTab(props: TherapistTabProps) {
           const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
           return (
             <li key={s.id} className="chron__row">
-              <span>{new Date(s.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+              <span>{d(s.at)}</span>
               <span>{name ? t(name) : t('Video session')}</span>
               <span className="small muted">{s.minutes}m</span>
-              <span className="small muted">{s.notesShared ? t('Done') : ''}</span>
+              {/* This column was labelled "Done", which read as "you attended".
+                  It is the notes-sharing flag: whether your therapist wrote up
+                  the session for you to see. Two different facts. */}
+              <span className="small muted">{s.notesShared ? t('Notes shared') : ''}</span>
             </li>
           )
         })}
@@ -353,7 +384,7 @@ export function TherapistTab(props: TherapistTabProps) {
         ))}
       </ul>
 
-      <Messages state={therapy} update={update} />
+      <Messages patientId={SELF_USE_PATIENT_ID} therapistName={link.therapist.name} />
     </div>
   )
 }
@@ -757,39 +788,92 @@ function ToggleRow({
 
 /* -------------------------------------------------------------- messages -- */
 
-function Messages({ state, update }: { state: TherapyState; update: (fn: (s: TherapyState) => TherapyState) => void }) {
-  const { t } = useI18n()
+/**
+ * The patient's half of one thread.
+ *
+ * It reads and writes `messageStore`, which the therapist's desktop also reads
+ * and writes. Before that, this component wrote into the therapy link and the
+ * workspace wrote into its own state: two chats that each looked like they
+ * worked and never met.
+ *
+ * Deliberately NOT here: a delivery receipt, a typing indicator, or "seen".
+ * This is not an instant messenger — a therapist answers between appointments,
+ * and a read receipt on a message about a bad week creates an expectation of
+ * an immediate reply that nobody has promised.
+ */
+function Messages({ patientId, therapistName }: { patientId: string; therapistName: string }) {
+  const { t, d } = useI18n()
+  const { rows, update } = useMessages()
   const [text, setText] = useState('')
-  const msgs = state.link?.messages ?? []
+  const endRef = useRef<HTMLDivElement | null>(null)
 
-  function send() {
+  const msgs = threadFor(rows, patientId)
+  const unread = unreadFor(rows, patientId, 'patient')
+
+  /* Opening the tab IS reading them. */
+  useEffect(() => {
+    if (unread > 0) update((rs) => markRead(rs, patientId, 'patient'))
+  }, [unread, patientId, update])
+
+  /* A thread opens on its newest message, not its oldest — a conversation is
+     read from the bottom. */
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [msgs.length])
+
+  function submit() {
     const body = text.trim()
-    if (!body || !state.link) return
-    update((s) =>
-      s.link
-        ? { ...s, link: { ...s.link, messages: [...s.link.messages, { id: `m-${Date.now()}`, from: 'patient', text: body, at: Date.now() }] } }
-        : s,
-    )
+    if (!body) return
+    update((rs) => sendMessage(rs, patientId, 'patient', body))
     setText('')
   }
+
+  const over = text.length > MAX_LENGTH - 100
 
   return (
     <>
       <h3 className="home__sect">{t('Messages')}</h3>
-      <p className="small muted">🔒 {t('End-to-end encrypted')}</p>
-      {!msgs.length && <p className="small muted">{t('No messages yet.')}</p>}
-      <div className="msgs">
-        {msgs.map((m) => (
-          <div key={m.id} className={`msg msg--${m.from}`}>
-            <p>{m.text}</p>
-            <span className="small muted">{new Date(m.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-          </div>
-        ))}
-      </div>
+      <p className="small muted">
+        {t('Your therapist reads these between sessions. For anything urgent, use the emergency numbers in your profile.')}
+      </p>
+
+      {!msgs.length ? (
+        <p className="small muted msgs__empty">
+          {t('No messages yet. Write to {name} whenever something is worth saying between sessions.', { name: therapistName })}
+        </p>
+      ) : (
+        <div className="msgs" role="log" aria-label={t('Messages')}>
+          {msgs.map((m) => (
+            <div key={m.id} className={`msg msg--${m.from}`}>
+              <p>{m.text}</p>
+              <span className="small muted msg__at">
+                {d(m.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+      )}
+
       <div className="msgs__compose">
-        <input className="ob-input" value={text} onChange={(e) => setText(e.target.value)} placeholder={t('Write a message…')} />
-        <button className="btn btn--primary" onClick={send} disabled={!text.trim()}>{t('Send')}</button>
+        <input
+          className="ob-input"
+          value={text}
+          maxLength={MAX_LENGTH}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
+          }}
+          placeholder={t('Write a message…')}
+          aria-label={t('Write a message…')}
+        />
+        <button className="btn btn--primary" onClick={submit} disabled={!text.trim()}>{t('Send')}</button>
       </div>
+      {over && (
+        <p className="small muted msgs__count">
+          {t('{n} characters left', { n: MAX_LENGTH - text.length })}
+        </p>
+      )}
     </>
   )
 }

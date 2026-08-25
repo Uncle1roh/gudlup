@@ -910,3 +910,20 @@
 }
 .vas-opt:hover { transform: translateY(-1px); }
 .vas-opt[aria-pressed='true'] { border-color: var(--aura); background: #f4faf7; transform: scale(1.08); }
+
+/* --- the thread ----------------------------------------------------------- */
+/* A conversation that grows without bound used to push the compose box off the
+   bottom of the page: the one control you need to answer with was the first
+   thing to leave the screen. The thread scrolls inside itself instead, opens on
+   its newest message, and the compose row stays where it was. */
+.msgs {
+  max-height: min(46vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+.msg__at { display: block; margin-top: 4px; font-size: 11.5px; }
+.msgs__empty { margin: 10px 0; }
+.msgs__count { margin-top: 6px; text-align: right; }
+.msgs__compose { position: sticky; bottom: 0; padding: 8px 0 2px; background: var(--mist); }

@@ -30,6 +30,7 @@ import {
   adherenceBand,
   adherencePct,
   assessmentDueLabel,
+  threadIdFor,
   codeExpired,
   generateConnectionCode,
   vasDirection,
@@ -38,6 +39,7 @@ import {
   type WorkspaceState,
 } from './data'
 import type { Duration } from '../types/domain'
+import { useMessages, unreadFor } from '../data/messageStore'
 import {
   INSTRUMENTS,
   SCHEDULE,
@@ -54,7 +56,6 @@ import {
   cbiOffered,
   minutesFor,
   vasSeries as vasSeriesOf,
-  SELF_USE_PATIENT_ID,
 } from '../data/assessmentStore'
 
 type Filter = 'all' | 'today' | 'assessment' | 'alerts' | 'inactive'
@@ -84,11 +85,18 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
   const [sort, setSort] = useState<'next' | 'name' | 'last' | 'vas'>('next')
   const [addOpen, setAddOpen] = useState(false)
   const now = Date.now()
+  const { rows: msgRows } = useMessages()
+
+  /* A message written from the patient's own app is unread work exactly like a
+     seeded one, so both the alert filter and the row badge count them. */
+  const unreadOf = (p: WorkspacePatient) =>
+    p.messages.filter((m) => m.from === 'patient' && !m.read).length +
+    unreadFor(msgRows, threadIdFor(p), 'therapist')
 
   const rows = useMemo(() => {
     const alerts = (p: WorkspacePatient) =>
       Boolean(assessmentDueLabel(p)) ||
-      p.messages.some((m) => m.from === 'patient' && !m.read) ||
+      unreadOf(p) > 0 ||
       (p.lastSessionAt != null && now - p.lastSessionAt > 30 * DAY)
 
     let list = state.patients
@@ -109,7 +117,9 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
     })
     // Alert rows float to the top of whatever ordering is in force.
     return [...sorted.filter(alerts), ...sorted.filter((p) => !alerts(p))]
-  }, [state.patients, filter, sort, now])
+    // msgRows is a dependency: a message arriving from the patient's app has
+    // to re-sort the roster, not wait for something else to invalidate it.
+  }, [state.patients, filter, sort, now, msgRows])
 
   if (!state.patients.length) {
     return (
@@ -162,7 +172,7 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
         <tbody>
           {rows.map((p) => {
             const due = assessmentDueLabel(p)
-            const unread = p.messages.filter((m) => m.from === 'patient' && !m.read).length
+            const unread = unreadOf(p)
             const inactive = !p.lastSessionAt || now - p.lastSessionAt > 30 * DAY
             const inSession = p.nextSessionAt != null && Math.abs(now - p.nextSessionAt) < 15 * 60_000
             return (
@@ -316,10 +326,11 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
   })
   const [assessOpen, setAssessOpen] = useState(false)
   const { rows, update: updateAssessments } = useAssessments()
+  const { rows: msgRows } = useMessages()
   /* A bridged patient is the one whose Self Use app this build actually drives,
      so their queue is read under the Self Use id. Everyone else keeps their own
      — the two never share a row. */
-  const queueId = patient.bridged ? SELF_USE_PATIENT_ID : patient.id
+  const queueId = threadIdFor(patient)
   const [rxOpen, setRxOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState('')
   const [noteSearch, setNoteSearch] = useState('')
@@ -328,7 +339,9 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
 
   const toggle = (s: Section) => setOpen((o) => ({ ...o, [s]: !o[s] }))
   const due = assessmentDueLabel(patient)
-  const unread = patient.messages.filter((m) => m.from === 'patient' && !m.read).length
+  const unread =
+    patient.messages.filter((m) => m.from === 'patient' && !m.read).length +
+    unreadFor(msgRows, queueId, 'therapist')
   const rxAvg = patient.prescriptions.length
     ? Math.round(patient.prescriptions.reduce((n, r) => n + adherencePct(r), 0) / patient.prescriptions.length)
     : null

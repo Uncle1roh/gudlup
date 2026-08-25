@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useI18n } from '../i18n'
+import { useMessages, unreadFor } from '../data/messageStore'
 import { useDataProvider } from '../data/provider'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { isUpcoming, type Appointment } from '../data/scheduling'
@@ -34,6 +35,7 @@ import {
   demoWorkspace,
   lowAdherencePatients,
   unreadCount,
+  threadIdFor,
   useWorkspace,
   type SessionRow,
   type WorkspacePatient,
@@ -131,7 +133,12 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
     )
   }
 
-  const unread = unreadCount(state)
+  /* The badge has to count the live thread as well as the seeded fixtures, or
+     a message a patient sent from their own app raises no flag anywhere. */
+  const { rows: messageRows } = useMessages()
+  const unread =
+    unreadCount(state) +
+    state.patients.reduce((n, p) => n + unreadFor(messageRows, threadIdFor(p), 'therapist'), 0)
   const lowAdherence = lowAdherencePatients(state)
 
   /* The appointment id is the ROOM both devices join. The patient books
