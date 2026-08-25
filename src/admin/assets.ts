@@ -203,3 +203,174 @@ export function fmtBytes(n: number | undefined): string {
   if (n > 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
   return `${Math.round(n / 1024)} KB`
 }
+
+/* ============================================================ upload / delete
+
+   Adding and removing library files from the console rather than from the
+   Supabase dashboard. Two things make this more than a storage call:
+
+   · A file's PATH is its classification. `assets/music/f4/x.mp3` IS a phase-4
+     music track — there is no separate record saying so, which is why
+     `listAssets()` can walk the bucket and classify everything it finds. So an
+     upload has to build the path from a chosen target, not from wherever the
+     file happened to come from, and the name has to be sanitised because it
+     becomes part of a URL.
+
+   · Deleting a file that a protocol's AssetMap still points at would leave the
+     renderer resolving a path that 404s — silently, at render time, long after
+     anyone connected the two. So a delete is not one operation: it removes the
+     object, its `asset_meta` row, and every AssetMap reference to it.
+   ---------------------------------------------------------------------------- */
+
+/** Where an uploaded file should land. The path is derived from this. */
+export type UploadTarget =
+  | { kind: 'music'; phase: PhaseKey }
+  | { kind: 'soundscape'; texture: string }
+  | { kind: 'heartbeat' }
+  | { kind: 'bowl' }
+
+/** Bucket paths are URLs. Keep them boring: lowercase, ASCII, no spaces. */
+export function sanitizeFileName(name: string): string {
+  const dot = name.lastIndexOf('.')
+  /* `dot > 0` treated a dotfile-style name (".mp3") as having no extension,
+     so it sanitised to "mp3" — a file with no extension at all, which
+     `listAssets()` filters out. The file would upload, vanish from the list,
+     and be impossible to map or delete from the console. A missing STEM is
+     the recoverable half; a missing extension is not. */
+  const hasExt = dot > -1 && dot < name.length - 1
+  const stem = (hasExt ? name.slice(0, dot) : name)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  const ext = (hasExt ? name.slice(dot + 1) : '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return `${stem || 'audio'}${ext ? `.${ext}` : ''}`
+}
+
+/** A texture folder name: the same rules, since it is a path segment too. */
+export function sanitizeTexture(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export function targetPath(target: UploadTarget, fileName: string): string {
+  const file = sanitizeFileName(fileName)
+  switch (target.kind) {
+    case 'music': return `${ASSET_ROOT}/music/${target.phase}/${file}`
+    case 'soundscape': return `${ASSET_ROOT}/soundscape/${sanitizeTexture(target.texture) || 'other'}/${file}`
+    default: return `${ASSET_ROOT}/${target.kind}/${file}`
+  }
+}
+
+/** 100 MB is Supabase's default object ceiling; a library loop is a few MB. */
+export const MAX_ASSET_BYTES = 100 * 1024 * 1024
+
+export interface UploadCheck { ok: boolean; reason?: string }
+
+/** What is wrong with this file, in words, before anything is uploaded. */
+export function checkUpload(file: File): UploadCheck {
+  if (!AUDIO_EXT.test(file.name)) {
+    return { ok: false, reason: `«${file.name}» non è un file audio (mp3, wav, ogg, m4a, flac, aac).` }
+  }
+  if (file.size === 0) return { ok: false, reason: `«${file.name}» è vuoto.` }
+  if (file.size > MAX_ASSET_BYTES) {
+    return { ok: false, reason: `«${file.name}» supera i ${Math.round(MAX_ASSET_BYTES / (1024 * 1024))} MB.` }
+  }
+  return { ok: true }
+}
+
+export interface UploadResult { path: string; replaced: boolean }
+
+/**
+ * Put one file in the library.
+ *
+ * `upsert: false` on purpose: an accidental re-upload must not silently
+ * replace a file other protocols are already mapped to. The caller decides,
+ * and passes `replace` when it has asked.
+ */
+export async function uploadAsset(
+  file: File,
+  target: UploadTarget,
+  opts: { replace?: boolean } = {},
+): Promise<UploadResult> {
+  const check = checkUpload(file)
+  if (!check.ok) throw new Error(check.reason)
+
+  const sb = client()
+  const path = targetPath(target, file.name)
+
+  if (!opts.replace) {
+    const existing = await pathExists(sb, path)
+    if (existing) {
+      throw new Error(`Esiste già un file in ${path}. Rinominalo, oppure conferma la sostituzione.`)
+    }
+  }
+
+  const { error } = await sb.storage.from(ASSET_BUCKET).upload(path, file, {
+    upsert: Boolean(opts.replace),
+    contentType: file.type || 'audio/mpeg',
+    cacheControl: '3600',
+  })
+  if (error) throw new Error(`Caricamento fallito: ${error.message}`)
+
+  // A replaced file keeps its path, so any cached decode of it is now stale.
+  bufferCache.delete(path)
+  return { path, replaced: Boolean(opts.replace) }
+}
+
+async function pathExists(sb: SupabaseClient, path: string): Promise<boolean> {
+  const slash = path.lastIndexOf('/')
+  const dir = path.slice(0, slash)
+  const name = path.slice(slash + 1)
+  try {
+    const entries = await listDir(sb, dir)
+    return entries.some((e) => e.name === name && e.id !== null)
+  } catch {
+    return false
+  }
+}
+
+/** Remove the object itself. Reference cleanup is the caller's job — see
+    `deleteAssetEverywhere` in the admin screen, which does both. */
+export async function deleteAssetObject(path: string): Promise<void> {
+  const sb = client()
+  const { error } = await sb.storage.from(ASSET_BUCKET).remove([path])
+  if (error) throw new Error(`Eliminazione fallita: ${error.message}`)
+  bufferCache.delete(path)
+}
+
+/** Every phase slot in an AssetMap that points at `path`. */
+export function assetMapReferences(map: AssetMap | undefined, path: string): string[] {
+  if (!map) return []
+  const hits: string[] = []
+  for (const k of PHASE_KEYS) {
+    if (map.music[k] === path) hits.push(`music ${k.toUpperCase()}`)
+    if (map.soundscape[k] === path) hits.push(`soundscape ${k.toUpperCase()}`)
+  }
+  if (map.heartbeat === path) hits.push('heartbeat')
+  if (map.bowl === path) hits.push('bowl')
+  return hits
+}
+
+/** The same map with every reference to `path` removed. Returns the ORIGINAL
+    object when nothing pointed at it, so a caller can skip a pointless write. */
+export function withoutAsset(map: AssetMap | undefined, path: string): AssetMap | undefined {
+  if (!map || !assetMapReferences(map, path).length) return map
+  const music = { ...map.music }
+  const soundscape = { ...map.soundscape }
+  for (const k of PHASE_KEYS) {
+    if (music[k] === path) delete music[k]
+    if (soundscape[k] === path) delete soundscape[k]
+  }
+  return {
+    music,
+    soundscape,
+    heartbeat: map.heartbeat === path ? undefined : map.heartbeat,
+    bowl: map.bowl === path ? undefined : map.bowl,
+  }
+}

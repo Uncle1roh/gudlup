@@ -315,3 +315,10 @@ export async function saveAssetTags(path: string, tags: string[]): Promise<void>
   const { error } = await client().from('asset_meta').upsert({ path, tags }, { onConflict: 'path' })
   if (error) throw new Error(`Could not save tags: ${error.message}`)
 }
+
+/** Drop a file's tag row. Called when the file itself is deleted, so the table
+    does not accumulate rows for paths that no longer exist. */
+export async function deleteAssetMeta(path: string): Promise<void> {
+  const { error } = await client().from('asset_meta').delete().eq('path', path)
+  if (error) throw new Error(`Could not remove tags: ${error.message}`)
+}

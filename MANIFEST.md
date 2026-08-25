@@ -1,6 +1,53 @@
 # Good Loop — build manifest
 
-**Slice: two PO reports — the dots row and the dead catalog rows** (current)
+**Slice: rename a protocol from its Scheda; add and delete library files** (current)
+- Two PO requests: edit the clinical **Titolo** from the Scheda so a catalogue
+  assembled from several workbooks can be brought to one house style, and
+  add/delete files in the **Libreria audio** with the database kept correct.
+
+- **The clinical title is editable now.** It arrives from the workbook on import,
+  and different workbooks were written by different people, so the catalogue
+  drifts. Renaming changes the LABEL only: `applyCardDraft` spreads the existing
+  entry, so code, family, versions, timelines, Studio sessions and rendered
+  audio are carried through untouched. A blank is refused in the editor and
+  again in `applyCardDraft` — an empty clinical title would leave the catalog
+  row, the plan and the clinical record showing nothing but a code. The card
+  also states what renaming does NOT change, and that where no public name is
+  set `patientTitle()` falls back to the clinical one, so renaming also changes
+  what the PERSON reads for that entry. `docs/PROTOCOL_CATALOG.md` updated — it
+  said the clinical title was not editable, and that is no longer true.
+
+- **Add and delete in the Asset Library.** Neither is a plain storage call:
+  · A file's PATH is its classification. `assets/music/f4/x.mp3` IS a phase-4
+    music track, and nothing else records that — which is why `listAssets()` can
+    walk the bucket and classify what it finds. So an upload builds the path
+    from a chosen TARGET (phase / texture / heartbeat / bowl), never from where
+    the file came from, and the filename is sanitised because it becomes part of
+    a URL. The panel shows the resulting path before anything is sent.
+  · An existing path is never silently overwritten. Replacing would swap the
+    audio under every protocol mapped to it, so it is offered and confirmed.
+  · **Deleting scrubs references first.** A protocol's AssetMap points at a
+    path; removing the object alone would leave the renderer resolving a 404
+    silently, at render time, long after anyone could connect the two events.
+    The dialog names every protocol and slot it is about to clear, then clears
+    them, then removes the `asset_meta` tag row, then the object — in that
+    order, so a failure part-way leaves an orphaned FILE (visible, harmless)
+    rather than a protocol pointing at nothing.
+
+- **A bug the tests caught.** `sanitizeFileName('.mp3')` returned `mp3` — no
+  extension — because the split used `dot > 0` and a dotfile-style name has its
+  dot at index 0. `listAssets()` filters on the extension, so that file would
+  have uploaded, vanished from the list, and been impossible to map or delete
+  from the console. A missing STEM is recoverable; a missing extension is not.
+- `tools/test-asset-library.ts` — 49 assertions: filename and texture
+  sanitising (accents, spaces, path separators, traversal attempts), the
+  path-is-classification round trip for all six phases, what is refused before
+  an upload starts, and the reference scrub — every slot cleared, every slot
+  pointing elsewhere untouched, the original map not mutated, and an unchanged
+  map returned as-is so the caller can skip a pointless write.
+- `tsc --noEmit`, `vite build` and all four harnesses clean (251 · 92 · 67 · 49).
+
+**Slice: two PO reports — the dots row and the dead catalog rows**
 - **"6 circles and some weird word coming down breaking the box."** The weekly
   caption lived INSIDE `.home__dots`, and `.home__dots > span` styled every
   direct child: the caption inherited `height: 9px` and `border-radius: 50%`,

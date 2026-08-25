@@ -108,8 +108,24 @@ treatment is a claim the product does not make.
 ### Where to edit it
 
 Catalog → **Percorsi clinici** → the row's **✎ Scheda** button, or the
-workscreen's **Dettagli → Scheda pubblica e tag**. The clinical title is shown
-for context and is not editable there — it comes from the workbook.
+workscreen's **Dettagli → Scheda pubblica e tag**.
+
+The **clinical title is editable there too**. It arrives from the workbook on
+import, and a catalogue assembled from workbooks written by different people
+ends up with different naming conventions; bringing it to one house style
+should not require re-importing the material. Renaming changes the LABEL only —
+the code, the family, the versions, the timelines, the Studio sessions and the
+rendered audio are all carried through untouched (`applyCardDraft` spreads the
+existing entry, and `tools/test-publish-versions.ts` asserts it).
+
+Two things to know before renaming:
+
+* A **blank is refused.** An empty clinical title would leave the catalog row,
+  the plan and the clinical record showing nothing but a code.
+* Where **no public name is set**, `patientTitle()` falls back to the clinical
+  one — so renaming also changes what the PERSON reads for that entry. If the
+  new clinical name is not something a person should read, write a public name
+  at the same time.
 
 ---
 

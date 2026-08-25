@@ -6,6 +6,14 @@
    lets the admin assign which asset serves each protocol phase. The
    assignment (AssetMap) is saved on the catalog entry and is exactly what
    Renderer v3 mixes — unmapped phases fall back to the synth layers.
+
+   Files are added and removed from here too. A delete is deliberately not a
+   single storage call: a file's PATH is its classification, and a protocol's
+   AssetMap points at that path, so removing the object alone would leave the
+   renderer resolving a 404 silently, at render time, long after anyone
+   connected the two. Deleting therefore removes the object, its `asset_meta`
+   tag row, and every AssetMap reference to it — and says up front which
+   protocols it is about to touch.
    ============================================================================ */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -13,10 +21,11 @@ import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import type { CatalogProtocol } from '../data/catalog'
 import {
-  assetMapCoverage, emptyAssetMap, fmtBytes, groupSoundscapes, listAssets,
-  PHASE_KEYS, type AssetMap, type AudioAsset, type PhaseKey,
+  assetMapCoverage, assetMapReferences, checkUpload, deleteAssetObject, emptyAssetMap,
+  fmtBytes, groupSoundscapes, listAssets, targetPath, uploadAsset, withoutAsset,
+  PHASE_KEYS, type AssetMap, type AudioAsset, type PhaseKey, type UploadTarget,
 } from './assets'
-import { loadAssetMeta, saveAssetTags } from './assetPools'
+import { deleteAssetMeta, loadAssetMeta, saveAssetTags } from './assetPools'
 
 type Tab = 'music' | 'soundscape' | 'special'
 
@@ -38,6 +47,15 @@ export function AssetLibrary({ actor }: { actor: string }) {
   // phase-mapping panel
   const [protocols, setProtocols] = useState<CatalogProtocol[]>([])
   const [selCode, setSelCode] = useState<string>('')
+
+  /* Add / remove. `allProtocols` is every catalog entry, not just the
+     mappable ones below — a delete has to scrub references wherever they
+     are, and an entry without a datasheet can still carry an AssetMap. */
+  const [allProtocols, setAllProtocols] = useState<CatalogProtocol[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadNote, setUploadNote] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<AudioAsset | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [draft, setDraft] = useState<AssetMap>(emptyAssetMap())
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,6 +76,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
     if (hasSupabaseEnv()) void refresh()
     else { setError('La libreria audio legge da Supabase Storage — in modalità mock non esiste alcun bucket. Imposta VITE_SUPABASE_URL / _ANON_KEY.'); setAssets([]) }
     void dp.listProtocols().then((ps) => {
+      setAllProtocols(ps)
       const mappable = ps.filter((p) => p.datasheet || p.spec)
       setProtocols(mappable)
       if (mappable.length) setSelCode((c) => c || mappable[0].code)
@@ -152,6 +171,104 @@ export function AssetLibrary({ actor }: { actor: string }) {
     }
   }
 
+  /* ---------------------------------------------------------- upload --- */
+
+  async function doUpload(files: FileList | null, target: UploadTarget) {
+    if (!files || !files.length) return
+    setUploading(true)
+    setError(null)
+    setUploadNote(null)
+    const done: string[] = []
+    const failed: string[] = []
+    try {
+      for (const file of Array.from(files)) {
+        const check = checkUpload(file)
+        if (!check.ok) { failed.push(check.reason as string); continue }
+        const path = targetPath(target, file.name)
+        try {
+          await uploadAsset(file, target)
+          done.push(path)
+        } catch (e) {
+          /* The common failure is "a file with that name is already there".
+             Replacing silently would swap the audio under every protocol
+             mapped to that path, so it is offered, never assumed. */
+          const message = (e as Error).message
+          if (/Esiste già/.test(message) && window.confirm(`${message}\n\nSostituire il file esistente?`)) {
+            await uploadAsset(file, target, { replace: true })
+            done.push(`${path} (sostituito)`)
+          } else {
+            failed.push(message)
+          }
+        }
+      }
+      if (done.length) {
+        await dp.logAudit({
+          actor, action: 'asset.uploaded', target: done[0],
+          detail: done.length > 1 ? `${done.length} file` : done[0],
+        }).catch(() => { /* the upload happened; the log is not worth failing on */ })
+        await refresh()
+      }
+      setUploadNote(
+        [done.length ? `${done.length} file caricati.` : '', ...failed].filter(Boolean).join(' · ') || null,
+      )
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  /* ---------------------------------------------------------- delete --- */
+
+  /** Which protocols point at this file, and where. */
+  function referencesTo(path: string): { code: string; where: string[] }[] {
+    return allProtocols
+      .map((p) => ({ code: p.code, where: assetMapReferences(p.assetMap, path) }))
+      .filter((r) => r.where.length > 0)
+  }
+
+  /**
+   * Remove the object, its tag row, and every AssetMap that points at it.
+   *
+   * Order matters: the references go first. If the storage delete succeeds
+   * and a later write fails, a protocol is left pointing at a file that is
+   * gone — the exact silent breakage this is here to prevent. Clearing the
+   * references first means the worst case is an orphaned file, which is
+   * visible in the list and harmless.
+   */
+  async function doDelete(a: AudioAsset) {
+    setDeleting(true)
+    setError(null)
+    try {
+      const refs = referencesTo(a.path)
+      for (const ref of refs) {
+        const p = allProtocols.find((x) => x.code === ref.code)
+        if (!p) continue
+        const next: CatalogProtocol = { ...p, assetMap: withoutAsset(p.assetMap, a.path), updatedAt: Date.now() }
+        await dp.saveProtocol(next)
+        setAllProtocols((ps) => ps.map((x) => (x.code === next.code ? next : x)))
+        setProtocols((ps) => ps.map((x) => (x.code === next.code ? next : x)))
+        if (next.code === selCode) setDraft(next.assetMap ?? emptyAssetMap())
+      }
+
+      await deleteAssetMeta(a.path).catch(() => { /* no tag row is fine */ })
+      await deleteAssetObject(a.path)
+
+      await dp.logAudit({
+        actor, action: 'asset.deleted', target: a.path,
+        detail: refs.length ? `riferimenti rimossi: ${refs.map((r) => r.code).join(', ')}` : 'nessun riferimento',
+      }).catch(() => { /* the delete happened */ })
+
+      setMetaTags((m) => { const next = { ...m }; delete next[a.path]; return next })
+      setConfirmDelete(null)
+      await refresh()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const assetRow = (a: AudioAsset) => (
     <div key={a.path} className="adm-asset">
       <button className={`adm-asset__play${playing === a.path ? ' is-on' : ''}`} onClick={() => toggle(a)} title={playing === a.path ? 'Ferma' : 'Ascolta'}>
@@ -170,6 +287,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
         />
       )}
       <span className="adm-asset__meta">{fmtBytes(a.sizeBytes)}</span>
+      <button
+        className="adm-asset__del"
+        title="Elimina dalla libreria"
+        aria-label={`Elimina ${a.name}`}
+        onClick={() => setConfirmDelete(a)}
+      >
+        ✕
+      </button>
     </div>
   )
 
@@ -189,6 +314,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
 
       {assets !== null && (
         <>
+          <UploadPanel
+            tab={tab}
+            busy={uploading}
+            note={uploadNote}
+            textures={[...groupSoundscapes(assets ?? []).keys()]}
+            onUpload={(files, target) => void doUpload(files, target)}
+          />
+
           <div className="adm-spec__chips" style={{ marginBottom: 12 }}>
             <button className={`b2b-btn${tab === 'music' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('music')}>♪ Music by phase ({music.length})</button>
             <button className={`b2b-btn${tab === 'soundscape' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('soundscape')}>🌊 Soundscapes ({(assets ?? []).filter((a) => a.kind === 'soundscape').length})</button>
@@ -304,6 +437,170 @@ export function AssetLibrary({ actor }: { actor: string }) {
           </div>
         </>
       )}
+
+      {confirmDelete && (
+        <DeleteAssetDialog
+          asset={confirmDelete}
+          references={referencesTo(confirmDelete.path)}
+          busy={deleting}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => void doDelete(confirmDelete)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ============================================================== upload ==== */
+
+/**
+ * Where a file goes is decided here, not by the file. The bucket path IS the
+ * classification — `assets/music/f4/x.mp3` is a phase-4 music track, and
+ * nothing else records that — so the target is chosen explicitly and the
+ * resulting path is shown before anything is sent.
+ */
+function UploadPanel({
+  tab,
+  busy,
+  note,
+  textures,
+  onUpload,
+}: {
+  tab: Tab
+  busy: boolean
+  note: string | null
+  textures: string[]
+  onUpload: (files: FileList | null, target: UploadTarget) => void
+}) {
+  const [phase, setPhase] = useState<PhaseKey>('f1')
+  const [texture, setTexture] = useState<string>(textures[0] ?? 'wind')
+  const [newTexture, setNewTexture] = useState('')
+  const [special, setSpecial] = useState<'heartbeat' | 'bowl'>('heartbeat')
+  const input = useRef<HTMLInputElement | null>(null)
+
+  const target: UploadTarget =
+    tab === 'music'
+      ? { kind: 'music', phase }
+      : tab === 'soundscape'
+        ? { kind: 'soundscape', texture: newTexture.trim() || texture }
+        : { kind: special }
+
+  const preview = targetPath(target, 'nome-file.mp3')
+
+  return (
+    <section className="adm-upload">
+      <div className="adm-upload__row">
+        <span className="adm-spec__lbl">Aggiungi file</span>
+
+        {tab === 'music' && (
+          <select className="b2b-input adm-asset__sel" value={phase} onChange={(e) => setPhase(e.target.value as PhaseKey)}>
+            {PHASE_KEYS.map((k) => <option key={k} value={k}>{PHASE_LABEL[k]}</option>)}
+          </select>
+        )}
+
+        {tab === 'soundscape' && (
+          <>
+            <select
+              className="b2b-input adm-asset__sel"
+              value={texture}
+              disabled={!!newTexture.trim()}
+              onChange={(e) => setTexture(e.target.value)}
+            >
+              {textures.length === 0 && <option value="wind">wind</option>}
+              {textures.map((tx) => <option key={tx} value={tx}>{tx}</option>)}
+            </select>
+            <input
+              className="b2b-input"
+              style={{ maxWidth: 180 }}
+              placeholder="…o una nuova texture"
+              value={newTexture}
+              onChange={(e) => setNewTexture(e.target.value)}
+            />
+          </>
+        )}
+
+        {tab === 'special' && (
+          <select className="b2b-input adm-asset__sel" value={special} onChange={(e) => setSpecial(e.target.value as 'heartbeat' | 'bowl')}>
+            <option value="heartbeat">Battito cardiaco</option>
+            <option value="bowl">Campana tibetana</option>
+          </select>
+        )}
+
+        <input
+          ref={input}
+          type="file"
+          accept=".mp3,.wav,.ogg,.m4a,.flac,.aac,audio/*"
+          multiple
+          hidden
+          onChange={(e) => { onUpload(e.target.files, target); e.target.value = '' }}
+        />
+        <button className="b2b-btn b2b-btn--primary" disabled={busy} onClick={() => input.current?.click()}>
+          {busy ? 'Caricamento…' : '⬆ Carica file'}
+        </button>
+      </div>
+
+      <p className="b2b-sub">
+        Finisce in <code>{preview}</code>. Il nome viene ripulito (minuscole, senza spazi né accenti) perché
+        diventa parte dell’URL. Più file insieme sono ammessi.
+      </p>
+      {note && <div className="adm-note">{note}</div>}
+    </section>
+  )
+}
+
+/* ============================================================== delete ==== */
+
+/**
+ * A delete says what it is about to break before it breaks it. If a protocol's
+ * AssetMap points at this file, that mapping is cleared as part of the same
+ * action — leaving it would make the renderer resolve a missing path silently,
+ * at render time, with nothing on screen connecting the two events.
+ */
+function DeleteAssetDialog({
+  asset,
+  references,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  asset: AudioAsset
+  references: { code: string; where: string[] }[]
+  busy: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="adm-scrim" onClick={onCancel} role="dialog" aria-modal="true">
+      <div className="adm-dialog" onClick={(e) => e.stopPropagation()}>
+        <h2 className="b2b-card__title">Eliminare «{asset.name}»?</h2>
+        <p className="b2b-sub adm-mono">{asset.path}</p>
+
+        {references.length === 0 ? (
+          <p className="b2b-sub">Nessun protocollo usa questo file. L’eliminazione è definitiva.</p>
+        ) : (
+          <>
+            <div className="adm-note adm-note--warn">
+              {references.length === 1 ? 'Un protocollo usa' : `${references.length} protocolli usano`} questo file.
+              La mappatura verrà rimossa e quelle fasi torneranno ai livelli sintetizzati finché non assegni
+              un altro file.
+            </div>
+            <ul className="adm-reflist">
+              {references.map((r) => (
+                <li key={r.code}>
+                  <span className="adm-mono">{r.code}</span> — {r.where.join(', ')}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="adm-cred__actions" style={{ marginTop: 14 }}>
+          <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>Annulla</button>
+          <button className="b2b-btn b2b-btn--danger" disabled={busy} onClick={onConfirm}>
+            {busy ? 'Eliminazione…' : 'Elimina definitivamente'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

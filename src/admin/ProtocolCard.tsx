@@ -4,9 +4,13 @@
    A clinical protocol has two names and they do different jobs:
 
      · the CLINICAL title ("Calm and Inner Security") names a therapeutic
-       intent. It is the therapist's and the admin's name for the material, it
-       stays on the catalog row, in the plan and in the clinical record, and it
-       is never edited here.
+       intent. It is the therapist's and the admin's name for the material and
+       it is what appears on the catalog row, in the plan and in the clinical
+       record. It is editable here so a catalogue imported from several
+       workbooks can be brought to one house style without re-importing —
+       renaming changes the LABEL only: the code, the family, the versions,
+       the timelines, the Studio sessions and the rendered audio are all
+       carried through untouched.
 
      · the PUBLIC title ("Un respiro prima di dormire") is what the PERSON
        reads in the player, on the home card and in their history. It names a
@@ -38,7 +42,7 @@ import type { CatalogProtocol } from '../data/catalog'
 
 export interface ProtocolCardDraft {
   code: string
-  /** Clinical title — shown for context, not editable here. */
+  /** Clinical title. Editable; never allowed to become empty. */
   title: string
   publicTitle: string
   publicBlurb: string
@@ -61,13 +65,25 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
 export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtocol): CatalogProtocol {
   const publicTitle = draft.publicTitle.trim()
   const publicBlurb = draft.publicBlurb.trim()
+  const title = draft.title.trim()
   return {
     ...existing,
+    /* An empty clinical title would leave the catalog row, the plan and the
+       clinical record showing nothing but a code, so a blank keeps the
+       previous one rather than clearing it. The editor also refuses to save
+       an empty field, so this is the second line of defence, not the first. */
+    title: title || existing.title,
     publicTitle: publicTitle || undefined,
     publicBlurb: publicBlurb || undefined,
     tags: normalizeTags(draft.tags),
     updatedAt: Date.now(),
   }
+}
+
+/** Whether this draft can be saved, and why not. */
+export function cardDraftError(draft: ProtocolCardDraft): string | null {
+  if (!draft.title.trim()) return 'Il titolo clinico non può restare vuoto.'
+  return null
 }
 
 interface Props {
@@ -84,6 +100,7 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
   const [custom, setCustom] = useState('')
   const set = (p: Partial<ProtocolCardDraft>) => onChange({ ...draft, ...p })
   const full = draft.tags.length >= MAX_TAGS
+  const invalid = cardDraftError(draft)
 
   function toggle(id: string) {
     if (draft.tags.includes(id)) set({ tags: draft.tags.filter((x) => x !== id) })
@@ -104,8 +121,23 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
   const body = (
     <>
       <p className="b2b-sub">
-        Il titolo clinico resta <b>{draft.title}</b> e non cambia. Il <b>nome pubblico</b> è quello che legge
-        la persona: dice il momento, non il disturbo. Lasciandolo vuoto si continua a mostrare il titolo clinico.
+        Il <b>titolo clinico</b> è il nome del materiale per te e per il terapeuta: sta sulla riga del catalogo,
+        nel percorso e nella cartella clinica. Il <b>nome pubblico</b> è quello che legge la persona: dice il
+        momento, non il disturbo. Lasciandolo vuoto si continua a mostrare il titolo clinico.
+      </p>
+
+      <label className="pe-field">
+        <span className="pe-label">Titolo clinico <em>il nome per te e per il terapeuta</em></span>
+        <input
+          className="b2b-input" value={draft.title} placeholder="es. Calma e sicurezza interiore"
+          onChange={(e) => set({ title: e.target.value })}
+        />
+        {invalid && <span className="pe-err">{invalid}</span>}
+      </label>
+
+      <p className="b2b-sub">
+        Rinominare cambia solo l’etichetta: codice, famiglia, durate, timeline, sessioni dello Studio e audio
+        collegato restano esattamente com’erano.
       </p>
 
       <label className="pe-field">
@@ -166,7 +198,7 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
       </p>
 
       <div className="plan-head__cta" style={{ marginTop: 14 }}>
-        <button className="b2b-btn b2b-btn--primary" disabled={busy} onClick={onSave}>
+        <button className="b2b-btn b2b-btn--primary" disabled={busy || !!invalid} onClick={onSave}>
           {busy ? 'Salvataggio…' : 'Salva scheda'}
         </button>
         {onCancel && <button className="b2b-btn b2b-btn--ghost" onClick={onCancel}>Annulla</button>}

@@ -2219,3 +2219,47 @@ td, th { overflow-wrap: anywhere; }
 /* A wide block that genuinely cannot wrap scrolls INSIDE its own box rather
    than taking the page with it. */
 .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Inline validation under an admin field. */
+.pe-err { display: block; margin-top: 5px; font-size: 12.5px; color: #b23b3b; }
+
+/* ============================================================================
+   Asset Library — add and remove
+   ============================================================================ */
+
+.adm-upload {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px 16px; margin-bottom: 14px;
+  background: var(--mist-2); border: 1px dashed var(--line); border-radius: var(--r-md);
+}
+.adm-upload__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adm-upload code { font-size: 12px; overflow-wrap: anywhere; }
+
+/* The delete control stays quiet until the row is hovered: it is destructive,
+   and a red ✕ on every row of a long library reads as an error state. */
+.adm-asset__del {
+  flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 6px;
+  color: var(--slate); font-size: 13px; line-height: 1;
+  opacity: 0.35; transition: opacity 120ms, background 120ms, color 120ms;
+}
+.adm-asset:hover .adm-asset__del { opacity: 1; }
+.adm-asset__del:hover { background: #fbf2f2; color: #b23b3b; }
+.adm-asset__del:focus-visible { opacity: 1; outline: 2px solid #b23b3b; outline-offset: 1px; }
+
+.adm-scrim {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(16, 40, 32, 0.5);
+}
+.adm-dialog {
+  width: min(520px, 100%); max-height: 86dvh; overflow-y: auto;
+  padding: 24px 26px; border-radius: 14px;
+  background: #fff; box-shadow: var(--shadow-lift);
+  display: flex; flex-direction: column; gap: 10px;
+  animation: screen-in 200ms var(--ease) both;
+}
+.adm-dialog .adm-mono { overflow-wrap: anywhere; }
+
+.adm-reflist { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.adm-reflist li { font-size: 13px; color: var(--slate); overflow-wrap: anywhere; }
