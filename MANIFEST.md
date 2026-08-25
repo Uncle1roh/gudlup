@@ -1,6 +1,39 @@
 # Good Loop — build manifest
 
-**Slice: the player was ignoring published audio, and the frame could not scroll** (current)
+**Slice: two PO reports — the dots row and the dead catalog rows** (current)
+- **"6 circles and some weird word coming down breaking the box."** The weekly
+  caption lived INSIDE `.home__dots`, and `.home__dots > span` styled every
+  direct child: the caption inherited `height: 9px` and `border-radius: 50%`,
+  and `.home__dotslabel { width: 100% }` put only the WIDTH back. So the text
+  spilled out under a 9px-tall pill, and the caption itself was drawn as an
+  extra dot — five sessions, six circles. The dots and the caption are siblings
+  now rather than parent and child; a `:not()` would have fixed the symptom and
+  left the same trap for the next caption. The dots keep the count as an
+  `aria-label` and the visible caption is `aria-hidden`, so a screen reader
+  hears it once.
+- **"On the list of protocols we can only click the 1.5 protocol."** True, and
+  the gate behind it is right: the admin workscreen IS the PLAIN timeline
+  review, and `openable = !!mergedPlain(p)` — a protocol with no published
+  timeline has no workscreen to open. What was wrong is that such a row became
+  inert with NO cursor, NO hover, NO tooltip and no alternative. Three rows on
+  screen, one opens, nothing says why the other two do not.
+  · Every row is clickable now. Without a timeline it opens the CARD editor
+    (nome pubblico e tag) instead, which is the action that is genuinely
+    available, so no row is ever a dead end.
+  · The title on a non-openable row says exactly what is missing and what to do:
+    import the Excel of a duration.
+  · The duration pills were disabled per-PROTOCOL (`disabled={!openable}`), so a
+    protocol with a 12-minute timeline had its 12m pill greyed out too. They are
+    disabled per-DURATION now, and an idle pill's title says that time signature
+    has no timeline rather than saying nothing.
+- Regression test in `tools/test-render-surfaces.tsx` (92 renders): the dots row
+  must contain only dots, exactly as many as the week asks for, with the caption
+  outside it. Two of its own assertions were wrong first — `span` is itself
+  letters, so a naive text search finds the markup, and the label renders in
+  Italian because that is the product default.
+- `tsc --noEmit`, `vite build` and all three harnesses clean (251 · 92 · 67).
+
+**Slice: the player was ignoring published audio, and the frame could not scroll**
 - PO report: "there are places with wrong mobile width, there are places with no
   scroll, there are words breaking out of boxes… also when I start an audio file,
   we still get a generic test version."

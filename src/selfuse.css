@@ -180,10 +180,21 @@
   display: grid; place-items: center; width: 22px; height: 22px;
   border-radius: 50%; background: var(--aura); color: #fff; font-size: 13px;
 }
+/* The dots and their caption are siblings, not parent and child.
+
+   They used to share a container, and `.home__dots > span` therefore
+   styled the caption too: it kept `height: 9px` and `border-radius: 50%`
+   while only its width was put back, so the text spilled out under a
+   9px-tall pill and the caption itself was drawn as an extra dot. A
+   `:not()` would have fixed the symptom and left the trap. */
+.home__week-progress { display: flex; flex-direction: column; gap: 6px; }
 .home__dots { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.home__dots > span { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.home__dots > span {
+  flex: 0 0 auto;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--line);
+}
 .home__dots > span.is-on { background: var(--aura); }
-.home__dotslabel { width: 100%; }
 
 .home__sect { font-family: var(--display); font-size: 17px; font-weight: 500; margin: 22px 0 4px; }
 .home__quick { margin-top: 6px; }

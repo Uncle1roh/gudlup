@@ -264,6 +264,31 @@ renders('TH-PERF, no sessions', <Performance state={wsEmpty} />)
 renders('TH-SETTINGS', <WorkspaceSettings state={ws} update={noop} onOpenAvailability={noop} />)
 
 /* ------------------------------------------- the catalog reached the UI --- */
+console.log('\n--- the weekly dots ---')
+
+/* The caption used to live INSIDE .home__dots, where `> span` styled it as a
+   9px circle: the text spilled out below the row and the caption itself drew
+   as an extra dot. Asserting on the structure keeps the two apart. */
+const weekHtml = renderToString(
+  shell(<Home {...homeProps} pathway={populated.pathway} logs={populated.logs} weekLogs={[]} />),
+)
+const dotsBlock = /<div[^>]*class="home__dots"[^>]*>([\s\S]*?)<\/div>/.exec(weekHtml)
+assert(dotsBlock != null, 'the weekly dots row renders')
+assert(
+  // Strip the tags before looking for text: `span` is itself letters, so a
+  // naive search finds the markup rather than the caption.
+  dotsBlock != null && dotsBlock[1].replace(/<[^>]*>/g, '').trim() === '',
+  'the dots row contains ONLY dots — no caption text inside it',
+)
+assert(
+  dotsBlock != null && (dotsBlock[1].match(/<span/g) ?? []).length === 5,
+  'week 1 of Stress Management draws exactly its five dots, not six',
+)
+assert(weekHtml.includes('home__week-progress'), 'the caption sits beside the dots, not inside them')
+// The label is localized (the product default is Italian), so assert on the
+// numbers it carries rather than on English wording.
+assert(/<div class="home__dots"[^>]*aria-label="2 [^"]*5 /.test(weekHtml), 'the dots carry the count for a screen reader')
+
 console.log('\n--- the catalog view ---')
 
 const catalogHtml = renderToString(shell(<Catalog catalog={CATALOG} onOpen={noop} onQuickStart={noop} />))

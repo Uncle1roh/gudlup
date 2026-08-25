@@ -286,9 +286,22 @@ export function CatalogAdmin({ actor }: { actor: string }) {
             const withAudio = new Set(p.versions.filter((v) => v.audioUrl?.['pt-BR']).map((v) => v.duration))
             const tags = tagsOf(p)
             return (
-            <div className={`adm-tr${openable ? ' adm-tr--click' : ''}`} key={p.code}
-              onClick={openable ? () => { setOpenAt(null); setOpened(p) } : undefined}
-              title={openable ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)' : undefined}
+            <div className="adm-tr adm-tr--click" key={p.code}
+              onClick={() => {
+                /* No timeline means there is no workscreen to open — but the
+                   card (nome pubblico e tag) is always editable, so the row
+                   opens that instead of doing nothing at all. */
+                if (!openable) {
+                  if (shelf === 'library') setDraft(draftFrom(p))
+                  else setCard(cardDraftFrom(p))
+                  return
+                }
+                setOpenAt(null)
+                setOpened(p)
+              }}
+              title={openable
+                ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)'
+                : 'Nessuna timeline PLAIN pubblicata: importa il file Excel di una durata per aprire la schermata di lavoro. Clicca per modificare la scheda.'}
             >
               <div className="adm-mono">{p.code}</div>
               <div>
@@ -310,8 +323,17 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                   <button
                     key={d}
                     className={`adm-pill adm-pill--btn ${withAudio.has(d) ? 'adm-pill--ok' : withTimeline.has(d) ? 'adm-pill--warn' : 'adm-pill--idle'}`}
-                    title={`${withAudio.has(d) ? `${d} min — audio in linea` : withTimeline.has(d) ? `${d} min — timeline pubblicata, audio non collegato` : `${d} min — nessuna timeline`} · apri questa versione`}
-                    disabled={!openable}
+                    title={
+                      withAudio.has(d)
+                        ? `${d} min — audio in linea · apri questa versione`
+                        : withTimeline.has(d)
+                          ? `${d} min — timeline pubblicata, audio non collegato · apri questa versione`
+                          : `${d} min — nessuna timeline pubblicata: importa il file Excel di questa durata`
+                    }
+                    /* A duration with no timeline has nothing to open. It stays
+                       visible because it is a real time signature of the
+                       protocol — the pill says what is missing. */
+                    disabled={!withTimeline.has(d)}
                     onClick={() => { setOpenAt(d); setOpened(p) }}
                   >
                     {d}m

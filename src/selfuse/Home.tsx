@@ -142,13 +142,19 @@ export function Home(props: HomeProps) {
             </>
           )}
 
-          <div className="home__dots" aria-label={t('{done} of {total} sessions this week', { done: doneThisWeek, total: targetThisWeek })}>
-            {Array.from({ length: targetThisWeek }, (_, i) => (
-              <span key={i} className={i < doneThisWeek ? 'is-on' : ''} />
-            ))}
-            <span className="small muted home__dotslabel">
+          <div className="home__week-progress">
+            <div
+              className="home__dots"
+              role="img"
+              aria-label={t('{done} of {total} sessions this week', { done: doneThisWeek, total: targetThisWeek })}
+            >
+              {Array.from({ length: targetThisWeek }, (_, i) => (
+                <span key={i} className={i < doneThisWeek ? 'is-on' : ''} />
+              ))}
+            </div>
+            <p className="small muted" aria-hidden="true">
               {t('{done} of {total} sessions this week', { done: doneThisWeek, total: targetThisWeek })}
-            </span>
+            </p>
           </div>
         </section>
       ) : (

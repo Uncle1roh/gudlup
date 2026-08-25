@@ -114,7 +114,11 @@ function SelfUseProgress({ state, onGlCheck, onWho5, onMood, onExportSelfUse }: 
           <span className="metric__value">{week.length} {t('of')} {target}</span>
           <span className="metric__label">{t('sessions · {n} min', { n: minutes })}</span>
         </div>
-        <div className="home__dots">
+        <div
+          className="home__dots"
+          role="img"
+          aria-label={t('{done} of {total} sessions this week', { done: week.length, total: target })}
+        >
           {Array.from({ length: target }, (_, i) => (
             <span key={i} className={i < week.length ? 'is-on' : ''} />
           ))}
