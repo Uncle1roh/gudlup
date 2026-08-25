@@ -2,6 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './selfuse.css'
+import './corporate.css'
+import './workspace.css'
 
 /* After a redeploy, tabs opened before it still reference the previous build's
    hashed chunks; the first lazy import then 404s ("Failed to fetch dynamically

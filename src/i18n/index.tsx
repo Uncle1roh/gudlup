@@ -11,12 +11,16 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { IT } from './it'
+import { IT_SELF_USE } from './it-selfuse'
 import { PT } from './pt'
 
 export type Locale = 'en' | 'it' | 'pt-BR'
 
 const STORAGE_KEY = 'gl.locale'
-const DICTS: Partial<Record<Locale, Record<string, string>>> = { it: IT, 'pt-BR': PT }
+/* The Self Use dictionary is merged LAST, so where a string exists in both it
+   is the Self Use wording that wins — that surface's copy was written against
+   its own spec and reviewed as a unit. */
+const DICTS: Partial<Record<Locale, Record<string, string>>> = { it: { ...IT, ...IT_SELF_USE }, 'pt-BR': PT }
 
 /** Options shown in Profile → Language. */
 export const LOCALES: { code: Locale; label: string }[] = [

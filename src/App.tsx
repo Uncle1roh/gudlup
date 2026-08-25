@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { SoundStudio } from './studio/SoundStudio'
 import { ConsumerApp } from './app/ConsumerApp'
+import { SelfUseApp } from './selfuse/SelfUseApp'
 import { TherapistApp } from './b2b/TherapistApp'
+import { WorkspaceApp } from './workspace/WorkspaceApp'
+import { CorporateApp } from './corporate/CorporateApp'
 import { AdminApp } from './admin/AdminApp'
 import { EmployerApp } from './employer/EmployerApp'
 import { DataLayerProvider } from './data/provider'
@@ -26,9 +29,22 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  const isB2b = route === '#therapist' || route === '#b2b'
+  /* Three surfaces built to the 2026-08 wireframe specs, and the three that
+     preceded them. The new ones own the primary routes; the earlier screens
+     stay reachable on explicit -legacy routes so nothing that worked before is
+     lost while the specs bed in.
+
+       #app / (default)  Self Use mobile app        46 screens
+       #therapist        Therapist Workspace        28 screens
+       #employer / #hr   Corporate Dashboard        19 screens
+       #nr1              NR-1 psychosocial report   (regulatory, separate)
+       #b2c-legacy · #b2b-legacy                    previous surfaces */
+  const isLegacyB2c = route === '#b2c-legacy'
+  const isWorkspace = route === '#therapist'
+  const isLegacyB2b = route === '#b2b' || route === '#b2b-legacy'
   const isAdmin = route === '#admin'
-  const isEmployer = route === '#employer' || route === '#hr'
+  const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate'
+  const isNr1 = route === '#nr1'
 
   function content() {
     // Demo hub: links every surface for testers. No gate — it's just links.
@@ -60,8 +76,23 @@ export default function App() {
       )
     }
 
-    // The employer (HR) NR-1 dashboard — its own gate and role.
-    if (isEmployer) {
+    // The Corporate Dashboard — aggregates only, HR role.
+    if (isCorporate) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <AuthGate mode="hr">
+              <CorporateApp />
+            </AuthGate>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
+    }
+
+    // The NR-1 psychosocial report keeps its own route: it is a regulatory
+    // surface with a risk vocabulary the Corporate Dashboard is not allowed
+    // to use, so the two must not be folded into one navigation.
+    if (isNr1) {
       return (
         <AuthProvider>
           <DataLayerProvider>
@@ -73,11 +104,23 @@ export default function App() {
       )
     }
 
+    if (isWorkspace || isLegacyB2b) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <AuthGate mode="b2b">
+              {isWorkspace ? <WorkspaceApp /> : <TherapistApp />}
+            </AuthGate>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
+    }
+
     return (
       <AuthProvider>
         <DataLayerProvider>
-          <AuthGate mode={isB2b ? 'b2b' : 'b2c'}>
-            {isB2b ? <TherapistApp /> : <ConsumerApp />}
+          <AuthGate mode="b2c">
+            {isLegacyB2c ? <ConsumerApp /> : <SelfUseApp />}
           </AuthGate>
         </DataLayerProvider>
       </AuthProvider>

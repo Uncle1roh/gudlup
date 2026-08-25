@@ -1,6 +1,221 @@
 # Good Loop — build manifest
 
-**Slice: publishing overwrote the other time signatures** (current)
+**Slice: the three gaps closed — video, PDF, the live catalog** (current)
+- The previous slice shipped the three wireframe surfaces and named three gaps.
+  This closes them.
+
+- **Video is a real peer connection.** `src/b2b/webrtc` already held a complete,
+  production-capable stack — `useVideoCall` with real `RTCPeerConnection`s, a
+  swappable signalling seam (in-tab loopback, or Supabase Realtime across
+  devices), and a `ControlAction` channel. What was missing was the wiring into
+  the new layouts, not the stack. `VideoStage` was NOT reused: it brings the
+  legacy console's layout with it, and the two new surfaces are 70/30 desktop
+  and full-bleed mobile. `workspace/Video.tsx` holds only the part that must not
+  be re-derived — binding a `MediaStream` to a `<video>`, and the states that
+  are not a picture (no camera, permission denied, not yet connected).
+  · **The protocol audio never crosses the wire**, and that is the whole design.
+    WebRTC voice is mono-ised and echo-cancelled, which would destroy the
+    binaural beat the method rests on. The patient's device plays the published
+    file locally; the transport carries CONTROL — play, pause, resume, stop,
+    intervene, end. The therapist's monitor audio is a second local playback, so
+    they hear what the patient hears without it being streamed.
+  · A therapist pause stops the patient's CLOCK as well as their audio. Pausing
+    only the sound would let the phases run on under silence and the two sides
+    would end the session in different places.
+  · **The appointment id is the room.** The patient books through the data layer
+    (`bookAppointment`), and both sides read the same record — neither is handed
+    a room id by hand. The Self Use booking flow is now real: therapists from
+    `listAvailableTherapists()`, slots from the availability template expanded
+    against times already taken, and a booking that can be REJECTED when someone
+    took the slot first — reported and the grid reloaded, not swallowed.
+  · The workspace roster and the scheduling roster are still two lists in this
+    build, so they are matched by name. No match means no shared room and the
+    call falls back to the in-tab simulated peer — which the waiting room states
+    plainly rather than pretending to be a real session. The Sandbox never opens
+    a real room at all: a practice session must not be joinable by a patient who
+    happens to be waiting.
+
+- **PDF is a real file, not a print dialog.** `src/lib/pdf.ts` — PDF 1.4, the
+  two standard Helvetica faces, WinAnsi, vector rules. No new dependency: these
+  are text documents, jsPDF is ~350 kB for that, and this is ~400 lines with no
+  supply-chain surface and deterministic output.
+  · Wrapping uses Adobe's published Helvetica widths. Estimating from character
+    count breaks "Illinois" in a completely different place from "MMMMMMMM", and
+    a clinical report with text running off the page edge is not a record.
+  · Characters outside WinAnsi are TRANSLITERATED (→ becomes `->`, ≥ becomes
+    `>=`), never dropped silently. An emoji is dropped rather than rendered as a
+    stray glyph from the font's own table.
+  · `workspace/sessionPdf.ts`: an unsigned report is watermarked DRAFT — a draft
+    that looks like a filed record is worse than no export. Re-signing prints its
+    version number, because an audit trail nobody can read off the paper is not
+    one. A video-only session omits the treatment rows entirely rather than
+    printing "Phases completed: 0/6", which would read as a failed treatment.
+    A missing VAS says "Not recorded" — "not measured" and "measured and
+    forgotten" must not look the same.
+  · `corporate/reportPdf.ts`: **suppression travels with the document.** A
+    section below N=5 prints "Not enough data" rather than being omitted, because
+    a missing section reads as "we did not measure that". The spec's exact footer
+    is on EVERY page. Trend words come from the same `movement()` the screens
+    use, so the export cannot say something the dashboard would refuse to.
+  · `selfuse/progressPdf.ts`: the monthly summary and the therapy summary. The
+    therapy one states who recorded the VAS and that the scales are a
+    conversation to have with the therapist, not to read alone off a PDF.
+    "Export my data" in Privacy & Data stays JSON — portability is a different
+    job from a document.
+
+- **Published protocols now reach every surface.** `data/liveCatalog.tsx` lays
+  the catalog over the editorial spine. `data/selfuse.ts` stays what it was — the
+  product decision about which 19 sessions exist, what they are called, which
+  pathway week they belong to. What a PO publishes wins over it:
+  · `publicTitle` / `publicBlurb` replace the editorial name where one is
+    written (CLAUDE.md: patient-facing screens print `patientTitle()`). Where no
+    public name exists, `patientTitle()` resolves to the CLINICAL title — which
+    is exactly what a person must not read — so the editorial name stays.
+  · **Which DURATIONS exist comes from the catalog.** Publishing only the
+    12-minute workbook means the app offers one time signature, not three, two of
+    which would fall back to a placeholder bed and sound wrong. The Quick default
+    on the mood sheet becomes the shortest that actually exists.
+  · A protocol a PO DISABLES disappears from browsing, from prescription, and
+    from any pathway that referenced it — the dead week is dropped and the rest
+    renumbered, so nobody is stranded on "Start Today's Session" with nothing to
+    start. `dropped` is reported so the screen can say the pathway is shorter
+    than usual rather than silently pretending it always was.
+  · A library audio published this morning appears in Explore → All Sessions
+    with no code change, because the resolver reads the catalog rather than a
+    list.
+  · The therapist's protocol wizard and prescription modal read the same
+    catalog. The wizard shows all 25 (the six clinical-only ones badged and
+    usable in a live session); `prescribable` excludes them in ONE place.
+    Both flag a protocol with no rendered audio instead of letting a therapist
+    prescribe silence unknowingly.
+  · **Audio resolves per duration and per language.** `audioUrlFor()` walks
+    locale → pt-BR → en → anything, and returns nothing when that version has no
+    file, so the player uses its bed. It never serves another DURATION's file:
+    a 6-minute mixdown played for a 24-minute session would be wrong in a way
+    nobody would notice until a patient did.
+
+- `tools/test-pdf.ts` — 67 assertions, and it does not check the bytes we wrote:
+  it PARSES them back with pdfjs-dist (already a dependency) and reads the text
+  out. Page counts, extractable headings and table cells, the header repeating
+  when a table spans pages, the LAST row surviving (which is what proves the
+  xref offsets are right), the draft watermark, and the corporate export's
+  suppression, footer and vocabulary. One test caught a false pass of its own: a
+  case-sensitive absence check passed because `section()` uppercases its labels.
+- `tools/test-render-surfaces.tsx` grows to 76: the screens now render inside
+  the real `DataLayerProvider` and a RESOLVED catalog, and the new assertions
+  cover disabling a protocol, a pathway losing a week and renumbering, and a
+  protocol published in a single time signature offering exactly that one.
+- `tools/test-wireframe-specs.ts` grows to 251 with the audio-resolution rules.
+- `tsc --noEmit` clean, `vite build` clean, all three harnesses pass.
+- Still open, stated rather than hidden: corporate aggregates remain
+  deterministic fixtures — the shapes are the contract a `SECURITY DEFINER` call
+  will return, the numbers are not yet real. A cross-device call needs Supabase
+  env for the Realtime signalling transport; without it the second peer is
+  simulated in-tab over a real peer connection, and the UI says so. Public STUN
+  covers most home and office NATs; a symmetric NAT or a strict corporate
+  firewall will need a TURN relay, and `ICE` in `useVideoCall.ts` is where its
+  credentials go.
+
+**Slice: the three wireframe specs, built**
+- Input: `Suggestions/` — three Claude Design canvases dated 2026-08-24 (Self Use
+  app, Therapist Workspace desktop, Corporate Dashboard) plus three .docx
+  specifications. 93 screens in total: 46 · 28 · 19. Every screen id in those
+  documents now exists in the app.
+- **Three new surfaces, not three rewrites.** The audio engine, the protocol
+  catalog, the data provider and the auth gate are untouched and reused; what
+  is new is the product surface above them. The screens that preceded these
+  specs stay reachable on `#b2c-legacy` and `#b2b-legacy`, so nothing that
+  worked before was removed to make room.
+- Routes: `#app` (and the default) = Self Use · `#therapist` = Workspace ·
+  `#employer` / `#hr` = Corporate Dashboard · `#nr1` = the NR-1 report, kept on
+  its own route because it is a REGULATORY surface whose risk vocabulary is
+  exactly what the Corporate Dashboard's forbidden-terms list excludes; folding
+  the two into one navigation would have put "risk" and "exposure" one click
+  from a wellbeing chart.
+
+- **Self Use** (`src/selfuse/`, `src/data/selfuse.ts`, `measures.ts`,
+  `selfUseStore.ts`). 19 sessions with wellbeing names over 19 distinct catalog
+  protocols; 5 pathways; the 8-card quick grid; GL-Check, WHO-5 and Daily Mood;
+  the Safety Gateway at all three levels. The mapping from a Self Use session to
+  its protocol lives in ONE table, so the clinical and the public vocabulary
+  cannot drift. The six clinical-only protocols (GL-ANX 1.2, 1.5 · GL-DEP 2.1,
+  2.2, 2.3, 2.5) are not in that table, are not browsable and cannot be
+  prescribed — they run only inside a live therapist-led session.
+  · The player follows the six phases: dim through Phase 1, the breathing orb in
+    Phase 2, black through 3–5, brighten across Phase 6. Controls fade after 30 s.
+    Phase 6 is re-orientation and gets NO metric, NO celebration and NO pop-up;
+    the post-session screen fades in only after the audio has finished.
+  · ON-7 sits AFTER the first-session prompt on purpose — the optional consents
+    must not stand between a new person and their first six minutes.
+  · A prescribed session counts toward THERAPY progress and never toward the
+    Self Use pathway. The therapist prescribed it, so it belongs to the therapy.
+
+- **Therapist Workspace** (`src/workspace/`). Roster → patient card → live
+  session → report → post-session, plus calendar, messages, cross-patient
+  prescriptions, the reports archive, private performance figures and the
+  sandbox. The live session is 70 % video / 30 % three-tab panel; switching tabs
+  never touches the feed.
+  · Notes are ONE free-text entry per session tagged "Session #N", not a
+    Pre/During/Debrief split — a session is one clinical account. The Good Loop
+    quick-notes fold into that same entry with their timestamps and phases.
+  · The VAS is recorded BY the therapist from the patient's spoken answer.
+    There is no patient-facing VAS widget anywhere in the product.
+  · Pre-launch check: stereo failure and missing consent are HARD blocks;
+    latency is a soft warning the therapist decides on.
+  · Signing a report is versioned. Re-signing adds a version and preserves the
+    earlier one — an audit trail that overwrites is not one.
+
+- **Corporate Dashboard** (`src/corporate/`). Setup wizard, Overview,
+  Engagement, Wellbeing, Reports, Management (4 tabs), Settings (5 sections).
+  · **No metric is a bare number.** `Cell<T>` pairs every figure with the number
+    of people behind it and `cellValue()` returns null below k = 5, so a screen
+    that forgets to check gets "Not enough data yet" rather than a number
+    derived from four identifiable people. Charts are not drawn at all below the
+    threshold — an empty axis reads as "no risk found", which is a claim.
+  · The therapy channel is ONE integer with no breakdown, modelled as a type
+    that cannot be decomposed. Its sparseness IS the privacy commitment.
+  · Trend language comes from one function and can only produce "Trending up" /
+    "Stable" / "Trending down". The forbidden-vocabulary list is data in
+    `metrics.ts` and asserted against the rendered copy in the proof harness.
+  · Charts are greyscale with hatch and dot fills — no red zone, no green zone.
+    A wellbeing chart must not tell a company it is in the red.
+
+- **A real bug found by the harness.** `safetyLevel2Trigger()` used
+  `moods.slice(-3).every(m => m.level <= 2)` to decide whether inactivity
+  followed a decline. `[].every()` is TRUE, so anyone with no mood entries who
+  simply stopped using the app for a fortnight tripped the Safety Gateway —
+  precisely the alarmist behaviour the spec forbids. Fixed with an explicit
+  length check; the test that caught it asserts that silence after an IMPROVING
+  trend triggers nothing.
+
+- i18n: English source strings as keys, as everywhere else. Italian for the
+  whole Self Use surface in `i18n/it-selfuse.ts` (its own module — one surface,
+  one spec, reviewed as a unit), merged last so its wording wins on shared keys.
+  The two PROFESSIONAL desktop surfaces stay on English source strings pending a
+  specialist pass: "adherence", "VAS delta" and "k-anonymity suppression" in a
+  rough register would be worse than the English a clinician already reads. The
+  fallback prints the key, so both are fully usable today.
+- No schema change: the Self Use, therapy-link and workspace state added here is
+  per-person or per-therapist working state that no other role reads, held
+  locally behind a hook with the same shape a provider method would have. The
+  clinical record still goes through `DataProvider.recordSession`. Nothing was
+  added to setup.sql, so the `notify pgrst` rule does not apply to this slice.
+- `tools/test-render-surfaces.tsx` — 64 server renders. `tsc` proves the types
+  line up and `vite build` proves the bundle links, but neither ever CALLS a
+  component; this does, in both the empty state a new account sees and the
+  populated one, since most render crashes live in the empty case. It also
+  asserts against the rendered HTML rather than the source: no protocol code
+  reaches a patient screen, and no forbidden term reaches the dashboard.
+- `tools/test-wireframe-specs.ts` — 237 assertions: k-anonymity at every
+  boundary, the forbidden vocabulary against real dashboard copy, the trend
+  labels, the one-integer therapy channel, the 19/6 protocol split, pathway
+  integrity, WHO-5 and GL-Check scoring, all three Safety Gateway triggers and
+  their non-triggers, adherence bands, connection-code expiry and the message
+  SLA. `tsc --noEmit` clean, `vite build` clean.
+- Known gaps at the time of this slice — video, PDF and the live catalog — were
+  closed by the slice above it. The corporate aggregates remain fixtures.
+
+**Slice: publishing overwrote the other time signatures**
 - PO report: "the same protocol has a 6-, 12- and 24-minute version, and when
   we publish it overwrites the other time signatures".
 - **Reproduced and true.** `publishToCatalog()` rebuilt `versions` from the
