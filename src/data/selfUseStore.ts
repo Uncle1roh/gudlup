@@ -234,7 +234,11 @@ export function useSelfUseStore(userId?: string): SelfUseStore {
     catalog should pass it, because it is the plan the person is actually
     walking. */
 export interface PlanShape {
-  plan: { week: number; count: number }[]
+  plan: { week: number; blocks: { count: number }[] }[]
+}
+
+function asked(w: { blocks: { count: number }[] }): number {
+  return w.blocks.reduce((n, b) => n + b.count, 0)
 }
 
 /** Which pathway week is current: the first week whose count is not yet met. */
@@ -242,7 +246,7 @@ export function currentWeek(ps: PathwayState | null, resolved?: PlanShape): numb
   const p = resolved ?? pathwayById(ps?.id)
   if (!ps || !p || !p.plan.length) return 1
   for (const w of p.plan) {
-    if ((ps.done[w.week] ?? 0) < w.count) return w.week
+    if ((ps.done[w.week] ?? 0) < asked(w)) return w.week
   }
   return p.plan.length
 }
@@ -255,7 +259,7 @@ export function pathwayDone(ps: PathwayState | null): number {
 export function isPathwayComplete(ps: PathwayState | null, resolved?: PlanShape): boolean {
   const p = resolved ?? pathwayById(ps?.id)
   if (!ps || !p || !p.plan.length) return false
-  return p.plan.every((w) => (ps.done[w.week] ?? 0) >= w.count)
+  return p.plan.every((w) => (ps.done[w.week] ?? 0) >= asked(w))
 }
 
 /** Sessions logged since the most recent Monday 00:00 local. */

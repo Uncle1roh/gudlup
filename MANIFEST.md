@@ -1656,7 +1656,7 @@ Verified: `tsc --noEmit` + `npm run build` clean; no callers outside `src/tts`
 touch the changed signatures.
 
 
-**Slice: Asset Library · Datasheet Importer · Renderer v3** (current)
+**Slice: Asset Library · Datasheet Importer · Renderer v3**
 
 ## What this slice adds
 1. **Asset Library** (admin → Asset library): browses the PO's produced audio in
@@ -1720,3 +1720,133 @@ parsed — split into its own chunk).
 - Remaining protocol docs → datasheets.
 - Second (male) TTS voice for the Deep double-induction rows — currently
   rendered with the primary voice and flagged in the render notes.
+
+
+**Slice: the four new Suggestions documents** (current)
+
+Four documents landed in `Suggestions/`. Three are marked *"Just a first
+suggestion. To be discussed."*; one — the therapist instruments — is marked
+**Confirmed, the definitive MVP set**. They are treated differently below, and
+what was NOT built is listed at the end rather than left silent.
+
+## Built
+
+**The five B2B instruments** — `src/data/assessments.ts`
+- DASS-21 (21 items, three subscales), PSS-10 (10, four reverse), BRS (6,
+  three reverse), CBI (19, three subscales, two different response scales
+  inside one questionnaire), VAS (emoji 1–5).
+- `scoreDass21` returns BOTH the raw 0–21 sums and the ×2 scaled 0–42 figures.
+  Storing one alone would leave a reader guessing which scale a "14" is on,
+  and the published norm tables are written against the scaled one.
+- Nothing in the file returns a severity, a band or a label. `SCORE_RANGE`
+  gives bounds so a screen can draw a bar without inventing its own, and
+  `SCORE_DIRECTION` says only which way is MORE of the construct — never which
+  way is good. Interpretation is the therapist's, and the module cannot express
+  it even by accident.
+- `proposesCbi` takes the SCALED scores explicitly: the reference states the
+  trigger on the DASS-42 scale, and feeding it raw sums would have fired it at
+  roughly half the intended threshold.
+- CBI item 13 is reverse-scored. The developer reference is silent on it; the
+  published instrument reverses it, and leaving it un-reversed would have made
+  the work-related subscale max out at the wrong end.
+
+**The queue** — `src/data/assessmentStore.ts`
+- Carries an instrument from the therapist's desktop to the patient's app and
+  the completed record back. `send` lands `confirmed` (a therapist choosing an
+  instrument IS the confirmation); `proposeDue` lands `proposed` and never
+  reaches the patient until someone confirms it.
+- Completion goes through `freeze` only: a second submission throws, an
+  incomplete questionnaire throws, and `saveProgress` refuses a frozen record
+  rather than half-erasing it. Append-only is a legal-evidence requirement in
+  an NR-1 context, so it is enforced at the one door rather than by convention.
+- `proposeDue` is idempotent within a day — a screen calling it on every render
+  cannot fill the queue with duplicates.
+- `vasRecord` writes the session pair already frozen, `confirmedBy: 'auto'`,
+  `timepoint: 'session'`, so VAS never collides with the scheduled instruments.
+- localStorage here is a demo stand-in for a table, said plainly in the header.
+  Assessment records are health data and belong server-side under LGPD.
+
+**The patient side** — `src/selfuse/Assessment.tsx`, wired into the Therapist tab
+- One item per screen, the published English text marked `lang="en"` while the
+  chrome stays Italian — a translated DASS-21 is a different instrument.
+- Progress saves after every answer and resumes at the first UNANSWERED item.
+  Twenty-one items is long enough that losing them would push people into a
+  rushed retake, which is worse data than a resumed one.
+- The closing screen shows no score, no band, no comparison to last month. The
+  render harness asserts that no score RANGE (`0–42`, `0–40`, `1–5`, `0–100`)
+  appears anywhere on the patient's side — a readout always carries its range,
+  so that one assertion covers the whole rule.
+- Linking a therapist queues the T0 baseline, which is what the schedule
+  proposes on day 1.
+
+**The therapist side** — `src/workspace/Patients.tsx`
+- The Send-assessment modal now reads the real instruments, sittings, licences
+  and timepoints. It says when an instrument is outside the proposed schedule
+  instead of silently allowing it, and it offers CBI only when the latest
+  DASS-21 meets the trigger — labelled *offered*, never *indicated*.
+- `AssessmentQueue` draws what was actually sent, started and returned. A
+  returned row prints its score with its range and the construct direction and
+  stops there.
+- `VasSummary` pools the therapist-guided readings and the app's own pre/post
+  pairs into ONE mean. Averaging only the guided half would quietly answer a
+  different question than the row appears to ask.
+
+**The session VAS** — `src/selfuse/Session.tsx`
+- Five faces before the session and the same five after, in the reorientation
+  moment. Both gate their screen's primary button, which is what "mandatory,
+  one tap" comes to in practice. The system stores 1–5; the person sees a face
+  and never a number or the word VAS.
+- **This reverses an earlier rule.** The Therapist Workspace additional-info
+  document said the VAS is recorded by the therapist from the patient's verbal
+  answer and that there is *no patient-facing VAS widget anywhere in the
+  product*. The new instruments document is marked Confirmed and says the
+  opposite: patient-tapped, mandatory pre and post, automatic, in BOTH
+  channels, feeding one unified trend. The Confirmed document won. If that is
+  wrong, it reverts by deleting the two `VasRow` blocks in `Session.tsx`.
+
+**The five journeys** — `src/data/selfuse.ts`
+- `PathwayWeek` changed from `{ week, slug, duration, count }` to
+  `{ week, focus, blocks[], rotation? }`. The journey tables mix lengths inside
+  a week — four Standard plus a Quick before a meeting, three Standard plus a
+  Deep at the weekend — and the old shape flattened that into five identical
+  sessions. Each week now also carries the FOCUS line the tables give it.
+- `resolvePathway` drops a week only when NOTHING in it survives. A week that
+  loses one block to a disabled protocol is still a usable week; before, the
+  whole week vanished.
+- The consolidation weeks are marked `rotation: true` and are described as
+  such rather than prescribing a fixed sequence the document does not give.
+
+## New / rewritten files
+- `src/data/assessments.ts` — the five instruments, scoring, schedule, record.
+- `src/data/assessmentStore.ts` — the queue, immutability, VAS, CBI trigger.
+- `src/selfuse/Assessment.tsx` — the patient's questionnaire runner.
+- `tools/test-assessments.ts` — 108 assertions.
+- `tools/test-assessment-queue.ts` — 69 assertions.
+- Rewritten: `src/data/selfuse.ts` (PATHWAYS), `src/data/selfUseStore.ts`,
+  `src/data/liveCatalog.tsx` (`resolvePathway`), `src/selfuse/Home.tsx`,
+  `ProgressTab.tsx`, `Explore.tsx`, `SelfUseApp.tsx`, `Session.tsx`,
+  `TherapistTab.tsx`, `src/workspace/Patients.tsx`.
+
+## Verified
+- `tsc --noEmit` clean, `vite build` clean.
+- 264 spec assertions, 112 renders, 108 instrument assertions, 69 queue
+  assertions, 67 PDF assertions, 49 asset-library assertions — 669 in all.
+- Traps the harnesses hold: all-Never on the PSS-10 scores 16, not 0; all-Agree
+  on the BRS is 3, not 5; the CBI work-related subscale maxes at 85.71 because
+  of item 13; PSS-10 and BRS skip T1; a completed record cannot be re-submitted
+  or walked back to in_progress; one storage list leaks nothing between
+  patients; no instrument carries the words mild/moderate/severe/cut-off/
+  diagnos anywhere.
+
+## Read, deliberately NOT built (all marked "to be discussed")
+- **HR sees an employee list** (name, email, registration date). The original
+  spec and the shipped code say aggregate counts only, enforced structurally
+  and asserted in tests. This is an LGPD decision, not a UI one.
+- The 2-question onboarding (dropping the session-length question).
+- The company-code activation cap.
+- "Link to your company" in Profile → Account Settings.
+- HR report: usage by time-of-day band; engagement defined as ≥3 sessions/week.
+- The 12-week corporate adoption scheme.
+- Already present and left alone: the WHO-5 / GL-Check / Daily Mood set and the
+  Meu Momento mood→session table, which the Self Use reporting document
+  describes exactly as built.

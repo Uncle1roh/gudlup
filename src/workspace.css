@@ -704,3 +704,17 @@
   .w-call__wait { grid-template-columns: 1fr; }
   .w-panel { border-left: none; border-top: 1px solid var(--w-line); }
 }
+
+/* --- the live assessment queue ------------------------------------------- */
+/* Sent, started, returned. A returned row prints its score and its range and
+   stops there: no band, no colour that means better or worse. */
+.w-assess-queue { margin-top: 12px; border-top: 1px solid var(--w-line); padding-top: 10px; }
+.w-queue { list-style: none; margin: 6px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.w-queue__row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); gap: 10px; align-items: baseline; font-size: 13px; }
+.w-queue__inst { font-weight: 600; overflow-wrap: anywhere; }
+.w-queue__state { color: var(--w-muted); white-space: nowrap; }
+.w-queue__score { color: var(--w-muted); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+@media (max-width: 1200px) {
+  .w-queue__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .w-queue__score { grid-column: 1 / -1; text-align: left; }
+}

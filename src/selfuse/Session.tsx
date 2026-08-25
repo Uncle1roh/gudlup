@@ -27,6 +27,7 @@ import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { durationLabel } from '../data/selfuse'
 import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
 import type { Duration } from '../types/domain'
+import { VAS_OPTIONS } from '../data/assessments'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -43,6 +44,45 @@ export interface SessionOutcome {
   /** false when the person ended it early from the player. */
   completed: boolean
   feedback?: PostFeedback
+  /**
+   * The VAS pair, 1–5, tapped before and after.
+   *
+   * One measure, two moments, the same scale — the delta only means something
+   * because the second reading is the same question as the first. Both are
+   * required to open the screen's primary button, which is what "mandatory,
+   * one tap" comes to in practice.
+   */
+  vasPre?: number
+  vasPost?: number
+}
+
+/**
+ * The emoji scale, shared by the two ends of a session.
+ *
+ * Icons rather than numbers on purpose: a 100 mm line needs motor precision a
+ * phone does not give, and a number invites the person to score themselves.
+ * The system stores 1–5; the person sees a face. The label is read by screen
+ * readers and never printed beside the icon.
+ */
+function VasRow({ value, onPick }: { value: number | null; onPick: (v: number) => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="vas-row" role="group" aria-label={t('How do you feel right now?')}>
+      {VAS_OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className="vas-opt"
+          aria-pressed={value === o.value}
+          aria-label={t(o.label)}
+          title={t(o.label)}
+          onClick={() => onPick(o.value)}
+        >
+          <span aria-hidden="true">{o.icon}</span>
+        </button>
+      ))}
+    </div>
+  )
 }
 
 interface SessionFlowProps {
@@ -68,8 +108,10 @@ export function SessionFlow(props: SessionFlowProps) {
   const [stage, setStage] = useState<Stage>('pre')
   const startedAt = useRef(Date.now())
   const completed = useRef(true)
+  const vasPre = useRef<number | null>(null)
 
-  function begin() {
+  function begin(pre: number) {
+    vasPre.current = pre
     startedAt.current = Date.now()
     setStage(needsStereoCheck ? 'stereo' : 'play')
   }
@@ -100,7 +142,7 @@ export function SessionFlow(props: SessionFlowProps) {
       session={session}
       duration={duration}
       contextLine={props.contextLine}
-      onFeedback={(f) => {
+      onFeedback={(f, post) => {
         if (f === 'support') { props.onNeedSupport(); return }
         props.onDone({
           slug: session.slug,
@@ -109,6 +151,8 @@ export function SessionFlow(props: SessionFlowProps) {
           completedAt: Date.now(),
           completed: completed.current,
           feedback: f ?? undefined,
+          vasPre: vasPre.current ?? undefined,
+          vasPost: post ?? undefined,
         })
       }}
     />
@@ -125,10 +169,11 @@ function PreSession({
 }: {
   session: ResolvedSession
   duration: Duration
-  onBegin: () => void
+  onBegin: (vasPre: number) => void
   onCancel: () => void
 }) {
   const { t } = useI18n()
+  const [vas, setVas] = useState<number | null>(null)
   return (
     <div className="app-frame">
       <div className="screen screen--center pre-session">
@@ -141,9 +186,16 @@ function PreSession({
             <li>{t('Get comfortable.')}</li>
           </ul>
           <p className="small muted">🎧 {t('Headphones recommended')}</p>
+
+          <div className="vas-block">
+            <p className="small">{t('How do you feel right now?')}</p>
+            <VasRow value={vas} onPick={setVas} />
+          </div>
         </div>
         <div className="screen__footer btn-stack">
-          <button className="btn btn--primary" onClick={onBegin}>{t('Begin Session')}</button>
+          <button className="btn btn--primary" disabled={vas == null} onClick={() => onBegin(vas as number)}>
+            {t('Begin Session')}
+          </button>
           <button className="btn btn--quiet" onClick={onCancel}>{t('Cancel')}</button>
         </div>
       </div>
@@ -480,17 +532,18 @@ function PostSession({
   session: ResolvedSession
   duration: Duration
   contextLine?: string
-  onFeedback: (f: PostFeedback | null) => void
+  onFeedback: (f: PostFeedback | null, vasPost: number | null) => void
 }) {
   const { t } = useI18n()
   const [picked, setPicked] = useState<PostFeedback | null>(null)
+  const [vas, setVas] = useState<number | null>(null)
   const isDeep = duration === 24
 
   function choose(f: PostFeedback) {
     setPicked(f)
     // "Need support" hands over immediately; the others are stored silently and
     // acknowledged with one line, then the person leaves at their own pace.
-    if (f === 'support') onFeedback('support')
+    if (f === 'support') onFeedback('support', vas)
   }
 
   return (
@@ -500,6 +553,14 @@ function PostSession({
           <h2 className="display">{t('Well done')}</h2>
           <p className="muted post__what">{t(session.name)} · {t('{n} min', { n: duration })}</p>
           {isDeep && <p className="lead post__reorient">{t('Take a moment before moving on.')}</p>}
+
+          {/* The second half of the pair, asked in the reorientation moment the
+              session ends on. It is the same scale as before the session — a
+              delta between two different questions would mean nothing. */}
+          <div className="vas-block">
+            <p className="small">{t('How do you feel right now?')}</p>
+            <VasRow value={vas} onPick={setVas} />
+          </div>
 
           <div className="post__feedback">
             <div className="post__q">
@@ -527,7 +588,7 @@ function PostSession({
         </div>
 
         <div className="screen__footer">
-          <button className="btn btn--primary" onClick={() => onFeedback(picked)}>
+          <button className="btn btn--primary" disabled={vas == null} onClick={() => onFeedback(picked, vas)}>
             {t('Back to Home')}
           </button>
         </div>

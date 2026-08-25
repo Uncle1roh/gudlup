@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import { useI18n } from '../i18n'
-import { durationLabel, durationTag, type PathwayId } from '../data/selfuse'
+import { durationLabel, durationTag, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
 import { coverFor, coverStyle } from './artwork'
 import {
@@ -52,10 +52,11 @@ export function Explore({ pathway, completed, initialTab = 'pathways', onStartPa
   /* The catalog's hero leads with what the person is already doing, so the
      library opens on something relevant rather than on whatever sorts first. */
   const activePathway = pathway ? findPathway(catalog.pathways, pathway.id) : undefined
-  const todaySlug =
+  const todayWeek =
     pathway && activePathway
-      ? activePathway.plan.find((w) => w.week === currentWeek(pathway, activePathway))?.slug
+      ? activePathway.plan.find((w) => w.week === currentWeek(pathway, activePathway))
       : undefined
+  const todaySlug = todayWeek ? primaryBlock(todayWeek)?.slug : undefined
 
   if (catalog.loading) {
     return <div className="su-page"><p className="small muted">{t('Loading…')}</p></div>
@@ -216,20 +217,37 @@ function PathwayDetail({
 
       <div className="weeks">
         {pathway.plan.map((w) => {
-          const s = catalog.sessions.find((x) => x.slug === w.slug)
+          const lead = primaryBlock(w)
+          const s = lead ? catalog.sessions.find((x) => x.slug === lead.slug) : undefined
           const isOpen = open === w.week
           return (
             <div key={w.week} className={`week${isOpen ? ' is-open' : ''}`}>
               <button className="week__head" onClick={() => setOpen(isOpen ? null : w.week)}>
-                <span>{t('Week {n}', { n: w.week })} · {s ? t(s.name) : ''}</span>
+                <span>
+                  {t('Week {n}', { n: w.week })} · {w.rotation ? t('Your own mix') : s ? t(s.name) : ''}
+                </span>
                 <span aria-hidden="true">{isOpen ? '⌄' : '›'}</span>
               </button>
-              {isOpen && s && (
+              {isOpen && (
                 <div className="week__body fade-in">
-                  <p className="small muted">{t(s.blurb)}</p>
-                  <p className="small">
-                    {t(durationLabel(w.duration))} ({t('{n} min', { n: w.duration })}) × {t('{n} sessions', { n: w.count })}
-                  </p>
+                  <p className="small muted">{t(w.focus)}</p>
+                  <ul className="week__blocks">
+                    {w.blocks.map((b, i) => {
+                      const bs = catalog.sessions.find((x) => x.slug === b.slug)
+                      return (
+                        <li key={`${b.slug}-${b.duration}-${i}`}>
+                          <strong>{bs ? t(bs.name) : b.slug}</strong>{' · '}
+                          {t(durationLabel(b.duration))} ({b.duration} min) × {b.count}
+                          {b.when && <em className="small muted"> — {t(b.when)}</em>}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {w.rotation && (
+                    <p className="small muted">
+                      {t('A consolidation week — repeat whichever of these worked best for you.')}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -260,20 +278,23 @@ function WeeklyView({
   if (!p) return null
   const week = currentWeek(state, p)
   const plan = p.plan.find((w) => w.week === week)
-  const session = plan ? catalog.sessions.find((x) => x.slug === plan.slug) : undefined
+  const lead = plan ? primaryBlock(plan) : undefined
+  const session = lead ? catalog.sessions.find((x) => x.slug === lead.slug) : undefined
   const done = state.done[week] ?? 0
-  const target = plan?.count ?? 0
+  const target = plan ? weekCount(plan) : 0
   const todayIdx = (new Date().getDay() + 6) % 7
 
-  /* The week's sessions are spread across the first `target` weekdays, with the
-     remaining days marked as rest. It is a schedule, not an obligation: a day
-     that passed unused says nothing at all. */
-  const rows = DAY_LABELS.map((label, i) => {
-    const scheduled = i < target
-    const isDone = scheduled && i < done
-    const isToday = i === todayIdx
-    return { label, scheduled, isDone, isToday }
-  })
+  /* A week can mix lengths, so the day row shows WHICH session and how long
+     rather than repeating one line. The blocks are laid out in order across
+     the first `target` weekdays; the rest are rest. It is a schedule, not an
+     obligation — a day that passed unused says nothing at all. */
+  const slots = (plan?.blocks ?? []).flatMap((b) => Array.from({ length: b.count }, () => b))
+  const rows = DAY_LABELS.map((label, i) => ({
+    label,
+    block: slots[i],
+    isDone: i < done,
+    isToday: i === todayIdx,
+  }))
 
   return (
     <div className="su-page weekly">
@@ -282,26 +303,37 @@ function WeeklyView({
       <h1 className="display su-h1">{t(p.name)}</h1>
 
       <h3 className="home__sect">{t('This week')}</h3>
-      {session && <p className="lead">{t(session.name)}</p>}
+      {plan && <p className="lead">{t(plan.focus)}</p>}
+      {plan?.rotation && (
+        <p className="small muted">
+          {t('A consolidation week — repeat whichever of these worked best for you.')}
+        </p>
+      )}
 
       <ul className="daylist">
-        {rows.map((r) => (
-          <li key={r.label} className={`daylist__row${r.isToday ? ' is-today' : ''}`}>
-            <span className="daylist__day">{t(r.label)}</span>
-            <span className="daylist__what">
-              {r.scheduled && plan ? `${t(durationLabel(plan.duration))} · ${plan.duration}m` : '—'}
-            </span>
-            <span className="daylist__state">
-              {r.isDone ? t('Done') : r.isToday && r.scheduled ? t('TODAY') : r.scheduled ? '' : t('Rest')}
-            </span>
-          </li>
-        ))}
+        {rows.map((r) => {
+          const rs = r.block ? catalog.sessions.find((x) => x.slug === r.block.slug) : undefined
+          return (
+            <li key={r.label} className={`daylist__row${r.isToday ? ' is-today' : ''}`}>
+              <span className="daylist__day">{t(r.label)}</span>
+              <span className="daylist__what">
+                {r.block
+                  ? `${rs ? t(rs.name) : ''} · ${t(durationLabel(r.block.duration))} ${r.block.duration}m`
+                  : '—'}
+                {r.block?.when && <em className="small muted"> — {t(r.block.when)}</em>}
+              </span>
+              <span className="daylist__state">
+                {r.isDone ? t('Done') : r.isToday && r.block ? t('TODAY') : r.block ? '' : t('Rest')}
+              </span>
+            </li>
+          )
+        })}
       </ul>
 
-      {plan && session && done < target && (
+      {plan && session && lead && done < target && (
         <button
           className="btn btn--primary"
-          onClick={() => onStart({ slug: session.slug, duration: plan.duration, pathwayWeek: week })}
+          onClick={() => onStart({ slug: (slots[done] ?? lead).slug, duration: (slots[done] ?? lead).duration, pathwayWeek: week })}
         >
           {t('Start {day} session', { day: t(DAY_LABELS[todayIdx]) })}
         </button>
@@ -330,7 +362,7 @@ function SessionDetail({
   const [duration, setDuration] = useState<Duration>(
     session.durations.includes(6) ? 6 : (session.durations[0] ?? 6),
   )
-  const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.slug === session.slug))
+  const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.blocks.some((b) => b.slug === session.slug)))
 
   const cover = coverFor(session.slug, session.theme)
 

@@ -34,7 +34,7 @@ import {
   MOOD_LEVELS,
   type MoodEntry,
 } from '../data/measures'
-import { durationLabel } from '../data/selfuse'
+import { durationLabel, weekCount } from '../data/selfuse'
 import { useCatalog, findPathway } from '../data/liveCatalog'
 import {
   currentWeek,
@@ -84,7 +84,7 @@ function SelfUseProgress({ state, onGlCheck, onWho5, onMood, onExportSelfUse }: 
   const minutes = week.reduce((n, l) => n + l.duration, 0)
   const pw = findPathway(catalog.pathways, state.pathway?.id)
   const planWeek = pw?.plan.find((w) => w.week === currentWeek(state.pathway, pw))
-  const target = planWeek?.count ?? 5
+  const target = planWeek ? weekCount(planWeek) : 5
 
   const last = state.glChecks[state.glChecks.length - 1] ?? null
   const prev = state.glChecks[state.glChecks.length - 2] ?? null

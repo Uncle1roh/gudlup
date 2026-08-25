@@ -18,7 +18,7 @@
 
 import { useState } from 'react'
 import { useI18n } from '../i18n'
-import { durationLabel } from '../data/selfuse'
+import { durationLabel, primaryBlock, weekCount } from '../data/selfuse'
 import { useCatalog, findPathway, type ResolvedSession } from '../data/liveCatalog'
 import { currentWeek, type PathwayState, type SelfUseLog } from '../data/selfUseStore'
 import type { Duration } from '../types/domain'
@@ -65,9 +65,12 @@ export function Home(props: HomeProps) {
   const pw = findPathway(catalog.pathways, props.pathway?.id)
   const week = pw ? currentWeek(props.pathway, pw) : 1
   const weekPlan = pw?.plan.find((w) => w.week === week)
-  const todaySession = weekPlan ? catalog.sessions.find((x) => x.slug === weekPlan.slug) : undefined
+  /* A week can mix lengths (four Standard plus a Quick rescue). The card
+     leads with the week's primary block; the rest are on the weekly view. */
+  const block = weekPlan ? primaryBlock(weekPlan) : undefined
+  const todaySession = block ? catalog.sessions.find((x) => x.slug === block.slug) : undefined
   const doneThisWeek = props.pathway?.done[week] ?? 0
-  const targetThisWeek = weekPlan?.count ?? 0
+  const targetThisWeek = weekPlan ? weekCount(weekPlan) : 0
   const completedPathway = Boolean(props.pathway?.completedAt)
   const didSessionToday = props.weekLogs.some(
     (l) => new Date(l.at).toDateString() === new Date().toDateString(),
@@ -122,7 +125,7 @@ export function Home(props: HomeProps) {
               <p className="small muted">{t('Great job today.')}</p>
               <button
                 className="btn btn--quiet"
-                onClick={() => props.onStart({ slug: todaySession.slug, duration: weekPlan!.duration, pathwayWeek: week })}
+                onClick={() => props.onStart({ slug: todaySession.slug, duration: block!.duration, pathwayWeek: week })}
               >
                 {t('Do an extra session?')}
               </button>
@@ -131,11 +134,11 @@ export function Home(props: HomeProps) {
             <>
               <div className="home__today">
                 <span className="small muted">{t("Today's session")}</span>
-                <strong>{t(todaySession.name)} · {t('{n} min', { n: weekPlan!.duration })}</strong>
+                <strong>{t(todaySession.name)} · {t('{n} min', { n: block!.duration })}</strong>
               </div>
               <button
                 className="btn btn--primary"
-                onClick={() => props.onStart({ slug: todaySession.slug, duration: weekPlan!.duration, pathwayWeek: week })}
+                onClick={() => props.onStart({ slug: todaySession.slug, duration: block!.duration, pathwayWeek: week })}
               >
                 {t("Start Today's Session")}
               </button>

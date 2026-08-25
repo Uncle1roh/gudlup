@@ -32,6 +32,10 @@ import { TherapistTab } from '../src/selfuse/TherapistTab'
 import { GlCheckFlow, Who5Flow, DailyMoodFlow } from '../src/selfuse/Measures'
 import { SafetyLevel1, SafetyLevel2, SafetyLevel3 } from '../src/selfuse/Safety'
 import { emptyTherapy, seedLink, DEMO_THERAPISTS } from '../src/selfuse/therapyStore'
+import { Assessment } from '../src/selfuse/Assessment'
+import { SessionFlow } from '../src/selfuse/Session'
+import { send as sendAssessment, complete as completeAssessment } from '../src/data/assessmentStore'
+import { DASS21, BRS, type Responses } from '../src/data/assessments'
 import { emptyState, type SelfUseState } from '../src/data/selfUseStore'
 import { resolveCompanyCode } from '../src/data/convention'
 
@@ -189,6 +193,71 @@ const therapistProps = {
 renders('THR · B  no convention', <TherapistTab {...therapistProps} hasConvention={false} therapy={emptyTherapy()} />)
 renders('THR · A  no therapist', <TherapistTab {...therapistProps} hasConvention therapy={emptyTherapy()} />)
 renders('THR · A2 pending', <TherapistTab {...therapistProps} hasConvention therapy={{ link: null, request: { therapistId: 'th-silva', therapistName: 'Dr. Ana Silva', therapistRole: 'Clinical Psychologist', slotMs: Date.now() + 86_400_000, sentAt: Date.now() } }} />)
+/* --- the session VAS -------------------------------------------------------
+   Confirmed spec: one tap before every session and one after, both mandatory.
+   The pre screen is where the first tap lives, and "Begin Session" does not
+   open until it is made. */
+const vasSession = CATALOG.sessions[0]
+renders('SES-1 pre-session', <SessionFlow session={vasSession} duration={12} needsStereoCheck={false} onStereoChecked={noop} onDone={noop} onCancel={noop} onNeedSupport={noop} />)
+const preHtml = renderToString(shell(<SessionFlow session={vasSession} duration={12} needsStereoCheck={false} onStereoChecked={noop} onDone={noop} onCancel={noop} onNeedSupport={noop} />))
+assert(preHtml.includes('vas-row'), 'the pre-session screen asks for a VAS reading')
+assert((preHtml.match(/class="vas-opt"/g) ?? []).length === 5, 'five anchors, one tap')
+assert(preHtml.includes('disabled=""'), 'and the Begin button is closed until one is tapped')
+assert(
+  !/VAS|1–5|scale/i.test(preHtml.replace(/<[^>]+>/g, ' ')),
+  'the person is never shown the instrument name or its numbers — only faces',
+)
+assert(!/>[1-5]</.test(preHtml.replace(/<span aria-hidden="true">[^<]*<\/span>/g, '')), 'no numeric value is printed beside a face')
+
+/* --- the assessment runner -------------------------------------------------
+   The one screen where a patient answers a clinical instrument. Two things
+   must hold on it: the item text is the published English, and the person is
+   never shown a score. */
+const sent = sendAssessment([], 'me', 'DASS21', 'T0', 'Dr. Ana Silva', 1_700_000_000_000)
+const asmtRecord = sent[0]
+renders('ASMT · DASS-21 first item', <Assessment record={asmtRecord} onSaveProgress={noop} onSubmit={noop} onClose={noop} />)
+
+const asmtHtml = renderToString(shell(<Assessment record={asmtRecord} therapistName="Dr. Ana Silva" onSaveProgress={noop} onSubmit={noop} onClose={noop} />))
+assert(asmtHtml.includes('I found it hard to wind down'), 'the runner prints the published item text')
+assert(asmtHtml.includes('lang="en"'), 'and marks it English, since a translated DASS-21 is a different instrument')
+/* The chrome is localized — Italian by default — so the counter is asserted
+   on its numbers, not on English copy. */
+const counter = (h: string) => h.match(/class="msr__count">([^<]*)</)?.[1] ?? ''
+assert(/1\D+21/.test(counter(asmtHtml)), 'it says how far through 21 items you are')
+assert(
+  !/mild|moderate|severe|cut-?off|diagnos/i.test(asmtHtml.replace(/<[^>]+>/g, ' ')),
+  'the runner shows no severity language',
+)
+
+/* A half-finished record resumes at the first unanswered item, not at item 1. */
+const partway = { ...asmtRecord, responses: [1, 2, 3, 4].map((i) => ({ itemIndex: i, value: 1 })), status: 'in_progress' as const }
+const resumedHtml = renderToString(shell(<Assessment record={partway} onSaveProgress={noop} onSubmit={noop} onClose={noop} />))
+assert(/5\D+21/.test(counter(resumedHtml)), 'resuming lands on the first unanswered item')
+
+/* A COMPLETED record must still render without ever printing its score — the
+   number belongs on the therapist's side, beside the history that reads it. */
+const brsAnswers: Responses = {}
+for (const i of BRS.items) brsAnswers[i.index] = 5
+const brsSent = sendAssessment([], 'me', 'BRS', 'T0', 'th', 1_700_000_000_000)
+const brsDone = completeAssessment(brsSent, brsSent[0].id, brsAnswers, 1_700_000_000_000)[0]
+const doneHtml = renderToString(shell(<Assessment record={brsDone} therapistName="Dr. Ana Silva" onSaveProgress={noop} onSubmit={noop} onClose={noop} />))
+assert(brsDone.scores?.kind === 'BRS' && brsDone.scores.mean === 3, 'all-Agree on the BRS is 3, not 5 — reverse scoring is live in the store')
+/* A score readout always carries its range. None of the four appear on the
+   patient's side at all — that is the whole rule, in one assertion. */
+assert(
+  !/0–42|0–40|1–5|0–100/.test(doneHtml.replace(/<[^>]+>/g, ' ')),
+  'and the patient screen prints no score range, so no score',
+)
+
+/* VAS has no patient-facing widget. Handed one anyway, the runner says who
+   records it rather than inventing a scale. */
+const vasHtml = renderToString(shell(<Assessment record={{ ...asmtRecord, instrumentId: 'VAS' }} onSaveProgress={noop} onSubmit={noop} onClose={noop} />))
+assert(vasHtml.includes('therapist'), 'a VAS record shows who records it, never a scale the patient taps')
+assert(!vasHtml.includes('who5-opt'), 'and offers no options')
+
+const asmtItems = DASS21.items.length
+assert(asmtItems === 21, 'the runner is walking all 21 DASS-21 items')
+
 renders('THR · C  active therapy', <TherapistTab {...therapistProps} hasConvention therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />)
 
 renders('MSR-1 GL-Check', <GlCheckFlow previous={null} onDone={noop} onClose={noop} />)
@@ -344,16 +413,33 @@ assert(
   'disabling a protocol removes it from what may be prescribed',
 )
 assert(
-  disabled.pathways.every((p) => p.plan.every((w) => w.slug !== 'calm-safety')),
-  'a pathway week whose protocol was disabled is dropped rather than left dead',
+  disabled.pathways.every((p) => p.plan.every((w) => w.blocks.every((b) => b.slug !== 'calm-safety'))),
+  'no surviving week still asks for the disabled session',
+)
+assert(
+  disabled.pathways.every((p) => p.plan.every((w) => w.blocks.length > 0)),
+  'a week is never left with nothing in it',
 )
 assert(
   disabled.pathways.every((p) => p.plan.every((w, i) => w.week === i + 1)),
   'the remaining pathway weeks are renumbered densely',
 )
+/* Focus & Performance week 2 is calm-safety twice over, so it loses the whole
+   week. Stress Management uses calm-safety for ONE block of its consolidation
+   week, so that week survives with the block removed — which is the point of
+   modelling a week as blocks rather than as a single session and a count. */
 assert(
-  disabled.pathways.find((p) => p.id === 'stress-management')!.dropped === 1,
-  'the pathway reports how many weeks it lost, so a screen can say so',
+  disabled.pathways.find((p) => p.id === 'focus-performance')!.dropped === 1,
+  'a week whose every block used the disabled session is dropped, and the pathway says so',
+)
+assert(
+  disabled.pathways.find((p) => p.id === 'stress-management')!.dropped === 0,
+  'a week that used it for only one of several blocks keeps the week and drops the block',
+)
+const consolidation = disabled.pathways.find((p) => p.id === 'stress-management')!.plan.find((w) => w.rotation)!
+assert(
+  consolidation.blocks.length > 0 && consolidation.blocks.every((b) => b.slug !== 'calm-safety'),
+  'that week is shorter but still usable',
 )
 
 /* Publishing only one time signature must offer only that one. */

@@ -355,15 +355,37 @@ export type PathwayId =
   | 'balance-boundaries'
   | 'growth-resilience'
 
+/**
+ * One prescription inside a week.
+ *
+ * A week is not "one session five times" — the clinical design mixes lengths:
+ * four Standard sessions plus a Quick one to reach for before a meeting, or
+ * three Standard plus a Deep at the weekend. Modelling a week as a single
+ * slug and a count flattened that away, so the app asked for five identical
+ * sessions where the journey asked for four and a rescue.
+ */
+export interface PathwayBlock {
+  /** The Self Use session. */
+  slug: string
+  duration: Duration
+  count: number
+  /** When it is meant to be used, where the journey says so. */
+  when?: string
+}
+
 export interface PathwayWeek {
   /** 1-based. */
   week: number
-  /** The session this week is built around. */
-  slug: string
-  /** Default length for the week's sessions. */
-  duration: Duration
-  /** How many sessions the week asks for. */
-  count: number
+  /** What the week is FOR, in the journey's own words. */
+  focus: string
+  /** What the week asks for, longest-standing first. */
+  blocks: PathwayBlock[]
+  /**
+   * A consolidation week with no fixed content: the person repeats whichever
+   * sessions worked for them. The app offers the pathway's own sessions rather
+   * than prescribing one, and never marks the week "missed".
+   */
+  rotation?: boolean
 }
 
 export interface Pathway {
@@ -383,6 +405,24 @@ export interface Pathway {
   plan: PathwayWeek[]
 }
 
+/** The primary session of a week — what "today's session" opens. */
+export function primaryBlock(w: PathwayWeek): PathwayBlock | undefined {
+  return w.blocks[0]
+}
+
+/** How many sessions a week asks for in total. */
+export function weekCount(w: PathwayWeek): number {
+  return w.blocks.reduce((n, b) => n + b.count, 0)
+}
+
+/*
+ * The five journeys, from the architecture document's journey tables.
+ *
+ * The week compositions, the focus lines and the suggested cadence are the
+ * clinical design, not a product guess — they are transcribed rather than
+ * invented, and the Portuguese session names in the source map to the Self Use
+ * slugs above one-to-one.
+ */
 export const PATHWAYS: Pathway[] = [
   {
     id: 'focus-performance',
@@ -393,12 +433,33 @@ export const PATHWAYS: Pathway[] = [
     weeks: 4,
     duration: 12,
     about:
-      'Four weeks of attention work. It starts by settling the body, adds a way to order competing demands, and ends with deciding and acting rather than turning things over.',
+      'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.',
     plan: [
-      { week: 1, slug: 'focus-clarity', duration: 12, count: 5 },
-      { week: 2, slug: 'calm-safety', duration: 12, count: 5 },
-      { week: 3, slug: 'breathing-presence', duration: 12, count: 4 },
-      { week: 4, slug: 'action-decision', duration: 12, count: 4 },
+      { week: 1, focus: 'Recovering alert calm', blocks: [{ slug: 'focus-clarity', duration: 12, count: 5 }] },
+      {
+        week: 2,
+        focus: 'Handling situational pressure',
+        blocks: [
+          { slug: 'calm-safety', duration: 12, count: 4 },
+          { slug: 'calm-safety', duration: 6, count: 1, when: 'before a meeting' },
+        ],
+      },
+      {
+        week: 3,
+        focus: 'Centring and presence',
+        blocks: [
+          { slug: 'breathing-presence', duration: 12, count: 4 },
+          { slug: 'breathing-presence', duration: 6, count: 1, when: 'at the start of the day' },
+        ],
+      },
+      {
+        week: 4,
+        focus: 'Turning calm into action',
+        blocks: [
+          { slug: 'action-decision', duration: 12, count: 4 },
+          { slug: 'action-decision', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
     ],
   },
   {
@@ -407,16 +468,56 @@ export const PATHWAYS: Pathway[] = [
     blurb: 'Regain calm, reorganize demands, and build healthy boundaries.',
     lengthLabel: '4–6 weeks',
     perWeekLabel: '4–5',
-    weeks: 5,
+    weeks: 6,
     duration: 12,
     about:
-      'A progressive journey to regain calm, reorganize demands, set healthy boundaries, and build lasting confidence.',
+      'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.',
     plan: [
-      { week: 1, slug: 'calm-safety', duration: 12, count: 5 },
-      { week: 2, slug: 'demand-management', duration: 12, count: 5 },
-      { week: 3, slug: 'healthy-boundaries', duration: 12, count: 4 },
-      { week: 4, slug: 'personal-balance', duration: 12, count: 4 },
-      { week: 5, slug: 'inner-strength', duration: 24, count: 4 },
+      { week: 1, focus: 'Recovering a state of calm', blocks: [{ slug: 'focus-clarity', duration: 12, count: 5 }] },
+      {
+        week: 2,
+        focus: 'Reorganising the load',
+        blocks: [
+          { slug: 'demand-management', duration: 12, count: 4 },
+          { slug: 'demand-management', duration: 6, count: 1, when: 'when it gets too much' },
+        ],
+      },
+      {
+        week: 3,
+        focus: 'Building boundaries',
+        blocks: [
+          { slug: 'personal-balance', duration: 12, count: 4 },
+          { slug: 'personal-balance', duration: 6, count: 1, when: 'to close the day' },
+        ],
+      },
+      {
+        week: 4,
+        focus: 'Confidence and anchoring',
+        blocks: [
+          { slug: 'confidence-moment', duration: 12, count: 4 },
+          { slug: 'confidence-moment', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
+      {
+        week: 5,
+        focus: 'Consolidation',
+        rotation: true,
+        blocks: [
+          { slug: 'focus-clarity', duration: 12, count: 2 },
+          { slug: 'demand-management', duration: 6, count: 1 },
+          { slug: 'confidence-moment', duration: 24, count: 1 },
+        ],
+      },
+      {
+        week: 6,
+        focus: 'Keeping it going',
+        rotation: true,
+        blocks: [
+          { slug: 'personal-balance', duration: 12, count: 2 },
+          { slug: 'calm-safety', duration: 6, count: 1 },
+          { slug: 'confidence-moment', duration: 24, count: 1 },
+        ],
+      },
     ],
   },
   {
@@ -425,16 +526,47 @@ export const PATHWAYS: Pathway[] = [
     blurb: 'From exhaustion to renewed vitality. Permission to pause, then rebuild.',
     lengthLabel: '4–6 weeks',
     perWeekLabel: '3–4',
-    weeks: 5,
+    weeks: 6,
     duration: 12,
     about:
-      'Recovery in the order it actually happens: stopping first, then rebuilding. The early weeks ask very little of you on purpose.',
+      'For anyone who feels emptied out, exhausted, chronically in energy debt. Progressive regeneration: from allowing yourself to stop, through to a deeper recharge.',
     plan: [
-      { week: 1, slug: 'permission-pause', duration: 12, count: 3 },
-      { week: 2, slug: 'energy-renewal', duration: 24, count: 3 },
-      { week: 3, slug: 'healthy-boundaries', duration: 12, count: 4 },
-      { week: 4, slug: 'conscious-priorities', duration: 12, count: 4 },
-      { week: 5, slug: 'vitality-motivation', duration: 12, count: 4 },
+      { week: 1, focus: 'The right to recover', blocks: [{ slug: 'permission-pause', duration: 12, count: 4 }] },
+      {
+        week: 2,
+        focus: 'Deep regeneration',
+        blocks: [
+          { slug: 'energy-renewal', duration: 12, count: 4 },
+          { slug: 'energy-renewal', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
+      { week: 3, focus: 'Reconnecting with yourself', blocks: [{ slug: 'professional-authenticity', duration: 12, count: 4 }] },
+      {
+        week: 4,
+        focus: 'Recharging motivation',
+        blocks: [
+          { slug: 'vitality-motivation', duration: 12, count: 3 },
+          { slug: 'vitality-motivation', duration: 24, count: 2 },
+        ],
+      },
+      {
+        week: 5,
+        focus: 'Consolidation and resilience',
+        rotation: true,
+        blocks: [
+          { slug: 'inner-strength', duration: 12, count: 2 },
+          { slug: 'permission-pause', duration: 6, count: 1 },
+        ],
+      },
+      {
+        week: 6,
+        focus: 'Keeping it going',
+        rotation: true,
+        blocks: [
+          { slug: 'inner-strength', duration: 24, count: 1 },
+          { slug: 'energy-renewal', duration: 12, count: 2 },
+        ],
+      },
     ],
   },
   {
@@ -446,12 +578,33 @@ export const PATHWAYS: Pathway[] = [
     weeks: 4,
     duration: 12,
     about:
-      'Four weeks about edges: where your day ends, what you keep for yourself, and what you want your work to sound like.',
+      'For anyone who struggles to switch off from work, whose line between professional and personal life has blurred, who is over-connected and relationally overloaded.',
     plan: [
-      { week: 1, slug: 'healthy-boundaries', duration: 12, count: 4 },
-      { week: 2, slug: 'personal-balance', duration: 12, count: 4 },
-      { week: 3, slug: 'conscious-priorities', duration: 12, count: 4 },
-      { week: 4, slug: 'professional-authenticity', duration: 24, count: 4 },
+      {
+        week: 1,
+        focus: 'Psychological detachment',
+        blocks: [
+          { slug: 'personal-balance', duration: 12, count: 4 },
+          { slug: 'personal-balance', duration: 6, count: 1, when: 'to close the day' },
+        ],
+      },
+      { week: 2, focus: 'Relational and organisational boundaries', blocks: [{ slug: 'healthy-boundaries', duration: 12, count: 4 }] },
+      {
+        week: 3,
+        focus: 'Realigning with what matters',
+        blocks: [
+          { slug: 'conscious-priorities', duration: 12, count: 4 },
+          { slug: 'conscious-priorities', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
+      {
+        week: 4,
+        focus: 'Sustainability and resources',
+        blocks: [
+          { slug: 'inner-strength', duration: 12, count: 3 },
+          { slug: 'inner-strength', duration: 24, count: 1 },
+        ],
+      },
     ],
   },
   {
@@ -463,14 +616,44 @@ export const PATHWAYS: Pathway[] = [
     weeks: 6,
     duration: 12,
     about:
-      'The longest pathway, and the least urgent. It builds flexibility, then confidence, then a view further out than this week.',
+      'The longest and deepest journey, oriented towards personal and professional development. For anyone looking for growth, flexibility and a longer view.',
     plan: [
-      { week: 1, slug: 'flexibility-adaptation', duration: 12, count: 4 },
-      { week: 2, slug: 'overcoming-challenges', duration: 12, count: 4 },
-      { week: 3, slug: 'self-confidence', duration: 12, count: 4 },
-      { week: 4, slug: 'supportive-connections', duration: 12, count: 3 },
-      { week: 5, slug: 'inner-strength', duration: 24, count: 3 },
-      { week: 6, slug: 'vision-growth', duration: 24, count: 3 },
+      { week: 1, focus: 'Openness to change', blocks: [{ slug: 'flexibility-adaptation', duration: 12, count: 4 }] },
+      {
+        week: 2,
+        focus: 'Transforming difficulty',
+        blocks: [
+          { slug: 'overcoming-challenges', duration: 12, count: 4 },
+          { slug: 'overcoming-challenges', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
+      { week: 3, focus: 'Inner strength', blocks: [{ slug: 'self-confidence', duration: 12, count: 4 }] },
+      {
+        week: 4,
+        focus: 'Relationships that support you',
+        blocks: [
+          { slug: 'supportive-connections', duration: 12, count: 3 },
+          { slug: 'supportive-connections', duration: 24, count: 1 },
+        ],
+      },
+      {
+        week: 5,
+        focus: 'The longer view',
+        blocks: [
+          { slug: 'vision-growth', duration: 12, count: 4 },
+          { slug: 'vision-growth', duration: 24, count: 1, when: 'at the weekend' },
+        ],
+      },
+      {
+        week: 6,
+        focus: 'Integration and consolidation',
+        rotation: true,
+        blocks: [
+          { slug: 'flexibility-adaptation', duration: 6, count: 1 },
+          { slug: 'self-confidence', duration: 12, count: 2 },
+          { slug: 'vision-growth', duration: 24, count: 1 },
+        ],
+      },
     ],
   },
 ]
@@ -481,7 +664,7 @@ export function pathwayById(id: PathwayId | string | null | undefined): Pathway 
 
 /** Total sessions a pathway asks for, across all weeks. */
 export function pathwayTotal(p: Pathway): number {
-  return p.plan.reduce((n, w) => n + w.count, 0)
+  return p.plan.reduce((n, w) => n + weekCount(w), 0)
 }
 
 /* --------------------------------------------------------------------------

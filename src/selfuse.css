@@ -870,3 +870,43 @@
 /* The video surface is the one child that must NOT scroll: it is a feed with
    controls pinned over it, and a scrollbar there would be a bug. */
 .call__video { min-height: 0; overflow: hidden; }
+
+/* A pathway week can ask for more than one thing — four Standard sessions plus
+   a Quick one to reach for before a meeting. The detail lists them rather than
+   flattening the week to a single line. */
+.week__blocks { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.week__blocks li { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.week__blocks strong { font-weight: 600; }
+.week__blocks em { font-style: normal; }
+
+/* --- assessments: the patient's side ------------------------------------- */
+/* The runner reuses the WHO-5 screen; these are the parts that differ — a
+   progress bar over twenty-one items, a two-button footer with Back, and a
+   closing screen that deliberately shows no number. */
+.asmt-bar { height: 3px; background: var(--line, #e6e6e6); margin: 0 20px; border-radius: 2px; overflow: hidden; }
+.asmt-bar > span { display: block; height: 100%; background: var(--aura); transition: width .25s ease; }
+.asmt-foot { display: flex; gap: 10px; }
+.asmt-foot .btn { flex: 1; }
+.asmt-missing { text-align: center; padding: 0 20px 12px; }
+.asmt-done { font-size: 40px; line-height: 1; color: var(--aura); margin-bottom: 8px; }
+.msr__body--center { text-align: center; align-items: center; justify-content: center; }
+.asmt-card .rx-card__top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.asmt-card p { overflow-wrap: anywhere; }
+
+/* --- the session VAS ------------------------------------------------------ */
+/* Five faces, one tap, the same row before and after. Big enough to hit with a
+   thumb on the smallest phone the app supports, and it wraps rather than
+   overflowing if the viewport is narrower still. */
+.vas-block { margin-top: 18px; text-align: center; }
+.vas-block > p { margin-bottom: 8px; }
+.vas-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.vas-opt {
+  width: 48px; height: 48px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; line-height: 1;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: #fff; cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+.vas-opt:hover { transform: translateY(-1px); }
+.vas-opt[aria-pressed='true'] { border-color: var(--aura); background: #f4faf7; transform: scale(1.08); }

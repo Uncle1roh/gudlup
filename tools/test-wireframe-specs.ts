@@ -203,10 +203,34 @@ console.log('\n--- Self Use: pathways ---')
 assert(PATHWAYS.length === 5, 'there are five pathways')
 for (const p of PATHWAYS) {
   assert(p.plan.length === p.weeks, `${p.name} has one plan entry per week`)
-  assert(p.plan.every((w) => sessionBySlug(w.slug)), `${p.name} references only real sessions`)
+  assert(
+    p.plan.every((w) => w.blocks.length > 0 && w.blocks.every((b) => sessionBySlug(b.slug))),
+    `${p.name} references only real sessions`,
+  )
   assert(p.plan.every((w, i) => w.week === i + 1), `${p.name} numbers its weeks densely from 1`)
+  assert(p.plan.every((w) => w.focus.trim().length > 0), `${p.name} says what every week is FOR`)
+  assert(
+    p.plan.every((w) => w.blocks.every((b) => b.count > 0 && sessionBySlug(b.slug)!.durations.includes(b.duration))),
+    `${p.name} only asks for durations that exist`,
+  )
   assert(pathwayTotal(p) > 0, `${p.name} asks for at least one session`)
 }
+
+/* The journey tables mix lengths inside a week — four Standard plus a Quick
+   rescue, or three Standard plus a Deep at the weekend. A model that flattened
+   a week to one session and a count would silently lose that. */
+assert(
+  PATHWAYS.some((p) => p.plan.some((w) => w.blocks.length > 1)),
+  'at least one week mixes more than one block, as the journey tables do',
+)
+assert(
+  PATHWAYS.some((p) => p.plan.some((w) => w.blocks.some((b) => b.when))),
+  'a block can say WHEN it is for — "before a meeting", "at the weekend"',
+)
+assert(
+  PATHWAYS.some((p) => p.plan.some((w) => w.rotation)),
+  'the longer journeys end in a consolidation week the person composes themselves',
+)
 
 // Every onboarding answer must land somewhere, including "I'm not sure yet".
 for (const c of INTAKE_CHALLENGES) {

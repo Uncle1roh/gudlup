@@ -32,7 +32,8 @@ import { useTherapyStore } from './therapyStore'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
-import { type PathwayId } from '../data/selfuse'
+import { primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
+import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
 import { safetyLevel2Trigger, dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
@@ -77,6 +78,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { user, signOut } = useAuth()
   const dp = useDataProvider()
   const { state, update, reset } = useSelfUseStore(user?.id)
+  const { update: updateAssessments } = useAssessments()
   const { state: therapy, update: updateTherapy } = useTherapyStore(user?.id)
 
   const [tab, setTab] = useState<Tab>('home')
@@ -138,7 +140,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             const first = p?.plan[0]
             // The first session is always Quick, whatever length they chose —
             // six minutes is the promise the welcome screen made.
-            if (first) setLaunch({ slug: first.slug, duration: 6, pathwayWeek: 1 })
+            const lead = first ? primaryBlock(first) : undefined
+            if (lead) setLaunch({ slug: lead.slug, duration: 6, pathwayWeek: 1 })
           }
         }}
       />
@@ -153,7 +156,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       const planWeek = pw?.plan.find((w) => w.week === launch.pathwayWeek)
       const doneThisWeek = launch.pathwayWeek ? state.pathway?.done[launch.pathwayWeek] ?? 0 : 0
       const context = planWeek
-        ? t('{done} of {total} this week.', { done: doneThisWeek + 1, total: planWeek.count })
+        ? t('{done} of {total} this week.', { done: doneThisWeek + 1, total: weekCount(planWeek) })
         : undefined
 
       return (
@@ -176,6 +179,14 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     const l = launch
     setLaunch(null)
     if (!o.completed) return // ended early — nothing is recorded, as promised
+
+    /* The session VAS. It runs in this channel as well as the therapist one and
+       lands in the same series, so a person who does both produces one trend
+       rather than two half-trends that no one can compare. It needs no
+       confirmation and is frozen the moment it is written. */
+    if (typeof o.vasPre === 'number' && typeof o.vasPost === 'number') {
+      updateAssessments((rs) => [...rs, vasRecord(SELF_USE_PATIENT_ID, o.vasPre as number, o.vasPost as number, o.completedAt)])
+    }
 
     const session = catalog.sessions.find((x) => x.slug === o.slug)
     // The clinical record still goes through the data layer, keyed on the
@@ -208,7 +219,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       const week = l.pathwayWeek
       const done = { ...s.pathway.done, [week]: (s.pathway.done[week] ?? 0) + 1 }
       const p = findPathway(catalog.pathways, s.pathway.id)
-      const complete = p ? p.plan.every((w) => (done[w.week] ?? 0) >= w.count) : false
+      const complete = p ? p.plan.every((w) => (done[w.week] ?? 0) >= weekCount(w)) : false
       return {
         ...s,
         logs: [...s.logs, log],

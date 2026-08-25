@@ -40,6 +40,18 @@ import {
   type PatientIntake,
 } from './therapyStore'
 import type { Launch } from './Home'
+import { Assessment } from './Assessment'
+import {
+  useAssessments,
+  pendingFor,
+  completedFor,
+  saveProgress,
+  send as sendAssessment,
+  complete as completeRecord,
+  minutesFor,
+  SELF_USE_PATIENT_ID,
+} from '../data/assessmentStore'
+import { INSTRUMENTS } from '../data/assessments'
 
 interface TherapistTabProps {
   hasConvention: boolean
@@ -59,6 +71,7 @@ type View =
   | { kind: 'profile'; id: string }
   | { kind: 'code' }
   | { kind: 'onb'; step: 1 | 2 | 3; therapist: TherapistProfile }
+  | { kind: 'assessment'; id: string }
 
 export function TherapistTab(props: TherapistTabProps) {
   const { t } = useI18n()
@@ -66,6 +79,9 @@ export function TherapistTab(props: TherapistTabProps) {
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'root' })
   const { therapy, update } = props
+  const { rows, update: updateAssessments } = useAssessments()
+  const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
+  const finished = completedFor(rows, SELF_USE_PATIENT_ID)
 
   /* ---------------------------------------------------- booking flow ----- */
 
@@ -90,6 +106,21 @@ export function TherapistTab(props: TherapistTabProps) {
     )
   }
 
+  if (view.kind === 'assessment') {
+    const record = rows.find((r) => r.id === view.id)
+    if (record) {
+      return (
+        <Assessment
+          record={record}
+          therapistName={therapy.link?.therapist.name}
+          onSaveProgress={(res) => updateAssessments((rs) => saveProgress(rs, record.id, res))}
+          onSubmit={(res) => updateAssessments((rs) => completeRecord(rs, record.id, res))}
+          onClose={() => setView({ kind: 'root' })}
+        />
+      )
+    }
+  }
+
   if (view.kind === 'code') {
     return (
       <ConnectionCodeScreen
@@ -108,6 +139,15 @@ export function TherapistTab(props: TherapistTabProps) {
         onStep={(s) => setView({ kind: 'onb', step: s, therapist: view.therapist })}
         onFinish={(intake) => {
           update(() => ({ request: null, link: { ...seedLink(view.therapist), intake } }))
+          /* T0 is days 1–2 of the journey, and linking IS day 1. The schedule
+             proposes it; a therapist taking someone on has confirmed it by
+             taking them on, so it arrives as a real request rather than a
+             suggestion nobody ever acts on. */
+          updateAssessments((rs) =>
+            pendingFor(rs, SELF_USE_PATIENT_ID).some((r) => r.instrumentId === 'DASS21')
+              ? rs
+              : sendAssessment(rs, SELF_USE_PATIENT_ID, 'DASS21', 'T0', view.therapist.name),
+          )
           setView({ kind: 'root' })
         }}
       />
@@ -221,6 +261,46 @@ export function TherapistTab(props: TherapistTabProps) {
           </p>
         )}
       </article>
+
+      {(pending.length > 0 || finished.length > 0) && (
+        <>
+          <h3 className="home__sect">{t('Questionnaires')}</h3>
+          {pending.map((r) => {
+            const inst = r.instrumentId === 'VAS' ? null : INSTRUMENTS[r.instrumentId]
+            const answered = r.responses.length
+            return (
+              <article key={r.id} className="card asmt-card">
+                <div className="rx-card__top">
+                  <strong>{inst ? inst.name : 'VAS'}</strong>
+                  <span className="small muted">{t('{n} min', { n: minutesFor(r.instrumentId) })}</span>
+                </div>
+                <p className="small muted">
+                  {t('{name} asked you to fill this in. Take it when you have a quiet few minutes.', {
+                    name: therapy.link?.therapist.name ?? t('Your therapist'),
+                  })}
+                </p>
+                <button className="btn btn--primary" onClick={() => setView({ kind: 'assessment', id: r.id })}>
+                  {answered > 0 ? t('Resume') : t('Start')}
+                </button>
+              </article>
+            )
+          })}
+          {/* Completed ones show the DATE and nothing else. The score is on the
+              therapist's side, where the history that gives it meaning is. */}
+          {finished.length > 0 && (
+            <ul className="chron">
+              {finished.map((r) => (
+                <li key={r.id} className="chron__row">
+                  <span>{new Date(r.completedAt ?? r.administeredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span>{r.instrumentId === 'VAS' ? 'VAS' : INSTRUMENTS[r.instrumentId].name}</span>
+                  <span className="small muted">{t('Sent')}</span>
+                  <span />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
 
       <h3 className="home__sect">{t('Prescriptions')}</h3>
       {!link.prescriptions.length && <p className="small muted">{t('No prescriptions yet.')}</p>}

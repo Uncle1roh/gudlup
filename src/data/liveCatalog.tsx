@@ -201,16 +201,28 @@ export interface ResolvedPathway extends Pathway {
 
 export function resolvePathway(p: Pathway, sessions: ResolvedSession[]): ResolvedPathway {
   const ok = new Set(browsableSessions(sessions).map((s) => s.slug))
-  const kept = p.plan.filter((w) => ok.has(w.slug))
-  const plan = kept.map((w, i) => {
-    const session = sessions.find((s) => s.slug === w.slug)
-    // A week asking for a duration the catalog no longer publishes falls back
-    // to the nearest one that exists, rather than to a placeholder bed.
-    const duration = session?.durations.includes(w.duration)
-      ? w.duration
-      : nearestDuration(session?.durations ?? [], w.duration)
-    return { ...w, week: i + 1, duration }
-  })
+  const byslug = new Map(sessions.map((s) => [s.slug, s]))
+
+  /* A week is dropped only when NOTHING in it survives. A week that asks
+     for four Standard sessions plus one Quick rescue is still a usable
+     week when only the rescue's protocol was disabled. */
+  const kept = p.plan
+    .map((w) => ({
+      ...w,
+      blocks: w.blocks
+        .filter((b) => ok.has(b.slug))
+        .map((b) => {
+          // A block asking for a duration the catalog no longer publishes
+          // falls back to the nearest one that exists, not to a bed.
+          const durations = byslug.get(b.slug)?.durations ?? []
+          return durations.includes(b.duration)
+            ? b
+            : { ...b, duration: nearestDuration(durations, b.duration) }
+        }),
+    }))
+    .filter((w) => w.blocks.length > 0)
+
+  const plan = kept.map((w, i) => ({ ...w, week: i + 1 }))
   return { ...p, plan, weeks: plan.length, dropped: p.plan.length - plan.length }
 }
 

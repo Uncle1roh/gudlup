@@ -38,6 +38,24 @@ import {
   type WorkspaceState,
 } from './data'
 import type { Duration } from '../types/domain'
+import {
+  INSTRUMENTS,
+  SCHEDULE,
+  SCORE_DIRECTION,
+  isDueAt,
+  type AssessmentRecord,
+  type InstrumentId,
+  type Timepoint,
+} from '../data/assessments'
+import {
+  useAssessments,
+  send as sendAssessment,
+  forPatient,
+  cbiOffered,
+  minutesFor,
+  vasSeries as vasSeriesOf,
+  SELF_USE_PATIENT_ID,
+} from '../data/assessmentStore'
 
 type Filter = 'all' | 'today' | 'assessment' | 'alerts' | 'inactive'
 
@@ -297,6 +315,11 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
     history: true, assessments: true, selfuse: false, prescriptions: true, notes: true, goals: false,
   })
   const [assessOpen, setAssessOpen] = useState(false)
+  const { rows, update: updateAssessments } = useAssessments()
+  /* A bridged patient is the one whose Self Use app this build actually drives,
+     so their queue is read under the Self Use id. Everyone else keeps their own
+     — the two never share a row. */
+  const queueId = patient.bridged ? SELF_USE_PATIENT_ID : patient.id
   const [rxOpen, setRxOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState('')
   const [noteSearch, setNoteSearch] = useState('')
@@ -371,6 +394,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
           ) : (
             <AssessmentBlock patient={patient} />
           )}
+          <AssessmentQueue rows={forPatient(rows, queueId)} />
           <button className="w-btn w-btn--ghost" onClick={() => setAssessOpen(true)}>{t('Send assessment')}</button>
           <p className="w-note">
             {t('Assessments are self-report, completed in the app — never administered during a call.')}
@@ -547,7 +571,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
           </div>
           <div className="w-sidecard">
             <div className="w-field__label">{t('VAS summary')}</div>
-            <VasSummary patient={patient} />
+            <VasSummary patient={patient} rows={rows} queueId={queueId} />
           </div>
           <div className="w-sidecard">
             <div className="w-field__label">{t('Prescription adherence')}</div>
@@ -564,9 +588,14 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
       {assessOpen && (
         <AssessmentModal
           patient={patient}
+          offerCbi={cbiOffered(rows, queueId)}
           onClose={() => setAssessOpen(false)}
-          onSend={(instrument) => {
-            patchPatient((p) => ({ ...p, assessmentDue: instrument }))
+          onSend={(instrument, timepoint) => {
+            /* The queue row is what the patient's app reads. The due label is
+               only the roster's badge — writing one without the other would
+               flag a patient who was never actually sent anything. */
+            updateAssessments((rs) => sendAssessment(rs, queueId, instrument, timepoint, 'therapist'))
+            patchPatient((p) => ({ ...p, assessmentDue: `${INSTRUMENTS[instrument as Exclude<InstrumentId, 'VAS'>].name} (${timepoint})` }))
             setAssessOpen(false)
           }}
         />
@@ -585,17 +614,91 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
   )
 }
 
-function VasSummary({ patient }: { patient: WorkspacePatient }) {
+/**
+ * One VAS trend, not two.
+ *
+ * A patient who sees a therapist AND uses Self Use produces readings on both
+ * sides. Averaging only the therapist-guided ones would quietly answer a
+ * different question than the one this row appears to ask, so the guided
+ * sessions and the app's own pre/post pairs are pooled into a single mean.
+ */
+function VasSummary({ patient, rows, queueId }: { patient: WorkspacePatient; rows: AssessmentRecord[]; queueId: string }) {
   const { t } = useI18n()
-  const withVas = patient.sessions.filter((s) => s.vasPre != null && s.vasPost != null)
+  const guided = patient.sessions
+    .filter((s) => s.vasPre != null && s.vasPost != null)
+    .map((s) => ({ pre: s.vasPre as number, post: s.vasPost as number }))
+  const selfUse = vasSeriesOf(rows, queueId).map((v) => ({ pre: v.pre, post: v.post }))
+  const withVas = [...guided, ...selfUse]
   if (!withVas.length) return <span className="w-muted">{t('Not recorded')}</span>
-  const pre = withVas.reduce((n, s) => n + (s.vasPre as number), 0) / withVas.length
-  const post = withVas.reduce((n, s) => n + (s.vasPost as number), 0) / withVas.length
+  const pre = withVas.reduce((n, s) => n + s.pre, 0) / withVas.length
+  const post = withVas.reduce((n, s) => n + s.post, 0) / withVas.length
   return (
     <strong>
       {pre.toFixed(1)} → {post.toFixed(1)}
     </strong>
   )
+}
+
+/**
+ * What has actually been sent, and what came back.
+ *
+ * `AssessmentBlock` above draws the historical fixture series. This draws the
+ * live queue: sent, half-finished, and returned. Returned rows print the score
+ * with its range and the direction of the construct, and nothing else — no
+ * band, no colour, no arrow that means "better". `SCORE_DIRECTION` says which
+ * way is more of the thing being measured; what that means for this patient is
+ * the therapist's reading, not the system's.
+ */
+function AssessmentQueue({ rows }: { rows: AssessmentRecord[] }) {
+  const { t } = useI18n()
+  if (!rows.length) return null
+  const ordered = [...rows].sort((a, b) => b.administeredAt - a.administeredAt)
+  return (
+    <div className="w-assess-queue">
+      <div className="w-field__label">{t('Sent')}</div>
+      <ul className="w-queue">
+        {ordered.map((r) => (
+          <li key={r.id} className="w-queue__row">
+            <span className="w-queue__inst">
+              {r.instrumentId === 'VAS' ? 'VAS' : INSTRUMENTS[r.instrumentId].name} · {r.timepoint}
+            </span>
+            <span className="w-queue__state">
+              {r.status === 'completed'
+                ? new Date(r.completedAt ?? 0).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : r.status === 'in_progress'
+                  ? t('Started')
+                  : r.status === 'postponed'
+                    ? t('Postponed')
+                    : t('Waiting · {n} min', { n: minutesFor(r.instrumentId) })}
+            </span>
+            <span className="w-queue__score">{scoreLine(r)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="w-small">
+        {t('Scores are shown with their range and nothing more. Reading them is yours.')}
+      </p>
+    </div>
+  )
+}
+
+/** A score as text, with its range. Never a band, never a judgement. */
+function scoreLine(r: AssessmentRecord): string {
+  const s = r.scores
+  if (!s) return ''
+  const dir = SCORE_DIRECTION[r.instrumentId] === 'higher-is-more-resource' ? '↑ resource' : '↑ symptom'
+  switch (s.kind) {
+    case 'DASS21':
+      return `D ${s.scaled.depression} · A ${s.scaled.anxiety} · S ${s.scaled.stress} (0–42, ${dir})`
+    case 'PSS10':
+      return `${s.total} (0–40, ${dir})`
+    case 'BRS':
+      return `${s.mean} (1–5, ${dir})`
+    case 'CBI':
+      return `P ${s.personal} · W ${s.workRelated} · C ${s.clientRelated} (0–100, ${dir})`
+    case 'VAS':
+      return `${s.pre} → ${s.post} (1–5, ${dir})`
+  }
 }
 
 function AssessmentBlock({ patient }: { patient: WorkspacePatient }) {
@@ -641,20 +744,43 @@ function AssessmentBlock({ patient }: { patient: WorkspacePatient }) {
 
 /* ----------------------------------------------------- TH-PAT-ASSESS ---- */
 
-const INSTRUMENTS = ['DASS-21', 'PSS-10', 'BRS', 'CBI'] as const
+/**
+ * Sending an instrument.
+ *
+ * Everything offered here comes from `assessments.ts` — the four self-report
+ * instruments, their sittings, and the timepoint the schedule proposes. Two
+ * rules from the developer reference are enforced rather than described:
+ *
+ * · VAS is not in this list. It is recorded by the therapist from the
+ *   patient's verbal answer during the session; there is no patient-facing VAS
+ *   widget to send them to.
+ * · CBI is not scheduled. It appears only when the latest DASS-21 pattern
+ *   meets the trigger, and it is labelled as OFFERED, never as indicated —
+ *   the system proposes an instrument, it does not propose a hypothesis.
+ */
+const SENDABLE: Exclude<InstrumentId, 'VAS'>[] = ['DASS21', 'PSS10', 'BRS', 'CBI']
 
 function AssessmentModal({
   patient,
+  offerCbi,
   onClose,
   onSend,
 }: {
   patient: WorkspacePatient
+  offerCbi: boolean
   onClose: () => void
-  onSend: (instrument: string) => void
+  onSend: (instrument: InstrumentId, timepoint: Timepoint) => void
 }) {
   const { t } = useI18n()
-  const recommended = assessmentDueLabel(patient) ? 'DASS-21' : null
-  const [instrument, setInstrument] = useState<string>(recommended ?? 'DASS-21')
+  const due = assessmentDueLabel(patient)
+  /* "DASS-21 (T2)" — the fixture's due label carries the timepoint. */
+  const dueTimepoint = (due?.match(/T[0-3]/)?.[0] as Timepoint | undefined) ?? 'T0'
+  const [instrument, setInstrument] = useState<InstrumentId>(due ? 'DASS21' : 'DASS21')
+  const [timepoint, setTimepoint] = useState<Timepoint>(dueTimepoint)
+
+  const options = SENDABLE.filter((id) => id !== 'CBI' || offerCbi)
+  const chosen = INSTRUMENTS[instrument as Exclude<InstrumentId, 'VAS'>]
+  const scheduled = instrument !== 'CBI' && isDueAt(instrument, timepoint)
 
   return (
     <div className="w-scrim" onClick={onClose} role="dialog" aria-modal="true">
@@ -663,21 +789,54 @@ function AssessmentModal({
 
         <label className="w-field">
           <span className="w-field__label">{t('Instrument')}</span>
-          <select className="w-input" value={instrument} onChange={(e) => setInstrument(e.target.value)}>
-            {INSTRUMENTS.map((i) => (
-              <option key={i} value={i}>{i}{i === recommended ? ` — ${t('Recommended')}` : ''}</option>
+          <select className="w-input" value={instrument} onChange={(e) => setInstrument(e.target.value as InstrumentId)}>
+            {options.map((id) => (
+              <option key={id} value={id}>
+                {INSTRUMENTS[id].name}
+                {id === 'CBI' ? ` — ${t('offered')}` : isDueAt(id, timepoint) ? ` — ${t('due at {tp}', { tp: timepoint })}` : ''}
+              </option>
             ))}
           </select>
         </label>
 
+        <label className="w-field">
+          <span className="w-field__label">{t('Timepoint')}</span>
+          <select className="w-input" value={timepoint} onChange={(e) => setTimepoint(e.target.value as Timepoint)}>
+            {(['T0', 'T1', 'T2', 'T3'] as Timepoint[]).map((tp) => {
+              const entry = SCHEDULE.find((x) => x.timepoint === tp)
+              return (
+                <option key={tp} value={tp}>
+                  {tp}{entry?.note ? ` — ${t(entry.note)}` : ''}
+                </option>
+              )
+            })}
+          </select>
+        </label>
+
         <p className="w-lead">
-          {t('The patient will receive a notification and can complete the questionnaire in their app at their own pace (typically 5–7 minutes).')}
+          {t('{name} · {n} minutes · {licence}', {
+            name: chosen.name,
+            n: chosen.minutes,
+            licence: t(chosen.licence),
+          })}
+        </p>
+        {instrument === 'CBI' && (
+          <p className="w-small">
+            {t('Offered because the latest DASS-21 met the trigger. It is not part of the schedule and carries no interpretation.')}
+          </p>
+        )}
+        {!scheduled && instrument !== 'CBI' && (
+          <p className="w-small">{t('Not part of the proposed schedule at this timepoint — sending it anyway is your call.')}</p>
+        )}
+
+        <p className="w-lead">
+          {t('The patient completes the questionnaire in their own app, at their own pace. It is never administered during a call.')}
         </p>
 
         <div className="w-actions">
           <button className="w-link" onClick={onClose}>{t('Remind me in 1 week')}</button>
           <button className="w-btn w-btn--ghost" onClick={onClose}>{t('Cancel')}</button>
-          <button className="w-btn w-btn--primary" onClick={() => onSend(instrument)}>{t('Send')}</button>
+          <button className="w-btn w-btn--primary" onClick={() => onSend(instrument, timepoint)}>{t('Send')}</button>
         </div>
       </div>
     </div>
