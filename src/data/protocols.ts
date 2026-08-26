@@ -243,6 +243,37 @@ export function registerProtocols(list: Protocol[]): void {
   for (const p of list) registry.set(p.code, { ...p })
 }
 
+/**
+ * Make the catalog AUTHORITATIVE: after this, the registry holds exactly what
+ * the catalog holds and nothing else.
+ *
+ * `registerProtocols` only ever added. The registry starts life seeded with
+ * the 25 static PROTOCOLS above, so every one of them stayed resolvable for
+ * the whole session no matter what the catalog said. Delete GL-ANX 1.1 from
+ * the database — `supabase/setup.sql` itself deletes every `source = 'seed'`
+ * row — and `getProtocol('GL-ANX 1.1')` still handed back the static seed:
+ * six generic phases, no `lengthSeconds`, and no audio at all. A protocol that
+ * had been removed, disabled, or was mid-reimport therefore kept playing as a
+ * placeholder bed instead of failing visibly, and a freshly imported one could
+ * be shadowed by its own ghost until the tab was closed.
+ *
+ * An EMPTY list is ignored on purpose. A catalog that came back empty is
+ * almost always a permissions or connectivity problem rather than a real empty
+ * catalog, and wiping the registry on it would take the app down for a reason
+ * nobody could see.
+ */
+export function syncProtocols(list: Protocol[]): void {
+  if (!list.length) return
+  registry.clear()
+  for (const p of list) registry.set(p.code, { ...p })
+}
+
+/** Test seam: put the registry back to its static seeds. */
+export function resetProtocolRegistry(): void {
+  registry.clear()
+  for (const p of PROTOCOLS) registry.set(p.code, p)
+}
+
 /** Everything currently resolvable (seed + registered). */
 export function allProtocols(): Protocol[] {
   return [...registry.values()]

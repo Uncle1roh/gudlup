@@ -547,4 +547,6 @@ export const IT_SELF_USE: Record<string, string> = {
     'Non è stato possibile riprodurre l’audio registrato: senti il tappeto sonoro.',
   'The check you tap before and after each session is shared with your therapist.':
     'Il check che tocchi prima e dopo ogni sessione viene condiviso con il tuo terapeuta.',
+  'This session is not available at the moment. Your therapist or the Good Loop team can restore it.':
+    'Questa sessione non è disponibile al momento. Il tuo terapeuta o il team Good Loop possono ripristinarla.',
 }

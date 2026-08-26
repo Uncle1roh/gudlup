@@ -302,10 +302,15 @@ function ImmersiveSession({
    * audio through it therefore played the placeholder bed even when a PO had
    * published a real mixdown, which is exactly the bug this fixes.
    */
-  const protocol = session.entry ?? getProtocol(session.protocolCode) ?? getProtocol('GL-ANX 1.1')!
-  const audioUrl = audioUrlFor(protocol, duration, locale)
-  const total = demoSeconds ?? versionLengthSeconds(protocol, duration)
-  const fractions = protocol.phases.length ? protocol.phases.map((p) => p.fraction) : STANDARD_FRACTIONS
+  /* There is deliberately no last-resort protocol here. It used to fall back
+     to GL-ANX 1.1, so a session whose protocol had been deleted, disabled or
+     renamed played SOMETHING — a different protocol's phases over a
+     placeholder bed — and looked like it had worked. Nothing is a safer
+     outcome than the wrong thing played silently. */
+  const protocol = session.entry ?? getProtocol(session.protocolCode)
+  const audioUrl = protocol ? audioUrlFor(protocol, duration, locale) : undefined
+  const total = demoSeconds ?? (protocol ? versionLengthSeconds(protocol, duration) : duration * 60)
+  const fractions = protocol?.phases.length ? protocol.phases.map((p) => p.fraction) : STANDARD_FRACTIONS
   /* Set when a published file existed but would not play. */
   const [audioFailed, setAudioFailed] = useState<string | null>(null)
 
@@ -325,7 +330,7 @@ function ImmersiveSession({
   const fadeRef = useRef<number | null>(null)
 
   const { index: phaseIdx, within } = phaseAt(elapsed, total, fractions)
-  const phase = protocol.phases[phaseIdx]
+  const phase = protocol?.phases[phaseIdx]
   const isBreath = phaseIdx === 1
   const isClosing = phaseIdx === fractions.length - 1
 
@@ -418,6 +423,23 @@ function ImmersiveSession({
     return () => document.removeEventListener('visibilitychange', onHidden)
   }, [])
 
+  /* Every hook above has run, so this return is safe. The session cannot be
+     played: rather than substituting another protocol, say so. */
+  if (!protocol) {
+    return (
+      <div className="app-frame">
+        <div className="player">
+          <div className="fade-in player__ready">
+            <p className="lead player__readytext">
+              {t('This session is not available at the moment. Your therapist or the Good Loop team can restore it.')}
+            </p>
+            <button className="btn btn--light player__begin" onClick={() => onEnd(false)}>{t('Back')}</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!started) {
     return (
       <div className="app-frame">
@@ -470,7 +492,7 @@ function ImmersiveSession({
             >
               ✕
             </button>
-            <span className="hud__phase">{t('Phase {n}', { n: phaseIdx + 1 })} · {t(phase.name)}</span>
+            <span className="hud__phase">{t('Phase {n}', { n: phaseIdx + 1 })}{phase ? ` · ${t(phase.name)}` : ''}</span>
             <span className="hud__time">{fmt(elapsed)} / {fmt(total)}</span>
           </div>
           <div className="hud__controls">

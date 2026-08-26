@@ -350,15 +350,18 @@ function TreatmentMode({
      asynchronously and, until it lands, returns a static seed that carries no
      published audio at all. */
   const entry = catalog.all.find((p) => p.code === treatment.protocolCode)
-  const protocol = entry ?? getProtocol(treatment.protocolCode) ?? getProtocol('GL-ANX 1.1')!
-  const fractions = protocol.phases.length
+  /* No fallback protocol. Substituting GL-ANX 1.1 for a protocol the catalog
+     no longer has meant a therapist and a patient could sit through a session
+     neither of them had chosen. */
+  const protocol = entry ?? getProtocol(treatment.protocolCode)
+  const fractions = protocol?.phases.length
     ? protocol.phases.map((p) => p.fraction)
     : [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
   /* THIS device plays the published mixdown for the version the therapist
      chose. Nothing about the treatment audio travels over the call. */
-  const audioUrl = audioUrlFor(protocol, treatment.duration, locale)
+  const audioUrl = protocol ? audioUrlFor(protocol, treatment.duration, locale) : undefined
   const [audioFailed, setAudioFailed] = useState<string | null>(null)
-  const total = demoSeconds ?? versionLengthSeconds(protocol, treatment.duration)
+  const total = demoSeconds ?? (protocol ? versionLengthSeconds(protocol, treatment.duration) : treatment.duration * 60)
 
   const [elapsed, setElapsed] = useState(0)
   const playerRef = useRef<SessionPlayer | null>(null)
@@ -431,7 +434,8 @@ function TreatmentMode({
 
         <div className="guided__hud">
           <div className="guided__phase">
-            {t('Phase {n}', { n: phaseIdx + 1 })} · {t(protocol.phases[phaseIdx].name)}
+            {t('Phase {n}', { n: phaseIdx + 1 })}
+            {protocol?.phases[phaseIdx] ? ` · ${t(protocol.phases[phaseIdx].name)}` : ''}
           </div>
           <div className="guided__bar" aria-hidden="true">
             <span style={{ width: `${(elapsed / total) * 100}%` }} />

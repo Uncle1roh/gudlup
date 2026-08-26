@@ -30,7 +30,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useDataProvider } from './provider'
-import { registerProtocols } from './protocols'
+import { syncProtocols } from './protocols'
 import {
   CATALOG_DURATIONS,
   audienceOf,
@@ -329,7 +329,10 @@ export function useLiveCatalog(locale: Locale): LiveCatalog {
       .then((list) => {
         if (!active) return
         setAll(list)
-        registerProtocols(list.filter((p) => p.enabled))
+        /* The catalog REPLACES the registry rather than adding to it. A
+           protocol that was deleted or disabled has to stop resolving, or it
+           keeps playing from a static seed nobody can see or edit. */
+        syncProtocols(list.filter((p) => p.enabled))
         setError(null)
       })
       .catch((e: Error) => { if (active) setError(e) })
