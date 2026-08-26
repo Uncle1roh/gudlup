@@ -52,6 +52,17 @@ async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> 
   window.location.hash = '#studio'
 }
 
+/**
+ * The workscreen's stand-in for a protocol that has no timeline yet.
+ *
+ * It carries the identity — code and title — and no versions, which is exactly
+ * what the screen needs to render its header and disable the four actions that
+ * operate on a timeline while leaving Importa Excel open.
+ */
+function emptyTimeline(p: CatalogProtocol): PlainTimeline {
+  return { code: p.code, title: p.title, versions: [], affirmations: [], issues: [] }
+}
+
 export function CatalogAdmin({ actor }: { actor: string }) {
   const dp = useDataProvider()
   const { data, loading, refetch } = useProtocols()
@@ -140,10 +151,16 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     )
   }
 
-  if (opened && openedPlain) {
+  /* EVERY protocol opens the workscreen — a protocol with no PLAIN timeline
+     yet opens it empty rather than being diverted to the card editor. The
+     workscreen is where Importa Excel lives, so sending someone somewhere else
+     because they have nothing to import YET left them with no way in: the row
+     opened a card, and the five actions were unreachable for exactly the
+     protocols that needed them. */
+  if (opened) {
     return (
       <PlainImport
-        timeline={openedPlain}
+        timeline={openedPlain ?? emptyTimeline(opened)}
         initialDuration={openAt ?? undefined}
         fileName={`catalog · ${opened.code}`}
         actor={actor}
@@ -288,20 +305,16 @@ export function CatalogAdmin({ actor }: { actor: string }) {
             return (
             <div className="adm-tr adm-tr--click" key={p.code}
               onClick={() => {
-                /* No timeline means there is no workscreen to open — but the
-                   card (nome pubblico e tag) is always editable, so the row
-                   opens that instead of doing nothing at all. */
-                if (!openable) {
-                  if (shelf === 'library') setDraft(draftFrom(p))
-                  else setCard(cardDraftFrom(p))
-                  return
-                }
+                /* The library shelf keeps its own editor — those entries are
+                   editorial, not clinical timelines. Everything else opens the
+                   workscreen, with or without a timeline. */
+                if (shelf === 'library') { setDraft(draftFrom(p)); return }
                 setOpenAt(null)
                 setOpened(p)
               }}
               title={openable
                 ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)'
-                : 'Nessuna timeline PLAIN pubblicata: importa il file Excel di una durata per aprire la schermata di lavoro. Clicca per modificare la scheda.'}
+                : 'Apri — nessuna timeline PLAIN ancora pubblicata: da qui puoi importare il file Excel o modificare la scheda.'}
             >
               <div className="adm-mono">{p.code}</div>
               <div>

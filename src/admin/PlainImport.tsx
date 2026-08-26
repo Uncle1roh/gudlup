@@ -115,7 +115,10 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  /* Open by default when there is no timeline: the Scheda is the only thing
+     on this screen that can still be edited, and leaving it folded away under
+     a toggle is what made the protocol look like it had nothing to offer. */
+  const [detailsOpen, setDetailsOpen] = useState(t.versions.length === 0)
   const [notes, setNotes] = useState<string[]>([])
 
   /* ---- published state (auto-detected for catalog reopens) ----
@@ -358,7 +361,12 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     }
   }
 
-  const disabled = busy || errors.length > 0 || poolsLoading
+  /* A protocol opened from the catalog with no PLAIN timeline yet lands here
+     with an empty one. The screen still opens — this is where Importa Excel
+     lives — but the four actions that need a timeline have nothing to act on. */
+  const hasTimeline = t.versions.length > 0
+  const disabled = busy || !hasTimeline || errors.length > 0 || poolsLoading
+  const noTimelineWhy = hasTimeline ? undefined : 'Nessuna timeline PLAIN per questo protocollo — importa il file Excel di una durata.'
 
   return (
     <div className="adm-page adm-plain">
@@ -399,21 +407,22 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
         <button className="adm-plain__act" onClick={onImportExcel ?? onCancel} disabled={busy}>
           <span className="adm-plain__act-ico">⬆</span> Importa Excel
         </button>
-        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={poolsLoading ? 'Caricamento della libreria sonora…' : undefined}>
+        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={noTimelineWhy ?? (poolsLoading ? 'Caricamento della libreria sonora…' : undefined)}>
           <span className="adm-plain__act-ico">🎚</span> Modifica nello Studio
         </button>
-        <button className="adm-plain__act" onClick={() => void download()} disabled={disabled}>
+        <button className="adm-plain__act" onClick={() => void download()} disabled={disabled} title={noTimelineWhy}>
           <span className="adm-plain__act-ico">⬇</span> Scarica
         </button>
         <button
           className={`adm-plain__act${mastered ? ' adm-plain__act--done' : ''}`}
           onClick={() => masteredRef.current?.click()}
-          disabled={busy}
+          disabled={disabled}
+          data-why={noTimelineWhy}
           title="Carica il WAV/MP3 masterizzato esternamente — Pubblica userà esattamente questo file"
         >
           <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Masterizzato ✓' : 'Carica masterizzato'}
         </button>
-        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled}>
+        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled} title={noTimelineWhy}>
           <span className="adm-plain__act-ico">🚀</span> Pubblica
         </button>
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
@@ -421,6 +430,13 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       </div>
       {mastered && !live && (
         <div className="adm-plain__status">File masterizzato caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Pubblica userà questo file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Usa invece il render dell’app</a></div>
+      )}
+
+      {!hasTimeline && (
+        <div className="adm-plain__status">
+          Questo protocollo non ha ancora una timeline PLAIN. Usa <b>Importa Excel</b> per caricarne
+          una durata — la scheda qui sotto è già modificabile.
+        </div>
       )}
 
       {poolsLoading && <div className="adm-plain__status">Caricamento della libreria sonora…</div>}

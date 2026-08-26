@@ -45,6 +45,7 @@ import { Management } from '../src/corporate/Management'
 import { Settings as CorporateSettings } from '../src/corporate/Settings'
 import { buildAggregates, defaultState } from '../src/corporate/data'
 
+import { PlainImport } from '../src/admin/PlainImport'
 import { TherapistOnboarding } from '../src/workspace/Onboarding'
 import { Roster, PatientCard } from '../src/workspace/Patients'
 import { Calendar } from '../src/workspace/Calendar'
@@ -257,6 +258,36 @@ assert(!vasHtml.includes('who5-opt'), 'and offers no options')
 
 const asmtItems = DASS21.items.length
 assert(asmtItems === 21, 'the runner is walking all 21 DASS-21 items')
+
+/* --- the protocol workscreen opens for EVERY protocol ----------------------
+   A protocol with no PLAIN timeline used to divert the row to a card editor,
+   so the five actions — the only place Importa Excel lives — were unreachable
+   for exactly the protocols that had nothing imported yet. */
+const emptyPlain = { code: 'GL-ANX 1.1', title: 'Safety and Calm', versions: [], affirmations: [], issues: [] }
+const wsHtml = renderToString(
+  shell(
+    <PlainImport
+      timeline={emptyPlain}
+      fileName="catalog · GL-ANX 1.1"
+      actor="admin"
+      onCancel={noop}
+      onDone={noop}
+    />,
+  ),
+)
+assert(wsHtml.includes('Importa Excel'), 'the workscreen opens with no timeline at all')
+/* One button per action; `adm-plain__actions` is the div around them and
+   `adm-plain__act-ico` the glyph inside each, so the count is taken from the
+   button tags themselves. */
+const actButtons = wsHtml.match(/<button[^>]*class="adm-plain__act[^>]*>/g) ?? []
+assert(actButtons.length === 5, 'and shows all five actions')
+assert(wsHtml.includes('Modifica nello Studio') && wsHtml.includes('Pubblica'), 'Studio and Pubblica among them')
+assert(wsHtml.includes('GL-ANX 1.1'), 'headed by the protocol it belongs to')
+
+/* The four that need a timeline are disabled, and the one way forward is not. */
+assert(actButtons.filter((b) => b.includes('disabled')).length === 4, 'the four timeline actions are closed')
+assert(!actButtons[0].includes('disabled'), 'Importa Excel stays open — it is the way out')
+assert(/non ha ancora una timeline PLAIN/.test(wsHtml), 'and the screen says why, in the open rather than in a tooltip')
 
 /* --- one VAS scale, one direction -----------------------------------------
    The therapy link used to seed VAS on a 0-10 distress scale while the
