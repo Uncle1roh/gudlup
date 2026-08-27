@@ -4,6 +4,8 @@ import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
 import { useRef } from 'react'
 import { PlainImport } from './PlainImport'
+import { DatasheetImport } from './DatasheetImport'
+import { SpecImport } from './SpecImport'
 import { setStudioProject, setStudioSeed } from '../compose/handoff'
 import { plainToStudioTracks } from './plainStudio'
 import { listAssets } from './assets'
@@ -59,6 +61,17 @@ async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> 
  * what the screen needs to render its header and disable the four actions that
  * operate on a timeline while leaving Importa Excel open.
  */
+/** What material the catalog holds for a protocol, in one short phrase. */
+function materialLabel(p: CatalogProtocol): string {
+  const bits: string[] = []
+  const durs = plainDurations(p)
+  if (durs.length) bits.push(`PLAIN ${durs.map((d) => `${d}m`).join('+')}`)
+  else if (p.plain) bits.push('PLAIN (legacy)')
+  if (p.datasheet) bits.push('Scheda dati')
+  if (p.spec) bits.push('Documento')
+  return bits.length ? bits.join(' · ') : 'nessun workbook'
+}
+
 function emptyTimeline(p: CatalogProtocol): PlainTimeline {
   return { code: p.code, title: p.title, versions: [], affirmations: [], issues: [] }
 }
@@ -151,12 +164,41 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     )
   }
 
-  /* EVERY protocol opens the workscreen — a protocol with no PLAIN timeline
-     yet opens it empty rather than being diverted to the card editor. The
-     workscreen is where Importa Excel lives, so sending someone somewhere else
-     because they have nothing to import YET left them with no way in: the row
-     opened a card, and the five actions were unreachable for exactly the
-     protocols that needed them. */
+  /* A protocol reopens the workscreen for the material it ACTUALLY carries.
+     The catalog only ever knew how to reopen a PLAIN timeline, so a protocol
+     imported from a datasheet (Scheda Dati) or a spec document had no way back
+     in at all: it rendered, its audio attached, it played correctly in the app
+     — and the row said no Excel had been uploaded, because no PLAIN workbook
+     ever had been. Nothing was wrong with the protocol; the catalog was asking
+     the wrong question about it. */
+  if (opened?.datasheet && !openedPlain) {
+    return (
+      <DatasheetImport
+        datasheet={opened.datasheet}
+        fileName={`catalog · ${opened.code}`}
+        actor={actor}
+        onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
+        onDone={() => { setOpened(null); setOpenAt(null); refetch() }}
+      />
+    )
+  }
+
+  if (opened?.spec && !openedPlain) {
+    return (
+      <SpecImport
+        spec={opened.spec}
+        fileName={`catalog · ${opened.code}`}
+        actor={actor}
+        onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
+        onDone={() => { setOpened(null); setOpenAt(null); refetch() }}
+      />
+    )
+  }
+
+  /* Nothing stored at all: the PLAIN workscreen opens empty rather than the row
+     doing nothing. That screen is where Importa Excel lives, so diverting
+     someone elsewhere left the import button unreachable for exactly the
+     protocols that needed it. */
   if (opened) {
     return (
       <PlainImport
@@ -299,6 +341,10 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           </div>
           {protocols.map((p) => {
             const openable = !!mergedPlain(p)
+            /* A datasheet or a spec is material the workscreen can reopen just
+               as well as a PLAIN timeline — it is a different workbook, not an
+               absent one. */
+            const reopenable = openable || !!p.datasheet || !!p.spec
             const withTimeline = new Set(plainDurations(p))
             const withAudio = new Set(p.versions.filter((v) => v.audioUrl?.['pt-BR']).map((v) => v.duration))
             const tags = tagsOf(p)
@@ -312,9 +358,9 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 setOpenAt(null)
                 setOpened(p)
               }}
-              title={openable
+              title={reopenable
                 ? 'Apri — revisione, Studio, render e collegamento (senza reimportare)'
-                : 'Apri — nessuna timeline PLAIN ancora pubblicata: da qui puoi importare il file Excel o modificare la scheda.'}
+                : 'Apri — nessun materiale ancora importato: da qui puoi caricare il file Excel o modificare la scheda.'}
             >
               <div className="adm-mono">{p.code}</div>
               <div>
@@ -341,12 +387,15 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                         ? `${d} min — audio in linea · apri questa versione`
                         : withTimeline.has(d)
                           ? `${d} min — timeline pubblicata, audio non collegato · apri questa versione`
-                          : `${d} min — nessuna timeline pubblicata: importa il file Excel di questa durata`
+                          : reopenable
+                            ? `${d} min — nessuna timeline PLAIN: apre la scheda dati importata`
+                            : `${d} min — nessuna timeline pubblicata: importa il file Excel di questa durata`
                     }
-                    /* A duration with no timeline has nothing to open. It stays
-                       visible because it is a real time signature of the
-                       protocol — the pill says what is missing. */
-                    disabled={!withTimeline.has(d)}
+                    /* Openable when this duration has a PLAIN timeline, or when
+                       the protocol carries a datasheet/spec the workscreen can
+                       reopen. A pill only stays dead when there is genuinely
+                       nothing behind it — and then it says so. */
+                    disabled={!withTimeline.has(d) && !reopenable}
                     onClick={() => { setOpenAt(d); setOpened(p) }}
                   >
                     {d}m
@@ -355,7 +404,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 {!p.versions.length && !withTimeline.size && <span className="adm-tag">—</span>}
               </div>
               <div>{tenantsLabel(p)}</div>
-              <div>{p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}</div>
+              <div>
+                {p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}
+                {/* WHICH workbook is behind the row. A protocol can play
+                    perfectly from an attached mixdown while carrying no PLAIN
+                    timeline at all, and until this line existed the only way to
+                    find that out was to open it and read an error. */}
+                <div className="adm-tag">{materialLabel(p)}</div>
+              </div>
               <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
                 {shelf === 'library' ? (
                   <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setDraft(draftFrom(p))} title="Titolo, descrizione, scaffale, copertina">

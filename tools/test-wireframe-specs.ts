@@ -73,7 +73,7 @@ import {
 } from '../src/workspace/data'
 import { graceEndsAt, resolveCompanyCode, safetyContact, hasProfessionalSupport } from '../src/data/convention'
 import { audioLanguage, audioUrlFor, hasRenderedAudio, playableDurations } from '../src/data/liveCatalog'
-import type { CatalogProtocol } from '../src/data/catalog'
+import { mergedPlain, type CatalogProtocol } from '../src/data/catalog'
 import type { Protocol } from '../src/types/domain'
 
 let passed = 0
@@ -441,5 +441,41 @@ assert(playableDurations(entry([{ duration: 24 }, { duration: 6 }])).join() === 
 assert(playableDurations(undefined).length === 0, 'an absent entry publishes nothing')
 assert(!hasRenderedAudio(entry([{ duration: 12 }]), 'it'), 'a published version with no file is not "audio ready"')
 assert(hasRenderedAudio(entry([{ duration: 12, audioUrl: { 'pt-BR': 'a.mp3' } }]), 'it'), 'a published version WITH a file is audio ready')
+
+/* ---------------------------------------------------------------------------
+   Which workscreen a catalog row can reopen
+
+   A protocol can play perfectly — audio attached to its versions — while
+   carrying no PLAIN timeline at all, because it was imported from a Scheda
+   Dati or a spec document instead. The catalog only knew how to reopen a PLAIN
+   timeline, so those rows reported that no Excel had been uploaded and could
+   not be edited. Nothing was wrong with the protocol; the wrong question was
+   being asked about it.
+   --------------------------------------------------------------------------- */
+
+function reopenable(p: { plain?: unknown; plainByDuration?: unknown; datasheet?: unknown; spec?: unknown }): boolean {
+  return !!mergedPlain(p as never) || !!p.datasheet || !!p.spec
+}
+
+const playsButNoPlain = {
+  code: 'GL-ANX 1.1',
+  versions: [{ duration: 12 as const, audioUrl: { 'pt-BR': 'https://x/a.mp3' } }],
+  datasheet: { code: 'GL-ANX 1.1' },
+}
+assert(!mergedPlain(playsButNoPlain as never), 'a datasheet-only protocol has no PLAIN timeline')
+assert(
+  (playsButNoPlain.versions[0].audioUrl as Record<string, string>)['pt-BR'].length > 0,
+  'and can still be playing real audio — the two facts are independent',
+)
+assert(reopenable(playsButNoPlain), 'so it must still be reopenable, from its datasheet')
+
+assert(reopenable({ spec: { code: 'GL-ANX 1.2' } }), 'a spec-imported protocol is reopenable too')
+assert(reopenable({ plain: { code: 'x', versions: [], affirmations: [], issues: [] } }), 'and a legacy PLAIN one')
+assert(!reopenable({}), 'a protocol carrying nothing at all is the only unreopenable case')
+
+/* mergedPlain falls back to the legacy field, so a pre-per-duration import is
+   never stranded by the newer storage shape. */
+const legacy = { plain: { code: 'x', title: 'x', versions: [{ sheet: 'S', durationMin: 12 }], affirmations: [], issues: [] } }
+assert(mergedPlain(legacy as never)?.versions.length === 1, 'a legacy `plain` still resolves through mergedPlain')
 
 console.log(`\n${passed} assertions passed.`)
