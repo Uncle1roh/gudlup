@@ -41,7 +41,10 @@ const TAG_SYNONYMS: [RegExp, string][] = [
   [/\bnott[e]|night|noite/i, 'night'],
   [/\bnev[e]|snow|inverno|winter/i, 'snow'],
   [/\bheartbeat|battito|cuore|coração|coracao|bpm/i, 'heartbeat'],
-  [/\bcampan|bowl|tibetan/i, 'bowl'],
+  // 'gong' belongs here too: a gong strike is the same kind of accent, and
+  // without it a clip asking for one was treated as a one-shot by the Studio
+  // but still drawn from the general soundscape pool.
+  [/\bcampan|bowl|tibetan|gong/i, 'bowl'],
 ]
 
 /** Normalize free text ("lago calmo") into canonical pool tokens (['lake']). */
@@ -66,6 +69,15 @@ export interface AssetPools {
   /** canonical tag → assets. An asset appears under every tag it carries. */
   soundscapeByTag: Map<string, AudioAsset[]>
   heartbeat: AudioAsset[]
+  /**
+   * Singing-bowl strikes.
+   *
+   * This pool did not exist. `listAssets` classified everything under
+   * `assets/bowl/` as `kind: 'bowl'` and `buildAssetPools` then had no branch
+   * for it, so every bowl file the POs delivered was dropped on the floor
+   * between the two — visible in the Asset Library, absent from every draw.
+   */
+  bowl: AudioAsset[]
   /** all soundscapes, for last-resort fallback draws. */
   soundscapes: AudioAsset[]
 }
@@ -81,7 +93,7 @@ function assetTags(a: AudioAsset, meta: Map<string, string[]>): string[] {
 
 export function buildAssetPools(assets: AudioAsset[], metaRows: AssetMetaRow[] = []): AssetPools {
   const meta = new Map(metaRows.map((r) => [r.path, r.tags]))
-  const pools: AssetPools = { musicByPhase: {}, soundscapeByTag: new Map(), heartbeat: [], soundscapes: [] }
+  const pools: AssetPools = { musicByPhase: {}, soundscapeByTag: new Map(), heartbeat: [], bowl: [], soundscapes: [] }
   for (const a of assets) {
     if (a.kind === 'music' && a.phase) {
       const arr = pools.musicByPhase[a.phase] ?? []
@@ -96,6 +108,8 @@ export function buildAssetPools(assets: AudioAsset[], metaRows: AssetMetaRow[] =
       }
     } else if (a.kind === 'heartbeat') {
       pools.heartbeat.push(a)
+    } else if (a.kind === 'bowl') {
+      pools.bowl.push(a)
     }
   }
   return pools
@@ -172,15 +186,38 @@ function poolNote(n: number, reused: boolean): string {
 
 export interface DrawResult { asset: AudioAsset; how: string }
 
+/**
+ * Everything eligible for a named special layer.
+ *
+ * A PO can reasonably file the heartbeat under `assets/heartbeat/` OR under
+ * `assets/soundscape/heartbeat/`, and both readings of the folder convention
+ * are defensible. The old code only looked in the first and returned null
+ * rather than falling through, so a file sitting in plain sight in the second
+ * produced a silent clip and a note saying the PO had not delivered it. Both
+ * places count now; nothing has to be moved.
+ */
+function specialCandidates(pools: AssetPools, tag: string): AudioAsset[] {
+  const dedicated = tag === 'heartbeat' ? pools.heartbeat : pools.bowl
+  const byTag = pools.soundscapeByTag.get(tag) ?? []
+  const seen = new Set(dedicated.map((a) => a.path))
+  return [...dedicated, ...byTag.filter((a) => !seen.has(a.path))]
+}
+
 /** Soundscape draw by `ambiente` tag. Best tag-overlap wins; ties draw at
     random, preferring files this protocol has not used yet (`ledger`).
-    "heartbeat …" goes to the heartbeat pool (Dec. H). */
+    "heartbeat …" and "campana tibetana …" go to their own pools (Dec. H). */
 export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => number, ledger?: DrawLedger): DrawResult | null {
   const want = normalizeTags(ambiente)
-  if (want.includes('heartbeat')) {
-    if (!pools.heartbeat.length) return null
-    const d = pickFresh(pools.heartbeat, rnd, ledger, 'ss:heartbeat')
-    return { asset: d.asset, how: `heartbeat pool (${poolNote(pools.heartbeat.length, d.reused)})` }
+  /* A special layer NEVER falls back to a general soundscape. A clip asking
+     for a singing bowl used to score zero against the texture tags and then be
+     handed a lake or a wind from the last-resort pool — the wrong sound,
+     delivered silently, which is worse than the silence it replaced. */
+  for (const tag of ['heartbeat', 'bowl'] as const) {
+    if (!want.includes(tag)) continue
+    const cands = specialCandidates(pools, tag)
+    if (!cands.length) return null
+    const d = pickFresh(cands, rnd, ledger, `ss:${tag}`)
+    return { asset: d.asset, how: `${tag} pool (${poolNote(cands.length, d.reused)})` }
   }
   // score every soundscape by tag overlap
   const scored = new Map<AudioAsset, number>()

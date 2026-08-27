@@ -256,12 +256,17 @@ export function plainToStudioTracks(
 
     if (c.tipo === 'soundscape' || c.tipo === 'music') {
       const isHeartbeat = c.tipo === 'soundscape' && /heartbeat|battito|bpm/i.test(c.ambiente ?? '')
+      /* A singing-bowl strike is an ACCENT, not a texture. It has to be told
+         apart from a soundscape here because everything else about the two is
+         the same, and a bowl looped over its clip rings again every few
+         seconds instead of once. */
+      const isBowl = c.tipo === 'soundscape' && /campan|bowl|tibetan|gong/i.test(c.ambiente ?? '')
       const l = lane(c.traccia, () => ({
         type: 'sample',
         name: c.traccia,
         volume: 0.3,
         channel: 'C',
-        duck: isHeartbeat ? 'none' : c.tipo === 'music' ? 'music' : 'soundscape',
+        duck: isHeartbeat || isBowl ? 'none' : c.tipo === 'music' ? 'music' : 'soundscape',
         clips: [],
       }))
       /* Random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
@@ -284,7 +289,8 @@ export function plainToStudioTracks(
             label = `${drawn.asset.name} · tag "${c.ambiente}"`
             notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
           } else {
-            notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${isHeartbeat ? ' (PO heartbeat file pending)' : ''}.`)
+            const pending = isHeartbeat ? ' (PO heartbeat file pending)' : isBowl ? ' (PO singing-bowl file pending)' : ''
+            notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${pending}.`)
           }
         } else {
           const drawn = drawMusicPlaylist(pools, c.faseFrom ?? 1, clipDur, MAX_SAMPLE_SLOTS, rnd, ledger)
@@ -309,8 +315,8 @@ export function plainToStudioTracks(
           url,
           label,
           slots,
-          // a texture loops; a song must not
-          loop: c.tipo === 'soundscape',
+          // a texture loops; a song must not; a bowl strike rings once
+          loop: c.tipo === 'soundscape' && !isBowl,
           drawTag: c.tipo === 'soundscape' ? (c.ambiente ?? undefined) : undefined,
           drawPhase: c.tipo === 'music' ? (c.faseFrom ?? 1) : undefined,
         } as SampleParams,

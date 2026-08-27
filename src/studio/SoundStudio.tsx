@@ -48,7 +48,7 @@ import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './ma
 import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, voiceById, voicesByArchetype, type CatalogVoice } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
-import { groupSoundscapes, listAssets, assetPublicUrl, PHASE_KEYS, type AudioAsset } from '../admin/assets'
+import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
@@ -2301,7 +2301,7 @@ function projectLedger(pools: AssetPools, tracks: Track[], skipClipId?: string):
       for (const s of sampleSlots(c.params as SampleParams)) inUse.add(s.url)
     }
   }
-  const all: AudioAsset[] = [...pools.soundscapes, ...pools.heartbeat]
+  const all: AudioAsset[] = [...pools.soundscapes, ...pools.heartbeat, ...pools.bowl]
   for (const arr of Object.values(pools.musicByPhase)) if (arr) all.push(...arr)
   const ledger = newDrawLedger()
   for (const a of all) {
@@ -2411,8 +2411,10 @@ function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (ur
   }, [])
   if (err) return <div className="mt-note">{err}</div>
   if (!assets) return <div className="mt-note">Caricamento della libreria audio…</div>
-  const music = assets.filter((a) => a.kind === 'music')
-  const scapes = groupSoundscapes(assets)
+  /* Every kind the library holds, in one list. The old version enumerated
+     music and soundscapes by hand, so the two PO deliverables were absent from
+     the dropdown even though they were sitting in Storage. */
+  const groups = libraryGroups(assets)
   return (
     <div className="mt-tts__row" style={{ margin: '4px 0 8px' }}>
       <span className="mt-tts__lbl">File</span>
@@ -2425,22 +2427,9 @@ function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (ur
         }}
       >
         <option value="" disabled>{label ?? (value ? `Change file (now: ${value})…` : 'Pick a library file…')}</option>
-        {PHASE_KEYS.map((k) => {
-          const list = music.filter((a) => a.phase === k)
-          return list.length ? (
-            <optgroup key={k} label={`Music · ${k.toUpperCase()}`}>
-              {list.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
-            </optgroup>
-          ) : null
-        })}
-        {music.some((a) => !a.phase) && (
-          <optgroup label="Music · no phase prefix">
-            {music.filter((a) => !a.phase).map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
-          </optgroup>
-        )}
-        {[...scapes.entries()].map(([texture, list]) => (
-          <optgroup key={texture} label={`Soundscape · ${texture}`}>
-            {list.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
+        {groups.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {g.items.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
           </optgroup>
         ))}
       </select>

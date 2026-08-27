@@ -152,6 +152,47 @@ export async function listAssets(): Promise<AudioAsset[]> {
   return out
 }
 
+/**
+ * Every library file, grouped the way a picker lists them.
+ *
+ * This lives here rather than inside the Studio because the Studio's picker
+ * used to build its own groups — music by phase, then soundscapes by texture —
+ * and simply had no branch for the two PO deliverables. A heartbeat or a
+ * singing bowl could be uploaded, previewed and mapped for the renderer, and
+ * still be impossible to put on a clip, because the dropdown that chooses a
+ * file never mentioned it. Deriving the groups from the asset KINDS means a
+ * kind cannot be forgotten by omission again.
+ */
+export interface LibraryGroup {
+  label: string
+  items: AudioAsset[]
+}
+
+export function libraryGroups(assets: AudioAsset[]): LibraryGroup[] {
+  const out: LibraryGroup[] = []
+
+  for (const phase of PHASE_KEYS) {
+    const items = assets.filter((a) => a.kind === 'music' && a.phase === phase)
+    if (items.length) out.push({ label: `Music · ${phase.toUpperCase()}`, items })
+  }
+  const unphased = assets.filter((a) => a.kind === 'music' && !a.phase)
+  if (unphased.length) out.push({ label: 'Music · no phase prefix', items: unphased })
+
+  for (const [texture, items] of groupSoundscapes(assets)) {
+    out.push({ label: `Soundscape · ${texture}`, items })
+  }
+
+  const heartbeat = assets.filter((a) => a.kind === 'heartbeat')
+  if (heartbeat.length) out.push({ label: 'Battito cardiaco', items: heartbeat })
+  const bowl = assets.filter((a) => a.kind === 'bowl')
+  if (bowl.length) out.push({ label: 'Campana tibetana', items: bowl })
+
+  const other = assets.filter((a) => a.kind === 'other')
+  if (other.length) out.push({ label: 'Altro', items: other })
+
+  return out
+}
+
 /** Group soundscape assets by texture for the browse UI. */
 export function groupSoundscapes(assets: AudioAsset[]): Map<string, AudioAsset[]> {
   const map = new Map<string, AudioAsset[]>()
