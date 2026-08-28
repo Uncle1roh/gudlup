@@ -17,7 +17,8 @@
 
 import { entryForPublish, entryForStudioSave } from '../src/admin/publishPlain'
 import { plainToStudioTracks } from '../src/admin/plainStudio'
-import { mergedPlain, plainFor, plainDurations, type CatalogProtocol } from '../src/data/catalog'
+import { CATALOG_DURATIONS, mergedPlain, plainFor, plainDurations, studioFor, type CatalogProtocol } from '../src/data/catalog'
+import type { SeedClip, StudioProject } from '../src/compose/types'
 import type { PlainClip, PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
 import type { Duration } from '../src/types/domain'
 
@@ -238,6 +239,68 @@ assert(
   afterSaveOff.enabled === false,
   'and never silently switches back on one an admin deliberately disabled',
 )
+
+/* ------------------------------------------ reopening what was saved ----- */
+console.log('\n--- close the browser, come back, press Modifica ---')
+
+/* The reported bug: save a session at 12 minutes on a protocol that also
+   declares 24, close the browser, press Modifica — and the 24-minute version
+   opens from its timeline. The work looked lost. It was sitting untouched in
+   the 12-minute slot; the wrong slot was being asked for. */
+function pickDuration(p: CatalogProtocol, want?: Duration): Duration | undefined {
+  const declared = CATALOG_DURATIONS.filter((d) => p.versions.some((v) => v.duration === d))
+  const withSession = declared.filter((d) => studioFor(p, d))
+  return (want != null && p.versions.some((v) => v.duration === want) ? want : undefined)
+    ?? withSession[0]
+    ?? (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
+}
+
+const session: StudioProject = { name: 'twelve', lengthSec: 720, masterGain: 0.8, tracks: [], savedAt: T }
+const savedAt12: CatalogProtocol = {
+  ...row,
+  versions: [{ duration: 6 }, { duration: 12 }, { duration: 24 }],
+  studioByDuration: { 12: session },
+}
+
+assert(pickDuration(savedAt12) === 12, 'Modifica opens the signature that HAS a saved session, not 24')
+assert(studioFor(savedAt12, 12)?.name === 'twelve', 'and that session is the one that comes back')
+assert(!studioFor(savedAt12, 24), 'the 24-minute slot is genuinely empty — nothing was overwritten')
+
+/* An explicit request still wins: clicking the 24m pill opens 24. */
+assert(pickDuration(savedAt12, 24) === 24, 'asking for a specific signature overrides the preference')
+
+/* With no session anywhere, the old behaviour stands. */
+const noSessions: CatalogProtocol = { ...row, versions: [{ duration: 6 }, { duration: 24 }] }
+assert(pickDuration(noSessions) === 24, 'with nothing saved it still opens the longest version')
+
+/* Two saved sessions: the shortest comes first, deterministically, rather than
+   depending on object key order. */
+const savedTwice: CatalogProtocol = {
+  ...savedAt12,
+  studioByDuration: { 24: { ...session, name: 'twentyfour' }, 6: { ...session, name: 'six' } },
+}
+assert(pickDuration(savedTwice) === 6, 'the first declared signature with a session wins, in ascending order')
+
+/* --------------------------------------- a save must round-trip in full -- */
+console.log('\n--- what a saved clip carries back ---')
+
+/* `toStudioProject` writes these and `seedTrackToTrack` reads them. Both lists
+   have to agree or an edit is written and never restored — which is how the
+   per-clip EQ was being lost, silently, on every reopen. */
+const SAVED_CLIP_FIELDS = [
+  'startSec', 'durationSec', 'params', 'text', 'gainDb',
+  'fadeInSec', 'fadeOutSec', 'calibrateDb', 'eq', 'ttsPath', 'ttsText',
+]
+const roundTrip: SeedClip = {
+  startSec: 10, durationSec: 20, params: { pan: 0 } as never, text: 'ciao',
+  gainDb: -3, fadeInSec: 1, fadeOutSec: 2, calibrateDb: -18,
+  eq: { lowGainDb: 1 } as never, ttsPath: 'tts/v/abc.mp3', ttsText: 'ciao',
+}
+for (const f of SAVED_CLIP_FIELDS) {
+  assert(f in roundTrip, `a saved clip can carry "${f}"`)
+}
+assert(roundTrip.ttsPath === 'tts/v/abc.mp3', 'including where its synthesized voice is stored')
+assert(roundTrip.ttsText === roundTrip.text, 'and the text that voice was spoken from')
 
 console.log(`\n${pass} assertions passed.`)
 if (fails.length) {

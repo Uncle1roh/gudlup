@@ -41,6 +41,19 @@ export interface SeedClip {
   /** Per-clip parametric EQ, so a saved Studio project reopens shaped the way
       it was left. */
   eq?: ClipEq
+  /**
+   * Storage path of the synthesized voice for this clip.
+   *
+   * The rendered audio is an AudioBuffer and cannot be written to JSON, so a
+   * saved project used to come back with every voice line unrendered — and
+   * re-rendering a 24-minute protocol is dozens of ElevenLabs calls for audio
+   * that was already paid for. The bytes are kept in Storage and the clip
+   * carries the path.
+   */
+  ttsPath?: string
+  /** The text `ttsPath` was spoken from, so an edited line is not passed off
+      as still rendered. */
+  ttsText?: string
 }
 
 /** A Studio session saved into a catalog protocol: everything needed to reopen

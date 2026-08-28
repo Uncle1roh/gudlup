@@ -29,7 +29,22 @@ function tenantsLabel(p: CatalogProtocol): string {
     timeline is converted into one, so "edit" always lands on the real material
     instead of an empty project — and never on another duration's mix. */
 async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> {
+  /*
+   * Which time signature "Modifica" opens.
+   *
+   * This used to prefer 24 whenever the protocol declared it. So a PO who
+   * saved a session at 12 minutes, closed the browser and came back found the
+   * 24-minute version opening from its timeline instead — their work looked
+   * lost, and was in fact sitting untouched in the 12-minute slot.
+   *
+   * A SAVED SESSION now wins over everything except an explicit request. Work
+   * someone did by hand is the most valuable thing on the row, and the one
+   * thing that cannot be regenerated from the workbook.
+   */
+  const declared = CATALOG_DURATIONS.filter((d) => p.versions.some((v) => v.duration === d))
+  const withSession = declared.filter((d) => studioFor(p, d))
   const duration = (want != null && p.versions.some((v) => v.duration === want) ? want : undefined)
+    ?? withSession[0]
     ?? (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
   const attach = duration ? { code: p.code, duration } : undefined
   const saved = duration ? studioFor(p, duration) : undefined
@@ -447,7 +462,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                   className="adm-editbtn"
                   disabled={busyCode === p.code}
                   onClick={() => void openInStudio(p).catch((e) => setImportError((e as Error).message))}
-                  title={studioFor(p, 24) || studioFor(p, 12) || studioFor(p, 6) ? 'Apri nello Studio la sessione salvata' : 'Apri nello Studio dalla timeline del protocollo'}
+                  title={(() => {
+                    const saved = CATALOG_DURATIONS.filter((d) => studioFor(p, d))
+                    return saved.length
+                      ? `Apri la sessione salvata (${saved.map((d) => `${d}m`).join(' · ')})`
+                      : 'Apri nello Studio dalla timeline del protocollo'
+                  })()}
                 >
                   🎚 Modifica
                 </button>

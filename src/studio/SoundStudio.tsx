@@ -55,6 +55,7 @@ import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import { entryForStudioSave } from '../admin/publishPlain'
+import { lookup as ttsLookup, store as ttsStore, fetchStored as ttsFetch, ttsPath as ttsPathFor, type TtsKey } from '../tts/ttsStore'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
 import type { StudioProject } from '../compose/types'
@@ -80,6 +81,8 @@ interface Clip {
   peaks: Float32Array | null
   text?: string
   ttsSource?: AudioBuffer | null
+  /** Storage path of the synthesized bytes, so the render survives a save. */
+  ttsPath?: string
   /** The text `ttsSource` was actually spoken from. Editing `text` cannot clear
       ttsSource (a voice clip without it re-renders as the placeholder TONE), so
       staleness is tracked instead of destroyed: Preview auditions the existing
@@ -201,7 +204,16 @@ function seedTrackToTrack(t: SeedTrack): Track {
     channel: t.channel,
     effects: t.effects,
     baseLufs: t.baseLufs,
-    clips: t.clips.map((c) => ({ id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params, buffer: null, peaks: null, text: c.text, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec, calibrateDb: c.calibrateDb })),
+    /* `eq`, `ttsPath` and `ttsText` were written by the save and dropped here,
+       so a reopened project came back without its per-clip EQ and with every
+       voice line unrendered. Whatever `toStudioProject` writes, this reads. */
+    clips: t.clips.map((c) => ({
+      id: uid(), startSec: c.startSec, durationSec: c.durationSec, params: c.params,
+      buffer: null, peaks: null, text: c.text,
+      gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec,
+      calibrateDb: c.calibrateDb, eq: c.eq,
+      ttsPath: c.ttsPath, ttsText: c.ttsText,
+    })),
   }
 }
 
@@ -301,6 +313,11 @@ function StudioDesktop() {
           fadeOutSec: c.fadeOutSec,
           calibrateDb: c.calibrateDb,
           eq: c.eq,
+          /* What makes a synthesized voice survive the save. Only written when
+             the render matches the text currently on the clip — an edited line
+             must come back unrendered, not silently spoken as the old one. */
+          ttsPath: c.ttsText && c.ttsText === (c.text ?? '').trim() ? c.ttsPath : undefined,
+          ttsText: c.ttsPath ? c.ttsText : undefined,
         })),
       })),
     }
@@ -479,6 +496,52 @@ function StudioDesktop() {
     }
     void doRender(trackId, clipId, tr.type, cl.params, cl.durationSec, shape)
   }, [doRender, rebakeVoice])
+
+  /**
+   * Bring saved voice renders back, once, when a project opens.
+   *
+   * The bytes are in Storage and the clip carries the path, so this is a
+   * download and a decode — no provider call and no credits. A path that no
+   * longer resolves simply leaves the clip unrendered, which is the state it
+   * would have been in anyway.
+   */
+  const hydrated = useRef(false)
+  useEffect(() => {
+    if (hydrated.current) return
+    hydrated.current = true
+    const jobs: { trackId: string; clip: Clip }[] = []
+    for (const t of tracksRef.current) {
+      if (t.type !== 'voice') continue
+      for (const c of t.clips) if (c.ttsPath && !c.ttsSource) jobs.push({ trackId: t.id, clip: c })
+    }
+    if (!jobs.length) return
+    let alive = true
+    void (async () => {
+      for (const { trackId, clip } of jobs) {
+        try {
+          const player = playerRef.current
+          if (!player) return
+          const bytes = await ttsFetch(clip.ttsPath as string)
+          if (!alive || !bytes) continue
+          const decoded = await player.decode(bytes)
+          if (!alive) continue
+          const vp = clip.params as VoiceParams
+          const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - clip.startSec)
+          let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
+          buf = shapeClipBuffer(buf, {
+            eq: clip.eq, calibrateDb: clip.calibrateDb, gainDb: clip.gainDb,
+            fadeInSec: clip.fadeInSec, fadeOutSec: clip.fadeOutSec,
+          })
+          if (!alive) continue
+          setClipBuffer(trackId, clip.id, buf, { ttsSource: decoded, durationSec: buf.duration })
+        } catch {
+          /* a render that will not come back just leaves the clip unrendered */
+        }
+      }
+    })()
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const scheduleRender = useCallback((trackId: string, clipId: string) => {
     const m = renderTimers.current
@@ -679,18 +742,35 @@ function StudioDesktop() {
         rerollRef.current.set(clipId, n)
         seed = Math.imul(n, 2654435761) >>> 0
       }
-      const bytes = await provider.render(text, {
-        lang: ttsLanguage(),
+      const ctx = voiceContext(tracksRef.current, clipId)
+      const key: TtsKey = {
+        text,
         voiceId: effectiveVoice(vp).id,
-        ...voiceContext(tracksRef.current, clipId),
+        lang: ttsLanguage(),
+        context: `${ctx.previousText ?? ''}|${ctx.nextText ?? ''}`,
         seed,
-      })
+      }
+      /* Storage first. An identical request — same line, same voice, same
+         context, no re-roll — has already been paid for once, here or in
+         another protocol, and asking costs a download instead of credits. */
+      let bytes = await ttsLookup(key)
+      let fromCache = true
+      if (!bytes) {
+        fromCache = false
+        bytes = await provider.render(text, {
+          lang: key.lang,
+          voiceId: key.voiceId,
+          ...ctx,
+          seed,
+        })
+      }
+      const storedPath = fromCache ? await ttsPathFor(key) : await ttsStore(key, bytes)
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       if (renderTokens.current.get(clipId) !== token) return
-      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, durationSec: buf.duration })
+      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, durationSec: buf.duration })
     } catch (e) {
       setTtsError((e as Error).message)
     } finally {

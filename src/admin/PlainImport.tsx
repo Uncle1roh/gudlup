@@ -13,7 +13,7 @@ import { persistenceNote, saveProtocolVerified } from './publish'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
-import { setStudioSeed } from '../compose/handoff'
+import { setStudioSeed, setStudioProject } from '../compose/handoff'
 import { attachRenderedAudio } from './attachAudio'
 import type { Duration } from '../types/domain'
 import {
@@ -21,6 +21,7 @@ import {
   catalogDuration,
   plainDurations,
   plainFor,
+  studioFor,
   timelinesByDuration,
   type CatalogProtocol,
 } from '../data/catalog'
@@ -228,9 +229,22 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   function editInStudio() {
     if (!version) return
     try {
-      const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
       const dur = version.durationMin === 6 || version.durationMin === 12 || version.durationMin === 24 ? (version.durationMin as Duration) : undefined
-      setStudioSeed(seed.tracks, seed.name, t.code && dur ? { code: t.code, duration: dur } : undefined, undefined, { returnTo: '#admin' })
+      const attach = t.code && dur ? { code: t.code, duration: dur } : undefined
+
+      /* A session already saved for THIS time signature wins over a fresh seed
+         from the workbook. Reseeding would silently discard hand edits — and
+         re-draw every random asset, so the mix would not even be the same one
+         the PO left. Only a duration with nothing saved is seeded. */
+      const saved = dur ? studioFor(published ?? undefined, dur) : undefined
+      if (saved) {
+        setStudioProject(saved, attach, '#admin')
+        window.location.hash = '#studio'
+        return
+      }
+
+      const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
+      setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin' })
       setNotes(seed.notes)
       window.location.hash = '#studio'
     } catch (e) {
