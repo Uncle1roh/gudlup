@@ -7,10 +7,10 @@ import { PlainImport } from './PlainImport'
 import { DatasheetImport } from './DatasheetImport'
 import { SpecImport } from './SpecImport'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
-import { audienceOf, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
+import { audienceOf, durationState, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
 import { ProtocolCardEditor, applyCardDraft, cardDraftError, type ProtocolCardDraft } from './ProtocolCard'
-import { familyFromCode } from './publishPlain'
+import { entryForPublish, familyFromCode } from './publishPlain'
 import { saveProtocolVerified } from './publish'
 import { takeReturnToProtocol } from './workscreenReturn'
 import { LIBRARY_CATEGORIES } from '../data/library'
@@ -120,6 +120,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   /** The "Crea nuovo" dialog: the Scheda, filled in before anything exists. */
   const [creating, setCreating] = useState<ProtocolCardDraft | null>(null)
   const [savingNew, setSavingNew] = useState(false)
+  /** The time signature the open file dialog is importing for. */
+  const [importFor, setImportFor] = useState<Duration | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
   /* Clinical material and library audio are two different products with two
@@ -154,10 +156,41 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       }
       const res = await parsePlainTimeline(bytes)
       if (res.error || !res.timeline) throw new Error(res.error ?? 'Impossibile leggere il file Excel.')
+
+      /*
+       * Importing from INSIDE a protocol files the workbook under that
+       * protocol, for the time signature that was selected.
+       *
+       * It used to replace the whole screen with the imported workbook — which
+       * carries its own code and title — so importing the 12-minute file while
+       * looking at GL-ANX 1.1 showed a different protocol's identity, lost the
+       * 6-minute version from view, and reported a conflict. The screen knows
+       * which protocol and which duration; the spreadsheet does not need to.
+       */
+      if (opened) {
+        const proto = entryForPublish({
+          timeline: res.timeline,
+          existing: opened,
+          selected: importFor ?? openAt ?? undefined,
+          keepDraft: true,
+          intoExisting: true,
+        })
+        const stored = await saveProtocolVerified(dp, proto)
+        await dp.logAudit({
+          actor, action: 'protocol.plain.imported', target: stored.code,
+          detail: `${file.name} · ${importFor ?? openAt ?? '?'}m`,
+        }).catch(() => undefined)
+        setOpenAt(importFor ?? openAt ?? null)
+        setOpened(stored)
+        refetch()
+        return
+      }
+
       setImported({ timeline: res.timeline, fileName: file.name })
     } catch (e) {
       setImportError((e as Error).message)
     } finally {
+      setImportFor(null)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
@@ -217,7 +250,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         actor={actor}
         onCancel={() => { setImported(null); refetch() }}
         onDone={() => { setImported(null); refetch() }}
-        onImportExcel={() => fileRef.current?.click()}
+        onImportExcel={(d) => { setImportFor(d); fileRef.current?.click() }}
         fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
       />
     )
@@ -267,7 +300,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         actor={actor}
         onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
         onDone={() => { setOpened(null); setOpenAt(null); refetch() }}
-        onImportExcel={() => fileRef.current?.click()}
+        onImportExcel={(d) => { setImportFor(d); fileRef.current?.click() }}
         fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
       />
     )
@@ -446,8 +479,6 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                as well as a PLAIN timeline — it is a different workbook, not an
                absent one. */
             const reopenable = openable || !!p.datasheet || !!p.spec
-            const withTimeline = new Set(plainDurations(p))
-            const withAudio = new Set(p.versions.filter((v) => v.audioUrl?.['pt-BR']).map((v) => v.duration))
             const tags = tagsOf(p)
             return (
             <div className="adm-tr adm-tr--click" key={p.code}
@@ -476,33 +507,30 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                   ? (LIBRARY_CATEGORIES.find((c) => c.id === p.library?.category)?.label ?? '—')
                   : FAMILY_LABEL[p.family]}
               </div>
-              {/* One pill per TIME SIGNATURE: green = audio in linea, amber =
-                  timeline pubblicata senza audio, grey = non pubblicata. */}
+              {/* One pill per TIME SIGNATURE, and ALWAYS all three. Grey = no
+                  Excel imported for it, red = saved but not on the air, green =
+                  a person can play it. Showing only the durations a protocol
+                  happened to declare meant a new protocol showed none at all. */}
               <div className="adm-durs" onClick={(e) => e.stopPropagation()}>
-                {CATALOG_DURATIONS.filter((d) => p.versions.some((v) => v.duration === d) || withTimeline.has(d)).map((d) => (
-                  <button
-                    key={d}
-                    className={`adm-pill adm-pill--btn ${withAudio.has(d) ? 'adm-pill--ok' : withTimeline.has(d) ? 'adm-pill--warn' : 'adm-pill--idle'}`}
-                    title={
-                      withAudio.has(d)
-                        ? `${d} min — audio in linea · apri questa versione`
-                        : withTimeline.has(d)
-                          ? `${d} min — timeline pubblicata, audio non collegato · apri questa versione`
-                          : reopenable
-                            ? `${d} min — nessuna timeline PLAIN: apre la scheda dati importata`
-                            : `${d} min — nessuna timeline pubblicata: importa il file Excel di questa durata`
-                    }
-                    /* Openable when this duration has a PLAIN timeline, or when
-                       the protocol carries a datasheet/spec the workscreen can
-                       reopen. A pill only stays dead when there is genuinely
-                       nothing behind it — and then it says so. */
-                    disabled={!withTimeline.has(d) && !reopenable}
-                    onClick={() => { setOpenAt(d); setOpened(p) }}
-                  >
-                    {d}m
-                  </button>
-                ))}
-                {!p.versions.length && !withTimeline.size && <span className="adm-tag">—</span>}
+                {CATALOG_DURATIONS.map((d) => {
+                  const st = durationState(p, d)
+                  return (
+                    <button
+                      key={d}
+                      className={`adm-pill adm-pill--btn ${st === 'published' ? 'adm-pill--live' : st === 'saved' ? 'adm-pill--saved' : 'adm-pill--idle'}`}
+                      title={
+                        st === 'published'
+                          ? `${d} min — pubblicato, in ascolto`
+                          : st === 'saved'
+                            ? `${d} min — salvato, non ancora pubblicato · apri questa versione`
+                            : `${d} min — nessun Excel importato · apri per caricarlo`
+                      }
+                      onClick={() => { setOpenAt(d); setOpened(p) }}
+                    >
+                      {d}m
+                    </button>
+                  )
+                })}
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>

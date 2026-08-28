@@ -18,12 +18,14 @@ import { attachRenderedAudio } from './attachAudio'
 import type { Duration } from '../types/domain'
 import {
   CATALOG_DURATIONS,
+  durationState,
   catalogDuration,
   plainDurations,
   plainFor,
   studioFor,
   timelinesByDuration,
   type CatalogProtocol,
+  type DurationState,
 } from '../data/catalog'
 import { entryForPublish } from './publishPlain'
 import { ProtocolCardEditor, cardDraftFrom, applyCardDraft, type ProtocolCardDraft } from './ProtocolCard'
@@ -42,8 +44,10 @@ interface Props {
   actor: string
   onCancel: () => void
   onDone: () => void
-  /** Opens the catalog's Import Excel file dialog directly (no page). */
-  onImportExcel?: () => void
+  /** Opens the catalog's Import Excel file dialog for the SELECTED duration.
+      The screen knows which time signature is being worked on; the file does
+      not, and asking the spreadsheet was what produced the conflict. */
+  onImportExcel?: (duration: Duration) => void
   /** The catalog's hidden file input, mounted here so the dialog works
       while this screen is the one on display. */
   fileInput?: import('react').ReactNode
@@ -67,12 +71,17 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   /* one selected version — the TIME SIGNATURE being worked on. Chips appear
      whenever the workbook (or the catalog entry it reopens) carries more than
      one, and every action below applies to this one alone. */
-  const [sheet, setSheet] = useState<string>(
-    (initialDuration != null ? t.versions.find((v) => v.durationMin === initialDuration)?.sheet : undefined)
-    ?? t.versions[0]?.sheet ?? '',
+  /* The screen is on a TIME SIGNATURE, not on a sheet.
+     A protocol always has 6, 12 and 24 — whether or not an Excel has been
+     imported for them — so an empty one has to be selectable: choosing it is
+     how you say which duration the file you are about to import belongs to.
+     Keying the selection to a sheet meant a duration with no sheet could not
+     be pointed at, which is why importing the second workbook was guesswork. */
+  const [picked, setPicked] = useState<Duration>(
+    initialDuration ?? (catalogDuration(t.versions[0]?.durationMin ?? 12) ?? 12),
   )
-  const version = t.versions.find((v) => v.sheet === sheet) ?? t.versions[0]
-  const versionDuration = version ? catalogDuration(version.durationMin) : null
+  const version = t.versions.find((v) => catalogDuration(v.durationMin) === picked)
+  const versionDuration = version ? catalogDuration(version.durationMin) : picked
 
   /* ---- asset pools (draw happens at seed/render — gate until ready) ---- */
   const [pools, setPools] = useState<AssetPools | null>(null)
@@ -154,11 +163,19 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     return m
   }, [t])
 
-  const allDurations = useMemo(() => {
-    const set = new Set<Duration>(sheetByDuration.keys())
-    for (const v of published?.versions ?? []) set.add(v.duration)
-    return CATALOG_DURATIONS.filter((d) => set.has(d))
-  }, [sheetByDuration, published])
+  /**
+   * What each time signature is, for the chips.
+   *
+   * The catalog is asked first — it knows what has been saved and what is on
+   * the air — and the workbook on screen counts as saved for whatever it
+   * carries, so a file just imported turns its chip red before anything has
+   * been written anywhere.
+   */
+  function stateOf(d: Duration): DurationState {
+    const stored = published ? durationState(published, d) : 'empty'
+    if (stored !== 'empty') return stored
+    return sheetByDuration.has(d) ? 'saved' : 'empty'
+  }
 
   function explain(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
@@ -243,7 +260,7 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     if (!t.code) return null
     try {
       const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
-      const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, keepDraft: true })
+      const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, keepDraft: true, intoExisting: true })
       const stored = await saveProtocolVerified(dp, proto)
       setPublished(stored)
       return stored
@@ -398,12 +415,20 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     }
   }
 
-  /* A protocol opened from the catalog with no PLAIN timeline yet lands here
-     with an empty one. The screen still opens — this is where Importa Excel
-     lives — but the four actions that need a timeline have nothing to act on. */
-  const hasTimeline = t.versions.length > 0
+  /*
+   * The four actions operate on the SELECTED time signature, so they are gated
+   * on that one having material — not on the workbook carrying something,
+   * anything, somewhere.
+   *
+   * That was the conflicting message: with the 6-minute file imported and the
+   * 12-minute chip selected, the buttons lit up because a timeline existed,
+   * while everything they would act on was empty.
+   */
+  const hasTimeline = !!version
   const disabled = busy || !hasTimeline || errors.length > 0 || poolsLoading
-  const noTimelineWhy = hasTimeline ? undefined : 'Nessuna timeline PLAIN per questo protocollo — importa il file Excel di una durata.'
+  const noTimelineWhy = hasTimeline
+    ? undefined
+    : `Nessun Excel importato per la versione da ${picked} minuti — usa Importa Excel.`
 
   return (
     <div className="adm-page adm-plain">
@@ -418,49 +443,49 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
             {live ? ' · in linea ✓' : versionDuration != null && publishedDurations.has(versionDuration) ? ' · pubblicato' : ''}
           </span>
         </div>
-        {/* One chip per TIME SIGNATURE. Every action on this screen applies to
-            the selected one only — publishing 12 min never touches 6 or 24. A
-            signature with no sheet is shown disabled, with the reason, instead
-            of being left out: "where are my other durations" is a question the
-            screen should answer rather than raise. */}
-        {allDurations.length > 1 && (
-          <div className="adm-plain__chips">
-            {allDurations.map((d) => {
-              const own = sheetByDuration.get(d)
-              const mark = liveDurations.has(d) ? ' ✓' : publishedDurations.has(d) ? ' ·' : own ? '' : ' ⏳'
-              const why = own
-                ? liveDurations.has(d)
-                  ? `${d} min — audio in linea`
-                  : publishedDurations.has(d)
-                    ? `${d} min — pubblicato, audio non ancora collegato`
-                    : `${d} min — non ancora pubblicato`
-                : `${d} min — nessun foglio timeline per questa durata: importa il file Excel di ${d} minuti${liveDurations.has(d) ? ' (l’audio già in linea resta com’è)' : ''}`
-              return (
-                <button
-                  key={d}
-                  className={`b2b-btn${own && sheet === own ? ' b2b-btn--primary' : ''}`}
-                  disabled={!own}
-                  onClick={() => own && setSheet(own)}
-                  title={why}
-                >
-                  {d}m{mark}
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {allDurations.some((d) => !sheetByDuration.has(d)) && (
-          <div className="adm-plain__status">
-            Durate senza foglio timeline:{' '}
-            <b>{allDurations.filter((d) => !sheetByDuration.has(d)).map((d) => `${d}m`).join(' · ')}</b>{' '}
-            — importa il file Excel di quella durata per lavorarci. Le altre durate non vengono toccate.
-          </div>
-        )}
+        {/* One chip per TIME SIGNATURE, and ALWAYS all three. A protocol ships
+            as a 6-, a 12- and a 24-minute session whether or not an Excel has
+            arrived for each, so all three are here from the start:
+
+              grey   nothing imported yet — pick it, then Importa Excel
+              red    saved, not on the air
+              green  published; a person can play it
+
+            Every action on this screen applies to the selected one alone, and
+            an EMPTY signature is selectable on purpose: choosing it is how you
+            say which duration the file you are about to import belongs to. */}
+        <div className="adm-plain__chips">
+          {CATALOG_DURATIONS.map((d) => {
+            const st = stateOf(d)
+            const on = picked === d
+            return (
+              <button
+                key={d}
+                className={`b2b-btn${on ? ' b2b-btn--primary' : ''} adm-plain__chip--${st === 'published' ? 'live' : st}`}
+                onClick={() => setPicked(d)}
+                title={
+                  st === 'published'
+                    ? `${d} min — pubblicato, in ascolto`
+                    : st === 'saved'
+                      ? `${d} min — salvato, non ancora pubblicato`
+                      : `${d} min — nessun Excel importato. Selezionalo e usa Importa Excel.`
+                }
+              >
+                {d}m
+              </button>
+            )
+          })}
+        </div>
       </header>
 
       <div className="adm-plain__actions adm-plain__actions--5">
-        <button className="adm-plain__act" onClick={onImportExcel ?? onCancel} disabled={busy}>
-          <span className="adm-plain__act-ico">⬆</span> Importa Excel
+        <button
+          className="adm-plain__act"
+          onClick={() => (onImportExcel ? onImportExcel(picked) : onCancel())}
+          disabled={busy}
+          title={`Importa il file Excel della versione da ${picked} minuti`}
+        >
+          <span className="adm-plain__act-ico">⬆</span> Importa Excel · {picked}m
         </button>
         <button className="adm-plain__act" onClick={() => void editInStudio()} disabled={disabled} title={noTimelineWhy ?? (poolsLoading ? 'Caricamento della libreria sonora…' : undefined)}>
           <span className="adm-plain__act-ico">🎚</span> Modifica nello Studio
@@ -489,8 +514,8 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
 
       {!hasTimeline && (
         <div className="adm-plain__status">
-          Questo protocollo non ha ancora una timeline PLAIN. Usa <b>Importa Excel</b> per caricarne
-          una durata — la scheda qui sotto è già modificabile.
+          Nessun Excel importato per la versione da <b>{picked} minuti</b>. Usa <b>Importa Excel · {picked}m</b> per
+          caricarlo — le altre durate non vengono toccate.
         </div>
       )}
 

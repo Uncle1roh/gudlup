@@ -287,7 +287,8 @@ assert(wsHtml.includes('GL-ANX 1.1'), 'headed by the protocol it belongs to')
 /* The four that need a timeline are disabled, and the one way forward is not. */
 assert(actButtons.filter((b) => b.includes('disabled')).length === 4, 'the four timeline actions are closed')
 assert(!actButtons[0].includes('disabled'), 'Importa Excel stays open — it is the way out')
-assert(/non ha ancora una timeline PLAIN/.test(wsHtml), 'and the screen says why, in the open rather than in a tooltip')
+assert(/Nessun Excel importato/.test(wsHtml), 'and the screen says why, in the open rather than in a tooltip')
+assert(/Importa Excel/.test(wsHtml), 'naming the action that fixes it')
 
 /* --- every time signature is visible, even the ones with no sheet ---------
    A protocol whose 6-minute PLAIN sheet was imported showed one chip, or none,
@@ -311,7 +312,15 @@ const oneSheet = renderToString(
 /* With nothing published yet the catalog knows of no other durations, so a
    single chip row is correct — the point is what happens when it DOES. */
 const chipText = (h: string) => h.replace(/<!--[^>]*-->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
-assert(!/24m/.test(chipText(oneSheet)), 'a lone 6-minute sheet with no catalog entry shows only what exists')
+
+/* All three time signatures are ALWAYS offered, whether or not an Excel has
+   arrived for them: a protocol ships as a 6-, a 12- and a 24-minute session,
+   and an empty one has to be selectable because choosing it is how you say
+   which duration the file you are about to import belongs to. */
+const lone = chipText(oneSheet)
+assert(/6m/.test(lone) && /12m/.test(lone) && /24m/.test(lone), 'all three chips are there with only one sheet imported')
+assert(/adm-plain__chip--saved/.test(oneSheet), 'the one that has material is marked saved')
+assert((oneSheet.match(/adm-plain__chip--empty/g) ?? []).length === 2, 'and the two with nothing in them are marked empty')
 
 const twoSheets = renderToString(
   shell(<PlainImport timeline={plainWith([6, 24])} fileName="catalog · GL-ANX 1.1" actor="admin" onCancel={noop} onDone={noop} />),
@@ -326,7 +335,8 @@ const gapHtml = renderToString(
   shell(<PlainImport timeline={plainWith([6, 12])} fileName="catalog · GL-ANX 1.1" actor="admin" onCancel={noop} onDone={noop} />),
 )
 assert(/6m/.test(chipText(gapHtml)) && /12m/.test(chipText(gapHtml)), 'the durations the workbook carries are all offered')
-assert(!/⏳/.test(gapHtml), 'and nothing is marked pending when every duration has a sheet')
+assert((gapHtml.match(/adm-plain__chip--saved/g) ?? []).length === 2, 'two sheets means two saved chips')
+assert((gapHtml.match(/adm-plain__chip--empty/g) ?? []).length === 1, 'and the untouched one stays empty')
 
 /* --- one VAS scale, one direction -----------------------------------------
    The therapy link used to seed VAS on a 0-10 distress scale while the

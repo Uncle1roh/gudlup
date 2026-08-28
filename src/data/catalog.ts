@@ -146,6 +146,35 @@ export function plainFor(
   return timelinesByDuration(p)[duration]
 }
 
+/**
+ * What a time signature is, at a glance.
+ *
+ *   empty      nothing imported for it yet — no Excel has been uploaded
+ *   saved      it has material and it is NOT on the air
+ *   published  a person can play it: the protocol is enabled and this duration
+ *              has a rendered file
+ *
+ * Every protocol has all three time signatures whether or not anything has
+ * been imported for them, so the three are always shown and this says which is
+ * which. Hiding the empty ones was what made a fresh protocol look like it had
+ * no durations at all.
+ *
+ * Defined here rather than on either screen because the catalog row and the
+ * protocol workscreen must never disagree about what a colour means.
+ */
+export type DurationState = 'empty' | 'saved' | 'published'
+
+export function durationState(
+  p: Pick<CatalogProtocol, 'plain' | 'plainByDuration' | 'studio' | 'studioByDuration' | 'versions' | 'enabled'> | undefined,
+  duration: Duration,
+): DurationState {
+  if (!p) return 'empty'
+  const version = p.versions.find((v) => v.duration === duration)
+  const hasAudio = Boolean(version?.audioUrl && Object.values(version.audioUrl).some(Boolean))
+  if (p.enabled && hasAudio) return 'published'
+  return plainFor(p, duration) || studioFor(p, duration) ? 'saved' : 'empty'
+}
+
 /** The durations that actually have a timeline, ascending. */
 export function plainDurations(
   p: Pick<CatalogProtocol, 'plain' | 'plainByDuration'> | undefined,

@@ -18,7 +18,7 @@
 import { entryForPublish, entryForStudioSave } from '../src/admin/publishPlain'
 import { newProtocolEntry, newProtocolError } from '../src/admin/CatalogAdmin'
 import { plainToStudioTracks } from '../src/admin/plainStudio'
-import { CATALOG_DURATIONS, mergedPlain, plainFor, plainDurations, studioFor, type CatalogProtocol } from '../src/data/catalog'
+import { CATALOG_DURATIONS, durationState, mergedPlain, plainFor, plainDurations, studioFor, type CatalogProtocol } from '../src/data/catalog'
 import type { SeedClip, StudioProject } from '../src/compose/types'
 import type { PlainClip, PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
 import type { Duration } from '../src/types/domain'
@@ -357,6 +357,72 @@ const off = entryForPublish({
 })
 assert(off.enabled === false, 'attaching a workbook never switches a disabled protocol back on')
 assert(!!plainFor(off, 12) && !!plainFor(off, 24), 'and it keeps both time signatures')
+
+/* ------------------------------------------- what colour a duration is --- */
+console.log('\n--- grey, red, green ---')
+
+/* All three time signatures are always shown; this is what each one says. */
+const blank = newProtocolEntry({ code: 'GL-ANX 4.1', title: 'Nuovo', publicTitle: '', publicBlurb: '', tags: [] }, T)
+for (const d of CATALOG_DURATIONS) {
+  assert(durationState(blank, d) === 'empty', `a brand new protocol is grey at ${d}m — no Excel imported`)
+}
+
+const six = entryForPublish({ timeline: { ...workbook(6), code: 'GL-ANX 4.1' }, existing: blank, selected: 6, keepDraft: true, intoExisting: true, now: T })
+assert(durationState(six, 6) === 'saved', 'importing the 6-minute Excel turns 6 red — saved, not on the air')
+assert(durationState(six, 12) === 'empty', 'and leaves 12 grey')
+assert(durationState(six, 24) === 'empty', 'and 24 grey')
+
+/* Red until BOTH things are true: the protocol is on, and this duration has a
+   file. Either alone is not something a person can play. */
+const audioOnly: CatalogProtocol = { ...six, versions: [{ duration: 6, audioUrl: { 'pt-BR': 'https://x/6.mp3' } }] }
+assert(durationState(audioOnly, 6) === 'saved', 'audio on a disabled protocol is still red — nobody can hear it')
+const enabledNoAudio: CatalogProtocol = { ...six, enabled: true }
+assert(durationState(enabledNoAudio, 6) === 'saved', 'and an enabled protocol with no file for that duration is red too')
+
+const onAirSix: CatalogProtocol = { ...six, enabled: true, versions: [{ duration: 6, audioUrl: { 'pt-BR': 'https://x/6.mp3' } }] }
+assert(durationState(onAirSix, 6) === 'published', 'enabled AND rendered is green')
+assert(durationState(onAirSix, 12) === 'empty', 'while the durations with nothing in them stay grey')
+
+/* A Studio session with no workbook still counts as saved — work exists. */
+const studioOnly: CatalogProtocol = { ...blank, studioByDuration: { 24: { name: 's', lengthSec: 1440, masterGain: 0.8, tracks: [], savedAt: T } } }
+assert(durationState(studioOnly, 24) === 'saved', 'a saved Studio session alone turns its duration red')
+
+/* --------------------------------------- importing INTO an open protocol -- */
+console.log('\n--- the workbook does not get to rename the protocol ---')
+
+/* The code and the title are set by hand at creation. A workbook imported into
+   an existing protocol supplies the TIMELINE and nothing else — otherwise the
+   spreadsheet renames the thing it was imported into, and a README naming a
+   different protocol files the timeline under a code nobody asked for. */
+const named = newProtocolEntry({ code: 'GL-ANX 4.2', title: 'Il mio titolo', publicTitle: 'Pubblico', publicBlurb: '', tags: ['sera'] }, T)
+const intoNamed = entryForPublish({
+  timeline: workbook(12),                 // its README says GL-ANX 1.1 / "Safety and Calm"
+  existing: named,
+  selected: 12,
+  keepDraft: true,
+  intoExisting: true,
+  now: T + 1000,
+})
+assert(intoNamed.code === 'GL-ANX 4.2', 'the protocol keeps its own code, not the workbook\'s')
+assert(intoNamed.title === 'Il mio titolo', 'and its own clinical title')
+assert(intoNamed.publicTitle === 'Pubblico', 'and the public name')
+assert(intoNamed.tags?.join() === 'sera', 'and the tags')
+assert(!!plainFor(intoNamed, 12), 'while the timeline the workbook carried is filed under 12m')
+assert(durationState(intoNamed, 12) === 'saved', 'which turns 12 red')
+
+/* Importing a SECOND workbook adds a duration and still changes nothing else. */
+const both = entryForPublish({
+  timeline: workbook(24), existing: intoNamed, selected: 24, keepDraft: true, intoExisting: true, now: T + 2000,
+})
+assert(plainDurations(both).join() === '12,24', 'the second import adds its duration')
+assert(both.title === 'Il mio titolo', 'and still does not rename anything')
+assert(durationState(both, 6) === 'empty', 'the one never imported stays grey')
+
+/* Publishing outside a protocol context still takes the workbook's identity —
+   that is the standalone import path, where there is nothing else to go on. */
+const standalone = entryForPublish({ timeline: workbook(12), existing: undefined, selected: 12, now: T })
+assert(standalone.code === 'GL-ANX 1.1', 'a standalone import is still named by its workbook')
+assert(standalone.title === 'Safety and Calm', 'title included')
 
 console.log(`\n${pass} assertions passed.`)
 if (fails.length) {

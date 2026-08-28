@@ -58,6 +58,18 @@ export interface PublishInput {
    * session in front of a person.
    */
   keepDraft?: boolean
+  /**
+   * File this workbook under the protocol that is already open, keeping ITS
+   * code and title.
+   *
+   * A protocol is created by hand now — code, clinical title, public name,
+   * tags — and then workbooks are imported into it. Letting the spreadsheet
+   * rename the thing it was imported into undid that, and a workbook whose
+   * README names a different protocol filed the timeline under a code nobody
+   * asked for. The Excel supplies the TIMELINE; the protocol supplies its own
+   * identity.
+   */
+  intoExisting?: boolean
   now?: number
 }
 
@@ -72,8 +84,9 @@ export interface PublishInput {
  *   which is what the Studio reopens through. A publish that cannot be
  *   reopened is the failure this whole file exists to make impossible.
  */
-export function entryForPublish({ timeline: t, existing, selected, keepDraft, now = Date.now() }: PublishInput): CatalogProtocol {
-  if (!t.code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
+export function entryForPublish({ timeline: t, existing, selected, keepDraft, intoExisting, now = Date.now() }: PublishInput): CatalogProtocol {
+  const code = intoExisting ? existing?.code ?? t.code : t.code
+  if (!code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
 
   const phased = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
 
@@ -94,9 +107,9 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, no
 
   return {
     ...(existing ?? {}),
-    code: t.code,
-    family: existing?.family ?? familyFromCode(t.code),
-    title: (t.title ?? t.code).trim(),
+    code,
+    family: existing?.family ?? familyFromCode(code),
+    title: intoExisting && existing?.title ? existing.title : (t.title ?? code).trim(),
     blurb: existing?.blurb ?? '',
     phases: catalogPhases.length ? catalogPhases : existing?.phases ?? [],
     versions: mergeVersions(existing?.versions, durations.length ? durations : [12]),
