@@ -51,7 +51,7 @@ import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEf
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
-import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
+import { peekStudioSeed, releaseStudioSeed, setStudioProject, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import { entryForStudioSave } from '../admin/publishPlain'
@@ -258,7 +258,7 @@ function StudioTooSmall() {
 /* ============================ main editor ============================ */
 function StudioDesktop() {
   const handoff = useMemo(() => {
-    const h = takeStudioSeed()
+    const h = peekStudioSeed()
     if (!h) return null
     const end = Math.max(120, ...h.tracks.flatMap((t) => t.clips.map((c) => c.startSec + c.durationSec)))
     return {
@@ -399,6 +399,10 @@ function StudioDesktop() {
 
   function goBack() {
     if (dirty && attachTarget && !window.confirm('Ci sono modifiche non salvate nel protocollo. Uscire comunque?')) return
+    /* The hand-off is released HERE and nowhere else. Reading it no longer
+       consumes it, so the session survives a resize, a re-render or a reload;
+       leaving the Studio on purpose is the one thing that ends it. */
+    releaseStudioSeed()
     window.location.hash = returnTo ?? '#'
   }
 
@@ -496,6 +500,30 @@ function StudioDesktop() {
     }
     void doRender(trackId, clipId, tr.type, cl.params, cl.durationSec, shape)
   }, [doRender, rebakeVoice])
+
+  /**
+   * Keep the hand-off in step with what is on screen.
+   *
+   * Restoring only the seed would bring back the project as it was OPENED —
+   * every edit since would still vanish on a resize past the desktop gate, a
+   * re-render or a reload. This writes the working state back after each
+   * change, so what comes back is what was there a moment ago.
+   *
+   * It is NOT a save. `dirty` stays set and the protocol is untouched until
+   * 💾 Salva is pressed; this is only what makes the editor survive being
+   * remounted. Debounced, because a drag fires it continuously.
+   */
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      try {
+        setStudioProject(toStudioProject(), attachTarget ?? undefined, returnTo ?? undefined)
+      } catch {
+        /* a project too large for sessionStorage keeps working in memory */
+      }
+    }, 800)
+    return () => window.clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, projectName, lengthSec, masterGain, sessionFades.inSec, sessionFades.outSec])
 
   /**
    * Bring saved voice renders back, once, when a project opens.
