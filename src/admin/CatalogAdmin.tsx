@@ -61,6 +61,21 @@ async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> 
  * what the screen needs to render its header and disable the four actions that
  * operate on a timeline while leaving Importa Excel open.
  */
+/**
+ * A protocol that exists only because a Studio session was saved onto it.
+ *
+ * Saving from the Studio is a valid way to start a protocol — you can build
+ * the mix before the workbook is final — but nothing about it is publishable
+ * yet: no timeline, no rendered audio, nothing a person could be given. It
+ * sits in the catalog as a DRAFT so it can be found and worked on again, and
+ * it stays inactive until a duration is published from the workscreen.
+ */
+function isDraft(p: CatalogProtocol): boolean {
+  if (p.enabled) return false
+  const hasAudio = p.versions.some((v) => v.audioUrl?.['pt-BR'])
+  return !hasAudio && !mergedPlain(p) && !p.datasheet && !p.spec
+}
+
 /** What material the catalog holds for a protocol, in one short phrase. */
 function materialLabel(p: CatalogProtocol): string {
   const bits: string[] = []
@@ -69,6 +84,8 @@ function materialLabel(p: CatalogProtocol): string {
   else if (p.plain) bits.push('PLAIN (legacy)')
   if (p.datasheet) bits.push('Scheda dati')
   if (p.spec) bits.push('Documento')
+  const studio = CATALOG_DURATIONS.filter((d) => studioFor(p, d))
+  if (studio.length) bits.push(`Studio ${studio.map((d) => `${d}m`).join('+')}`)
   return bits.length ? bits.join(' · ') : 'nessun workbook'
 }
 
@@ -405,7 +422,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>
-                {p.source === 'imported' ? <span className="adm-pill adm-pill--info">Importato</span> : <span className="adm-tag">Di serie</span>}
+                {isDraft(p)
+                  ? <span className="adm-pill adm-pill--warn">Bozza</span>
+                  : p.source === 'imported'
+                    ? <span className="adm-pill adm-pill--info">Importato</span>
+                    : <span className="adm-tag">Di serie</span>}
                 {/* WHICH workbook is behind the row. A protocol can play
                     perfectly from an attached mixdown while carrying no PLAIN
                     timeline at all, and until this line existed the only way to
@@ -430,14 +451,19 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 >
                   🎚 Modifica
                 </button>
+                {/* A draft cannot be switched on: there is nothing behind it to
+                    give anyone. Publishing a duration is what activates it, and
+                    the toggle says so instead of failing silently. */}
                 <button
                   className={`adm-toggle ${p.enabled ? 'is-on' : ''}`}
-                  disabled={busyCode === p.code}
+                  disabled={busyCode === p.code || isDraft(p)}
                   onClick={() => toggle(p)}
-                  title={p.enabled ? 'Attivo — clicca per disattivare' : 'Disattivato — clicca per attivare'}
+                  title={isDraft(p)
+                    ? 'Bozza — pubblica una durata dalla schermata del protocollo per attivarlo'
+                    : p.enabled ? 'Attivo — clicca per disattivare' : 'Disattivato — clicca per attivare'}
                 >
                   <span className="adm-toggle__knob" />
-                  <span className="adm-toggle__txt">{p.enabled ? 'Attivo' : 'Disattivato'}</span>
+                  <span className="adm-toggle__txt">{isDraft(p) ? 'Bozza' : p.enabled ? 'Attivo' : 'Disattivato'}</span>
                 </button>
                 <button
                   className="adm-del"

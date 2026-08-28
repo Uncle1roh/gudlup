@@ -15,21 +15,22 @@ import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { setStudioSeed } from '../compose/handoff'
 import { attachRenderedAudio } from './attachAudio'
-import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
+import type { Duration } from '../types/domain'
 import {
   CATALOG_DURATIONS,
   catalogDuration,
-  mergeVersions,
-  narrowTimeline,
+  plainDurations,
+  plainFor,
   timelinesByDuration,
   type CatalogProtocol,
 } from '../data/catalog'
+import { entryForPublish } from './publishPlain'
 import { ProtocolCardEditor, cardDraftFrom, applyCardDraft, type ProtocolCardDraft } from './ProtocolCard'
 import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
 import { plainWavFileName, renderPlainWav } from './renderPlain'
-import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimeline'
+import { secToMmss, type PlainTimeline } from './plainTimeline'
 
 interface Props {
   timeline: PlainTimeline
@@ -45,23 +46,6 @@ interface Props {
   /** The catalog's hidden file input, mounted here so the dialog works
       while this screen is the one on display. */
   fileInput?: import('react').ReactNode
-}
-
-const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
-
-function familyFromCode(code: string | null): ProtocolFamily {
-  const fam = (code ?? '').split(/\s+/)[0] as ProtocolFamily
-  return FAMILIES.includes(fam) ? fam : 'GL-ANX'
-}
-
-function phasesForCatalog(v: PlainVersion): SessionPhase[] {
-  if (v.phases.length !== 6) return []
-  return v.phases.map((p) => ({
-    id: p.fase as SessionPhase['id'],
-    name: p.label,
-    fraction: Math.max(0.01, (p.endS - p.startS) / Math.max(1, v.durationS)),
-    showOrb: p.fase === 2,
-  }))
 }
 
 function downloadBlob(name: string, blob: Blob) {
@@ -149,6 +133,31 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     () => (published ? new Set(Object.keys(timelinesByDuration(published)).map(Number) as Duration[]) : new Set<Duration>()),
     [published],
   )
+
+  /**
+   * EVERY time signature this protocol has, not only the ones with a timeline.
+   *
+   * The chips used to be built from the workbook alone and only appeared when
+   * it carried more than one version. So a protocol whose 6-minute PLAIN sheet
+   * had been imported showed a single chip — or none — with no hint that 12 and
+   * 24 existed at all, and the screen read as though the protocol were
+   * six-minute-only. The catalog knows better: it lists the versions, and the
+   * ones without a sheet are shown as unavailable rather than hidden.
+   */
+  const sheetByDuration = useMemo(() => {
+    const m = new Map<Duration, string>()
+    for (const v of t.versions) {
+      const d = catalogDuration(v.durationMin)
+      if (d != null && !m.has(d)) m.set(d, v.sheet)
+    }
+    return m
+  }, [t])
+
+  const allDurations = useMemo(() => {
+    const set = new Set<Duration>(sheetByDuration.keys())
+    for (const v of published?.versions ?? []) set.add(v.duration)
+    return CATALOG_DURATIONS.filter((d) => set.has(d))
+  }, [sheetByDuration, published])
 
   function explain(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
@@ -241,45 +250,28 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
    * already has, and each duration's timeline lands in its own slot.
    */
   async function publishToCatalog(): Promise<CatalogProtocol> {
-    if (!t.code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
-    const phased = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
     const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
-
-    // every duration this workbook carries, each with its own slice of it
-    const incoming: Partial<Record<Duration, PlainTimeline>> = {}
-    for (const v of t.versions) {
-      const d = catalogDuration(v.durationMin)
-      if (d) incoming[d] = narrowTimeline(t, v)
-    }
-    const durations = CATALOG_DURATIONS.filter((d) => !!incoming[d])
-    // the per-duration store: what was already published, then this workbook
-    const plainByDuration = { ...timelinesByDuration(existing), ...incoming }
-    const versions = mergeVersions(existing?.versions, durations.length ? durations : [12])
-
-    const proto: CatalogProtocol = {
-      ...(existing ?? {}),
-      code: t.code,
-      family: existing?.family ?? familyFromCode(t.code),
-      title: (t.title ?? t.code).trim(),
-      blurb: existing?.blurb ?? '',
-      phases: phasesForCatalog(phased).length ? phasesForCatalog(phased) : existing?.phases ?? [],
-      versions,
-      enabled: true,
-      source: 'imported',
-      tenants: existing?.tenants ?? 'all',
-      audioReady: existing?.audioReady ?? false,
-      spec: existing?.spec,
-      datasheet: existing?.datasheet,
-      // legacy mirror: the sheet just published. `plainByDuration` is the
-      // authority — readers go through mergedPlain()/plainFor().
-      plain: incoming[versionDuration ?? durations[0] ?? 12] ?? t,
-      plainByDuration,
-      assetMap: existing?.assetMap,
-      updatedAt: Date.now(),
-    }
+    /* The merge rule lives in `publishPlain.ts` so it can be executed against
+       assertions rather than argued about — including the one that matters
+       here: every duration written can be read back with `plainFor`, which is
+       what the Studio reopens through. */
+    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration })
+    const durations = plainDurations(proto)
     // verified: a write rejected by RLS used to leave a protocol that looked
     // published until the next screen change
     const stored = await saveProtocolVerified(dp, proto)
+
+    /* A publish that cannot be reopened is the failure this screen exists to
+       prevent, so it is checked against what came BACK from the catalog rather
+       than against what we sent. */
+    const unreadable = (versionDuration != null ? [versionDuration] : durations).filter((d) => !plainFor(stored, d))
+    if (unreadable.length) {
+      throw new Error(
+        `Salvato, ma ${unreadable.map((d) => `${d}m`).join(' · ')} non si rilegge dal catalogo — ` +
+        'la colonna plain_by_duration non è aggiornata: esegui di nuovo supabase/setup.sql e ripubblica.',
+      )
+    }
+
     await dp.logAudit({
       actor,
       action: 'protocol.plain.imported',
@@ -382,23 +374,41 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
           </span>
         </div>
         {/* One chip per TIME SIGNATURE. Every action on this screen applies to
-            the selected one only — publishing 12 min never touches 6 or 24. */}
-        {t.versions.length > 1 && (
+            the selected one only — publishing 12 min never touches 6 or 24. A
+            signature with no sheet is shown disabled, with the reason, instead
+            of being left out: "where are my other durations" is a question the
+            screen should answer rather than raise. */}
+        {allDurations.length > 1 && (
           <div className="adm-plain__chips">
-            {t.versions.map((v) => {
-              const d = catalogDuration(v.durationMin)
-              const mark = d != null && liveDurations.has(d) ? ' ✓' : d != null && publishedDurations.has(d) ? ' ·' : ''
+            {allDurations.map((d) => {
+              const own = sheetByDuration.get(d)
+              const mark = liveDurations.has(d) ? ' ✓' : publishedDurations.has(d) ? ' ·' : own ? '' : ' ⏳'
+              const why = own
+                ? liveDurations.has(d)
+                  ? `${d} min — audio in linea`
+                  : publishedDurations.has(d)
+                    ? `${d} min — pubblicato, audio non ancora collegato`
+                    : `${d} min — non ancora pubblicato`
+                : `${d} min — nessun foglio timeline per questa durata: importa il file Excel di ${d} minuti${liveDurations.has(d) ? ' (l’audio già in linea resta com’è)' : ''}`
               return (
                 <button
-                  key={v.sheet}
-                  className={`b2b-btn${sheet === v.sheet ? ' b2b-btn--primary' : ''}`}
-                  onClick={() => setSheet(v.sheet)}
-                  title={d != null && liveDurations.has(d) ? `${v.durationMin} min — audio in linea` : d != null && publishedDurations.has(d) ? `${v.durationMin} min — pubblicato, audio non ancora collegato` : `${v.durationMin} min — non ancora pubblicato`}
+                  key={d}
+                  className={`b2b-btn${own && sheet === own ? ' b2b-btn--primary' : ''}`}
+                  disabled={!own}
+                  onClick={() => own && setSheet(own)}
+                  title={why}
                 >
-                  {v.durationMin}m{mark}
+                  {d}m{mark}
                 </button>
               )
             })}
+          </div>
+        )}
+        {allDurations.some((d) => !sheetByDuration.has(d)) && (
+          <div className="adm-plain__status">
+            Durate senza foglio timeline:{' '}
+            <b>{allDurations.filter((d) => !sheetByDuration.has(d)).map((d) => `${d}m`).join(' · ')}</b>{' '}
+            — importa il file Excel di quella durata per lavorarci. Le altre durate non vengono toccate.
           </div>
         )}
       </header>

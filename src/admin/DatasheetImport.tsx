@@ -235,7 +235,13 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
                     key={v.duration}
                     className={`b2b-btn${renderDur === v.duration ? ' b2b-btn--primary' : ''}`}
                     disabled={!ready}
-                    title={ready ? undefined : `Timeline_${v.duration}min is not compiled yet`}
+                    /* The old message named a `Timeline_12min` sheet, which the
+                       unified workbook does not have — its TIMELINE sheet
+                       carries a Versione column instead. Naming a sheet that
+                       does not exist sent people looking for the wrong thing. */
+                    title={ready
+                      ? undefined
+                      : `Nessuna riga da ${v.duration} min nel foglio TIMELINE (colonna Versione = ${v.duration}). Aggiungile al workbook e reimporta — le altre durate non vengono toccate.`}
                     onClick={() => setRenderDur(v.duration)}
                   >
                     {v.duration} min{v.label ? ` · ${v.label}` : ''}{ready ? '' : ' ⏳'}
@@ -244,6 +250,14 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
               })}
             </div>
           </div>
+          {ds.versions.some((v) => !timelineReady(ds, v.duration)) && (
+            <div className="adm-note" style={{ margin: '6px 0' }}>
+              Durate senza righe nel foglio TIMELINE:{' '}
+              <b>{ds.versions.filter((v) => !timelineReady(ds, v.duration)).map((v) => `${v.duration}m`).join(' · ')}</b>{' '}
+              — la scheda le dichiara, ma il foglio TIMELINE non ha righe con quella Versione, quindi non c’è nulla da
+              renderizzare. È una mancanza del workbook, non del protocollo: l’audio già collegato resta in linea.
+            </div>
+          )}
           <div className="adm-spec__row">
             <span className="adm-spec__lbl">Assets</span>
             <div className="adm-spec__chips">

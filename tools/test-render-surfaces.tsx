@@ -289,6 +289,45 @@ assert(actButtons.filter((b) => b.includes('disabled')).length === 4, 'the four 
 assert(!actButtons[0].includes('disabled'), 'Importa Excel stays open — it is the way out')
 assert(/non ha ancora una timeline PLAIN/.test(wsHtml), 'and the screen says why, in the open rather than in a tooltip')
 
+/* --- every time signature is visible, even the ones with no sheet ---------
+   A protocol whose 6-minute PLAIN sheet was imported showed one chip, or none,
+   with nothing to say that 12 and 24 existed — the screen read as though the
+   protocol were six-minute-only. */
+function plainWith(durations: number[]) {
+  return {
+    code: 'GL-ANX 1.1',
+    title: 'Safety and Calm',
+    affirmations: [],
+    issues: [],
+    versions: durations.map((d) => ({
+      sheet: `S${d}`, durationMin: d, durationS: d * 60, clips: [], phases: [], levelMode: 'absolute' as const,
+    })),
+  }
+}
+
+const oneSheet = renderToString(
+  shell(<PlainImport timeline={plainWith([6])} fileName="catalog · GL-ANX 1.1" actor="admin" onCancel={noop} onDone={noop} />),
+)
+/* With nothing published yet the catalog knows of no other durations, so a
+   single chip row is correct — the point is what happens when it DOES. */
+const chipText = (h: string) => h.replace(/<!--[^>]*-->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+assert(!/24m/.test(chipText(oneSheet)), 'a lone 6-minute sheet with no catalog entry shows only what exists')
+
+const twoSheets = renderToString(
+  shell(<PlainImport timeline={plainWith([6, 24])} fileName="catalog · GL-ANX 1.1" actor="admin" onCancel={noop} onDone={noop} />),
+)
+assert(/6m/.test(chipText(twoSheets)) && /24m/.test(chipText(twoSheets)), 'two sheets give two selectable chips')
+const chipTags = twoSheets.match(/<button[^>]*b2b-btn[^>]*>/g) ?? []
+assert(chipTags.length >= 2, 'and they are real buttons')
+
+/* A duration the workbook does not cover is shown disabled with a reason,
+   never hidden. */
+const gapHtml = renderToString(
+  shell(<PlainImport timeline={plainWith([6, 12])} fileName="catalog · GL-ANX 1.1" actor="admin" onCancel={noop} onDone={noop} />),
+)
+assert(/6m/.test(chipText(gapHtml)) && /12m/.test(chipText(gapHtml)), 'the durations the workbook carries are all offered')
+assert(!/⏳/.test(gapHtml), 'and nothing is marked pending when every duration has a sheet')
+
 /* --- one VAS scale, one direction -----------------------------------------
    The therapy link used to seed VAS on a 0-10 distress scale while the
    confirmed instrument is 1-5 the other way up. One measure, two scales, two

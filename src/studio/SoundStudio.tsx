@@ -54,11 +54,11 @@ import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { takeStudioSeed, type StudioAttachTarget } from '../compose/handoff'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
-import type { Duration, ProtocolFamily } from '../types/domain'
-import { mergeVersions, mergedPlain, type CatalogProtocol } from '../data/catalog'
+import { entryForStudioSave } from '../admin/publishPlain'
+import type { Duration } from '../types/domain'
+import type { CatalogProtocol } from '../data/catalog'
 import type { StudioProject } from '../compose/types'
 import { useDataProvider } from '../data/provider'
-import { attachRenderedAudio } from '../admin/attachAudio'
 import type { SeedTrack } from '../compose/types'
 
 /* ---- layout constants ---- */
@@ -178,11 +178,6 @@ function nearestDuration(lengthSec: number): Duration {
   const mins = lengthSec / 60
   return CATALOG_DURATIONS.reduce((best, d) => (Math.abs(d - mins) < Math.abs(best - mins) ? d : best), CATALOG_DURATIONS[0])
 }
-const GL_FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
-function familyFromCode(code: string): ProtocolFamily {
-  const fam = code.split(/\s+/)[0] as ProtocolFamily
-  return GL_FAMILIES.includes(fam) ? fam : 'GL-ANX'
-}
 const uid = () => Math.random().toString(36).slice(2, 9)
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 const snap = (v: number) => Math.round(v * 4) / 4
@@ -274,11 +269,9 @@ function StudioDesktop() {
   const returnTo: string | null = handoff?.returnTo ?? null
   const sessionFades = { inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 }
   const dp = useDataProvider()
-  const [attaching, setAttaching] = useState(false)
   const [attachMsg, setAttachMsg] = useState<string | null>(null)
   const [targetOverride, setTargetOverride] = useState<StudioAttachTarget | null>(null)
   const [saving, setSaving] = useState(false)
-  const [publishing, setPublishing] = useState(false)
   const [dirty, setDirty] = useState(false)
 
   /** The whole session, serialized — everything except the audio buffers,
@@ -335,33 +328,17 @@ function StudioDesktop() {
   }
 
   /** The catalog entry for `target`, CREATING it when the protocol has never
-      been published — a first save from the Studio is a valid way in, with or
-      without an externally mastered file. */
+      been published. The rule lives in `publishPlain.ts` so it can be asserted
+      — in particular that a protocol born from a Studio save is a draft. */
   async function ensureCatalogProtocol(target: StudioAttachTarget): Promise<CatalogProtocol> {
     const existing = (await dp.listProtocols()).find((p) => p.code === target.code)
-    const base = getProtocol(target.code)
-    const versions = existing?.versions?.length
-      ? existing.versions
-      : base?.versions?.length ? base.versions : []
-    return {
-      // spread FIRST so nothing the Studio does not know about is dropped:
-      // audience, library metadata, the public name, the tags and the other
-      // time signatures' timelines and sessions all survive a Studio save.
-      ...(existing ?? {}),
+    return entryForStudioSave({
       code: target.code,
-      family: existing?.family ?? base?.family ?? familyFromCode(target.code),
-      title: existing?.title ?? base?.title ?? projectName,
-      blurb: existing?.blurb ?? base?.blurb ?? '',
-      phases: existing?.phases?.length ? existing.phases : base?.phases ?? [],
-      // merge, never replace — a 24-minute save must not delete the 6- and
-      // 12-minute versions or the audio already attached to them
-      versions: mergeVersions(versions, [target.duration]),
-      enabled: existing?.enabled ?? true,
-      source: existing?.source ?? 'imported',
-      tenants: existing?.tenants ?? 'all',
-      audioReady: existing?.audioReady ?? false,
-      updatedAt: Date.now(),
-    }
+      duration: target.duration,
+      existing,
+      base: getProtocol(target.code),
+      projectName,
+    })
   }
 
   /** Persist every Studio edit onto the protocol, creating it if needed.
@@ -388,9 +365,13 @@ function StudioDesktop() {
     setAttachMsg(null)
     try {
       const stored = await saveToProtocol(target)
-      const created = !stored.audioReady && !mergedPlain(stored)
+      const draft = !stored.enabled
       setAttachMsg(
-        `Salvato in ${target.code}${created ? ' (nuovo protocollo nel catalogo)' : ''} — riaprendolo ritrovi esattamente questa sessione.${persistenceNote() ?? ''}`,
+        `Salvato in ${target.code} · ${target.duration} min — riaprendolo ritrovi esattamente questa sessione.` +
+        (draft
+          ? ' È nel catalogo come BOZZA: non è attivo finché non pubblichi la durata dalla schermata del protocollo.'
+          : '') +
+        (persistenceNote() ?? ''),
       )
     } catch (e) {
       setAttachMsg(`Salvataggio non riuscito: ${(e as Error).message}`)
@@ -399,66 +380,11 @@ function StudioDesktop() {
     }
   }
 
-  /** Publish straight from the Studio: save the session, render the mixdown,
-      upload it and enable the protocol — the path for when nobody is going to
-      master the audio externally. */
-  async function publishFromStudio() {
-    const target = askTarget()
-    if (!target) return
-    setPublishing(true)
-    setAttachMsg(null)
-    try {
-      setAttachMsg('Salvataggio della sessione…')
-      await saveToProtocol(target)
-      setAttachMsg('Render del mixdown…')
-      const solo = tracks.some((t) => t.soloed)
-      const mix: MixTrack[] = tracks.map((t) => ({
-        gain: t.muted ? 0 : solo && !t.soloed ? 0 : t.volume,
-        pan: CHANNEL_PAN[t.channel ?? 'C'],
-        effects: t.effects,
-        clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
-      }))
-      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
-      const mastered = masterSessionBuffer(buffer)
-      setAttachMsg(`Caricamento della copia per lo streaming… (${mastered})`)
-      const { protocol } = await attachRenderedAudio(dp, target.code, target.duration, buffer)
-      if (!protocol.enabled) {
-        await saveProtocolVerified(dp, { ...protocol, enabled: true, updatedAt: Date.now() })
-      }
-      setAttachMsg(`In linea — ${target.code} · ${target.duration} min ora riproduce questa versione nell’app.${persistenceNote() ?? ''}`)
-    } catch (e) {
-      setAttachMsg(`Pubblicazione non riuscita: ${(e as Error).message}`)
-    } finally {
-      setPublishing(false)
-    }
-  }
-
   function goBack() {
     if (dirty && attachTarget && !window.confirm('Ci sono modifiche non salvate nel protocollo. Uscire comunque?')) return
     window.location.hash = returnTo ?? '#'
   }
 
-  async function attachToCatalog() {
-    if (!attachTarget) return
-    setAttaching(true)
-    setAttachMsg(null)
-    try {
-      const mix: MixTrack[] = tracks.map((t) => ({
-        gain: t.muted ? 0 : tracks.some((x) => x.soloed) && !t.soloed ? 0 : t.volume,
-        pan: CHANNEL_PAN[t.channel ?? 'C'],
-        effects: t.effects,
-        clips: t.clips.map((c) => ({ startSec: c.startSec, durationSec: c.durationSec, buffer: c.fxBuffer ?? c.buffer })),
-      }))
-      const buffer = await renderMixdownBuffer(mix, lengthSec, masterGain, sessionFades)
-      const mastered = masterSessionBuffer(buffer)
-      const { url } = await attachRenderedAudio(dp, attachTarget.code, attachTarget.duration, buffer)
-      setAttachMsg(`Attached — ${attachTarget.code} · ${attachTarget.duration} min now streams this edit. ${mastered} (${url.split('/').pop()})`)
-    } catch (e) {
-      setAttachMsg(`Attach failed: ${(e as Error).message}`)
-    } finally {
-      setAttaching(false)
-    }
-  }
   const [playing, setPlaying] = useState(false)
   const [playhead, setPlayhead] = useState(0)
   const [selected, setSelected] = useState<{ trackId: string; clipId: string } | null>(null)
@@ -1366,27 +1292,17 @@ function StudioDesktop() {
           <button
             className={`mt-export${dirty ? ' is-dirty' : ''}`}
             onClick={() => void onSave()}
-            disabled={saving || publishing}
+            disabled={saving}
             title="Salva tutte le modifiche dentro il protocollo — riaprendolo ritrovi questa sessione"
           >
             {saving ? 'Salvataggio…' : dirty ? '💾 Salva •' : '💾 Salva'}
           </button>
         }
-        {hasSupabaseEnv() && (
-          <button
-            className="mt-export mt-export--publish"
-            onClick={() => void publishFromStudio()}
-            disabled={publishing || saving}
-            title="Salva, renderizza e manda in linea il protocollo — senza masterizzazione esterna"
-          >
-            {publishing ? 'Pubblicazione…' : '🚀 Pubblica'}
-          </button>
-        )}
-        {attachTarget && hasSupabaseEnv() && (
-          <button className="mt-export" onClick={attachToCatalog} disabled={attaching || publishing} title={`Ricollega solo l’audio a ${attachTarget.code} · ${attachTarget.duration} min`}>
-            {attaching ? 'Collegamento…' : '⬆ Solo audio'}
-          </button>
-        )}
+        {/* Pubblica and Solo audio used to live here. Publishing is one act
+            with one home — the protocol workscreen — and having a second door
+            into it from the Studio meant two code paths that could disagree
+            about what a published protocol looks like. The Studio saves; the
+            workscreen publishes. */}
         <button className="mt-back" onClick={goBack} title={returnTo ? 'Torna alla schermata precedente' : 'Esci dallo studio'}>
           ← Indietro
         </button>
