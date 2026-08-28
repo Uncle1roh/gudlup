@@ -226,17 +226,48 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
 
   /* ---- actions ------------------------------------------------------- */
 
-  function editInStudio() {
+  /**
+   * Attach this workbook to the protocol WITHOUT publishing it.
+   *
+   * The timeline used to reach the catalog only through Publish, so a PO who
+   * imported an Excel, went to the Studio and saved found the session stored
+   * against a protocol that had no workbook — and had to import the same file
+   * again later. The import IS the work; it belongs to the protocol from the
+   * moment it is read.
+   *
+   * The protocol stays a draft: `keepDraft` leaves `enabled` alone rather than
+   * switching it on, because nothing has been rendered yet. Publishing is
+   * still what puts a time signature on the air.
+   */
+  async function attachTimeline(): Promise<CatalogProtocol | null> {
+    if (!t.code) return null
+    try {
+      const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
+      const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, keepDraft: true })
+      const stored = await saveProtocolVerified(dp, proto)
+      setPublished(stored)
+      return stored
+    } catch (e) {
+      setError(explain(e))
+      return null
+    }
+  }
+
+  async function editInStudio() {
     if (!version) return
     try {
       const dur = version.durationMin === 6 || version.durationMin === 12 || version.durationMin === 24 ? (version.durationMin as Duration) : undefined
       const attach = t.code && dur ? { code: t.code, duration: dur } : undefined
 
+      /* The workbook goes onto the protocol before the Studio opens, so the
+         session about to be saved has something to belong to. */
+      const stored = hasTimeline ? await attachTimeline() : null
+
       /* A session already saved for THIS time signature wins over a fresh seed
          from the workbook. Reseeding would silently discard hand edits — and
          re-draw every random asset, so the mix would not even be the same one
          the PO left. Only a duration with nothing saved is seeded. */
-      const saved = dur ? studioFor(published ?? undefined, dur) : undefined
+      const saved = dur ? studioFor(stored ?? published ?? undefined, dur) : undefined
       if (saved) {
         setStudioProject(saved, attach, '#admin')
         window.location.hash = '#studio'
@@ -431,7 +462,7 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
         <button className="adm-plain__act" onClick={onImportExcel ?? onCancel} disabled={busy}>
           <span className="adm-plain__act-ico">⬆</span> Importa Excel
         </button>
-        <button className="adm-plain__act" onClick={editInStudio} disabled={disabled} title={noTimelineWhy ?? (poolsLoading ? 'Caricamento della libreria sonora…' : undefined)}>
+        <button className="adm-plain__act" onClick={() => void editInStudio()} disabled={disabled} title={noTimelineWhy ?? (poolsLoading ? 'Caricamento della libreria sonora…' : undefined)}>
           <span className="adm-plain__act-ico">🎚</span> Modifica nello Studio
         </button>
         <button className="adm-plain__act" onClick={() => void download()} disabled={disabled} title={noTimelineWhy}>

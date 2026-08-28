@@ -16,6 +16,7 @@
    ============================================================================ */
 
 import { entryForPublish, entryForStudioSave } from '../src/admin/publishPlain'
+import { newProtocolEntry, newProtocolError } from '../src/admin/CatalogAdmin'
 import { plainToStudioTracks } from '../src/admin/plainStudio'
 import { CATALOG_DURATIONS, mergedPlain, plainFor, plainDurations, studioFor, type CatalogProtocol } from '../src/data/catalog'
 import type { SeedClip, StudioProject } from '../src/compose/types'
@@ -301,6 +302,61 @@ for (const f of SAVED_CLIP_FIELDS) {
 }
 assert(roundTrip.ttsPath === 'tts/v/abc.mp3', 'including where its synthesized voice is stored')
 assert(roundTrip.ttsText === roundTrip.text, 'and the text that voice was spoken from')
+
+/* ------------------------------------------------ creating from nothing -- */
+console.log('\n--- Crea nuovo ---')
+
+/* A protocol starts with a name, not with a spreadsheet. */
+const card = { code: 'gl-anx 3.7', title: 'Calma e sicurezza', publicTitle: 'Un respiro', publicBlurb: 'A letto, luci spente.', tags: ['sera'] }
+assert(newProtocolError(card, []) === null, 'a code and a clinical title are all it takes')
+assert(newProtocolError({ ...card, code: '' }, []) !== null, 'a protocol with no code is refused')
+assert(newProtocolError({ ...card, code: 'ANX 1.1' }, []) !== null, 'and so is one whose code is not a GL code')
+assert(newProtocolError({ ...card, title: '  ' }, []) !== null, 'the clinical title cannot be blank')
+assert(newProtocolError(card, ['GL-ANX 3.7']) !== null, 'a code already in the catalog is refused')
+
+const created = newProtocolEntry(card, T)
+assert(created.code === 'GL-ANX 3.7', 'the code is upper-cased and trimmed')
+assert(created.family === 'GL-ANX', 'the family is read off it')
+assert(created.title === 'Calma e sicurezza', 'the clinical title is kept')
+assert(created.publicTitle === 'Un respiro', 'and the public one')
+assert(created.tags?.join() === 'sera', 'and the tags')
+assert(created.versions.length === 0, 'it declares no time signature yet')
+assert(created.enabled === false, 'and it is NOT active — nothing has been published for it')
+assert(!mergedPlain(created) && !created.datasheet && !created.spec, 'it carries no material at all, which is the point')
+
+/* Importing the workbook onto it is the next step, and it stays a draft. */
+const withWorkbook = entryForPublish({
+  timeline: { ...workbook(12), code: 'GL-ANX 3.7' },
+  existing: created,
+  selected: 12,
+  keepDraft: true,
+  now: T + 1000,
+})
+assert(!!plainFor(withWorkbook, 12), 'the imported Excel is on the protocol')
+assert(withWorkbook.enabled === false, 'and importing it does NOT put the protocol on the air')
+assert(withWorkbook.title === 'Safety and Calm', 'the workbook names the protocol once it has one')
+assert(withWorkbook.publicTitle === 'Un respiro', 'and the Scheda written at creation survives the import')
+assert(withWorkbook.tags?.join() === 'sera', 'tags included')
+
+/* Publishing that duration is what activates it — the only thing that does. */
+const onAir = entryForPublish({
+  timeline: { ...workbook(12), code: 'GL-ANX 3.7' },
+  existing: withWorkbook,
+  selected: 12,
+  now: T + 2000,
+})
+assert(onAir.enabled === true, 'publishing is what activates a protocol')
+
+/* A protocol an admin switched off stays off when a workbook is attached. */
+const off = entryForPublish({
+  timeline: { ...workbook(24), code: 'GL-ANX 3.7' },
+  existing: { ...onAir, enabled: false },
+  selected: 24,
+  keepDraft: true,
+  now: T + 3000,
+})
+assert(off.enabled === false, 'attaching a workbook never switches a disabled protocol back on')
+assert(!!plainFor(off, 12) && !!plainFor(off, 24), 'and it keeps both time signatures')
 
 console.log(`\n${pass} assertions passed.`)
 if (fails.length) {

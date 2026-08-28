@@ -49,6 +49,15 @@ export interface PublishInput {
   existing: CatalogProtocol | undefined
   /** The time signature the screen is working on, when one is selected. */
   selected?: Duration | null
+  /**
+   * Write the workbook WITHOUT activating the protocol.
+   *
+   * Attaching an imported Excel is not publishing it. A PO importing a file so
+   * they can work on it in the Studio has rendered nothing yet, and a protocol
+   * that goes live the moment a spreadsheet is read would put an unfinished
+   * session in front of a person.
+   */
+  keepDraft?: boolean
   now?: number
 }
 
@@ -63,7 +72,7 @@ export interface PublishInput {
  *   which is what the Studio reopens through. A publish that cannot be
  *   reopened is the failure this whole file exists to make impossible.
  */
-export function entryForPublish({ timeline: t, existing, selected, now = Date.now() }: PublishInput): CatalogProtocol {
+export function entryForPublish({ timeline: t, existing, selected, keepDraft, now = Date.now() }: PublishInput): CatalogProtocol {
   if (!t.code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
 
   const phased = t.versions.find((v) => v.phases.length === 6) ?? t.versions[0]
@@ -91,7 +100,7 @@ export function entryForPublish({ timeline: t, existing, selected, now = Date.no
     blurb: existing?.blurb ?? '',
     phases: catalogPhases.length ? catalogPhases : existing?.phases ?? [],
     versions: mergeVersions(existing?.versions, durations.length ? durations : [12]),
-    enabled: true,
+    enabled: keepDraft ? existing?.enabled ?? false : true,
     source: 'imported',
     tenants: existing?.tenants ?? 'all',
     audioReady: existing?.audioReady ?? false,

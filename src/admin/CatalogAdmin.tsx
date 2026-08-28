@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
 import { FAMILY_LABEL } from '../compose/types'
@@ -6,15 +6,13 @@ import { useRef } from 'react'
 import { PlainImport } from './PlainImport'
 import { DatasheetImport } from './DatasheetImport'
 import { SpecImport } from './SpecImport'
-import { setStudioProject, setStudioSeed } from '../compose/handoff'
-import { plainToStudioTracks } from './plainStudio'
-import { listAssets } from './assets'
-import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
-import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
-import { audienceOf, mergedPlain, plainDurations, plainFor, studioFor, type CatalogProtocol } from '../data/catalog'
+import { audienceOf, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
-import { ProtocolCardEditor, applyCardDraft, cardDraftFrom, type ProtocolCardDraft } from './ProtocolCard'
+import { ProtocolCardEditor, applyCardDraft, cardDraftError, type ProtocolCardDraft } from './ProtocolCard'
+import { familyFromCode } from './publishPlain'
+import { saveProtocolVerified } from './publish'
+import { takeReturnToProtocol } from './workscreenReturn'
 import { LIBRARY_CATEGORIES } from '../data/library'
 import { DURATION_TAG_IDS, durationTagLabel, filterByTags, tagLabel, tagsInUse, tagsOf } from '../data/tags'
 import { CATALOG_DURATIONS } from '../data/catalog'
@@ -24,66 +22,14 @@ function tenantsLabel(p: CatalogProtocol): string {
   return p.tenants === 'all' ? 'Tutte le aziende' : `${p.tenants.length} aziend${p.tenants.length === 1 ? 'a' : 'e'}`
 }
 
-/** Open ONE time signature of a protocol in the Sound Studio. A saved Studio
-    session for that duration is restored as-is; otherwise that duration's PLAIN
-    timeline is converted into one, so "edit" always lands on the real material
-    instead of an empty project — and never on another duration's mix. */
-async function openInStudio(p: CatalogProtocol, want?: Duration): Promise<void> {
-  /*
-   * Which time signature "Modifica" opens.
-   *
-   * This used to prefer 24 whenever the protocol declared it. So a PO who
-   * saved a session at 12 minutes, closed the browser and came back found the
-   * 24-minute version opening from its timeline instead — their work looked
-   * lost, and was in fact sitting untouched in the 12-minute slot.
-   *
-   * A SAVED SESSION now wins over everything except an explicit request. Work
-   * someone did by hand is the most valuable thing on the row, and the one
-   * thing that cannot be regenerated from the workbook.
-   */
-  const declared = CATALOG_DURATIONS.filter((d) => p.versions.some((v) => v.duration === d))
-  const withSession = declared.filter((d) => studioFor(p, d))
-  const duration = (want != null && p.versions.some((v) => v.duration === want) ? want : undefined)
-    ?? withSession[0]
-    ?? (p.versions.find((v) => v.duration === 24) ?? p.versions[0])?.duration
-  const attach = duration ? { code: p.code, duration } : undefined
-  const saved = duration ? studioFor(p, duration) : undefined
-  if (saved) {
-    setStudioProject(saved, attach, '#admin')
-    window.location.hash = '#studio'
-    return
-  }
-  const timeline = (duration ? plainFor(p, duration) : undefined) ?? mergedPlain(p)
-  if (!timeline) throw new Error(`"${p.code}" non ha né una sessione salvata né una timeline PLAIN da aprire.`)
-  const version = timeline.versions.find((v) => v.durationMin === duration) ?? timeline.versions[0]
-  if (!version) throw new Error(`"${p.code}" non ha versioni nella timeline.`)
-  let pools: AssetPools | undefined
-  try {
-    if (hasSupabaseEnv()) {
-      const [assets, meta] = await Promise.all([listAssets(), loadAssetMeta()])
-      pools = buildAssetPools(assets, meta)
-    }
-  } catch { /* library unreachable — the seed just leaves sample clips undrawn */ }
-  const seed = plainToStudioTracks(timeline, version, { pools })
-  setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin' })
-  window.location.hash = '#studio'
-}
-
 /**
- * The workscreen's stand-in for a protocol that has no timeline yet.
+ * A protocol that exists only because a Studio session was saved onto it, or
+ * because "Crea nuovo" gave it a name.
  *
- * It carries the identity — code and title — and no versions, which is exactly
- * what the screen needs to render its header and disable the four actions that
- * operate on a timeline while leaving Importa Excel open.
- */
-/**
- * A protocol that exists only because a Studio session was saved onto it.
- *
- * Saving from the Studio is a valid way to start a protocol — you can build
- * the mix before the workbook is final — but nothing about it is publishable
- * yet: no timeline, no rendered audio, nothing a person could be given. It
- * sits in the catalog as a DRAFT so it can be found and worked on again, and
- * it stays inactive until a duration is published from the workscreen.
+ * Nothing about it is publishable yet: no timeline, no rendered audio, nothing
+ * a person could be given. It sits in the catalog as a DRAFT so it can be
+ * found and worked on again, and it stays inactive until a duration is
+ * published from its workscreen.
  */
 function isDraft(p: CatalogProtocol): boolean {
   if (p.enabled) return false
@@ -104,6 +50,48 @@ function materialLabel(p: CatalogProtocol): string {
   return bits.length ? bits.join(' · ') : 'nessun workbook'
 }
 
+const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', tags: [] }
+
+/** A GL code, the way the workbooks write it: "GL-ANX 1.1". */
+const CODE_SHAPE = /^GL-[A-Z]{2,8}\s+\d+\.\d+$/
+
+export function newProtocolError(draft: ProtocolCardDraft, taken: string[]): string | null {
+  const code = draft.code.trim().toUpperCase()
+  if (!code) return 'Serve un codice, per esempio "GL-ANX 1.1".'
+  if (!CODE_SHAPE.test(code)) return `"${draft.code}" non è un codice valido — la forma è "GL-ANX 1.1".`
+  if (taken.includes(code)) return `${code} esiste già nel catalogo.`
+  return cardDraftError(draft)
+}
+
+/**
+ * The catalog entry "Crea nuovo" writes.
+ *
+ * Empty on purpose: no versions, no workbook, no audio. It exists so the
+ * protocol has a name and a home before any material arrives, and it is a
+ * draft for the same reason a Studio save is — nothing has been published, so
+ * there is nothing to give anyone yet.
+ */
+export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): CatalogProtocol {
+  const code = draft.code.trim().toUpperCase()
+  return {
+    code,
+    family: familyFromCode(code),
+    title: draft.title.trim(),
+    blurb: '',
+    phases: [],
+    versions: [],
+    enabled: false,
+    source: 'imported',
+    tenants: 'all',
+    audioReady: false,
+    audience: 'clinical',
+    publicTitle: draft.publicTitle.trim() || undefined,
+    publicBlurb: draft.publicBlurb.trim() || undefined,
+    tags: draft.tags,
+    updatedAt: now,
+  }
+}
+
 function emptyTimeline(p: CatalogProtocol): PlainTimeline {
   return { code: p.code, title: p.title, versions: [], affirmations: [], issues: [] }
 }
@@ -116,6 +104,22 @@ export function CatalogAdmin({ actor }: { actor: string }) {
      clicked); null = its first version */
   const [openAt, setOpenAt] = useState<Duration | null>(null)
   const [imported, setImported] = useState<{ timeline: PlainTimeline; fileName: string } | null>(null)
+  /* Coming back from the Studio lands on the PROTOCOL, not on the list. The
+     Studio leaves a note saying which one and which time signature; this reads
+     it once, as soon as the catalog has the rows to find it in. */
+  const [returning, setReturning] = useState(() => takeReturnToProtocol())
+  useEffect(() => {
+    if (!returning || !data) return
+    const found = data.find((p) => p.code === returning.code)
+    setReturning(null)
+    if (!found) return
+    setOpenAt(returning.duration ?? null)
+    setOpened(found)
+  }, [returning, data])
+
+  /** The "Crea nuovo" dialog: the Scheda, filled in before anything exists. */
+  const [creating, setCreating] = useState<ProtocolCardDraft | null>(null)
+  const [savingNew, setSavingNew] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [busyCode, setBusyCode] = useState<string | null>(null)
   /* Clinical material and library audio are two different products with two
@@ -155,6 +159,29 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       setImportError((e as Error).message)
     } finally {
       if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  /** Create the protocol and go straight to its workscreen — that is where
+      the Excel is imported and everything else happens. */
+  async function createProtocol() {
+    if (!creating) return
+    const err = newProtocolError(creating, all.map((p) => p.code))
+    if (err) { setImportError(err); return }
+    setSavingNew(true)
+    setImportError(null)
+    try {
+      const entry = newProtocolEntry(creating)
+      const stored = await saveProtocolVerified(dp, entry)
+      await dp.logAudit({ actor, action: 'protocol.created', target: entry.code, detail: entry.title }).catch(() => undefined)
+      setCreating(null)
+      refetch()
+      setOpenAt(null)
+      setOpened(stored)
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      setSavingNew(false)
     }
   }
 
@@ -301,8 +328,13 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           </div>
         </div>
         {shelf === 'clinical' ? (
-          <button className="b2b-btn b2b-btn--primary" onClick={() => fileRef.current?.click()}>
-            ⬆ Importa Excel
+          /* Creating a protocol starts with naming it, not with a spreadsheet.
+             Importa Excel moved onto the workscreen, where the time signature
+             being imported is already chosen — importing from here meant the
+             file had to tell us which protocol it belonged to, and a file that
+             names the wrong one is a bad way to find that out. */
+          <button className="b2b-btn b2b-btn--primary" onClick={() => setCreating(EMPTY_CARD)}>
+            ＋ Crea nuovo
           </button>
         ) : (
           <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(EMPTY_DRAFT)}>
@@ -310,6 +342,43 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           </button>
         )}
         <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />
+        {creating && (
+          <div className="adm-scrim" onClick={() => setCreating(null)} role="dialog" aria-modal="true">
+            <div className="adm-dialog" onClick={(e) => e.stopPropagation()}>
+              <h2 className="b2b-h2">Nuovo protocollo</h2>
+              <label className="pe-field">
+                <span className="pe-label">Codice <em>la forma è "GL-ANX 1.1"</em></span>
+                <input
+                  className="b2b-input adm-mono"
+                  value={creating.code}
+                  placeholder="GL-ANX 1.1"
+                  autoFocus
+                  onChange={(e) => setCreating({ ...creating, code: e.target.value.toUpperCase() })}
+                />
+              </label>
+              <ProtocolCardEditor
+                draft={creating}
+                inline
+                busy={savingNew}
+                onChange={setCreating}
+                onSave={() => void createProtocol()}
+              />
+              {newProtocolError(creating, all.map((x) => x.code)) && (
+                <p className="pe-err">{newProtocolError(creating, all.map((x) => x.code))}</p>
+              )}
+              <div className="adm-dialog__actions">
+                <button className="b2b-btn" disabled={savingNew} onClick={() => setCreating(null)}>Annulla</button>
+                <button
+                  className="b2b-btn b2b-btn--primary"
+                  disabled={savingNew || !!newProtocolError(creating, all.map((x) => x.code))}
+                  onClick={() => void createProtocol()}
+                >
+                  {savingNew ? 'Creazione…' : 'Crea'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {importError && <span className="adm-plain__status adm-plain__status--err" style={{ marginLeft: 10 }}>{importError}</span>}
       </header>
 
@@ -449,28 +518,17 @@ export function CatalogAdmin({ actor }: { actor: string }) {
                 <div className="adm-tag">{materialLabel(p)}</div>
               </div>
               <div className="adm-tr__right" onClick={(e) => e.stopPropagation()}>
-                {shelf === 'library' ? (
+                {/* Scheda and Modifica used to live here. Both are on the
+                    protocol's own workscreen now, which is one click away and
+                    is where everything else about the protocol already is.
+                    Two ways in meant deciding, on the list, which of them a
+                    row wanted — and the list is not where that is known. A
+                    library entry keeps its editor: it has no workscreen. */}
+                {shelf === 'library' && (
                   <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setDraft(draftFrom(p))} title="Titolo, descrizione, scaffale, copertina">
                     ✎ Scheda
                   </button>
-                ) : (
-                  <button className="adm-editbtn" disabled={busyCode === p.code} onClick={() => setCard(cardDraftFrom(p))} title="Nome pubblico (non terapeutico) e tag — il titolo clinico non cambia">
-                    ✎ Scheda
-                  </button>
                 )}
-                <button
-                  className="adm-editbtn"
-                  disabled={busyCode === p.code}
-                  onClick={() => void openInStudio(p).catch((e) => setImportError((e as Error).message))}
-                  title={(() => {
-                    const saved = CATALOG_DURATIONS.filter((d) => studioFor(p, d))
-                    return saved.length
-                      ? `Apri la sessione salvata (${saved.map((d) => `${d}m`).join(' · ')})`
-                      : 'Apri nello Studio dalla timeline del protocollo'
-                  })()}
-                >
-                  🎚 Modifica
-                </button>
                 {/* A draft cannot be switched on: there is nothing behind it to
                     give anyone. Publishing a duration is what activates it, and
                     the toggle says so instead of failing silently. */}

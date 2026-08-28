@@ -1627,7 +1627,9 @@ img, svg, video, canvas { max-width: 100%; }
 /* ----------------------------------------------------------------------------
    Voice engine panel (TTS keys — Studio + PDF-to-audio)
    ---------------------------------------------------------------------------- */
-.mt-voicesetup { padding: 10px 14px; border-bottom: 1px solid var(--line); background: #fff; }
+/* The Studio is dark. This panel was left on a white background, so the
+   save confirmation printed light text on white and read as blank. */
+.mt-voicesetup { padding: 10px 14px; border-bottom: 1px solid var(--mt-line); background: var(--mt-panel); color: var(--mt-text); }
 .voice-panel { display: flex; flex-direction: column; gap: 10px; max-width: 640px; font-size: 13px; }
 .voice-panel__row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .voice-panel__badge { font-weight: 600; color: var(--slate); }
@@ -2260,6 +2262,10 @@ td, th { overflow-wrap: anywhere; }
   animation: screen-in 200ms var(--ease) both;
 }
 .adm-dialog .adm-mono { overflow-wrap: anywhere; }
+/* Annulla / Crea, pushed to the end and kept on one line down to a narrow
+   window — a dialog whose confirm button wraps out of view is a dialog nobody
+   completes. */
+.adm-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
 
 .adm-reflist { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .adm-reflist li { font-size: 13px; color: var(--slate); overflow-wrap: anywhere; }

@@ -55,6 +55,7 @@ import { peekStudioSeed, releaseStudioSeed, setStudioProject, type StudioAttachT
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import { entryForStudioSave } from '../admin/publishPlain'
+import { setReturnToProtocol } from '../admin/workscreenReturn'
 import { lookup as ttsLookup, store as ttsStore, fetchStored as ttsFetch, ttsPath as ttsPathFor, type TtsKey } from '../tts/ttsStore'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
@@ -403,6 +404,10 @@ function StudioDesktop() {
        consumes it, so the session survives a resize, a re-render or a reload;
        leaving the Studio on purpose is the one thing that ends it. */
     releaseStudioSeed()
+    /* Back to the PROTOCOL, not to the catalog list. The admin app routes with
+       local state, so '#admin' alone would drop the person two steps from
+       where they were working and make them find the protocol again. */
+    if (attachTarget) setReturnToProtocol({ code: attachTarget.code, duration: attachTarget.duration })
     window.location.hash = returnTo ?? '#'
   }
 
