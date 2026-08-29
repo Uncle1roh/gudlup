@@ -30,6 +30,7 @@ import {
   type SampleParams,
   type VoiceParams,
 } from '../studio/multitrack'
+import { harmonizeBuffer } from '../studio/effects'
 import { audioBufferToWav } from '../lib/wav'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from '../studio/mastering'
 import type { SeedTrack } from '../compose/types'
@@ -134,6 +135,12 @@ export async function renderPlainWav(
   try {
     for (const t of seed.tracks) {
       const clips: MixTrack['clips'] = []
+      /* The Harmonizer is the one effect that is NOT a bus node: it layers
+         pitch-shifted copies of the clip itself, so `buildEffectsChain` skips
+         it and the mixdown would silently drop it. The Studio does this per
+         clip; the offline render has to do the same or a sheet asking for
+         "coro" would be heard while editing and lost on Publish. */
+      const harmonizer = t.effects?.find((e) => e.kind === 'harmonizer' && e.enabled)
       for (const c of t.clips) {
         if (c.startSec >= lengthSec) continue
         let dur = Math.min(c.durationSec, lengthSec - c.startSec)
@@ -181,6 +188,10 @@ export async function renderPlainWav(
           let buf = await renderClipBuffer(t.type, c.params, dur)
           buf = shapeClipBuffer(buf, c)
           buffer = buf
+        }
+        if (buffer && harmonizer) {
+          buffer = await harmonizeBuffer(buffer, harmonizer.params)
+          dur = Math.min(lengthSec - c.startSec, buffer.duration)
         }
         clips.push({ startSec: c.startSec, durationSec: dur, buffer })
       }

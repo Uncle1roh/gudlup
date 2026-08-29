@@ -38,6 +38,7 @@
 import type { SeedClip, SeedTrack } from '../compose/types'
 import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type SampleParams, type SampleSlot, type VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
+import { applyFxSpecs, describeFx, fxKey } from './plainFx'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
 import {
   ANCHOR_LUFS,
@@ -249,6 +250,27 @@ export function plainToStudioTracks(
       ? { ...e, enabled: true, params: { ...e.params, mix: Math.min(0.9, pct / 100) } }
       : e))
 
+  /* The `fx` column. Effects belong to the LANE in this engine, so a clip's
+     rack is applied to whatever lane the clip lands on — including the split
+     `· eco` and `· loop` companions, which is where a whispered loop wants its
+     reverb. Written once per traccia is enough; if two clips of the same lane
+     disagree, the last one read wins and the notes say so. */
+  const fxOnLane = new Map<string, string>()
+  const laneFor = (key: string, make: () => SeedTrack, c: PlainClip): Lane => {
+    const l = lane(key, make)
+    if (!c.fx?.length) return l
+    const sig = fxKey(c.fx)
+    const prev = fxOnLane.get(l.key)
+    if (prev !== undefined && prev !== sig) {
+      notes.push(`"${l.track.name}": ${c.clipId} chiede un rack fx diverso da quello già impostato sulla traccia — vince l'ultimo letto (${describeFx(c.fx)}).`)
+    } else if (prev === undefined) {
+      notes.push(`"${l.track.name}": fx dal foglio ("${c.fxRaw}") → ${describeFx(c.fx)}.`)
+    }
+    fxOnLane.set(l.key, sig)
+    l.track.effects = applyFxSpecs(l.track.effects, c.fx)
+    return l
+  }
+
   /* ---------------- clip placement (1 row = 1 clip; loops expand by rule) */
   const mode = version.levelMode
   for (const c of version.clips) {
@@ -261,14 +283,14 @@ export function plainToStudioTracks(
          the same, and a bowl looped over its clip rings again every few
          seconds instead of once. */
       const isBowl = c.tipo === 'soundscape' && /campan|bowl|tibetan|gong/i.test(c.ambiente ?? '')
-      const l = lane(c.traccia, () => ({
+      const l = laneFor(c.traccia, () => ({
         type: 'sample',
         name: c.traccia,
         volume: 0.3,
         channel: 'C',
         duck: isHeartbeat || isBowl ? 'none' : c.tipo === 'music' ? 'music' : 'soundscape',
         clips: [],
-      }))
+      }), c)
       /* Random draw (Rules §7.1–7.2): tag pool for soundscape, GLOBAL phase
          pool for music. A soundscape is one looping texture, so one draw is
          right. MUSIC is not: a clip longer than a song used to loop that song,
@@ -330,7 +352,7 @@ export function plainToStudioTracks(
     }
 
     if (c.tipo === 'binaural' || c.tipo === 'solfeggio') {
-      const l = lane(c.traccia, () => ({ type: 'binaural', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }))
+      const l = laneFor(c.traccia, () => ({ type: 'binaural', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }), c)
       const params: BinauralParams = c.tipo === 'binaural'
         ? { carrierHz: ((c.carrierLHz ?? 200) + (c.carrierRHz ?? 210)) / 2, beatHz: (c.carrierRHz ?? 210) - (c.carrierLHz ?? 200) }
         : { carrierHz: c.frequenzaHz ?? 432, beatHz: 0 }
@@ -354,7 +376,7 @@ export function plainToStudioTracks(
     }
 
     if (c.tipo === 'bilateral') {
-      const l = lane(c.traccia, () => ({ type: 'bilateral', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }))
+      const l = laneFor(c.traccia, () => ({ type: 'bilateral', name: c.traccia, volume: 0.3, channel: 'C', clips: [] }), c)
       const { sound, why } = resolveBilateralFromRow(c)
       const params: BilateralParams = {
         sound: sound.id,
@@ -374,16 +396,50 @@ export function plainToStudioTracks(
     if (c.tipoContenuto === 'loop') {
       // dedicated lane: the loop has its own level and (optional) echo
       const key = `${c.traccia} · loop`
-      const l = lane(key, () => ({
+      const l = laneFor(key, () => ({
         type: 'voice',
-        name: `${c.traccia} · loop (${c.setAffermazioni ?? 'set'})`,
+        name: `${c.traccia} · loop (${c.setAffermazioni ?? c.sequenza ?? 'set'})`,
         volume: 0.3,
         channel,
         effects: c.eco ? echoFx(c.ecoRitardoS ?? 2, c.ecoVolumeDb ?? -8) : undefined,
         clips: [],
-      }))
+      }), c)
       if (c.riverberoPct !== undefined && c.riverberoPct > 0) l.track.effects = withReverb(l.track.effects, c.riverberoPct)
       const ids = c.setRange?.ids ?? []
+
+      /* ---- sequenza (mini-spec §2): an explicit ID@offset list. It was read
+         by the parser, announced in the notes as "expanded at seeding" — and
+         then never expanded, so a loop row carrying ONLY a sequenza built a
+         named voice lane with nothing on it. A track you can see and cannot
+         hear. It is expanded here, and it replaces the uniform
+         cadence for this row. ---- */
+      if (c.sequenzaSteps?.length) {
+        const seqSpeed = clipSpeed(c)
+        let placedSeq = 0
+        let skippedSeq = 0
+        for (const st of c.sequenzaSteps) {
+          const aff = affById.get(st.id)
+          if (!aff) continue
+          const start = c.startS + st.offsetS
+          const room = c.endS - start
+          if (room <= 0.5) { skippedSeq++; continue }
+          const dur = Math.min(aff.durataS ?? 6, Math.max(1, room - 0.5))
+          l.track.clips.push({
+            startSec: start,
+            durationSec: dur,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: seqSpeed, voiceId: voice.id } as VoiceParams,
+            text: aff.testo,
+            fadeInSec: 1,
+            fadeOutSec: 2,
+          })
+          l.clipDbs.push(nominalDb)
+          placedSeq++
+        }
+        notes.push(`Sequenza ${c.clipId} ("${c.sequenza}"): ${placedSeq} affermazioni a tempi espliciti su "${l.track.name}"${seqSpeed !== undefined ? `, ${speedWhy(c, seqSpeed)}` : ''}${skippedSeq ? ` · ${skippedSeq} oltre la fine del clip (${secToMmss(c.endS)})` : ''}.`)
+        /* The sequenza IS the loop for this row — the uniform cadence below
+           would place the same affirmations a second time. */
+        continue
+      }
 
       /* ---- whisper-ostinato (mini-spec §B): loop + sussurrato + single
          REF-xx. The refrain's "..."-separated fragments loop in a slow
@@ -470,21 +526,20 @@ export function plainToStudioTracks(
         }
       }
       notes.push(`Loop ${c.clipId} (${c.setAffermazioni}): ${placed} affirmation clips on "${l.track.name}" — every ${interval}s × ${cycles} cycle${cycles === 1 ? '' : 's'}${cycles > 1 ? ` (${att} dB per cycle)` : ''}, 1s/2s default envelope${loopSpeed !== undefined ? `, ${speedWhy(c, loopSpeed)}` : ''}${c.eco ? `, Emotional Echo +${c.ecoRitardoS ?? 2}s ${c.ecoVolumeDb ?? -8}dB` : ''}${skipped ? ` · ${skipped} skipped (window ends ${secToMmss(c.endS)})` : ''}.`)
-      if (c.sequenza) notes.push(`Loop ${c.clipId}: "sequenza" column present but not expanded (non-uniform loops are a later slice).`)
       continue
     }
 
     // linea — eco clips ride a companion lane so the echo FX stays honest
     const hasEco = !!c.eco
     const key = hasEco ? `${c.traccia} · eco` : c.traccia
-    const l = lane(key, () => ({
+    const l = laneFor(key, () => ({
       type: 'voice',
       name: hasEco ? `${c.traccia} · eco` : c.traccia,
       volume: 0.3,
       channel,
       effects: hasEco ? echoFx(c.ecoRitardoS ?? 2, c.ecoVolumeDb ?? -8) : undefined,
       clips: [],
-    }))
+    }), c)
     if (hasEco && l.track.clips.length === 0) {
       notes.push(`"${c.traccia}": clips with eco=on ride the companion track "${l.track.name}" (Emotional Echo pre-enabled) — echo is a track effect.`)
     }
@@ -558,6 +613,17 @@ export function plainToStudioTracks(
       applied++
     }
     if (applied) notes.push(`"${l.track.name}": ${applied} crossfade${applied === 1 ? '' : 's'} (crossfade_prec_s) applied as real equal-power overlaps.`)
+  }
+
+  /* A lane the Excel asked for and nothing landed on.
+     This is what "the track is there and does nothing" looks like from the
+     inside: a loop row whose affirmations could not be resolved builds its
+     voice lane and then places zero clips, and the seed used to hand that
+     silence over without a word. Now it is the first thing the notes say. */
+  for (const l of lanes) {
+    if (l.track.clips.length === 0) {
+      notes.push(`⚠ "${l.track.name}": nessun clip — la traccia esiste ma non suona. Controlla set_affermazioni / sequenza di questa riga nel foglio Affermazioni.`)
+    }
   }
 
   /* Reverb note (once per reverb'd lane). */

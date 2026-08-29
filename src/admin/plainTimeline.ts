@@ -21,6 +21,7 @@
    ============================================================================ */
 
 import type { WorkBook, WorkSheet } from 'xlsx'
+import { parseFxCell, type PlainFxSpec } from './plainFx'
 
 /* SheetJS is lazy-loaded (same pattern as datasheet.ts) so it never weighs on
    the main bundle. */
@@ -51,6 +52,13 @@ export interface PlainSetRange {
   to: number
   /** Resolved affirmation IDs (in ordine_loop order when available). */
   ids: string[]
+}
+
+/** One step of a `sequenza` cell: an affirmation ID and where it starts,
+    counted from the clip's own start_s. */
+export interface PlainSequenceStep {
+  id: string
+  offsetS: number
 }
 
 export interface PlainClip {
@@ -108,11 +116,18 @@ export interface PlainClip {
   intervalloS?: number
   cicli?: number
   attenuazioneCicloDb?: number
-  /** Reserved for non-uniform loops (explicit ID+offset list) — README §2. */
+  /** Non-uniform loops: the raw `sequenza` cell ("CSI-01@0; CSI-05@24"). */
   sequenza?: string
+  /** …and the same cell resolved against the Affermazioni sheet. */
+  sequenzaSteps?: PlainSequenceStep[]
   eco?: boolean
   ecoRitardoS?: number
   ecoVolumeDb?: number
+  /** `fx` column (any clip type): the Studio effect rack this lane asks for.
+      See `plainFx.ts` for the grammar. */
+  fx?: PlainFxSpec[]
+  /** The raw cell, so the notes can quote what was written. */
+  fxRaw?: string
   note?: string
 }
 
@@ -394,6 +409,45 @@ function parseSetRange(raw: string): Omit<PlainSetRange, 'ids'> | null {
   return null
 }
 
+/** Mini-spec §2 grammar for NON-UNIFORM loops: an explicit list of
+    affirmation IDs with the second they start at, counted from the clip's own
+    `start_s`.
+
+      sequenza
+      ────────────────────────────────────────────────────────────────
+      CSI-01@0; CSI-05@24; REF-01@1:30      seconds or m:ss
+      CSI-01; CSI-05; CSI-09                no offsets → intervallo_s apart
+
+    An ID with no offset takes its turn in the uniform cadence, so a sheet can
+    mix the two. Unreadable pieces are reported; nothing is invented. */
+function parseSequenza(raw: string, intervalloS: number | undefined): { steps: PlainSequenceStep[]; problems: string[] } {
+  const problems: string[] = []
+  const steps: PlainSequenceStep[] = []
+  const step = intervalloS ?? 20
+  let auto = 0
+  for (const piece of raw.split(/[;,\n]/).map((x) => x.trim()).filter(Boolean)) {
+    const m = piece.match(/^([A-Z]{2,4}-\d{1,3})\s*(?:[@=]\s*(.+))?$/i)
+    if (!m) { problems.push(`"${piece}" non è leggibile (attesa "CSI-01@0:24" oppure "CSI-01").`); continue }
+    const parts = m[1].toUpperCase().split('-')
+    const id = `${parts[0]}-${parts[1].padStart(2, '0')}`
+    let offsetS = auto * step
+    if (m[2] !== undefined) {
+      const at = m[2].trim()
+      const mmss = at.match(/^(\d+):(\d{2})$/)
+      if (mmss) offsetS = parseInt(mmss[1], 10) * 60 + parseInt(mmss[2], 10)
+      else {
+        const n = at.replace(',', '.').match(/-?\d+(?:\.\d+)?/)
+        if (!n) { problems.push(`"${piece}": offset "${at}" non leggibile.`); continue }
+        offsetS = parseFloat(n[0])
+      }
+    }
+    auto++
+    steps.push({ id, offsetS })
+  }
+  steps.sort((a, b) => a.offsetS - b.offsetS)
+  return { steps, problems }
+}
+
 function parseClipSheet(
   sheetName: string,
   ws: WorkSheet,
@@ -469,6 +523,21 @@ function parseClipSheet(
       fadeOutS: num(get(r, 'fade_out_s')) ?? 0,
       crossfadePrecS: num(get(r, 'crossfade_prec_s')),
       note: str(get(r, 'note')) || undefined,
+    }
+
+    /* `fx` is not a voice column: a soundscape can want a reverb and a music
+       bed can want a filter, so it is read for every tipo. Unreadable cells
+       are reported, never guessed at. */
+    const fxRaw = str(get(r, 'fx')) || str(get(r, 'effetti'))
+    if (fxRaw) {
+      const parsed = parseFxCell(fxRaw)
+      if (parsed.fx.length) { clip.fx = parsed.fx; clip.fxRaw = fxRaw }
+      for (const problem of parsed.problems) {
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `fx "${fxRaw}": ${problem}` })
+      }
+      if (!parsed.fx.length && !parsed.problems.length && !/^(off|no|none|nessuno|nessuna|-|0)$/i.test(fxRaw.trim())) {
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `fx "${fxRaw}" non ha prodotto nessun effetto — colonna ignorata.` })
+      }
     }
 
     if (tipo === 'soundscape') {
@@ -658,7 +727,32 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
 
   // loop set ranges resolved against Affermazioni (8 ⊂ 12 ⊂ 20)
   for (const c of v.clips) {
-    if (c.tipo !== 'voice' || c.tipoContenuto !== 'loop' || !c.setAffermazioni) continue
+    if (c.tipo !== 'voice' || c.tipoContenuto !== 'loop') continue
+
+    /* `sequenza` used to be parsed by nobody: the column was read, an info
+       issue said "expanded only at seeding", and seeding never expanded it.
+       A loop row carrying ONLY a sequenza therefore produced a named, empty
+       voice lane — a track visible in the Studio that plays nothing. */
+    if (c.sequenza) {
+      const seq = parseSequenza(c.sequenza, c.intervalloS)
+      for (const p of seq.problems) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `sequenza: ${p}` })
+      const known = seq.steps.filter((st) => affirmations.some((a) => a.id === st.id))
+      const missing = seq.steps.filter((st) => !affirmations.some((a) => a.id === st.id)).map((st) => st.id)
+      if (missing.length) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `sequenza: ${[...new Set(missing)].join(', ')} non presente nel foglio Affermazioni.` })
+      if (known.length) {
+        c.sequenzaSteps = known
+        issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `sequenza: ${known.length} affermazioni a tempi espliciti (${known.slice(0, 3).map((st) => `${st.id}@${secToMmss(st.offsetS)}`).join(', ')}${known.length > 3 ? '…' : ''}).` })
+      }
+      const late = known.filter((st) => c.startS + st.offsetS >= c.endS)
+      if (late.length) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `sequenza: ${late.map((st) => st.id).join(', ')} cade oltre la fine del clip (${secToMmss(c.endS)}) — non verrà piazzata.` })
+    }
+
+    if (!c.setAffermazioni) {
+      if (!c.sequenzaSteps?.length) {
+        issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Loop senza set_affermazioni né sequenza risolvibile — la traccia "${c.traccia}" resterebbe muta.` })
+      }
+      continue
+    }
     const rng = parseSetRange(c.setAffermazioni)
     if (!rng) {
       issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Cannot parse set_affermazioni "${c.setAffermazioni}" (expected a range "CSI-01..12" or a single ID "CSI-05" / "REF-01").` })
@@ -689,7 +783,9 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
       const window = c.endS - c.startS
       if (needed > window + 0.01) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Loop needs ~${Math.round(needed)} s (${ids.length} × ${c.intervalloS} s × ${cycles} cicli) but the clip window is ${window} s.` })
     }
-    if (c.sequenza) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `"sequenza" present — non-uniform loops are accepted but expanded only at seeding (slice 2).` })
+    if (!ids.length && !c.sequenzaSteps?.length) {
+      issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `set_affermazioni "${c.setAffermazioni}" non risolve nessuna affermazione — la traccia "${c.traccia}" resterebbe muta.` })
+    }
   }
 
   // retired concepts guard: nothing to do — Breathing/synth beds simply don't

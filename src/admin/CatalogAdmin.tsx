@@ -92,6 +92,12 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
   }
 }
 
+/** GL codes are compared as the README writes them, modulo spacing and case
+    ("gl-anx  1.1" is GL-ANX 1.1). */
+function normalizeCode(code: string | null | undefined): string {
+  return (code ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
+}
+
 function emptyTimeline(p: CatalogProtocol): PlainTimeline {
   return { code: p.code, title: p.title, versions: [], affirmations: [], issues: [] }
 }
@@ -103,7 +109,6 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   /* which TIME SIGNATURE the workscreen should land on (a duration pill was
      clicked); null = its first version */
   const [openAt, setOpenAt] = useState<Duration | null>(null)
-  const [imported, setImported] = useState<{ timeline: PlainTimeline; fileName: string } | null>(null)
   /* Coming back from the Studio lands on the PROTOCOL, not on the list. The
      Studio leaves a note saying which one and which time signature; this reads
      it once, as soon as the catalog has the rows to find it in. */
@@ -168,6 +173,22 @@ export function CatalogAdmin({ actor }: { actor: string }) {
        * which protocol and which duration; the spreadsheet does not need to.
        */
       if (opened) {
+        /*
+         * The file has to belong to the protocol it is being dropped into.
+         *
+         * It used to be merged in regardless — the screen kept its own code
+         * and title, so a GL-ANX 2.1 workbook imported into GL-ANX 1.1 became
+         * "GL-ANX 1.1" carrying someone else's timeline, and the protocol it
+         * really described appeared nowhere. Whatever the sheet is for, the
+         * answer is not to file it here silently.
+         */
+        const fileCode = normalizeCode(res.timeline.code)
+        if (fileCode && fileCode !== normalizeCode(opened.code)) {
+          throw new Error(
+            `Questo Excel è di ${res.timeline.code} — stai lavorando su ${opened.code}. ` +
+            `Importa il file Excel corretto (quello con il codice ${opened.code} nel foglio README).`,
+          )
+        }
         const proto = entryForPublish({
           timeline: res.timeline,
           existing: opened,
@@ -186,7 +207,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         return
       }
 
-      setImported({ timeline: res.timeline, fileName: file.name })
+      /* Unreachable by design: the only Importa Excel button lives on the
+         workscreen, so an import always has a protocol to belong to. If one
+         ever arrives without one, it is refused — opening a workbook in a
+         screen of its own is how a second, detached protocol used to appear
+         beside the one being worked on. */
+      throw new Error('Apri prima il protocollo a cui appartiene questo Excel, poi usa Importa Excel dalla sua schermata.')
     } catch (e) {
       setImportError((e as Error).message)
     } finally {
@@ -239,23 +265,6 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     }
   }
 
-  /* A protocol imported in the PLAIN format reopens its full workscreen
-     (review → Studio → render → attach) straight from the catalog row — the
-     timeline lives on the catalog entry, no re-import needed. */
-  if (imported) {
-    return (
-      <PlainImport
-        timeline={imported.timeline}
-        fileName={imported.fileName}
-        actor={actor}
-        onCancel={() => { setImported(null); refetch() }}
-        onDone={() => { setImported(null); refetch() }}
-        onImportExcel={(d) => { setImportFor(d); fileRef.current?.click() }}
-        fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
-      />
-    )
-  }
-
   /* A protocol reopens the workscreen for the material it ACTUALLY carries.
      The catalog only ever knew how to reopen a PLAIN timeline, so a protocol
      imported from a datasheet (Scheda Dati) or a spec document had no way back
@@ -296,6 +305,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       <PlainImport
         timeline={openedPlain ?? emptyTimeline(opened)}
         initialDuration={openAt ?? undefined}
+        notice={importError}
+        onDismissNotice={() => setImportError(null)}
         fileName={`catalog · ${opened.code}`}
         actor={actor}
         onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}

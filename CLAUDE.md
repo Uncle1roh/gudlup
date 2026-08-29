@@ -36,6 +36,9 @@ ElevenLabs TTS, Vercel (hash routing — no SPA rewrite config needed).
 - Music assets −18 LUFS, soundscapes −24 LUFS. Master to −16 LUFS with
   −1 dBTP true-peak limiter (BS.1770-4).
 - Music/soundscape drawn randomly from tagged asset pools, not fixed phase maps.
+- Excel `fx` column activates the Studio rack (eco / riverbero / coro /
+  saturazione / filtro) per track; `sequenza` places a non-uniform loop.
+  Grammar in `docs/EXCEL_FX.md`.
 - Breathing pacer is retired — all protocols are voice-guided.
 
 ## Voices

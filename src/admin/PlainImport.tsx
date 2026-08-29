@@ -51,6 +51,11 @@ interface Props {
   /** The catalog's hidden file input, mounted here so the dialog works
       while this screen is the one on display. */
   fileInput?: import('react').ReactNode
+  /** A refusal from the catalog's importer — most often "this Excel belongs to
+      another protocol". It was set on the list screen while THIS screen was
+      the one on display, so the import simply appeared to do nothing. */
+  notice?: string | null
+  onDismissNotice?: () => void
 }
 
 function downloadBlob(name: string, blob: Blob) {
@@ -60,7 +65,7 @@ function downloadBlob(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export function PlainImport({ timeline: t, initialDuration, fileName, actor, onCancel, onDone, onImportExcel, fileInput }: Props) {
+export function PlainImport({ timeline: t, initialDuration, fileName, actor, onCancel, onDone, onImportExcel, fileInput, notice, onDismissNotice }: Props) {
   const dp = useDataProvider()
   const [ttsTick, setTtsTick] = useState(0)
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
@@ -462,7 +467,7 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
               <button
                 key={d}
                 className={`b2b-btn${on ? ' b2b-btn--primary' : ''} adm-plain__chip--${st === 'published' ? 'live' : st}`}
-                onClick={() => setPicked(d)}
+                onClick={() => { setPicked(d); onDismissNotice?.() }}
                 title={
                   st === 'published'
                     ? `${d} min — pubblicato, in ascolto`
@@ -508,6 +513,15 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
         {fileInput}
       </div>
+      {notice && (
+        <div className="adm-plain__status adm-plain__status--err">
+          {notice}
+          {onDismissNotice && (
+            <> <a href="#dismiss" onClick={(e) => { e.preventDefault(); onDismissNotice() }}>Chiudi</a></>
+          )}
+        </div>
+      )}
+
       {mastered && !live && (
         <div className="adm-plain__status">File masterizzato caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Pubblica userà questo file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Usa invece il render dell’app</a></div>
       )}
