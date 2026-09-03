@@ -48,7 +48,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const canSubmit = !!email && !!password && (!signup || !isB2b || (!!name.trim() && !!crp.trim()))
 
   return (
-    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}`}>
+    /* The b2c door belongs to the Self Use surface, so it carries that
+       surface's theme. Without this it stayed cream while everything behind
+       it was dark, and opening the app meant a white screen handing over to a
+       black one. The clinician, employer and admin doors are unchanged — their
+       surfaces are still light. */
+    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr ? '' : ' su-studio'}`}>
       <div className="auth__card">
         <div className="auth__brand">goodloop</div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
@@ -106,7 +111,8 @@ export function AuthGate({ mode, children }: { mode: 'b2c' | 'b2b' | 'admin' | '
   const { t } = useI18n()
   if (!ready) {
     return (
-      <div className="auth auth--loading">
+      /* same ground as the door it precedes, or the wait is a white flash */
+      <div className={`auth auth--loading${mode === 'b2c' ? ' su-studio' : ''}`}>
         <div className="auth__spin" aria-label={t('Loading')} />
       </div>
     )

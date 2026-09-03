@@ -69,6 +69,12 @@
   16%  { opacity: 0.5; }
   100% { transform: scale(2.1);  opacity: 0; }
 }
+/* a ring leaving the orb, as a box-shadow rather than two more nodes */
+@keyframes gl-listen {
+  0%   { box-shadow: 0 0 0 0 rgba(167, 232, 208, 0); }
+  22%  { box-shadow: 0 0 0 6px rgba(167, 232, 208, 0.28); }
+  100% { box-shadow: 0 0 0 42px rgba(167, 232, 208, 0); }
+}
 
 
 .su-studio {
@@ -196,10 +202,14 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border-radius: 28px;
   gap: 0;
   justify-content: space-between;
-  /* the duotone ground, then the corner light over it */
+  /* grain on top, then the corner light, then the duotone ground. The grain's
+     opacity is baked into the SVG (opacity="0.14" on the rect) rather than set
+     with a blend mode — see the note above this rule. */
   background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E"),
     radial-gradient(115% 80% at 74% 12%, rgba(167, 232, 208, 0.4), rgba(31, 191, 148, 0.1) 44%, rgba(0, 0, 0, 0) 72%),
     linear-gradient(158deg, #12463a 0%, #0b2a24 52%, #071412 100%);
+  background-size: 170px 170px, auto, auto;
   box-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 /* THE ORB, bloomed into the top-right corner. A real element rather than a
@@ -219,26 +229,18 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   background: radial-gradient(circle at 36% 32%, #f6f3d6 0%, rgba(242, 238, 196, 0.6) 12%, #1fbf94 46%, rgba(15, 107, 82, 0.5) 74%, rgba(7, 20, 18, 0) 100%);
   animation: gl-core 9s ease-in-out infinite, gl-listen 9s ease-out infinite;
 }
-@keyframes gl-listen {
-  0%   { box-shadow: 0 0 0 0 rgba(167, 232, 208, 0); }
-  22%  { box-shadow: 0 0 0 6px rgba(167, 232, 208, 0.28); }
-  100% { box-shadow: 0 0 0 42px rgba(167, 232, 208, 0); }
-}
-/* the scrim, with the film grain blended into it in one layer */
+/* the scrim, and nothing else: type on near-black at the foot, on the art at
+   the head */
 .su-studio .home__pathway::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(to top, rgba(6, 13, 12, 0.92) 0%, rgba(6, 13, 12, 0.45) 42%, rgba(6, 13, 12, 0) 72%);
-  background-size: 170px 170px, auto;
-  background-blend-mode: overlay, normal;
+  background: linear-gradient(to top, rgba(6, 13, 12, 0.92) 0%, rgba(6, 13, 12, 0.45) 42%, rgba(6, 13, 12, 0) 72%);
 }
-/* the hero's own children sit above both layers */
-.su-studio .home__pathway > * { position: relative; z-index: 1; }
+/* the hero's own children sit above the orb and the scrim */
+.su-studio .home__pathway > * { position: relative; z-index: 2; }
 
 .su-studio .home__pwtop { align-items: center; gap: 8px; }
 .su-studio .home__pathway .eyebrow {
@@ -701,6 +703,80 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   color: var(--su-faint);
 }
 
+/* ============================================================== the door ==
+
+   The FIRST screen a person sees is the sign-in card, and it lives outside
+   `.app-frame` — so it kept the cream theme while everything behind it went
+   dark, and entering the app meant a white screen handing over to a black one.
+   It is scoped now (b2c only: the clinician, employer and admin doors belong
+   to surfaces that are still light) and it opens with the same bloom.
+
+   `overflow: hidden` matters here: the frame clips the 600px bloom for every
+   other screen, and this one has no frame to clip it. */
+
+.su-studio.auth {
+  position: relative;
+  overflow: hidden;
+  background: var(--su-ground);
+  min-height: 100dvh;
+}
+.su-studio.auth .auth__card {
+  position: relative;
+  z-index: 1;
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+  border-radius: 22px;
+  box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95);
+}
+/* The canvas puts a small breathing orb beside the wordmark in every header.
+   The door is the one place the app can carry it without new markup, and it
+   gives the first screen something alive on it — which is the whole point of
+   opening on a breath. */
+.su-studio.auth .auth__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  color: var(--su-fg);
+  letter-spacing: 0.02em;
+}
+.su-studio.auth .auth__brand::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #f6f3d6 0%, #1fbf94 54%, #0f6b52 100%);
+  animation: gl-core 9s ease-in-out infinite, gl-listen 9s ease-out infinite;
+}
+.su-studio.auth .auth__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  color: var(--su-fg);
+}
+.su-studio.auth .auth__sub { color: var(--su-muted); font-size: 13.5px; }
+.su-studio.auth .auth__input {
+  background: var(--su-well);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg);
+  border-radius: 13px;
+}
+.su-studio.auth .auth__input::placeholder { color: var(--su-faint); }
+.su-studio.auth .auth__alt,
+.su-studio.auth .auth__legal,
+.su-studio.auth .auth__switch { color: var(--su-faint); }
+.su-studio.auth a { color: var(--su-accent-2); }
+
+/* the loading beat before the door: the same ground, and the spinner in
+   emerald, so there is no white flash on the way in */
+.su-studio.auth--loading { background: var(--su-ground); }
+.su-studio .auth__spin {
+  border-color: var(--su-hair-2);
+  border-top-color: var(--su-accent);
+}
+
 /* ------------------------------------------------------------ onboarding - */
 
 .su-studio.ob { background: var(--su-ground); }
@@ -752,10 +828,51 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   animation: gl-ripple 9s ease-out infinite;
 }
 
+/* --------------------------------------------------------- entrances -----
+
+   Screens already rise 10px on `screen-in`. The hero earns a longer one — it
+   is the largest thing on the page and the thing a person is deciding about —
+   and the rail cards stagger in behind it so the catalog assembles rather
+   than snapping into place. */
+
+@keyframes gl-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.su-studio .home__pathway,
+.su-studio .cat-hero { animation: gl-rise 520ms cubic-bezier(0.22, 0.8, 0.3, 1) both; }
+.su-studio .cat-rail__track > * { animation: gl-rise 460ms cubic-bezier(0.22, 0.8, 0.3, 1) both; }
+.su-studio .cat-rail__track > :nth-child(1) { animation-delay: 40ms; }
+.su-studio .cat-rail__track > :nth-child(2) { animation-delay: 90ms; }
+.su-studio .cat-rail__track > :nth-child(3) { animation-delay: 140ms; }
+.su-studio .cat-rail__track > :nth-child(4) { animation-delay: 190ms; }
+.su-studio .cat-rail__track > :nth-child(n + 5) { animation-delay: 240ms; }
+.su-studio .mood-grid > * { animation: gl-rise 420ms cubic-bezier(0.22, 0.8, 0.3, 1) both; }
+.su-studio .mood-grid > :nth-child(even) { animation-delay: 70ms; }
+
+/* a press should feel like a press */
+.su-studio .btn:active,
+.su-studio .mood-card:active,
+.su-studio .cat-card:active,
+.su-studio .teaser:active { transform: scale(0.978); }
+.su-studio .btn,
+.su-studio .mood-card,
+.su-studio .cat-card,
+.su-studio .teaser { transition: transform 140ms cubic-bezier(0.22, 0.8, 0.3, 1), border-color 160ms linear; }
+
 @media (prefers-reduced-motion: reduce) {
   .su-studio .gl-grain { opacity: 0.1; }
   .su-studio::before,
   .su-studio .home__pathway::before,
+  .su-studio .auth__brand::before,
+  .su-studio .home__pathway,
+  .su-studio .cat-hero,
+  .su-studio .cat-rail__track > *,
+  .su-studio .mood-grid > *,
   .su-studio .orb--breathing,
   .su-studio .ring { animation: none; }
+  .su-studio .btn,
+  .su-studio .mood-card,
+  .su-studio .cat-card,
+  .su-studio .teaser { transition: none; }
 }
