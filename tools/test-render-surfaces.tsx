@@ -25,7 +25,7 @@ import { Onboarding } from '../src/selfuse/Onboarding'
 import { Home } from '../src/selfuse/Home'
 import { Explore } from '../src/selfuse/Explore'
 import { Catalog } from '../src/selfuse/Catalog'
-import { coverFor } from '../src/selfuse/artwork'
+import { coverFor, coverSvg } from '../src/selfuse/artwork'
 import { ProgressTab, GuidedProgress } from '../src/selfuse/ProgressTab'
 import { ProfileTab } from '../src/selfuse/ProfileTab'
 import { TherapistTab } from '../src/selfuse/TherapistTab'
@@ -507,13 +507,24 @@ assert(!catalogHtml.includes('GL-'), 'no protocol code appears on a cover card')
 const a1 = coverFor('calm-safety', 'calm')
 const a2 = coverFor('calm-safety', 'calm')
 assert(
-  a1.from === a2.from && a1.glyph === a2.glyph && a1.angle === a2.angle,
+  a1.from === a2.from && a1.motif === a2.motif && a1.angle === a2.angle,
   'a cover is deterministic for a given session',
 )
 assert(coverFor('focus-clarity', 'focus').from !== a1.from, 'different themes get visibly different covers')
+/* Covers are drawn scenes now, not a character in a gradient. The scene has to
+   exist for every session the catalog will show, and it has to be a real SVG:
+   an empty string would render as a flat colour and look deliberate. */
 assert(
-  CATALOG.browsable.every((s) => coverFor(s.slug, s.theme).glyph.length > 0),
-  'every browsable session has a glyph',
+  CATALOG.browsable.every((s) => coverSvg(coverFor(s.slug, s.theme)).startsWith('<svg')),
+  'every browsable session has a drawn cover',
+)
+assert(
+  CATALOG.browsable.every((s) => coverSvg(coverFor(s.slug, s.theme)).includes('preserveAspectRatio="xMidYMid slice"')),
+  'and it is composed to survive both the 3:4 card and the wide banner crop',
+)
+assert(
+  new Set(CATALOG.browsable.map((s) => coverFor(s.slug, s.theme).motif)).size >= 6,
+  'the rail does not repeat one composition over and over',
 )
 
 console.log('\n--- the resolved catalog reached the screens ---')
@@ -586,6 +597,53 @@ const focus = oneVersion.browsable.find((s) => s.protocolCode === 'GL-STRESS 4.1
 assert(
   focus.durations.length === 1 && focus.durations[0] === 12,
   'a protocol published in one time signature offers exactly that one',
+)
+
+/* --- a duration is only offered when the FILE for it exists -------------
+
+   Reported after two protocols were enabled with a 24-minute workbook and no
+   rendered audio: the app offered a 24-minute session that did not exist, and
+   playing it gave twenty-four minutes of synthesized bed. Two faults stacked —
+   the timeline counted as if it were audio, and when nothing counted at all
+   the resolver fell back to the editorial 6/12/24, offering three. */
+const MP3 = 'https://example.test/a.mp3'
+const imported = (over: Partial<import('../src/data/catalog').CatalogProtocol>) =>
+  seedCatalog().map((p) => (p.code === 'GL-ANX 1.1'
+    ? { ...p, source: 'imported' as const, versions: [], plainByDuration: undefined, ...over }
+    : p))
+
+const authoredOnly = resolveCatalog(
+  imported({ versions: [{ duration: 24 as const }] }),
+  'en',
+)
+assert(
+  !authoredOnly.browsable.some((s) => s.protocolCode === 'GL-ANX 1.1'),
+  'an imported protocol with a timeline and no rendered file is not offered at all',
+)
+assert(
+  !authoredOnly.sessions.find((s) => s.protocolCode === 'GL-ANX 1.1')?.durations.length,
+  'and it does not fall back to the editorial 6 / 12 / 24',
+)
+
+const partly = resolveCatalog(
+  imported({ versions: [{ duration: 6 as const, audioUrl: { 'pt-BR': MP3 } }, { duration: 24 as const }] }),
+  'en',
+)
+const anx = partly.browsable.find((s) => s.protocolCode === 'GL-ANX 1.1')!
+assert(
+  anx.durations.length === 1 && anx.durations[0] === 6,
+  'publishing 6 and authoring 24 offers 6 only — never the one without a file',
+)
+
+/* The seeded demo catalog has no audio anywhere and must stay browsable: the
+   rule is about PO material, and setup.sql deletes seed rows from a real DB. */
+assert(
+  CATALOG.browsable.length >= 19,
+  'the seed catalog is exempt — a developer machine still shows all 19 sessions',
+)
+assert(
+  CATALOG.browsable.every((s) => !s.audioReady),
+  'and every seeded session is marked as playing an ambient bed',
 )
 
 console.log(`\n${passed} renders passed.`)

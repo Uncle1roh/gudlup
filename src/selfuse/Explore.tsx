@@ -377,7 +377,6 @@ function SessionDetail({
           {t('No recorded voice is published for this session yet — it plays an ambient bed.')}
         </p>
       )}
-
       <div className="sheet__label">{t('Duration')}</div>
       <div className="chip-row">
         {session.durations.map((d) => (

@@ -84,13 +84,39 @@ export function audioUrlFor(
   return first
 }
 
-/** Durations a person can actually play: a published version, ascending. */
+/**
+ * Durations a person can actually play, ascending.
+ *
+ * The rule is the rendered FILE, not the timeline. This used to count
+ * `plainDurations` too — what a protocol has been AUTHORED for — so a workbook
+ * imported for 24 minutes and never published put a 24-minute button in front
+ * of a person, and pressing it played the synthesized placeholder bed: no
+ * voice, no protocol, twenty-four minutes of it. On a clinical mitigation tool
+ * that is worse than the session being absent. It matches `durationState()` in
+ * data/catalog.ts, which has always said a duration is PUBLISHED only when the
+ * protocol is enabled and that duration has a file.
+ *
+ * SEED entries are the exception, and deliberately so. They are the static
+ * demo catalog — nineteen sessions with no audio anywhere, by definition —
+ * and `supabase/setup.sql` deletes them from a real database, so they exist
+ * only in mock mode. Holding them to the file rule would empty the app on
+ * every developer machine to enforce a rule about PO material. They keep their
+ * declared durations and are marked as playing an ambient bed.
+ */
 export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
   if (!p) return []
-  const fromVersions = p.versions.map((v) => v.duration).filter((d): d is Duration => CATALOG_DURATIONS.includes(d))
-  const fromTimelines = plainDurations(p)
-  const all = new Set<Duration>([...fromVersions, ...fromTimelines])
-  return CATALOG_DURATIONS.filter((d) => all.has(d))
+  const rendered = new Set<Duration>()
+  for (const v of p.versions) {
+    if (!CATALOG_DURATIONS.includes(v.duration)) continue
+    if (v.audioUrl && Object.values(v.audioUrl).some((u) => Boolean(u))) rendered.add(v.duration)
+  }
+  if (rendered.size) return CATALOG_DURATIONS.filter((d) => rendered.has(d))
+  if (p.source !== 'seed') return []
+  const declared = new Set<Duration>([
+    ...p.versions.map((v) => v.duration).filter((d): d is Duration => CATALOG_DURATIONS.includes(d)),
+    ...plainDurations(p),
+  ])
+  return CATALOG_DURATIONS.filter((d) => declared.has(d))
 }
 
 /** True when at least one duration has real rendered audio. */
@@ -146,8 +172,12 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
       // is NOT what a person should read, so the editorial name stays instead.
       name: entry.publicTitle?.trim() ? patientTitle(entry) : s.name,
       blurb: entry.publicBlurb?.trim() ? patientBlurb(entry) : s.blurb,
-      durations: durations.length ? durations : s.durations,
-      available: true,
+      /* No fallback to the editorial durations. When the catalog has nothing
+         rendered, the honest answer is that this session cannot be started —
+         falling back to the spine's 6 / 12 / 24 offered THREE buttons that all
+         led to the placeholder bed instead of one. */
+      durations,
+      available: durations.length > 0,
       audioReady: hasRenderedAudio(entry, locale),
       entry,
     }

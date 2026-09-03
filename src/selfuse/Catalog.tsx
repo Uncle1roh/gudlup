@@ -275,8 +275,8 @@ export function CoverCard({ session, onOpen }: { session: ResolvedSession; onOpe
             <span key={d}>{d}</span>
           ))}
         </span>
-        {/* A session whose audio is not rendered yet is still browsable, but a
-            person deserves to know before they put headphones on. */}
+        {/* Only the seeded demo catalog can reach this: a published session
+            always has the file its duration promises. */}
         {!session.audioReady && <span className="cat-card__soon">{t('Ambient bed')}</span>}
       </span>
       <span className="cat-card__title">{t(session.name)}</span>
