@@ -18,6 +18,7 @@
    ============================================================================ */
 
 import type { Duration } from '../types/domain'
+import type { IconName } from '../selfuse/icons'
 
 /** Filter themes on the "All Sessions" view. */
 export type SelfUseTheme = 'focus' | 'calm' | 'energy' | 'balance' | 'growth'
@@ -674,19 +675,19 @@ export function pathwayTotal(p: Pathway): number {
 export interface IntakeOption {
   id: string
   label: string
-  icon: string
+  icon: IconName
   pathway: PathwayId
 }
 
 /** ON-4 Q1. "I'm not sure yet" routes to Stress Management, the most universal
     starting point, and ON-5 says so. */
 export const INTAKE_CHALLENGES: IntakeOption[] = [
-  { id: 'concentration', label: 'Difficulty concentrating', icon: '🎯', pathway: 'focus-performance' },
-  { id: 'overwhelmed', label: 'Feeling overwhelmed by demands', icon: '🌊', pathway: 'stress-management' },
-  { id: 'drained', label: 'Low energy, feeling drained', icon: '🔋', pathway: 'energy-recovery' },
-  { id: 'disconnect', label: 'Trouble disconnecting from work', icon: '🔌', pathway: 'balance-boundaries' },
-  { id: 'grow', label: 'Want to grow and build resilience', icon: '🌱', pathway: 'growth-resilience' },
-  { id: 'unsure', label: "I'm not sure yet", icon: '💭', pathway: 'stress-management' },
+  { id: 'concentration', label: 'Difficulty concentrating', icon: 'target', pathway: 'focus-performance' },
+  { id: 'overwhelmed', label: 'Feeling overwhelmed by demands', icon: 'wave', pathway: 'stress-management' },
+  { id: 'drained', label: 'Low energy, feeling drained', icon: 'battery', pathway: 'energy-recovery' },
+  { id: 'disconnect', label: 'Trouble disconnecting from work', icon: 'disconnect', pathway: 'balance-boundaries' },
+  { id: 'grow', label: 'Want to grow and build resilience', icon: 'sprout', pathway: 'growth-resilience' },
+  { id: 'unsure', label: "I'm not sure yet", icon: 'thought', pathway: 'stress-management' },
 ]
 
 export const INTAKE_TIMES = [
@@ -708,19 +709,23 @@ export type IntakeMatter = (typeof INTAKE_MATTERS)[number]['id']
 /** Home → Quick session. 8 cards, 2 columns × 4 rows. */
 export interface MoodCard {
   id: string
-  icon: string
+  /** A drawn glyph's name, never a character — see selfuse/icons.tsx. */
+  icon: IconName
   label: string
   /** The Self Use session this suggests. */
   slug: string
 }
 
+/* The icon is the NAME of a drawn glyph, not a character. Emoji rendered as
+   eight different vendors' art styles at a size the platform chose; the
+   Studio redesign draws one family. See selfuse/icons.tsx. */
 export const MOOD_CARDS: MoodCard[] = [
-  { id: 'tense', icon: '😣', label: 'Tense, agitated', slug: 'calm-safety' },
-  { id: 'racing', icon: '🌀', label: 'Mind racing', slug: 'focus-clarity' },
-  { id: 'exhausted', icon: '🪫', label: 'Exhausted', slug: 'permission-pause' },
-  { id: 'overwhelmed', icon: '📋', label: 'Overwhelmed by tasks', slug: 'demand-management' },
-  { id: 'unmotivated', icon: '⬇️', label: 'Unmotivated', slug: 'vitality-motivation' },
-  { id: 'nervous', icon: '⏰', label: 'Nervous before a meeting', slug: 'breathing-presence' },
-  { id: 'disconnect', icon: '🔌', label: 'Need to disconnect', slug: 'personal-balance' },
-  { id: 'stronger', icon: '💪', label: 'Want to feel stronger', slug: 'self-confidence' },
+  { id: 'tense', icon: 'tense', label: 'Tense, agitated', slug: 'calm-safety' },
+  { id: 'racing', icon: 'racing', label: 'Mind racing', slug: 'focus-clarity' },
+  { id: 'exhausted', icon: 'exhausted', label: 'Exhausted', slug: 'permission-pause' },
+  { id: 'overwhelmed', icon: 'overwhelmed', label: 'Overwhelmed by tasks', slug: 'demand-management' },
+  { id: 'unmotivated', icon: 'unmotivated', label: 'Unmotivated', slug: 'vitality-motivation' },
+  { id: 'nervous', icon: 'nervous', label: 'Nervous before a meeting', slug: 'breathing-presence' },
+  { id: 'disconnect', icon: 'disconnect', label: 'Need to disconnect', slug: 'personal-balance' },
+  { id: 'stronger', icon: 'stronger', label: 'Want to feel stronger', slug: 'self-confidence' },
 ]

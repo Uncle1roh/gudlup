@@ -30,6 +30,7 @@ import {
 import { looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { suggestedPathway, type IntakeAnswers, type Consents } from '../data/selfUseStore'
 import type { Duration } from '../types/domain'
+import { Icon } from './icons'
 
 export interface OnboardingResult {
   companyCode: string | null
@@ -151,7 +152,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <div className="btn-stack">
               <button className="btn btn--ghost ob-social" onClick={() => setStep(3)}>
-                <span aria-hidden="true">🇬</span> {t('Continue with Google')}
+                {t('Continue with Google')}
               </button>
               <button className="btn btn--ghost ob-social" onClick={() => setStep(3)}>
                 <span aria-hidden="true"></span> {t('Continue with Apple')}
@@ -316,7 +317,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               <div className="ob-optlist">
                 {INTAKE_TIMES.map((o) => (
                   <button key={o.id} className="ob-opt" aria-pressed={time === o.id} onClick={() => setTime(o.id)}>
-                    <span className="ob-opt__icon" aria-hidden="true">🕗</span>
+                    <span className="ob-opt__icon" aria-hidden="true"><Icon name="clock" size={20} /></span>
                     <span className="ob-opt__label">{t(o.label)}</span>
                     <span className="ob-radio" aria-hidden="true" />
                   </button>
@@ -329,7 +330,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               <div className="ob-optlist">
                 {INTAKE_MATTERS.map((o) => (
                   <button key={o.id} className="ob-opt" aria-pressed={matters === o.id} onClick={() => setMatters(o.id)}>
-                    <span className="ob-opt__icon" aria-hidden="true">✳</span>
+                    <span className="ob-opt__icon" aria-hidden="true"><Icon name="spark" size={20} /></span>
                     <span className="ob-opt__label">{t(o.label)}</span>
                     <span className="ob-radio" aria-hidden="true" />
                   </button>
@@ -392,7 +393,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               {t("Your first session is just 6 minutes. Find a quiet place, put on your headphones, and let's begin.")}
             </p>
             <p className="small muted ob-headphones">
-              🎧 {t('Headphones recommended for best experience')}
+              <Icon name="headphones" size={15} /> {t('Headphones recommended for best experience')}
             </p>
           </div>
           <div className="screen__footer btn-stack">

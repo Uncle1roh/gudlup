@@ -16,6 +16,7 @@
 
 import { useI18n } from '../i18n'
 import { GENERIC_CRISIS, type EapContact } from '../data/convention'
+import { Icon } from './icons'
 
 interface GatewayProps {
   /** The company EAP when one is configured; the generic line is always added. */
@@ -42,7 +43,7 @@ export function SafetyLevel3({ eap, onClose }: GatewayProps) {
     <div className="app-frame su-studio">
       <div className="screen screen--center safety">
         <div className="screen__body safety__body">
-          <div className="safety__mark" aria-hidden="true">🤝</div>
+          <div className="safety__mark" aria-hidden="true"><Icon name="support" size={26} /></div>
           <h2 className="display">{t("We're here to help you find support")}</h2>
           <p className="lead">
             {t("If you're going through a difficult moment, you don't have to face it alone. These resources can help right now.")}

@@ -34,6 +34,7 @@ import {
   type MoodEntry,
   type MoodLevel,
 } from '../data/measures'
+import { Icon } from './icons'
 
 /* ------------------------------------------------------------- MSR-1 ----- */
 
@@ -93,7 +94,7 @@ export function GlCheckFlow({ previous, onDone, onClose }: GlCheckProps) {
     <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
-          <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
+          <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
           <span className="msr__count">{t('{n} of {total}', { n: step + 1, total: GL_CHECK_QUESTIONS.length })}</span>
         </div>
 
@@ -172,7 +173,7 @@ export function Who5Flow({ previous, onDone, onClose }: Who5Props) {
     <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
-          <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
+          <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
           <span className="msr__count">{t('{n} of {total}', { n: step + 1, total: WHO5_ITEMS.length })}</span>
         </div>
 
@@ -257,7 +258,7 @@ export function DailyMoodFlow({ today, onDone, onClose, inline }: MoodProps) {
     <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
-          <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
+          <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
         </div>
         <div className="screen__body msr__body">
           <span className="eyebrow">{t('Mood calendar')}</span>

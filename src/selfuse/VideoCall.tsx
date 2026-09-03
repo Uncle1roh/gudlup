@@ -35,6 +35,7 @@ import { useVideoCall, type VideoCall as Call } from '../b2b/webrtc/useVideoCall
 import type { ControlAction } from '../b2b/webrtc/signaling'
 import type { TherapistProfile } from './therapyStore'
 import type { Duration } from '../types/domain'
+import { Icon } from './icons'
 
 type Stage = 'waiting' | 'video' | 'countdown' | 'treatment' | 'debrief' | 'ended'
 
@@ -152,7 +153,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
             </p>
           )}
 
-          <p className="small muted call__hp">🎧 {t('Stereo headphones are required for this session')}</p>
+          <p className="small muted call__hp"><Icon name="headphones" size={15} /> {t('Stereo headphones are required for this session')}</p>
 
           <p className="lead">
             {call.callState === 'connecting'
@@ -216,13 +217,13 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
 
         <div className="call__bar">
           <button className="call__btn" onClick={call.toggleMic} aria-pressed={!call.micOn}>
-            {call.micOn ? '🎤' : '🔇'}<span>{t('Mic')}</span>
+            <Icon name={call.micOn ? 'mic' : 'micOff'} size={20} /><span>{t('Mic')}</span>
           </button>
           <button className="call__btn call__btn--end" onClick={() => setConfirmEnd(true)}>
             <span>{t('End')}</span>
           </button>
           <button className="call__btn" onClick={call.toggleCam} aria-pressed={!call.camOn}>
-            {call.camOn ? '📷' : '🚫'}<span>{t('Camera')}</span>
+            <Icon name={call.camOn ? 'camera' : 'cameraOff'} size={20} /><span>{t('Camera')}</span>
           </button>
         </div>
 
@@ -425,7 +426,7 @@ function TreatmentMode({
 
         <TherapistThumb call={call} name={therapist.name} />
 
-        {intervening && <div className="guided__speaking">🔴 {t('Your therapist is speaking')}</div>}
+        {intervening && <div className="guided__speaking"><Icon name="record" size={12} /> {t('Your therapist is speaking')}</div>}
         {audioFailed && !intervening && (
           <div className="guided__speaking guided__speaking--warn">
             {t('The recorded audio could not be played, so this is the ambient bed.')}

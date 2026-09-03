@@ -28,6 +28,7 @@ import { durationLabel } from '../data/selfuse'
 import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
 import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
+import { Icon, type IconName } from './icons'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -57,7 +58,7 @@ export interface SessionOutcome {
 }
 
 /**
- * The emoji scale, shared by the two ends of a session.
+ * The face scale, shared by the two ends of a session.
  *
  * Icons rather than numbers on purpose: a 100 mm line needs motor precision a
  * phone does not give, and a number invites the person to score themselves.
@@ -78,7 +79,7 @@ function VasRow({ value, onPick }: { value: number | null; onPick: (v: number) =
           title={t(o.label)}
           onClick={() => onPick(o.value)}
         >
-          <span aria-hidden="true">{o.icon}</span>
+          <span aria-hidden="true"><Icon name={o.icon} size={26} /></span>
         </button>
       ))}
     </div>
@@ -185,7 +186,7 @@ function PreSession({
             <li>{t('Put on your headphones.')}</li>
             <li>{t('Get comfortable.')}</li>
           </ul>
-          <p className="small muted">🎧 {t('Headphones recommended')}</p>
+          <p className="small muted"><Icon name="headphones" size={15} /> {t('Headphones recommended')}</p>
 
           <div className="vas-block">
             <p className="small">{t('How do you feel right now?')}</p>
@@ -228,7 +229,7 @@ function StereoCheck({ onDone, onBack }: { onDone: () => void; onBack: () => voi
     <div className="app-frame su-studio">
       <div className="screen screen--center stereo">
         <div className="screen__body stereo__body">
-          <div className="stereo__art" aria-hidden="true">🎧</div>
+          <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
           <h2 className="display">{t("Let's check your headphones")}</h2>
           <p className="lead">{t('Which ear hears the tone?')}</p>
           <div className="chip-row stereo__answers">
@@ -449,7 +450,7 @@ function ImmersiveSession({
             <p className="lead player__readytext">
               {t("Find a comfortable position. Close your eyes when you're ready.")}
             </p>
-            <button className="btn btn--light player__begin" onClick={begin}>▶ {t('Begin')}</button>
+            <button className="btn btn--light player__begin" onClick={begin}><Icon name="play" size={18} /> {t('Begin')}</button>
             {!audioUrl && (
               <p className="small player__placeholder">
                 {t('No recorded voice is published for this length yet — this plays an ambient bed.')}
@@ -490,7 +491,7 @@ function ImmersiveSession({
               onClick={(e) => { e.stopPropagation(); setConfirmExit(true) }}
               aria-label={t('End session')}
             >
-              ✕
+              <Icon name="close" size={18} />
             </button>
             <span className="hud__phase">{t('Phase {n}', { n: phaseIdx + 1 })}{phase ? ` · ${t(phase.name)}` : ''}</span>
             <span className="hud__time">{fmt(elapsed)} / {fmt(total)}</span>
@@ -508,7 +509,7 @@ function ImmersiveSession({
               onClick={(e) => { e.stopPropagation(); toggle() }}
               aria-label={playing ? t('Pause') : t('Resume')}
             >
-              {playing ? '❚❚' : '▶'}
+              <Icon name={playing ? 'pause' : 'play'} size={26} />
             </button>
             <button
               className="hud__btn"
@@ -538,11 +539,11 @@ function ImmersiveSession({
 
 /* --------------------------------------------------------- SES-4 / SES-5 -- */
 
-const FEEDBACK: { id: PostFeedback; icon: string; label: string }[] = [
-  { id: 'relaxed', icon: '😌', label: 'Relaxed' },
-  { id: 'neutral', icon: '😐', label: 'Neutral' },
-  { id: 'restless', icon: '😖', label: 'Restless' },
-  { id: 'support', icon: '🤝', label: 'Need support' },
+const FEEDBACK: { id: PostFeedback; icon: IconName; label: string }[] = [
+  { id: 'relaxed', icon: 'relaxed', label: 'Relaxed' },
+  { id: 'neutral', icon: 'neutral', label: 'Neutral' },
+  { id: 'restless', icon: 'restless', label: 'Restless' },
+  { id: 'support', icon: 'support', label: 'Need support' },
 ]
 
 function PostSession({
@@ -596,7 +597,7 @@ function PostSession({
                   aria-pressed={picked === f.id}
                   onClick={() => choose(f.id)}
                 >
-                  <span className="post__icon" aria-hidden="true">{f.icon}</span>
+                  <span className="post__icon" aria-hidden="true"><Icon name={f.icon} size={24} /></span>
                   <span>{t(f.label)}</span>
                 </button>
               ))}

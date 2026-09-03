@@ -35,6 +35,7 @@ import {
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { coverFor, coverStyle } from './artwork'
 import type { Duration } from '../types/domain'
+import { Icon } from './icons'
 
 interface CatalogProps {
   catalog: LiveCatalog
@@ -217,7 +218,7 @@ function Hero({
         <p className="cat-hero__blurb">{t(session.blurb)}</p>
         <div className="cat-hero__actions">
           <button className="btn btn--light" onClick={() => onStart(shortest)}>
-            ▶ {t('Play')} · {shortest}m
+            <Icon name="play" size={17} /> {t('Play')} · {shortest}m
           </button>
           <button className="btn btn--light btn--outline" onClick={onOpen}>{t('More')}</button>
         </div>

@@ -22,6 +22,7 @@ import { durationLabel, primaryBlock, weekCount } from '../data/selfuse'
 import { useCatalog, findPathway, type ResolvedSession } from '../data/liveCatalog'
 import { currentWeek, type PathwayState, type SelfUseLog } from '../data/selfUseStore'
 import type { Duration } from '../types/domain'
+import { Icon } from './icons'
 
 export interface Launch {
   slug: string
@@ -92,7 +93,7 @@ export function Home(props: HomeProps) {
         </div>
         {props.hasNotifications && (
           <button className="home__bell" onClick={props.onNotifications} aria-label={t('Notifications')}>
-            🔔
+            <Icon name="bell" size={17} />
           </button>
         )}
       </header>
@@ -120,7 +121,7 @@ export function Home(props: HomeProps) {
           {didSessionToday ? (
             <>
               <div className="home__todaydone">
-                <span className="home__check" aria-hidden="true">✓</span> {t('Completed')}
+                <span className="home__check" aria-hidden="true"><Icon name="check" size={15} /></span> {t('Completed')}
               </div>
               <p className="small muted">{t('Great job today.')}</p>
               <button
@@ -178,7 +179,7 @@ export function Home(props: HomeProps) {
             if (!s) return null
             return (
               <button key={c.id} className="mood-card" onClick={() => setSheet(s)}>
-                <span className="mood-card__icon" aria-hidden="true">{c.icon}</span>
+                <span className="mood-card__icon" aria-hidden="true"><Icon name={c.icon} size={22} /></span>
                 <span className="mood-card__label">{t(c.label)}</span>
               </button>
             )

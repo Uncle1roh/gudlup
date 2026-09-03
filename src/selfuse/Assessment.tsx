@@ -31,6 +31,7 @@ import {
   type Responses,
 } from '../data/assessments'
 import { responsesOf } from '../data/assessmentStore'
+import { Icon } from './icons'
 
 interface AssessmentProps {
   record: AssessmentRecord
@@ -66,7 +67,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
       <div className="app-frame su-studio">
         <div className="screen msr">
           <div className="msr__top">
-            <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
+            <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
           </div>
           <div className="screen__body msr__body">
             <p className="lead">{t('This measure is recorded by your therapist during your session.')}</p>
@@ -81,7 +82,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
       <div className="app-frame su-studio">
         <div className="screen msr">
           <div className="screen__body msr__body msr__body--center">
-            <div className="asmt-done" aria-hidden="true">✓</div>
+            <div className="asmt-done" aria-hidden="true"><Icon name="check" size={28} /></div>
             <h2 className="display">{t('Thank you')}</h2>
             <p className="lead">
               {therapistName
@@ -117,7 +118,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
     <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
-          <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
+          <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
           <span className="msr__count">{t('{n} of {total}', { n: step + 1, total: instrument.items.length })}</span>
         </div>
 

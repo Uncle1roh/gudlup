@@ -35,6 +35,42 @@
    cream paper and goes muddy on near-black. Same hue, raised for its ground.
    ============================================================================ */
 
+/* ------------------------------------------------------------- motion ----
+
+   The canvas's own keyframes, at the canvas's own timings. Nothing here is
+   decoration for its own sake: the bloom drifts so a static gradient does not
+   read as a printed background, the orb breathes at the pace the session asks
+   a person to breathe at, and a ring leaves it every 4.5s so the screen looks
+   like it is listening. All of it stops under prefers-reduced-motion. */
+
+@keyframes gl-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(4%, -3%, 0) scale(1.12); }
+}
+@keyframes gl-core {
+  0%, 100% { transform: scale(0.955); }
+  50%      { transform: scale(1.03); }
+}
+@keyframes gl-halo {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  50%      { transform: scale(1.14); opacity: 0.85; }
+}
+@keyframes gl-ring {
+  0%   { transform: scale(0.86); opacity: 0; }
+  22%  { opacity: 0.34; }
+  100% { transform: scale(1.6);  opacity: 0; }
+}
+@keyframes gl-breath {
+  0%, 100% { transform: scale(0.9);  opacity: 0.92; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+@keyframes gl-ripple {
+  0%   { transform: scale(0.72); opacity: 0; }
+  16%  { opacity: 0.5; }
+  100% { transform: scale(2.1);  opacity: 0; }
+}
+
+
 .su-studio {
   --su-void:     #070d0c;
   --su-ground:   #0a1211;
@@ -88,6 +124,7 @@
   filter: blur(30px);
   pointer-events: none;
   z-index: 0;
+  animation: gl-drift 22s ease-in-out infinite;
 }
 .su-studio > * { position: relative; z-index: 1; }
 
@@ -159,29 +196,49 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border-radius: 28px;
   gap: 0;
   justify-content: space-between;
-  background: linear-gradient(158deg, #12463a 0%, #0b2a24 52%, #071412 100%);
+  /* the duotone ground, then the corner light over it */
+  background-image:
+    radial-gradient(115% 80% at 74% 12%, rgba(167, 232, 208, 0.4), rgba(31, 191, 148, 0.1) 44%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(158deg, #12463a 0%, #0b2a24 52%, #071412 100%);
   box-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
-/* the corner light, the orb's own bloom, and the grain, in one layer */
+/* THE ORB, bloomed into the top-right corner. A real element rather than a
+   background layer, so it can breathe and shed a ring the way the canvas
+   draws it — the ring is a box-shadow that grows and fades, which costs one
+   composited layer instead of two more nodes. */
 .su-studio .home__pathway::before {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  top: -46px;
+  right: -46px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  z-index: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle at 88% 6%, #f6f3d6 0%, rgba(242, 238, 196, 0.6) 3%, rgba(31, 191, 148, 0.75) 11%, rgba(15, 107, 82, 0.34) 19%, rgba(7, 20, 18, 0) 27%),
-    radial-gradient(115% 80% at 74% 12%, rgba(167, 232, 208, 0.4), rgba(31, 191, 148, 0.1) 44%, rgba(0, 0, 0, 0) 72%);
+  background: radial-gradient(circle at 36% 32%, #f6f3d6 0%, rgba(242, 238, 196, 0.6) 12%, #1fbf94 46%, rgba(15, 107, 82, 0.5) 74%, rgba(7, 20, 18, 0) 100%);
+  animation: gl-core 9s ease-in-out infinite, gl-listen 9s ease-out infinite;
 }
-/* the scrim: type sits on near-black at the foot, on the art at the head */
+@keyframes gl-listen {
+  0%   { box-shadow: 0 0 0 0 rgba(167, 232, 208, 0); }
+  22%  { box-shadow: 0 0 0 6px rgba(167, 232, 208, 0.28); }
+  100% { box-shadow: 0 0 0 42px rgba(167, 232, 208, 0); }
+}
+/* the scrim, with the film grain blended into it in one layer */
 .su-studio .home__pathway::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-  background: linear-gradient(to top, rgba(6, 13, 12, 0.92) 0%, rgba(6, 13, 12, 0.45) 42%, rgba(6, 13, 12, 0) 72%);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(to top, rgba(6, 13, 12, 0.92) 0%, rgba(6, 13, 12, 0.45) 42%, rgba(6, 13, 12, 0) 72%);
+  background-size: 170px 170px, auto;
+  background-blend-mode: overlay, normal;
 }
+/* the hero's own children sit above both layers */
+.su-studio .home__pathway > * { position: relative; z-index: 1; }
 
 .su-studio .home__pwtop { align-items: center; gap: 8px; }
 .su-studio .home__pathway .eyebrow {
@@ -687,8 +744,18 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 
 /* ----------------------------------------------------------------- orb ---- */
 
-.su-studio .ring { border-color: rgba(167, 232, 208, 0.3); }
+/* The shared BreathingOrb, on the canvas's clock: a 9s breath instead of 10s,
+   and rings in light emerald rather than the app's default mint. */
+.su-studio .orb--breathing { animation: gl-breath 9s ease-in-out infinite; }
+.su-studio .ring {
+  border-color: rgba(167, 232, 208, 0.3);
+  animation: gl-ripple 9s ease-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .su-studio .gl-grain { opacity: 0.1; }
+  .su-studio::before,
+  .su-studio .home__pathway::before,
+  .su-studio .orb--breathing,
+  .su-studio .ring { animation: none; }
 }

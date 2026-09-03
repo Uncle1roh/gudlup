@@ -25,6 +25,8 @@
    clinical translations exist, while the surrounding UI is localized normally.
    ============================================================================ */
 
+import type { IconName } from '../selfuse/icons'
+
 export type InstrumentId = 'DASS21' | 'PSS10' | 'BRS' | 'CBI' | 'VAS'
 
 /** T0 baseline, then the end of each of the first three months. */
@@ -220,15 +222,19 @@ export function optionsForItem(instrument: Instrument, item: InstrumentItem): Re
 
 /* =================================================================== VAS === */
 
-/** Emoji rather than a 100 mm line: a line needs fine motor precision that is
-    clumsy on a phone and adds measurement noise from imprecise taps. The
-    system stores the number; the person sees only the icon. */
-export const VAS_OPTIONS: (ResponseOption & { icon: string })[] = [
-  { value: 1, icon: '😟', label: 'Very distressed' },
-  { value: 2, icon: '😕', label: 'Somewhat distressed' },
-  { value: 3, icon: '😐', label: 'Neutral' },
-  { value: 4, icon: '🙂', label: 'Good' },
-  { value: 5, icon: '😊', label: 'Very good' },
+/** A face scale rather than a 100 mm line: a line needs fine motor precision
+    that is clumsy on a phone and adds measurement noise from imprecise taps.
+    The system stores the number; the person sees only the face.
+
+    The faces are DRAWN, not emoji — one instrument in one hand, at a size the
+    app chooses, instead of five pictures from whichever vendor the device
+    ships. `icon` is the glyph's name; see selfuse/icons.tsx. */
+export const VAS_OPTIONS: (ResponseOption & { icon: IconName })[] = [
+  { value: 1, icon: 'vas1', label: 'Very distressed' },
+  { value: 2, icon: 'vas2', label: 'Somewhat distressed' },
+  { value: 3, icon: 'vas3', label: 'Neutral' },
+  { value: 4, icon: 'vas4', label: 'Good' },
+  { value: 5, icon: 'vas5', label: 'Very good' },
 ]
 
 export const INSTRUMENTS: Record<Exclude<InstrumentId, 'VAS'>, Instrument> = {
