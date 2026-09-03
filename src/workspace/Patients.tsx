@@ -21,10 +21,11 @@
      sees a friendly session name and never a code.
    ============================================================================ */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n, fmtDate as localeDate } from '../i18n'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
+import { useDataProvider } from '../data/provider'
 import {
   CLUSTER_LABEL,
   adherenceBand,
@@ -32,14 +33,14 @@ import {
   assessmentDueLabel,
   threadIdFor,
   codeExpired,
-  generateConnectionCode,
   vasDirection,
   vasSeries,
   type WorkspacePatient,
   type WorkspaceState,
 } from './data'
 import type { Duration } from '../types/domain'
-import { useMessages, unreadFor } from '../data/messageStore'
+import { unreadFor } from '../data/messageStore'
+import { useThreads } from '../data/threads'
 import {
   INSTRUMENTS,
   SCHEDULE,
@@ -85,7 +86,7 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
   const [sort, setSort] = useState<'next' | 'name' | 'last' | 'vas'>('next')
   const [addOpen, setAddOpen] = useState(false)
   const now = Date.now()
-  const { rows: msgRows } = useMessages()
+  const { rows: msgRows } = useThreads()
 
   /* A message written from the patient's own app is unread work exactly like a
      seeded one, so both the alert filter and the row badge count them. */
@@ -247,18 +248,39 @@ export function AddPatientModal({
   onClose: () => void
 }) {
   const { t } = useI18n()
+  const dp = useDataProvider()
   const [copied, setCopied] = useState(false)
+  const [code, setCode] = useState<{ code: string; issuedAt: number } | null>(
+    state.connectionCode && !codeExpired(state.connectionCode) ? state.connectionCode : null,
+  )
+  const [failed, setFailed] = useState(false)
 
-  /* One active code per therapist: opening this modal without a live code
-     issues a new one, and issuing invalidates any previous unused code. */
-  const code = useMemo(() => {
-    if (state.connectionCode && !codeExpired(state.connectionCode)) return state.connectionCode
-    const fresh = { code: generateConnectionCode(), issuedAt: Date.now() }
-    update((s) => ({ ...s, connectionCode: fresh }))
-    return fresh
-  }, [state.connectionCode, update])
+  /**
+   * Mint the code on the SERVER.
+   *
+   * It used to be generated here and written to this browser's own storage,
+   * while the patient's app validated against two strings hardcoded in its
+   * source. The two were never the same codes and no table stood behind
+   * either, so this modal promised "patient appears in your Patient list" for
+   * a flow that could not connect anybody. A live code is reused; otherwise
+   * one is minted and remembered locally so reopening the modal shows the
+   * same code the patient was given.
+   */
+  useEffect(() => {
+    if (code) return
+    let alive = true
+    void dp.createTherapistCode()
+      .then((made: { code: string; createdAt: number }) => {
+        if (!alive) return
+        const fresh = { code: made.code, issuedAt: made.createdAt }
+        setCode(fresh)
+        update((s) => ({ ...s, connectionCode: fresh }))
+      })
+      .catch(() => { if (alive) setFailed(true) })
+    return () => { alive = false }
+  }, [code, dp, update])
 
-  const hoursLeft = Math.max(0, Math.round((code.issuedAt + 72 * 3_600_000 - Date.now()) / 3_600_000))
+  const hoursLeft = code ? Math.max(0, Math.round((code.issuedAt + 72 * 3_600_000 - Date.now()) / 3_600_000)) : 0
 
   return (
     <div className="w-scrim" onClick={onClose} role="dialog" aria-modal="true">
@@ -269,11 +291,13 @@ export function AddPatientModal({
         </p>
 
         <div className="w-code">
-          <span className="w-code__value">{code.code}</span>
+          <span className="w-code__value">
+            {code ? code.code : failed ? t('Could not create a code') : t('Creating…')}
+          </span>
           <button
             className="w-btn w-btn--ghost"
             onClick={() =>
-              navigator.clipboard?.writeText(code.code).then(
+              code && navigator.clipboard?.writeText(code.code).then(
                 () => { setCopied(true); window.setTimeout(() => setCopied(false), 1800) },
                 () => { /* clipboard blocked — the code is on screen */ },
               )
@@ -282,7 +306,12 @@ export function AddPatientModal({
             {copied ? t('Copied') : t('Copy code')}
           </button>
         </div>
-        <p className="w-small">{t('This code expires in {n} hours.', { n: hoursLeft })}</p>
+        {code && <p className="w-small">{t('This code expires in {n} hours.', { n: hoursLeft })}</p>}
+        {failed && (
+          <p className="w-small w-small--warn">
+            {t('The code could not be created. Check your connection and reopen this window.')}
+          </p>
+        )}
 
         <div className="w-steps">
           <div className="w-field__label">{t('How it works')}</div>
@@ -326,7 +355,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
   })
   const [assessOpen, setAssessOpen] = useState(false)
   const { rows, update: updateAssessments } = useAssessments()
-  const { rows: msgRows } = useMessages()
+  const { rows: msgRows } = useThreads()
   /* A bridged patient is the one whose Self Use app this build actually drives,
      so their queue is read under the Self Use id. Everyone else keeps their own
      — the two never share a row. */

@@ -24,6 +24,7 @@ import { useI18n, fmtDate } from '../i18n'
 import { useMessages, unreadFor } from '../data/messageStore'
 import { useDataProvider } from '../data/provider'
 import { LiveCatalogProvider } from '../data/liveCatalog'
+import { mergeServerPatients } from './data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
 import { TherapistOnboarding } from './Onboarding'
 import { Roster, PatientCard, initials } from './Patients'
@@ -155,6 +156,22 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
     void dp.listMyAppointments().then(setAppointments).catch(() => setAppointments([]))
   }, [dp])
   useEffect(loadAppointments, [loadAppointments])
+
+  /* People who connected with a code exist in the database; this roster is
+     local. Merge them in so a therapist actually SEES someone who joined —
+     without which the connection code led nowhere on this side either. Local
+     notes, goals and prescriptions survive the merge, and a hand-added record
+     with the same name is adopted rather than duplicated. */
+  useEffect(() => {
+    let alive = true
+    void dp.listPatients()
+      .then((rows) => {
+        if (!alive || !rows.length) return
+        update((s) => mergeServerPatients(s, rows.map((r) => ({ id: r.id, name: r.name }))))
+      })
+      .catch(() => { /* no backend, or none yet: the local roster stands */ })
+    return () => { alive = false }
+  }, [dp, update])
 
   const roomFor = useMemo(() => {
     const byName = new Map<string, Appointment>()

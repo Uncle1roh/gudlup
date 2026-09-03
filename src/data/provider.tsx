@@ -80,6 +80,16 @@ export interface DataProvider {
   /** Retire a code without deleting the patients who used it. */
   deactivateTherapistCode(code: string): Promise<void>
 
+  /**
+   * Every message this account may see — their own thread for a patient, all
+   * of their patients' threads for a therapist.
+   *
+   * One call rather than one per patient: the therapist's roster screen needs
+   * an unread count for every row, and row-level security already scopes the
+   * result to their own patients, so the narrowing is the database's job
+   * rather than a loop of queries.
+   */
+  listThreads(): Promise<ChatMessage[]>
   /** The thread for one patient. Omit `patientId` on the patient's own app. */
   listMessages(patientId?: string): Promise<ChatMessage[]>
   sendMessage(text: string, patientId?: string): Promise<void>

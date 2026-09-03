@@ -133,6 +133,15 @@ export interface WorkspaceMessage {
 
 export interface WorkspacePatient {
   id: string
+  /**
+   * The `patients` row id on the server, when this person is a real one.
+   *
+   * The workspace roster is local; the chat, the plan and the clinical record
+   * live in the database keyed by THIS id. Without it the therapist's replies
+   * went into a thread named after a local demo id that no patient's app has
+   * ever heard of.
+   */
+  linkedPatientId?: string
   name: string
   memberSince: number
   company?: string
@@ -505,8 +514,69 @@ export function vasDirection(p: WorkspacePatient): 'up' | 'down' | 'flat' | null
  * is defined once here because three surfaces ask the question and two of them
  * getting different answers would split a conversation in half.
  */
-export function threadIdFor(p: Pick<WorkspacePatient, 'id' | 'bridged'>): string {
-  return p.bridged ? 'me' : p.id
+export function threadIdFor(p: Pick<WorkspacePatient, 'id' | 'bridged' | 'linkedPatientId'>): string {
+  /* The server's id wins wherever there is one: it is what the patient's own
+     app writes to. `'me'` is the demo bridge and `p.id` is a local-only
+     record — neither can carry a message to another person. */
+  return p.linkedPatientId ?? (p.bridged ? 'me' : p.id)
+}
+
+/* ---------------------------------------------------- the real roster ----
+
+   People who connected with a code exist in the database, not in this store.
+   Merging rather than replacing is deliberate: a therapist's local notes,
+   goals and prescriptions for someone must survive the merge, and the demo
+   roster has to keep working with no backend at all. */
+
+export interface ServerPatient {
+  id: string
+  name: string
+  createdAt?: number
+}
+
+export function mergeServerPatients(state: WorkspaceState, server: ServerPatient[]): WorkspaceState {
+  if (!server.length) return state
+  const byLink = new Map(state.patients.filter((p) => p.linkedPatientId).map((p) => [p.linkedPatientId as string, p]))
+  /* A local record with the same NAME and no link yet is almost certainly the
+     same person the therapist added by hand before they connected — adopt it
+     rather than showing them twice. */
+  const adopted = new Set<string>()
+  const patients = state.patients.map((p) => {
+    if (p.linkedPatientId) return p
+    const match = server.find((sp) => sp.name.trim().toLowerCase() === p.name.trim().toLowerCase())
+    if (!match || byLink.has(match.id)) return p
+    adopted.add(match.id)
+    return { ...p, linkedPatientId: match.id, status: 'active' as PatientStatus }
+  })
+
+  const fresh = server
+    .filter((sp) => !byLink.has(sp.id) && !adopted.has(sp.id))
+    .map((sp): WorkspacePatient => {
+      const at = sp.createdAt ?? Date.now()
+      return {
+        id: `srv-${sp.id}`,
+        linkedPatientId: sp.id,
+        name: sp.name,
+        memberSince: at,
+        status: 'active',
+        linkedAt: at,
+        sessions: [],
+        assessments: [],
+        notes: [],
+        goals: [],
+        prescriptions: [],
+        /* A person who redeemed a code consented to the therapy relationship
+           in the same transaction (see redeem_therapist_code); the Self Use
+           data bridge is a separate consent they have not given. */
+        bridged: false,
+        bridgedSessions: [],
+        messages: [],
+        consentTherapy: true,
+      }
+    })
+
+  if (!fresh.length && !adopted.size) return state
+  return { ...state, patients: [...patients, ...fresh] }
 }
 
 export function unreadCount(state: WorkspaceState): number {

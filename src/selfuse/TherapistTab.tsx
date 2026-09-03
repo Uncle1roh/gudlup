@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
+import { normalizeConnectionCode } from '../data/link'
 import {
   expandOpenings,
   joinWindowOpen,
@@ -30,8 +31,6 @@ import {
 import { durationLabel } from '../data/selfuse'
 import { useCatalog } from '../data/liveCatalog'
 import {
-  DEMO_THERAPISTS,
-  checkConnectionCode,
   seedLink,
   adherence,
   profileFor,
@@ -52,15 +51,8 @@ import {
   SELF_USE_PATIENT_ID,
 } from '../data/assessmentStore'
 import { INSTRUMENTS } from '../data/assessments'
-import {
-  useMessages,
-  threadFor,
-  unreadFor,
-  markRead,
-  seedThread,
-  send as sendMessage,
-  MAX_LENGTH,
-} from '../data/messageStore'
+import { threadFor, unreadFor, MAX_LENGTH } from '../data/messageStore'
+import { useThreads } from '../data/threads'
 
 interface TherapistTabProps {
   hasConvention: boolean
@@ -89,7 +81,6 @@ export function TherapistTab(props: TherapistTabProps) {
   const [view, setView] = useState<View>({ kind: 'root' })
   const { therapy, update } = props
   const { rows, update: updateAssessments } = useAssessments()
-  const { update: updateMessages } = useMessages()
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
 
@@ -158,17 +149,10 @@ export function TherapistTab(props: TherapistTabProps) {
               ? rs
               : sendAssessment(rs, SELF_USE_PATIENT_ID, 'DASS21', 'T0', view.therapist.name),
           )
-          /* The therapist writes first, as they would in life. `seedThread`
-             runs only on an empty thread, so this can never land on top of a
-             real conversation. */
-          updateMessages((rs) =>
-            seedThread(
-              rs,
-              SELF_USE_PATIENT_ID,
-              'Welcome. Write to me here between our sessions whenever something is worth saying.',
-              Date.now(),
-            ),
-          )
+          /* No seeded welcome. This app used to write the therapist's first
+             message ITSELF, attributed to the therapist, so a person could
+             open a brand-new thread and read a greeting their clinician had
+             never sent. A message in a therapeutic record has an author. */
           setView({ kind: 'root' })
         }}
       />
@@ -610,19 +594,38 @@ function ConnectionCodeScreen({
   onConnected: (t: TherapistProfile) => void
 }) {
   const { t } = useI18n()
+  const dp = useDataProvider()
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  function submit() {
-    const res = checkConnectionCode(code, DEMO_THERAPISTS)
-    if (!res.ok || !res.therapist) {
-      setError(res.reason === 'expired'
-        ? t('This code has expired. Ask your therapist for a new one.')
-        : t('This code is not valid.'))
+  /**
+   * Redeem the code against the SERVER.
+   *
+   * It used to be checked against two strings hardcoded in this file, matched
+   * to a fixture directory also in this file — so no code a real therapist
+   * generated could ever work, and the two demo codes worked for everyone.
+   * The shape is still checked here, because a typo deserves an instant
+   * answer rather than a round trip; everything else is the database's call.
+   */
+  async function submit() {
+    const typed = normalizeConnectionCode(code)
+    if (!/^GL-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(typed)) {
+      setError(t('This code is not valid.'))
       return
     }
+    setBusy(true)
     setError(null)
-    onConnected(res.therapist)
+    try {
+      const link = await dp.redeemTherapistCode(typed)
+      onConnected(profileFor({ id: link.therapistId, name: link.therapistName }))
+    } catch (e) {
+      setError((e as Error).message === 'CODE_UNKNOWN'
+        ? t('This code is not valid.')
+        : t('We could not connect you just now. Check your connection and try again.'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -639,7 +642,9 @@ function ConnectionCodeScreen({
         spellCheck={false}
       />
       {error && <p className="ob-error">{error}</p>}
-      <button className="btn btn--primary" onClick={submit}>{t('Connect')}</button>
+      <button className="btn btn--primary" disabled={busy || !code.trim()} onClick={() => void submit()}>
+        {busy ? t('Connecting…') : t('Connect')}
+      </button>
     </div>
   )
 }
@@ -803,7 +808,7 @@ function ToggleRow({
  */
 function Messages({ patientId, therapistName }: { patientId: string; therapistName: string }) {
   const { t, d } = useI18n()
-  const { rows, update } = useMessages()
+  const { rows, send, markRead } = useThreads()
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement | null>(null)
 
@@ -812,8 +817,8 @@ function Messages({ patientId, therapistName }: { patientId: string; therapistNa
 
   /* Opening the tab IS reading them. */
   useEffect(() => {
-    if (unread > 0) update((rs) => markRead(rs, patientId, 'patient'))
-  }, [unread, patientId, update])
+    if (unread > 0) void markRead('patient')
+  }, [unread, markRead])
 
   /* A thread opens on its newest message, not its oldest — a conversation is
      read from the bottom. */
@@ -824,7 +829,9 @@ function Messages({ patientId, therapistName }: { patientId: string; therapistNa
   function submit() {
     const body = text.trim()
     if (!body) return
-    update((rs) => sendMessage(rs, patientId, 'patient', body))
+    /* No patientId: the person's own link names their thread, so this app
+       cannot address a conversation that is not theirs. */
+    void send(body)
     setText('')
   }
 

@@ -25,14 +25,8 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
-import {
-  useMessages,
-  threadFor,
-  unreadFor,
-  markRead,
-  send as postMessage,
-  type ChatMessage,
-} from '../data/messageStore'
+import { threadFor, unreadFor, type ChatMessage } from '../data/messageStore'
+import { useThreads } from '../data/threads'
 import {
   NOTIFICATION_ROWS,
   threadIdFor as threadId,
@@ -73,7 +67,7 @@ function fixtureRows(p: { id: string; bridged: boolean; messages: { id: string; 
 
 export function Messages({ state, update, onOpenPatient, initialPatientId }: ToolProps & { initialPatientId?: string }) {
   const { t, d } = useI18n()
-  const { rows, update: updateMessages } = useMessages()
+  const { rows, send: postToThread, markRead: markThreadRead } = useThreads()
 
   /* A conversation counts as existing if EITHER side has written — the store
      or the seeded fixtures. Filtering on the fixtures alone hid every patient
@@ -104,9 +98,12 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
   function send() {
     const text = draft.trim()
     if (!text || !patient) return
-    /* Both ends read this store. Writing into the workspace's own state was
-       what made the therapist's replies invisible to the patient. */
-    updateMessages((rs) => markRead(postMessage(rs, threadId(patient), 'therapist', text), threadId(patient), 'therapist'))
+    /* Both ends read one table. Writing into the workspace's own state was
+       what made the therapist's replies invisible to the patient — and
+       `threadId` is the SERVER's patient id wherever there is one, so the
+       message lands in the thread the person's own app reads. */
+    void postToThread(text, threadId(patient))
+    void markThreadRead('therapist', threadId(patient))
     update((s) => ({
       ...s,
       patients: s.patients.map((p) => (p.id === patient.id ? { ...p, messages: p.messages.map((m) => ({ ...m, read: true })) } : p)),
@@ -117,7 +114,7 @@ export function Messages({ state, update, onOpenPatient, initialPatientId }: Too
   function openThread(id: string) {
     setSelected(id)
     const p = state.patients.find((x) => x.id === id)
-    if (p) updateMessages((rs) => markRead(rs, threadId(p), 'therapist'))
+    if (p) void markThreadRead('therapist', threadId(p))
     update((s) => ({
       ...s,
       patients: s.patients.map((x) => (x.id === id ? { ...x, messages: x.messages.map((m) => ({ ...m, read: true })) } : x)),

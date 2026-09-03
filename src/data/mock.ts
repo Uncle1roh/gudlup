@@ -413,6 +413,7 @@ export function createMockProvider(): DataProvider {
     },
 
     // --- the thread ---
+    listThreads: () => delay(thread.map((m) => ({ ...m }))),
     listMessages: (patientId?: string) =>
       delay(thread.filter((m) => m.patientId === (patientId ?? link.patientId)).map((m) => ({ ...m }))),
     sendMessage: async (text: string, patientId?: string) => {
