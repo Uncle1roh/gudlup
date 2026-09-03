@@ -16,9 +16,26 @@ function newCtx(): Ctx {
   return new AC()
 }
 
-/** Play a 440 Hz tone in a single ear to verify stereo routing (UC-B2C-07). */
+/**
+ * Play a 440 Hz tone in a single ear to verify stereo routing (UC-B2C-07).
+ *
+ * Two things here are load-bearing and were not.
+ *
+ * RESUME. A context created outside a user-gesture call stack comes up
+ * `suspended` on Safari, iOS and some Android WebViews, and stays there: the
+ * oscillator is scheduled but the clock never advances, so the tone is SILENT.
+ * The person is asked which ear hears a tone that never sounded, answers
+ * wrong, and is told their headphones are broken. Every other context in this
+ * codebase resumes; this one did not.
+ *
+ * CLOSE ON A TIMER, not on `onended`. A suspended context never fires
+ * `onended`, so the close never ran and every attempt leaked a live context.
+ * iOS allows about four, after which even the gesture-driven "play again"
+ * button goes quiet and the check is unusable for the rest of the session.
+ */
 export function playEarTone(side: 'left' | 'right', durationMs = 1100): void {
   const ctx = newCtx()
+  if (ctx.state === 'suspended') void ctx.resume()
   const osc = ctx.createOscillator()
   osc.type = 'sine'
   osc.frequency.value = 440
@@ -40,7 +57,12 @@ export function playEarTone(side: 'left' | 'right', durationMs = 1100): void {
 
   osc.start(t)
   osc.stop(end + 0.05)
-  osc.onended = () => void ctx.close()
+  /* Belt and braces: close when the note ends, and again on a wall clock in
+     case the context was never allowed to run and `onended` never comes. */
+  let closed = false
+  const close = () => { if (!closed) { closed = true; void ctx.close() } }
+  osc.onended = close
+  setTimeout(close, durationMs + 400)
 }
 
 /* -------------------------------------------------------------------------- */

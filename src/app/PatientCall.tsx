@@ -12,6 +12,7 @@ import type { ControlAction } from '../b2b/webrtc/signaling'
 import type { Appointment } from '../data/scheduling'
 import { patientTitle } from '../types/domain'
 import type { Duration, MoodCheck, SessionRecord } from '../types/domain'
+import { audioUrlFor } from '../data/liveCatalog'
 
 interface PatientCallProps {
   appointment: Appointment
@@ -30,7 +31,7 @@ type Stage = 'pre' | 'call' | 'post'
  * through the (mono, echo-cancelled) call.
  */
 export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [stage, setStage] = useState<Stage>('pre')
   const [vasPre, setVasPre] = useState<MoodCheck | null>(null)
 
@@ -66,7 +67,10 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
         const p = getProtocol(c.protocolCode)
         if (!p) return
         const version = p.versions.find((v) => v.duration === c.durationMin) ?? p.versions[0]
-        const url = version?.audioUrl?.['pt-BR']
+        /* The language chain, not one hardcoded key: an Italian mixdown was
+           invisible to a 'pt-BR' read and the person got the placeholder bed
+           with nothing said about it. */
+        const url = audioUrlFor(p, version?.duration ?? (p.versions[0]?.duration ?? 12), locale)
         player.current?.stop()
         player.current = new SessionPlayer({ audioUrl: url, volume: 0.85 })
         void player.current.play()
@@ -106,7 +110,6 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
   const call = useVideoCall({
     roomId: appointment.id,
     role: 'patient',
-    autoAnswer: true,
     onControl,
   })
 

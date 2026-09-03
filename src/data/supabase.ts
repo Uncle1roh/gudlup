@@ -249,39 +249,45 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
 
   return {
     /* ---- scheduling ---- */
+    /**
+     * The roster, through an RPC rather than a join.
+     *
+     * This used to select `therapists` joined to `profiles`. A patient can
+     * read neither — `therapists` is owner-and-admin only, `profiles` is
+     * self-only — so row-level security returned zero rows and the app told
+     * every person "no therapist is available through your company yet". The
+     * query was correct; the permission was never going to allow it.
+     *
+     * `public_therapists()` is SECURITY DEFINER and returns approved
+     * therapists' name, CRP and avatar and nothing else (supabase/
+     * 5-therapist-booking.sql). Company scoping moves here, where the roster
+     * is already narrow.
+     */
     async listAvailableTherapists() {
-      const uid = await authUid()
-      const { data: me } = await sb.from('profiles').select('company_id').eq('auth_uid', uid).single()
-      const myCompany = (me as { company_id: string | null } | null)?.company_id ?? null
-      const { data, error } = await sb
-        .from('therapists')
-        .select('id, profiles!inner(name, avatar_url, company_id)')
-        .eq('status', 'approved')
+      const { data, error } = await sb.rpc('public_therapists')
       if (error) throw error
-      const rows = (data ?? []).map((r: any) => ({
-        id: r.id as string,
-        name: r.profiles?.name as string,
-        avatarUrl: (r.profiles?.avatar_url as string | null) ?? null,
-        companyId: (r.profiles?.company_id as string | null) ?? null,
-      }))
-      const sameCompany = myCompany ? rows.filter((r) => r.companyId === myCompany) : []
-      // pilot fallback: with no company-linked clinician, every approved one shows
-      return (sameCompany.length ? sameCompany : rows).map(({ id, name, avatarUrl }) => ({ id, name, avatarUrl }))
+      return ((data ?? []) as { id: string; name: string; avatar_url: string | null }[])
+        .map((r) => ({ id: r.id, name: r.name, avatarUrl: r.avatar_url ?? null }))
     },
     async getTherapistAvailability(therapistId: string) {
       const { data, error } = await sb.from('therapist_availability').select('slots').eq('therapist_id', therapistId).maybeSingle()
       if (error) return []
       return ((data as { slots: unknown } | null)?.slots as import('./scheduling').WeeklySlot[] | undefined) ?? []
     },
+    /**
+     * Which instants are taken — by anyone.
+     *
+     * Read directly, row-level security shows a patient only their OWN
+     * bookings, so a slot another patient took still rendered as free and the
+     * person found out by being refused. `booked_times()` returns start times
+     * and nothing else: no names, no ids, no appointment rows.
+     */
     async listBookedTimes(therapistId: string, fromMs: number, toMs: number) {
-      const { data, error } = await sb.from('appointments')
-        .select('starts_at')
-        .eq('therapist_id', therapistId)
-        .eq('status', 'booked')
-        .gte('starts_at', toIso(fromMs))
-        .lt('starts_at', toIso(toMs))
+      const { data, error } = await sb.rpc('booked_times', {
+        t_id: therapistId, from_at: toIso(fromMs), to_at: toIso(toMs),
+      })
       if (error) return []
-      return (data ?? []).map((r: { starts_at: string }) => toMs2(r.starts_at))
+      return ((data ?? []) as { starts_at: string }[]).map((r) => toMs2(r.starts_at))
     },
     async bookAppointment(therapistId: string, startsAtMs: number) {
       const uid = await authUid()
@@ -298,26 +304,33 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       }
       return { id: (data as any).id as string, therapistId, startsAtMs, durationMin: (data as any).duration_min ?? 50, status: 'booked' as const }
     },
+    /**
+     * The booking the person just made — also through an RPC.
+     *
+     * The old query reached the therapist's name through
+     * `therapists!inner(profiles!inner(name))`, and an INNER join to tables
+     * the patient cannot read drops the parent row. So a booking that was
+     * successfully written came back as null: the join window never opened,
+     * the video room id (this row's `id`) was never known, and Cancel did
+     * nothing while the slot stayed blocked.
+     */
     async getMyAppointment() {
-      const uid = await authUid()
-      const { data: me } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
-      const pid = (me as { id: string } | null)?.id
-      if (!pid) return null
-      const { data, error } = await sb.from('appointments')
-        .select('id, therapist_id, starts_at, duration_min, status, therapists!inner(profiles!inner(name))')
-        .eq('profile_id', pid)
-        .eq('status', 'booked')
-        .gte('starts_at', toIso(Date.now() - 2 * 3600_000))
-        .order('starts_at', { ascending: true })
-        .limit(1)
-      if (error || !data?.length) return null
-      const r = data[0] as any
+      const { data, error } = await sb.rpc('my_appointments')
+      if (error) return null
+      const cutoff = Date.now() - 2 * 3600_000
+      const next = ((data ?? []) as {
+        id: string; therapist_id: string; therapist_name: string | null
+        starts_at: string; duration_min: number | null; status: string
+      }[])
+        .filter((r) => r.status === 'booked' && toMs2(r.starts_at) >= cutoff)
+        .sort((a, b) => toMs2(a.starts_at) - toMs2(b.starts_at))[0]
+      if (!next) return null
       return {
-        id: r.id as string,
-        therapistId: r.therapist_id as string,
-        therapistName: r.therapists?.profiles?.name as string | undefined,
-        startsAtMs: toMs2(r.starts_at),
-        durationMin: r.duration_min ?? 50,
+        id: next.id,
+        therapistId: next.therapist_id,
+        therapistName: next.therapist_name ?? undefined,
+        startsAtMs: toMs2(next.starts_at),
+        durationMin: next.duration_min ?? 50,
         status: 'booked' as const,
       }
     },

@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from '../admin/hooks'
+import { isClinicalOnly } from '../data/selfuse'
 import { clinicalEntries } from '../data/catalog'
 import { byWeek, repositioned, skeletonPlan, PLAN_WEEKS, type Plan, type PlanItem } from '../data/plan'
 import type { Duration } from '../types/domain'
@@ -26,7 +27,15 @@ function fmtDone(ms: number): string {
 export function PlanEditor({ patientId, patientName }: { patientId: string; patientName: string }) {
   const dp = useDataProvider()
   const { data: catalog = [] } = useProtocols()
-  const clinical = useMemo(() => clinicalEntries(catalog), [catalog])
+  /* The six clinical-only protocols run INSIDE a therapist-led session and
+     are never homework — `prescribableEntries` and the Workspace prescription
+     modal both enforce that, and this editor did not, so GL-ANX 1.2 or
+     GL-DEP 2.1 could be dropped into a three-month plan and the patient's app
+     would open it unsupervised. */
+  const clinical = useMemo(
+    () => clinicalEntries(catalog).filter((c) => !isClinicalOnly(c.code)),
+    [catalog],
+  )
 
   const [plan, setPlan] = useState<Plan | null>(null)
   const [items, setItems] = useState<PlanItem[]>([])

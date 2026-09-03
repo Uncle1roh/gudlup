@@ -33,7 +33,19 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
         <div className="report__row"><span>Protocollo</span><b>{proto ? `${proto.code} — ${proto.title}` : 'Nessuno — solo colloquio'}</b></div>
         {preset && <div className="report__row"><span>Parametri</span><b>{preset.binaural} · respirazione {preset.breathing} · {preset.voice}</b></div>}
         <div className="report__row"><span>Durata</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.audioPlayed ? (result.completed ? '(audio completato)' : '(audio interrotto)') : ''}</b></div>
-        {result.audioPlayed && <div className="report__row"><span>VAS pre → post</span><b>{result.vasPre} → {result.vasPost} <span className="report__delta">(+{result.vasPost - result.vasPre})</span></b></div>}
+        {/* 0 means the reading was never taken. Printing "0 → 0 (+0)" would
+            read as a measured null effect, which is a different clinical
+            claim from "we did not measure". */}
+        {result.audioPlayed && (
+          <div className="report__row">
+            <span>VAS pre → post</span>
+            {result.vasPre > 0 && result.vasPost > 0 ? (
+              <b>{result.vasPre} → {result.vasPost} <span className="report__delta">({result.vasPost - result.vasPre >= 0 ? '+' : ''}{result.vasPost - result.vasPre})</span></b>
+            ) : (
+              <b className="report__none">non rilevato</b>
+            )}
+          </div>
+        )}
         <div className="report__row"><span>Obiettivo</span><b>{result.goal || '—'}</b></div>
         {result.intervened && <div className="report__row"><span>Intervento</span><b className="report__flag">INTERVIENI usato durante la seduta</b></div>}
 

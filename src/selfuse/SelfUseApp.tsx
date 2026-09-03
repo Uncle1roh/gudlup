@@ -167,7 +167,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           needsStereoCheck={!state.stereoCheckedAt}
           contextLine={context}
           demoSeconds={demoSeconds}
-          onStereoChecked={() => update((s) => ({ ...s, stereoCheckedAt: Date.now() }))}
+          /* Only a PASS retires the check. Recording a failure as a pass meant
+             someone on a mono Bluetooth earpiece was never asked again. */
+          onStereoChecked={(passed) => { if (passed) update((s) => ({ ...s, stereoCheckedAt: Date.now() })) }}
           onCancel={() => setLaunch(null)}
           onNeedSupport={() => { setLaunch(null); setOverlay({ kind: 'safety3' }) }}
           onDone={(o) => { void finishSession(o) }}

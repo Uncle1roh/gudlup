@@ -36,8 +36,21 @@ export type SignalMessage =
   | { kind: 'offer'; sdp: RTCSessionDescriptionInit }
   | { kind: 'answer'; sdp: RTCSessionDescriptionInit }
   | { kind: 'ice'; candidate: RTCIceCandidateInit }
-  /** Presence: broadcast on join so the other peer knows someone is there. */
-  | { kind: 'hello'; role: PeerRole }
+  /**
+   * Presence: broadcast on join so the other peer knows someone is there.
+   *
+   * `reply` is what stops an infinite greeting: a peer answers a hello so the
+   * one who joined first also learns about it, but it NEVER answers an answer.
+   * Without the flag both sides greeted each other forever — and because the
+   * therapist re-offers on every hello, the pair renegotiated identical SDP
+   * several times a second for the whole call, which is enough traffic to hit
+   * Realtime's rate limit and drop a control cue.
+   *
+   * It is also the patient's way of asking for renegotiation: a patient whose
+   * camera arrived after the answer sends a fresh hello, and the therapist —
+   * the only peer allowed to offer — re-offers with the new tracks in it.
+   */
+  | { kind: 'hello'; role: PeerRole; reply?: boolean }
   | { kind: 'bye' }
   | { kind: 'control'; control: ControlAction }
 

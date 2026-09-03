@@ -101,7 +101,15 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
     }
   }, [])
 
-  const call = useVideoCall({ roomId, role: 'patient', autoAnswer: true, onControl })
+  const call = useVideoCall({ roomId, role: 'patient', onControl })
+
+  /* The camera goes when the session is over, however it ended — the person
+     hung up, the therapist ended it, or the treatment ran out. `hangup` keeps
+     the hardware on purpose (a call can be retried from the same screen), so
+     the terminal stage is the right place to release it. Otherwise the camera
+     light stays lit over "session ended", which reads as still recording. */
+  const { stopCamera } = call
+  useEffect(() => { if (stage === 'ended') stopCamera() }, [stage, stopCamera])
 
   /* The therapist calling IS the session starting. The patient does not press
      anything a second time once they have joined the room. */

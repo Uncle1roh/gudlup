@@ -30,6 +30,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useDataProvider } from './provider'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { syncProtocols } from './protocols'
 import {
   CATALOG_DURATIONS,
@@ -96,12 +97,18 @@ export function audioUrlFor(
  * data/catalog.ts, which has always said a duration is PUBLISHED only when the
  * protocol is enabled and that duration has a file.
  *
- * SEED entries are the exception, and deliberately so. They are the static
- * demo catalog — nineteen sessions with no audio anywhere, by definition —
- * and `supabase/setup.sql` deletes them from a real database, so they exist
- * only in mock mode. Holding them to the file rule would empty the app on
- * every developer machine to enforce a rule about PO material. They keep their
- * declared durations and are marked as playing an ambient bed.
+ * The MOCK catalog is the exception, and deliberately so. It is the static
+ * demo material — nineteen sessions with no audio anywhere, by definition —
+ * and holding it to the file rule would empty the app on every developer
+ * machine to enforce a rule about PO material. It keeps its declared durations
+ * and is marked as playing an ambient bed.
+ *
+ * The test for "mock" is the ABSENCE OF A BACKEND, not `source === 'seed'`.
+ * That was the first version and it was wrong in a way that reached people:
+ * `protocols.source` defaults to `'seed'` in the schema and `mapCatalog`
+ * coerces anything that is not `'imported'` to `'seed'`, so a real row written
+ * by any path that did not set the column explicitly claimed the demo
+ * exemption — and offered 6 / 12 / 24 buttons with no file behind any of them.
  */
 export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
   if (!p) return []
@@ -111,7 +118,7 @@ export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
     if (v.audioUrl && Object.values(v.audioUrl).some((u) => Boolean(u))) rendered.add(v.duration)
   }
   if (rendered.size) return CATALOG_DURATIONS.filter((d) => rendered.has(d))
-  if (p.source !== 'seed') return []
+  if (hasSupabaseEnv() || p.source !== 'seed') return []
   const declared = new Set<Duration>([
     ...p.versions.map((v) => v.duration).filter((d): d is Duration => CATALOG_DURATIONS.includes(d)),
     ...plainDurations(p),

@@ -11,6 +11,7 @@ import { pickFromLibrary, type LibraryTag } from '../data/library'
 import { useI18n } from '../i18n'
 import type { WizardResult } from '../data/wizard'
 import type { MoodCheck, Protocol } from '../types/domain'
+import { audioUrlFor } from '../data/liveCatalog'
 
 type Step = 'welcome' | 'consent' | 'wizard' | 'stereo' | 'player' | 'post'
 
@@ -39,7 +40,7 @@ interface OnboardingProps {
 }
 
 export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: OnboardingProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const dp = useDataProvider()
   const [step, setStep] = useState<Step>('welcome')
   const [consent, setConsent] = useState(false)
@@ -64,9 +65,13 @@ export function Onboarding({ demoSeconds, onDemoToggle, onComplete, onSkip }: On
 
   function startSession() {
     if (!wizardResult) return
-    const protocol = (firstCode ? getProtocol(firstCode) : undefined) ?? getProtocol('GL-ANX 1.1')!
+    /* No substitute: if the wizard's protocol is not in the catalog, there is
+       nothing honest to start. GL-ANX 1.1 as a fallback meant a first session
+       that was not the one the intake chose. */
+    const protocol = firstCode ? getProtocol(firstCode) : undefined
+    if (!protocol) return
     const version = protocol.versions.find((v) => v.duration === wizardResult.duration) ?? protocol.versions[0]
-    const audioUrl = version?.audioUrl?.['pt-BR']
+    const audioUrl = audioUrlFor(protocol, version?.duration ?? wizardResult.duration, locale)
     const fullLength = versionLengthSeconds(protocol, version?.duration ?? wizardResult.duration)
     setSession({
       protocol,

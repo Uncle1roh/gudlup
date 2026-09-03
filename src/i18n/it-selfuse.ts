@@ -203,6 +203,9 @@ export const IT_SELF_USE: Record<string, string> = {
   'Left': 'Sinistro',
   'Right': 'Destro',
   'Play the tone again': 'Riproduci di nuovo il suono',
+  'Play the tone': 'Riproduci il suono',
+  'Put your headphones on. We will play a short tone in one ear.':
+    'Indossa le cuffie. Riprodurremo un breve suono in un orecchio solo.',
   'We recommend wired stereo headphones. Continue anyway?':
     'Consigliamo cuffie stereo con filo. Vuoi continuare lo stesso?',
   'Go back': 'Torna indietro',

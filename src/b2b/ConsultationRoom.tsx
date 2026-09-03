@@ -8,6 +8,8 @@ import { PRESETS, type Patient, type RapidNote } from './data'
 import { VideoStage } from './webrtc/VideoStage'
 import { useVideoCall } from './webrtc/useVideoCall'
 import type { LaunchConfig } from './ClinicalWizard'
+import { audioUrlFor } from '../data/liveCatalog'
+import { useI18n } from '../i18n'
 
 export interface SessionResult {
   /** '' when the consultation was talk-only (no audio played). */
@@ -53,6 +55,7 @@ function mmss(s: number): string {
  * when one is running, against the call otherwise.
  */
 export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, onEnd }: ConsultationRoomProps) {
+  const { locale } = useI18n()
   const call = useVideoCall({ roomId, role: 'therapist' })
   const { data: catalog, loading: catalogLoading } = useProtocols()
   // a supervised session plays CLINICAL material; the library is what the
@@ -131,7 +134,10 @@ export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, 
     const p = getProtocol(code)
     if (!p) return
     const version = p.versions.find((v) => v.duration === durationMin) ?? p.versions[0]
-    const url = version?.audioUrl?.['pt-BR']
+    /* The language chain, not one hardcoded key: an Italian mixdown was
+       invisible to a 'pt-BR' read and the person got the placeholder bed
+       with nothing said about it. */
+    const url = audioUrlFor(p, version?.duration ?? (p.versions[0]?.duration ?? 12), locale)
     player.current?.stop()
     player.current = new SessionPlayer({ audioUrl: url, volume: 0.45 })
     void player.current.play()
@@ -215,8 +221,15 @@ export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, 
       startedAt: callStartedAt.current,
       endedAt: Date.now(),
       notes: notesRef.current,
-      vasPre: audioPlayedRef.current ? 3 : 0,
-      vasPost: audioPlayedRef.current ? (completedRef.current ? 6 : 5) : 0,
+      /* NOT RECORDED, and it must not be invented. This room never asks the
+         person for a VAS reading, and it used to write 3 → 5/6 into a real
+         session record anyway. A fabricated clinical score is worse than a
+         missing one: it survives into the report, the history and any
+         aggregate built on top of them, and nothing downstream can tell it
+         from a reading someone actually gave. 0 is this type's "not
+         recorded" sentinel — see the audioPlayed branches around it. */
+      vasPre: 0,
+      vasPost: 0,
       intervened: intervenedRef.current,
       completed: audioPlayedRef.current ? completedRef.current : true,
       audioPlayed: audioPlayedRef.current,

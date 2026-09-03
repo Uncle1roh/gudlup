@@ -95,7 +95,10 @@ interface SessionFlowProps {
   contextLine?: string
   /** Testing hook: shorten every session to N seconds. null = full length. */
   demoSeconds?: number | null
-  onStereoChecked: () => void
+  /** Called when the check finishes. `passed` is false when the person tapped
+      "continue anyway" after a wrong ear — the session still starts, but the
+      check is not retired. */
+  onStereoChecked: (passed: boolean) => void
   onDone: (o: SessionOutcome) => void
   onCancel: () => void
   /** "Need support" — hands control to the Safety Gateway Level 3. */
@@ -123,7 +126,7 @@ export function SessionFlow(props: SessionFlowProps) {
   if (stage === 'stereo') {
     return (
       <StereoCheck
-        onDone={() => { props.onStereoChecked(); setStage('play') }}
+        onDone={(passed) => { props.onStereoChecked(passed); setStage('play') }}
         onBack={onCancel}
       />
     )
@@ -211,18 +214,29 @@ function PreSession({
  * answer warns and still lets the person continue — a headphone problem is a
  * quality problem, not a safety one.
  */
-function StereoCheck({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; onBack: () => void }) {
   const { t } = useI18n()
   const [ear, setEar] = useState<'left' | 'right'>('left')
   const [warn, setWarn] = useState(false)
+  const [started, setStarted] = useState(false)
 
   const play = useCallback((side: 'left' | 'right') => playEarTone(side), [])
-  useEffect(() => { play(ear) }, [ear, play])
+
+  /* The tone is played from a TAP, never from an effect on mount.
+     Browsers only let audio start inside a user-gesture call stack; an
+     auto-played tone comes out of a suspended context and is silent, so the
+     person is asked about a sound that never happened. The first tap starts
+     the check, and moving to the second ear plays from inside that same tap. */
+  function begin() {
+    setStarted(true)
+    play('left')
+  }
 
   function answer(side: 'left' | 'right') {
     if (side !== ear) { setWarn(true); return }
-    if (ear === 'left') { setEar('right'); return }
-    onDone()
+    setWarn(false)
+    if (ear === 'left') { setEar('right'); play('right'); return }
+    onDone(true)
   }
 
   return (
@@ -231,16 +245,25 @@ function StereoCheck({ onDone, onBack }: { onDone: () => void; onBack: () => voi
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
           <h2 className="display">{t("Let's check your headphones")}</h2>
-          <p className="lead">{t('Which ear hears the tone?')}</p>
-          <div className="chip-row stereo__answers">
-            <button className="chip" onClick={() => answer('left')}>
-              <span className="chip__label">{t('Left')}</span>
-            </button>
-            <button className="chip" onClick={() => answer('right')}>
-              <span className="chip__label">{t('Right')}</span>
-            </button>
-          </div>
-          <button className="btn btn--quiet" onClick={() => play(ear)}>{t('Play the tone again')}</button>
+          {!started ? (
+            <>
+              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear.')}</p>
+              <button className="btn btn--primary" onClick={begin}>{t('Play the tone')}</button>
+            </>
+          ) : (
+            <>
+              <p className="lead">{t('Which ear hears the tone?')}</p>
+              <div className="chip-row stereo__answers">
+                <button className="chip" onClick={() => answer('left')}>
+                  <span className="chip__label">{t('Left')}</span>
+                </button>
+                <button className="chip" onClick={() => answer('right')}>
+                  <span className="chip__label">{t('Right')}</span>
+                </button>
+              </div>
+              <button className="btn btn--quiet" onClick={() => play(ear)}>{t('Play the tone again')}</button>
+            </>
+          )}
 
           {warn && (
             <div className="stereo__warn fade-in">
@@ -248,7 +271,11 @@ function StereoCheck({ onDone, onBack }: { onDone: () => void; onBack: () => voi
                 {t('We recommend wired stereo headphones. Continue anyway?')}
               </p>
               <div className="chip-row">
-                <button className="btn btn--ghost" onClick={onDone}>{t('Continue')}</button>
+                {/* Continuing is allowed — a headphone problem is a quality
+                    problem, not a safety one — but it is NOT recorded as a
+                    pass, so the check comes back next time instead of being
+                    silently retired for good. */}
+                <button className="btn btn--ghost" onClick={() => onDone(false)}>{t('Continue')}</button>
                 <button className="btn btn--quiet" onClick={onBack}>{t('Go back')}</button>
               </div>
             </div>
