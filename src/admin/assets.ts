@@ -6,7 +6,9 @@
      assets/heartbeat/…            — heartbeat file(s), once the PO delivers
      assets/bowl/…                 — singing-bowl strike file(s), once delivered
    (soundscapes tolerate BOTH layouts: a folder per type, or flat files whose
-   name starts with the type — `wind-01.mp3`.)
+   name starts with the type — `wind-01.mp3`. And between the last two folders
+   the FILENAME decides — see `specialKind`: the live library has every bowl
+   filed under `assets/heartbeat/`.)
 
    This module lists and classifies those files, resolves public URLs, decodes
    them into AudioBuffers (cached — a phase-mapped stem is fetched once per
@@ -81,6 +83,25 @@ function publicUrl(sb: SupabaseClient, path: string): string {
   return sb.storage.from(ASSET_BUCKET).getPublicUrl(path).data.publicUrl
 }
 
+/**
+ * Which of the two special layers a file under `assets/heartbeat` or
+ * `assets/bowl` actually is.
+ *
+ * The folder is a filing convention, not a fact about the sound. In the live
+ * PO library all eight singing bowls sit in `assets/heartbeat/` under names
+ * that say exactly what they are (`bowl-…-singing-bowl-gong-….mp3`), and
+ * `assets/bowl/` is empty. Trusting the folder alone therefore did two wrong
+ * things at once: a clip asking for a campana tibetana found an EMPTY bowl
+ * pool and stayed silent — "no tracks found from the pool" — while a heartbeat
+ * clip could draw a gong. The NAME wins wherever it is unambiguous; the folder
+ * decides everything else. Nothing has to be moved in storage.
+ */
+export function specialKind(name: string, folder: 'heartbeat' | 'bowl'): 'heartbeat' | 'bowl' {
+  if (/campan|bowl|tibetan|gong|bong|bell|singing/i.test(name)) return 'bowl'
+  if (/heart|batti|cuore|cora[cç]|pulse|\bbpm\b/i.test(name)) return 'heartbeat'
+  return folder
+}
+
 /** Texture name from a flat soundscape filename: "wind-01.mp3" → "wind". */
 function textureFromName(name: string): string {
   return name.replace(AUDIO_EXT, '').split(/[-_.\d]/)[0].toLowerCase() || 'other'
@@ -138,13 +159,13 @@ export async function listAssets(): Promise<AudioAsset[]> {
   } catch { /* folder may not exist */ }
 
   // heartbeat / bowl (PO deliverables — tolerate absence)
-  for (const kind of ['heartbeat', 'bowl'] as const) {
+  for (const folder of ['heartbeat', 'bowl'] as const) {
     try {
-      const entries = await listDir(sb, `${ASSET_ROOT}/${kind}`)
+      const entries = await listDir(sb, `${ASSET_ROOT}/${folder}`)
       for (const e of entries) {
         if (e.id === null || !AUDIO_EXT.test(e.name)) continue
-        const path = `${ASSET_ROOT}/${kind}/${e.name}`
-        out.push({ path, name: e.name, kind, publicUrl: publicUrl(sb, path), sizeBytes: e.metadata?.size })
+        const path = `${ASSET_ROOT}/${folder}/${e.name}`
+        out.push({ path, name: e.name, kind: specialKind(e.name, folder), publicUrl: publicUrl(sb, path), sizeBytes: e.metadata?.size })
       }
     } catch { /* not delivered yet */ }
   }

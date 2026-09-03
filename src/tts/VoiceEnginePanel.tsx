@@ -13,7 +13,10 @@
 
 import { useEffect, useState } from 'react'
 import { getTtsProvider } from './index'
-import { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource } from './settings'
+import {
+  getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource,
+  hydrateTtsSettings, saveSharedTtsSettings, clearSharedTtsSettings, type SharedState,
+} from './settings'
 import { ARCHETYPES, defaultPrimary, defaultSecondary, VOICE_CATALOG, voiceById, voicesByArchetype, voicesSyncedAt } from './voiceCatalog'
 import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
 
@@ -47,6 +50,8 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [syncTick, setSyncTick] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [account, setAccount] = useState<AccountInfo | null>(null)
+  /* whether the DATABASE copy of the key is usable — null until first read */
+  const [shared, setShared] = useState<SharedState | null>(null)
 
   /** Pull the account's voices — the POs add one in ElevenLabs and it lands
       here, no code change. */
@@ -67,28 +72,65 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     if (!voiceById(voiceIdM)) setVoiceIdM(defaultSecondary().id)
   }
 
-  useEffect(() => { void refreshVoices(false) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  /* The shared key first, THEN the voices: a browser that has never seen the
+     key (a new machine, a fresh preview URL, a cleared profile) picks it up
+     from the database instead of asking the operator to paste it again. */
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const { changed, state } = await hydrateTtsSettings()
+      if (!alive) return
+      setShared(state)
+      if (changed) {
+        const s = getTtsSettings()
+        if (s) {
+          setApiKey(s.apiKey)
+          if (voiceById(s.voiceId)) setVoiceId(s.voiceId)
+          if (voiceById(s.voiceIdSecondary)) setVoiceIdM(s.voiceIdSecondary as string)
+          setStatus('Chiave ElevenLabs recuperata dalle impostazioni condivise — non serve reinserirla.')
+        }
+      }
+      await refreshVoices(false)
+    })()
+    return () => { alive = false }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const syncedAt = voicesSyncedAt()
   const provider = getTtsProvider()
   const source = elevenLabsSource()
-  const sourceNote = source === 'settings' ? 'chiave salvata in questo browser'
+  const sourceNote = source === 'shared' ? 'chiave condivisa — salvata nel database'
+    : source === 'settings' ? 'chiave salvata solo in questo browser'
     : source === 'env' ? 'chiave dall’ambiente di build'
     : 'nessuna chiave ElevenLabs — voce di ripiego'
   const pName = voiceById(voiceId)?.name ?? defaultPrimary().name
   const mName = voiceById(voiceIdM)?.name ?? defaultSecondary().name
 
-  function save() {
+  async function save() {
     setError(null); setStatus(null)
     if (!apiKey.trim()) { setError('Incolla la chiave API di ElevenLabs.'); return }
-    saveTtsSettings({ apiKey, voiceId, voiceIdSecondary: voiceIdM || undefined })
+    const next = { apiKey, voiceId, voiceIdSecondary: voiceIdM || undefined, savedAt: Date.now() }
+    saveTtsSettings(next)
     setStatus(`Salvato — ElevenLabs attivo con ${pName} (principale) + ${mName} (voce [M]).`)
     // a new key means a different workspace: re-read its voices immediately
     void refreshVoices(true, apiKey)
     onChanged?.()
+
+    /* Push it to the shared row so the NEXT browser does not have to be told
+       again. A failure here never loses the key — the local copy is already
+       written — it only means this machine keeps it to itself. */
+    const res = await saveSharedTtsSettings(next)
+    setShared(res.state)
+    if (res.state === 'ok') {
+      saveTtsSettings({ ...next, shared: true })
+      setStatus(`Salvato per tutti — la chiave è nel database e vale su ogni computer. Voci: ${pName} + ${mName}.`)
+    } else if (res.state === 'no-table') {
+      setStatus(`Salvato solo in questo browser. Per condividerla su ogni computer esegui supabase/3-shared-voice-key.sql. Voci: ${pName} + ${mName}.`)
+    } else if (res.state === 'forbidden') {
+      setStatus(`Salvato solo in questo browser — il database ha rifiutato la scrittura (serve un account con ruolo admin). Voci: ${pName} + ${mName}.`)
+    }
   }
 
-  function clear() {
+  async function clear() {
     clearTtsSettings()
     setApiKey('')
     setVoiceId(defaultPrimary().id)
@@ -96,6 +138,10 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setError(null)
     setStatus('Cancellato — si torna alla chiave d’ambiente (se impostata) o alla voce del browser.')
     onChanged?.()
+    /* The shared row goes too: leaving it would silently restore the key on
+       the next load, which is not what "Cancella" can be allowed to mean. */
+    const res = await clearSharedTtsSettings()
+    if (res.state === 'ok') setStatus('Cancellato ovunque — rimossa anche la chiave condivisa nel database.')
   }
 
   async function test(which: 'primary' | 'secondary') {
@@ -149,7 +195,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
       </p>
 
       <div className="voice-panel__actions">
-        <button className="voice-panel__btn voice-panel__btn--primary" onClick={save}>Salva</button>
+        <button className="voice-panel__btn voice-panel__btn--primary" onClick={() => void save()}>Salva</button>
         <button
           className="voice-panel__btn"
           onClick={() => void refreshVoices(true)}
@@ -160,14 +206,18 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         </button>
         <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? 'Riproduzione…' : '▶ Prova la voce'}</button>
         <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title="Riproduce una battuta italiana di doppia induzione con la voce [M]">▶ Prova [M]</button>
-        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={clear}>Cancella</button>
+        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={() => void clear()}>Cancella</button>
       </div>
 
       {status && <p className="voice-panel__ok">{status}</p>}
       {error && <p className="voice-panel__err">{error}</p>}
       <p className="voice-panel__fine">
-        La chiave salvata qui resta solo in questo browser (localStorage) ed è attiva subito, senza ricompilare.
-        Le chiavi impostate nell’ambiente di build restano come ripiego.
+        {shared === 'no-table'
+          ? 'La chiave resta solo in questo browser: la tabella app_settings non esiste ancora. Esegui supabase/3-shared-voice-key.sql per salvarla una volta sola e ritrovarla su ogni computer.'
+          : shared === 'forbidden'
+            ? 'La chiave resta solo in questo browser: questo account non può scrivere nelle impostazioni condivise (serve ruolo admin).'
+            : 'La chiave viene salvata nel database (visibile ai soli admin) e riappare da sola su ogni computer e su ogni deploy. Una copia locale resta in questo browser per lavorare offline.'}
+        {' '}Le chiavi impostate nell’ambiente di build restano come ripiego.
       </p>
     </div>
   )

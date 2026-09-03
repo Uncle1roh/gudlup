@@ -706,11 +706,6 @@
   overflow: hidden;
   isolation: isolate;
 }
-.cat-hero__glyph {
-  position: absolute; right: -8px; top: -22px; z-index: -1;
-  font-size: 190px; line-height: 1; opacity: 0.16;
-  pointer-events: none; user-select: none;
-}
 /* A scrim so the copy stays legible over the lighter end of the gradient. */
 .cat-hero::after {
   content: ''; position: absolute; inset: 0; z-index: -1;
@@ -792,11 +787,6 @@
   display: block; width: 100%; aspect-ratio: 3 / 4;
   border-radius: var(--r-md); overflow: hidden;
   box-shadow: var(--shadow-soft);
-}
-.cat-card__glyph {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  font-size: 54px; line-height: 1; opacity: 0.9;
 }
 .cat-card__lengths {
   position: absolute; left: 8px; bottom: 8px;

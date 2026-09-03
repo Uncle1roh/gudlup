@@ -511,6 +511,22 @@ drop policy if exists asset_meta_admin_write on asset_meta;
 create policy asset_meta_admin_write on asset_meta
   for all using (is_admin()) with check (is_admin());
 
+-- app_settings: operator settings that must OUTLIVE one browser --------------
+-- Today this holds exactly one row, key = 'tts.elevenlabs': the ElevenLabs API
+-- key and the two chosen voices. It used to live only in localStorage, which
+-- is per ORIGIN — so every new machine, every cleared profile and every Vercel
+-- preview URL asked an operator to paste the key again. It is a CREDENTIAL:
+-- admins only, for reading as well as writing.
+create table if not exists app_settings (
+  key         text primary key,
+  value       jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+alter table app_settings enable row level security;
+drop policy if exists app_settings_admin on app_settings;
+create policy app_settings_admin on app_settings
+  for all using (is_admin()) with check (is_admin());
+
 -- companies + audit: admins only ---------------------------------------------
 drop policy if exists companies_admin on companies;
 create policy companies_admin on companies

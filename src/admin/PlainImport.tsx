@@ -384,9 +384,22 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       setPublished(attached.protocol)
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
       const others = [...liveDurations].filter((d) => d !== dur).sort((a, b) => a - b)
+      /* The slot says how long a person expects the session to be, and nothing
+         upstream checks that the file agrees. Several protocols already in the
+         catalog carry a four-minute file in their 24-minute slot: the render
+         was right, the workbook it came from was simply not that time
+         signature. It is published either way — the operator may know exactly
+         what they are doing — but it can no longer happen quietly. */
+      const gotSec = audioBuffer.duration
+      const wantSec = dur * 60
+      const mm = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+      const lengthWarning = Math.abs(gotSec - wantSec) > wantSec * 0.1
+        ? ` ⚠ ATTENZIONE: il file dura ${mm(gotSec)}, non ${dur} min. È in linea lo stesso, ma chi sceglie "${dur} min" sentirà ${mm(gotSec)}. Controlla che il foglio pubblicato sia quello della durata giusta.`
+        : ''
       setStatus(
         `In linea — ${proto.code} · ${dur} min ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
         (others.length ? ` Le versioni da ${others.map((d) => `${d}`).join(' e ')} min restano invariate.` : '') +
+        lengthWarning +
         (persistenceNote() ?? ''),
       )
     } catch (e) {

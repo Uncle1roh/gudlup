@@ -20,7 +20,7 @@
    ============================================================================ */
 
 import { buildAssetPools, drawSoundscape, normalizeTags, mulberry32, newDrawLedger } from '../src/admin/assetPools'
-import { libraryGroups, type AudioAsset } from '../src/admin/assets'
+import { libraryGroups, specialKind, type AudioAsset } from '../src/admin/assets'
 
 let pass = 0
 const fails: string[] = []
@@ -131,6 +131,46 @@ for (const k of kinds) {
   )
 }
 assert(groups.every((g) => g.items.length > 0), 'and no empty group is offered')
+
+/* --------------------------------------------------------------------------
+   4. The folder is not the sound.
+
+   Reported by the POs as "the singing bowls do not find the track — it says no
+   tracks were found in the pool". The live library has every bowl sitting in
+   `assets/heartbeat/`, named for exactly what it is, and `assets/bowl/` empty.
+   Classifying by FOLDER alone therefore emptied the bowl pool and, in the same
+   move, let a heartbeat clip draw a gong. */
+console.log('')
+console.log('--- a bowl filed under assets/heartbeat is still a bowl ---')
+
+const REAL_HEARTBEAT_FOLDER = [
+  'bowl-alex-jauk-zen-tone-deep-202555.mp3',
+  'bowl-freesound-community-bong-105459.mp3',
+  'bowl-freesound-community-gong1-94016.mp3',
+  'bowl-freesound-community-singing-bowl-gong-69238.mp3',
+  'bowl-kalsstockmedia-church-temple-bell-gong-dong-sound-effect-3-241681.mp3',
+  'heart-creatorshome-heartbeat-with-reverb-328171.mp3',
+  'heart-freesound-community-real-heartbeat-sound-17663.mp3',
+  'heart-soul-serenity-sounds-heartbeat-241465.mp3',
+]
+
+const misfiled = REAL_HEARTBEAT_FOLDER.map((n) =>
+  asset(`assets/heartbeat/${n}`, specialKind(n, 'heartbeat')))
+
+assert(misfiled.filter((a) => a.kind === 'bowl').length === 5, 'the five bowl files are read as bowls')
+assert(misfiled.filter((a) => a.kind === 'heartbeat').length === 3, 'and the three heartbeats stay heartbeats')
+assert(specialKind('hb-60.mp3', 'heartbeat') === 'heartbeat', 'an unhelpful name falls back to its folder')
+assert(specialKind('unnamed-01.mp3', 'bowl') === 'bowl', 'in either direction')
+
+const p4 = buildAssetPools(misfiled)
+assert(p4.bowl.length === 5, 'the bowl pool is no longer empty')
+assert(p4.heartbeat.length === 3, 'and the heartbeat pool holds only heartbeats')
+const bowlNow = drawSoundscape(p4, 'campana tibetana', rnd, newDrawLedger())
+assert(bowlNow !== null, 'a clip asking for a campana tibetana finds a file')
+assert(/^bowl-/.test(bowlNow?.asset.name ?? ''), 'and it is a bowl, not a heartbeat')
+const heartNow = drawSoundscape(p4, 'heartbeat 60 BPM', rnd, newDrawLedger())
+assert(/^heart-/.test(heartNow?.asset.name ?? ''), 'a heartbeat clip can no longer draw a gong')
+
 
 console.log(`\n${pass} assertions passed.`)
 if (fails.length) {

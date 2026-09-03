@@ -369,9 +369,7 @@ function SessionDetail({
   return (
     <div className="su-page sess-detail">
       <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
-      <div className="sess-detail__cover" style={coverStyle(cover)}>
-        <span aria-hidden="true">{cover.glyph}</span>
-      </div>
+      <div className="sess-detail__cover" style={coverStyle(cover)} />
       <h1 className="display su-h1">{t(session.name)}</h1>
       <p className="lead">{t(session.about)}</p>
       {!session.audioReady && (

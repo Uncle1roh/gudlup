@@ -213,7 +213,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .chip[aria-pressed="true"] {
   border-color: var(--aura);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(84, 199, 190, 0.12);
+  box-shadow: 0 0 0 4px rgba(0, 155, 119, 0.14); /* --aura */
 }
 
 .chip-row { display: flex; gap: 10px; }
@@ -243,12 +243,12 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   filter: none;
   background: #fff;
   transform: scale(1.06);
-  box-shadow: 0 0 0 4px rgba(84, 199, 190, 0.18), var(--shadow-soft);
+  box-shadow: 0 0 0 4px rgba(0, 155, 119, 0.18), var(--shadow-soft); /* --aura */
 }
 .emoji-scale--dark .emoji-btn { background: rgba(255,255,255,0.06); }
 .emoji-scale--dark .emoji-btn[aria-pressed="true"] {
   background: rgba(255,255,255,0.12);
-  box-shadow: 0 0 0 4px rgba(166, 182, 238, 0.25);
+  box-shadow: 0 0 0 4px rgba(122, 198, 155, 0.3); /* --halo */
 }
 
 /* ----------------------------------------------------------------------------
@@ -292,17 +292,22 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .orb {
   position: relative;
   border-radius: 50%;
+  /* Emerald core → mint haze → celadon edge. The two colours this used to fade
+     through — a cyan (#54c7be) and a periwinkle (#a6b6ee) — are in no part of
+     Goodloop_Identity.pdf, and `--halo`, the mint declared for exactly this
+     job, was never referenced. The signature mark was reading blue on a
+     green-forward brand. */
   background:
     radial-gradient(circle at 38% 34%,
       var(--core) 0%,
-      rgba(251, 243, 230, 0.9) 12%,
+      rgba(251, 246, 228, 0.92) 12%,
       var(--aura) 46%,
-      rgba(84, 199, 190, 0.55) 64%,
-      rgba(166, 182, 238, 0.35) 82%,
-      rgba(166, 182, 238, 0) 100%);
+      rgba(122, 198, 155, 0.55) 66%,   /* --halo  #7ac69b */
+      rgba(183, 219, 173, 0.32) 84%,   /* --celadon #b7dbad */
+      rgba(183, 219, 173, 0) 100%);
   box-shadow:
-    0 0 60px -6px rgba(84, 199, 190, 0.5),
-    0 0 120px 10px rgba(166, 182, 238, 0.28);
+    0 0 60px -6px rgba(0, 155, 119, 0.42),    /* --aura */
+    0 0 120px 10px rgba(122, 198, 155, 0.26); /* --halo */
   z-index: 2;
 }
 
@@ -319,14 +324,15 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   inset: 0;
   margin: auto;
   border-radius: 50%;
-  border: 1.5px solid rgba(166, 182, 238, 0.45);
+  border: 1.5px solid rgba(122, 198, 155, 0.5); /* --halo */
   z-index: 1;
   opacity: 0;
   animation: ripple 10s ease-out infinite;
 }
-.ring:nth-child(2) { animation-delay: 0s; }
-.ring:nth-child(3) { animation-delay: 3.3s; }
-.ring:nth-child(4) { animation-delay: 6.6s; }
+/* The stagger is set on the elements themselves — see BreathingOrb. It used to
+   live here as :nth-child(2|3|4) against a wrapper whose children are
+   ring, ring, ring, orb: two rings fired together and the last rule addressed
+   the orb, which is not a ring. */
 @keyframes ripple {
   0%   { transform: scale(0.7); opacity: 0; }
   18%  { opacity: 0.6; }
@@ -336,7 +342,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* a faint, slow pulse for non-orb player phases (no rings, very subtle) */
 .ambient-pulse {
   position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 50% 46%, rgba(84,199,190,0.10), rgba(0,0,0,0) 55%);
+  background: radial-gradient(circle at 50% 46%, rgba(0,155,119,0.10), rgba(0,0,0,0) 55%); /* --aura */
   animation: ambient 9s ease-in-out infinite;
 }
 @keyframes ambient {
@@ -684,7 +690,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   font-size: 12px; font-weight: 600;
 }
 .journey__wk--done { background: var(--aura); color: #fff; }
-.journey__wk--now { background: #fff; color: var(--aura-deep); border: 2px solid var(--aura); box-shadow: 0 0 0 4px rgba(84,199,190,0.18); }
+.journey__wk--now { background: #fff; color: var(--aura-deep); border: 2px solid var(--aura); box-shadow: 0 0 0 4px rgba(0,155,119,0.18); /* --aura */ }
 .journey__wk--todo { background: var(--mist-2); color: var(--slate); }
 
 /* --- sparkline --- */

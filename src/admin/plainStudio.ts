@@ -299,9 +299,14 @@ export function plainToStudioTracks(
          crossfades the songs in sequence and cuts the last one at the end. */
       const clipDur = c.endS - c.startS
       let url = ''
+      /* The label is what the operator reads on the clip, so it has to say
+         WHICH of the two silences this is: the library was never loaded, or
+         it was loaded and holds nothing for this tag. Both used to print
+         "no pool available", which sent the POs looking for a missing library
+         when the real answer was a missing file. */
       let label = c.tipo === 'soundscape'
-        ? `tag "${c.ambiente ?? '?'}" — no pool available`
-        : `F${c.faseFrom ?? '?'} pool — no pool available`
+        ? `tag "${c.ambiente ?? '?'}" — libreria audio non caricata`
+        : `F${c.faseFrom ?? '?'} — libreria audio non caricata`
       let slots: SampleSlot[] | undefined
       if (pools) {
         if (c.tipo === 'soundscape') {
@@ -312,6 +317,7 @@ export function plainToStudioTracks(
             notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
           } else {
             const pending = isHeartbeat ? ' (PO heartbeat file pending)' : isBowl ? ' (PO singing-bowl file pending)' : ''
+            label = `tag "${c.ambiente ?? '?'}" — nessun file nel pool`
             notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${pending}.`)
           }
         } else {
@@ -326,6 +332,7 @@ export function plainToStudioTracks(
               notes.push(`${c.clipId} (${c.traccia}): ATTENZIONE — i brani disponibili coprono solo ~${Math.round(drawn.estimatedSec)}s dei ${Math.round(clipDur)}s della clip; la sequenza si ripeterà. Aggiungi brani al pool F${c.faseFrom} o accorcia la finestra.`)
             }
           } else {
+            label = `F${c.faseFrom ?? '?'} — nessun brano nel pool`
             notes.push(`${c.clipId} (${c.traccia}): NO file for phase pool F${c.faseFrom} — clip stays silent.`)
           }
         }

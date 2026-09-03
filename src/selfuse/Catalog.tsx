@@ -209,7 +209,6 @@ function Hero({
 
   return (
     <section className="cat-hero" style={coverStyle(cover)}>
-      <span className="cat-hero__glyph" aria-hidden="true">{cover.glyph}</span>
       <div className="cat-hero__body">
         <span className="cat-hero__eyebrow">
           {isPathway ? t('Today in your pathway') : t('A good place to start')}
@@ -271,7 +270,6 @@ export function CoverCard({ session, onOpen }: { session: ResolvedSession; onOpe
   return (
     <button className="cat-card" onClick={onOpen}>
       <span className="cat-card__cover" style={coverStyle(cover)}>
-        <span className="cat-card__glyph" aria-hidden="true">{cover.glyph}</span>
         <span className="cat-card__lengths">
           {session.durations.map((d) => (
             <span key={d}>{d}</span>

@@ -40,6 +40,9 @@ ElevenLabs TTS, Vercel (hash routing — no SPA rewrite config needed).
   saturazione / filtro) per track; `sequenza` places a non-uniform loop.
   Grammar in `docs/EXCEL_FX.md`.
 - Breathing pacer is retired — all protocols are voice-guided.
+- In `assets/heartbeat` and `assets/bowl` the FILENAME decides which pool a
+  file joins, not the folder — the live library keeps every singing bowl in
+  the heartbeat folder (`specialKind` in `src/admin/assets.ts`).
 
 ## Voices
 
