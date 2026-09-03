@@ -179,7 +179,15 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
   }
 
   if (stage === 'countdown') {
-    return <TransitionCountdown therapist={therapist} onDone={() => setStage('treatment')} />
+    /* Tell the therapist when the audio actually starts, so their monitor
+       clock and ours agree — they used to start theirs ten seconds earlier,
+       the moment they pressed play. */
+    return (
+      <TransitionCountdown
+        therapist={therapist}
+        onDone={() => { setStage('treatment'); call.sendControl({ action: 'started' }) }}
+      />
+    )
   }
 
   if (stage === 'treatment' && treatment) {

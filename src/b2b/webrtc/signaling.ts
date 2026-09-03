@@ -26,6 +26,17 @@ export type PeerRole = 'therapist' | 'patient'
  */
 export type ControlAction =
   | { action: 'play'; protocolCode: string; durationMin: number }
+  /**
+   * Patient → therapist: the local player has actually started.
+   *
+   * The therapist used to start its monitor clock the instant it SENT `play`,
+   * while the patient runs a ten-second transition countdown first. Every
+   * phase readout, every note timestamp and the end of the treatment landed
+   * ten seconds early on the patient — and the two patient surfaces disagreed
+   * with each other, because the legacy one starts immediately. The clock now
+   * starts when the audio does.
+   */
+  | { action: 'started' }
   | { action: 'pause' }
   | { action: 'resume' }
   | { action: 'stop' }

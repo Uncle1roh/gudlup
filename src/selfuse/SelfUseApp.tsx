@@ -142,7 +142,16 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             // The first session is always Quick, whatever length they chose —
             // six minutes is the promise the welcome screen made.
             const lead = first ? primaryBlock(first) : undefined
-            if (lead) setLaunch({ slug: lead.slug, duration: 6, pathwayWeek: 1 })
+            /* Six minutes is the promise the welcome screen made — but only
+               if six minutes exists. `resolvePathway` guarantees the block's
+               own duration is published, not that 6 is, so hard-coding it
+               made the very first session a new person ever hears the
+               placeholder bed whenever the PO published 12 and 24 only. */
+            if (lead) {
+              const offered = catalog.sessions.find((x) => x.slug === lead.slug)?.durations ?? []
+              const duration = offered.includes(6) ? 6 : (offered[0] ?? lead.duration)
+              setLaunch({ slug: lead.slug, duration, pathwayWeek: 1 })
+            }
           }
         }}
       />
@@ -152,6 +161,25 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   /* ------------------------------------------------------ the session --- */
   if (launch) {
     const session = catalog.sessions.find((x) => x.slug === launch.slug)
+    /* A launch that resolves to nothing used to fall through to the tab UI
+       with `launch` still set: the tap did nothing, no message, and the stale
+       state sat there. Reachable through a prescription whose session left
+       the catalog — so say what happened instead of appearing broken. */
+    if (!session) {
+      return (
+        <div className="app-frame su-studio">
+          <div className="screen screen--center">
+            <div className="screen__body">
+              <h2 className="display">{t('This session is not available')}</h2>
+              <p className="lead">
+                {t('It is no longer in the catalog. If your therapist prescribed it, they can prescribe it again.')}
+              </p>
+              <button className="btn btn--primary" onClick={() => setLaunch(null)}>{t('Go back')}</button>
+            </div>
+          </div>
+        </div>
+      )
+    }
     if (session) {
       const pw = findPathway(catalog.pathways, state.pathway?.id)
       const planWeek = pw?.plan.find((w) => w.week === launch.pathwayWeek)

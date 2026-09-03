@@ -198,6 +198,13 @@ export async function renderPlainWav(
       mix.push({
         gain: t.volume,
         pan: CHANNEL_PAN[t.channel ?? 'C'],
+        /* A binaural lane's two carriers live on opposite channels — that
+           separation IS the beat — and a bilateral lane alternates between
+           them. A stereo panner at ±1 sums both channels into one output, so
+           panning either lane does not move it, it destroys it. PLAIN pins
+           them to 'C' so this never fires today; it is here so a hand edit
+           upstream cannot quietly turn a binaural protocol into a chord. */
+        keepStereo: t.type === 'binaural' || t.type === 'bilateral',
         effects: t.effects,
         clips,
         // filled below once the voice windows are known

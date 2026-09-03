@@ -79,7 +79,17 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
   const { t } = useI18n()
   /* The Sandbox never opens a real room: a practice session must not be
      joinable by a patient who happens to be waiting. */
-  const call = useVideoCall({ roomId: sandbox ? null : roomId, role: 'therapist' })
+  /* When the PATIENT's audio actually starts. The monitor used to start its
+     own player and clock the instant `play` was sent, but the patient runs a
+     ten-second transition first — so every phase readout, every quick-note
+     timestamp and the end of the treatment were ten seconds ahead of the
+     person they describe. */
+  const [patientStartedAt, setPatientStartedAt] = useState<number | null>(null)
+  const call = useVideoCall({
+    roomId: sandbox ? null : roomId,
+    role: 'therapist',
+    onControl: (c) => { if (c.action === 'started') setPatientStartedAt(Date.now()) },
+  })
   const [joined, setJoined] = useState(false)
   const [tab, setTab] = useState<Tab>('notes')
   const [collapsed, setCollapsed] = useState(false)
@@ -337,6 +347,9 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
                 state={gl}
                 setState={setGl}
                 call={call}
+                patientStartedAt={patientStartedAt}
+                onArmTreatment={() => setPatientStartedAt(null)}
+                sandbox={!!sandbox}
                 demoSeconds={demoSeconds ?? null}
                 quickNotes={quickNotes}
                 addQuickNote={(text, phase) => setQuickNotes((q) => [...q, { at: Date.now(), phase, text }])}
@@ -525,6 +538,9 @@ function GoodLoopTab({
   state,
   setState,
   call,
+  patientStartedAt,
+  onArmTreatment,
+  sandbox,
   demoSeconds,
   quickNotes,
   addQuickNote,
@@ -534,6 +550,11 @@ function GoodLoopTab({
   state: GlState
   setState: (s: GlState) => void
   call: VideoCall
+  /** When the patient's own player started, or null while still waiting. */
+  patientStartedAt: number | null
+  /** Clear the ack before sending a new `play`. */
+  onArmTreatment: () => void
+  sandbox: boolean
   demoSeconds: number | null
   quickNotes: { at: number; phase: number; text: string }[]
   addQuickNote: (text: string, phase: number) => void
@@ -567,6 +588,7 @@ function GoodLoopTab({
         onStart={() => {
           /* This is what triggers the patient's 10-second countdown and then
              their local player. The audio itself never crosses the wire. */
+          onArmTreatment()
           call.sendControl({ action: 'play', protocolCode: state.code, durationMin: state.version })
           setState({
             stage: 'running',
@@ -590,6 +612,8 @@ function GoodLoopTab({
         state={state}
         setState={setState}
         call={call}
+        patientStartedAt={patientStartedAt}
+        sandbox={sandbox}
         quickNotes={quickNotes}
         addQuickNote={addQuickNote}
         onEnded={onTreatmentEnded}
@@ -800,6 +824,8 @@ function TreatmentMonitor({
   state,
   setState,
   call,
+  patientStartedAt,
+  sandbox,
   quickNotes,
   addQuickNote,
   onEnded,
@@ -807,6 +833,9 @@ function TreatmentMonitor({
   state: Extract<GlState, { stage: 'running' }>
   setState: (s: GlState) => void
   call: VideoCall
+  /** When the patient's own player started, or null while still waiting. */
+  patientStartedAt: number | null
+  sandbox: boolean
   quickNotes: { at: number; phase: number; text: string }[]
   addQuickNote: (text: string, phase: number) => void
   onEnded: () => void
@@ -832,9 +861,21 @@ function TreatmentMonitor({
   callRef.current = call
   const [confirmStop, setConfirmStop] = useState(false)
 
+  /* Start with the patient, not before them.
+     A sandbox rehearsal and the in-tab simulated peer never ack, so a short
+     grace period starts the monitor anyway rather than hanging it. */
+  const [graceOver, setGraceOver] = useState(false)
+  useEffect(() => {
+    if (patientStartedAt) return
+    const id = window.setTimeout(() => setGraceOver(true), sandbox ? 0 : 14_000)
+    return () => clearTimeout(id)
+  }, [patientStartedAt, sandbox])
+  const live = patientStartedAt !== null || graceOver
+
   /* The therapist HEARS the treatment audio — that is what makes monitoring
      possible at all, so the player runs on this side too. */
   useEffect(() => {
+    if (!live) return
     const p = new SessionPlayer({
       audioUrl,
       volume: 0.4,
@@ -843,9 +884,10 @@ function TreatmentMonitor({
     playerRef.current = p
     void p.play()
     return () => p.stop()
-  }, [audioUrl])
+  }, [audioUrl, live])
 
   useEffect(() => {
+    if (!live) return
     const id = window.setInterval(() => {
       const s = stateRef.current
       if (s.stage !== 'running' || s.paused || s.intervening) return
@@ -863,7 +905,7 @@ function TreatmentMonitor({
       setState({ ...s, elapsed: next })
     }, 1000)
     return () => clearInterval(id)
-  }, [setState, onEnded])
+  }, [setState, onEnded, live])
 
   let acc = 0
   let phaseIdx = 0

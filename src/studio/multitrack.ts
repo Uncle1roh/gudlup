@@ -916,7 +916,8 @@ export class MultitrackPlayer {
     this.trackGains.get(id)?.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02)
   }
 
-  /** Whole-track stereo position (−1 left · 0 center · +1 right). */
+  /** Whole-track stereo position (−1 left · 0 center · +1 right).
+      Binaural and bilateral lanes are pinned centre — see `safePan`. */
   setTrackPan(id: string, v: number): void {
     this.trackPans.get(id)?.pan.setTargetAtTime(Math.max(-1, Math.min(1, v)), this.ctx.currentTime, 0.02)
   }
@@ -1011,12 +1012,34 @@ export class MultitrackPlayer {
 export interface MixTrack {
   gain: number
   pan?: number
+  /** Never pan this lane, whatever `pan` says — its own stereo image is the
+      point. See `safePan`. */
+  keepStereo?: boolean
   effects?: TrackEffect[]
   /** Optional gain-multiplier automation (PLAIN ducking): piecewise-linear
       points, value 1 = the track's nominal `gain`. Applied via a second gain
       node so `gain` semantics stay untouched. */
   gainAutomation?: { timeSec: number; mul: number }[]
   clips: { startSec: number; durationSec?: number; buffer: AudioBuffer | null }[]
+}
+
+/**
+ * The whole-track pan a mix may safely apply.
+ *
+ * A binaural track carries its two carriers on OPPOSITE channels — that
+ * separation IS the beat. A StereoPannerNode at pan = −1 sums L+R into the
+ * left output, so panning a binaural lane hard does not move it, it DESTROYS
+ * it: both carriers land in one ear, the difference frequency disappears, and
+ * what is left is two tones the person hears as a chord. The PLAIN format
+ * never pans these lanes, but nothing stopped a hand edit in the Studio from
+ * doing it silently.
+ *
+ * Binaural and bilateral lanes therefore stay centred. Everything else pans
+ * normally.
+ */
+function safePan(t: MixTrack): number {
+  if (t.keepStereo) return 0
+  return Math.max(-1, Math.min(1, t.pan ?? 0))
 }
 
 export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number, masterGain: number, fades?: { inSec?: number; outSec?: number }): Promise<AudioBuffer> {
@@ -1040,7 +1063,7 @@ export async function renderMixdownBuffer(tracks: MixTrack[], lengthSec: number,
     const g = ctx.createGain()
     g.gain.value = t.gain
     const pan = ctx.createStereoPanner()
-    pan.pan.value = Math.max(-1, Math.min(1, t.pan ?? 0))
+    pan.pan.value = safePan(t)
     const fx = buildEffectsChain(ctx, t.effects)
     let head: AudioNode = g
     if (t.gainAutomation?.length) {

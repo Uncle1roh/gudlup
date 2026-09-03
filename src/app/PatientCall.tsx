@@ -61,6 +61,9 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
   }, [onDone, vasPre])
 
   /** Cues from the therapist's console. */
+  /* `onControl` is defined before the hook that owns `sendControl`, so the
+     ack goes through a ref rather than reordering the component. */
+  const sendRef = useRef<((c: ControlAction) => void) | null>(null)
   const onControl = useCallback((c: ControlAction) => {
     switch (c.action) {
       case 'play': {
@@ -74,6 +77,10 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
         player.current?.stop()
         player.current = new SessionPlayer({ audioUrl: url, volume: 0.85 })
         void player.current.play()
+        /* This surface has no transition countdown — it starts at once — so
+           it acks at once. Either way the therapist's clock starts when the
+           audio does, not when they pressed play. */
+        sendRef.current?.({ action: 'started' })
         playedRef.current = { code: p.code, duration: (version?.duration ?? c.durationMin) as Duration }
         elapsedRef.current = 0
         setElapsed(0)
@@ -112,6 +119,7 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
     role: 'patient',
     onControl,
   })
+  sendRef.current = call.sendControl
 
   /* session clock, only while a protocol is actually playing */
   useEffect(() => {

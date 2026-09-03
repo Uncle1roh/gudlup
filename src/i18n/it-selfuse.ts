@@ -204,6 +204,11 @@ export const IT_SELF_USE: Record<string, string> = {
   'Right': 'Destro',
   'Play the tone again': 'Riproduci di nuovo il suono',
   'Play the tone': 'Riproduci il suono',
+  'This session is not available': 'Questa sessione non è disponibile',
+  'It is no longer in the catalog. If your therapist prescribed it, they can prescribe it again.':
+    'Non è più nel catalogo. Se te l’ha prescritta la tua terapeuta, può prescriverla di nuovo.',
+  'The protocol behind it is no longer in the catalog. Your therapist can prescribe it again once it is republished.':
+    'Il protocollo che la genera non è più nel catalogo. La tua terapeuta potrà prescriverla di nuovo quando sarà ripubblicato.',
   'Put your headphones on. We will play a short tone in one ear.':
     'Indossa le cuffie. Riprodurremo un breve suono in un orecchio solo.',
   'We recommend wired stereo headphones. Continue anyway?':
