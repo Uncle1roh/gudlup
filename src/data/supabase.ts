@@ -22,6 +22,8 @@ import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, Message, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
+import { generateConnectionCode } from './link'
+import { MAX_LENGTH as MESSAGE_MAX_LENGTH } from './messageStore'
 import { normalizeTags } from './tags'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
@@ -682,6 +684,137 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     async deletePatientNote(_patientId: string, noteId: string): Promise<void> {
       const { error } = await sb.from('patient_notes').delete().eq('id', noteId)
       if (error) throw error
+    },
+
+    /* --- the therapist ↔ patient link ------------------------------------
+
+       `patients` is the therapist's table and a patient may only read their
+       own row (supabase/6-two-sided-care.sql). Everything below is either
+       that one row or a SECURITY DEFINER function that writes it. */
+
+    async getMyTherapistLink() {
+      const { data, error } = await sb.rpc('my_therapist_link')
+      if (error) return null
+      const r = ((data ?? []) as {
+        patient_id: string; therapist_id: string; therapist_name: string
+        crp: string | null; since: string
+      }[])[0]
+      if (!r) return null
+      return {
+        patientId: r.patient_id,
+        therapistId: r.therapist_id,
+        therapistName: r.therapist_name,
+        crp: r.crp ?? undefined,
+        since: toMs(r.since),
+      }
+    },
+
+    async redeemTherapistCode(code: string) {
+      const { data, error } = await sb.rpc('redeem_therapist_code', { p_code: code })
+      if (error) {
+        // the function raises for both cases; keep them apart for the person
+        if (/unknown code/i.test(error.message)) throw new Error('CODE_UNKNOWN')
+        throw new Error(error.message)
+      }
+      const r = ((data ?? []) as {
+        patient_id: string; therapist_id: string; therapist_name: string; crp: string | null
+      }[])[0]
+      if (!r) throw new Error('CODE_UNKNOWN')
+      return {
+        patientId: r.patient_id,
+        therapistId: r.therapist_id,
+        therapistName: r.therapist_name,
+        crp: r.crp ?? undefined,
+        since: Date.now(),
+      }
+    },
+
+    async listMyTherapistCodes() {
+      const pid = await profileId()
+      const { data, error } = await sb.from('therapist_codes')
+        .select('code, label, active, created_at')
+        .eq('therapist_id', pid)
+        .order('created_at', { ascending: false })
+      if (error) return []
+      return (data ?? []).map((r: { code: string; label: string | null; active: boolean; created_at: string }) => ({
+        code: r.code, label: r.label ?? undefined, active: r.active, createdAt: toMs(r.created_at),
+      }))
+    },
+
+    async createTherapistCode(label?: string) {
+      const pid = await profileId()
+      /* Retry once on the astronomically unlikely collision rather than hand
+         the therapist an error they can do nothing about. */
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const code = generateConnectionCode()
+        const { error } = await sb.from('therapist_codes')
+          .insert({ code, therapist_id: pid, label: label ?? null })
+        if (!error) return { code, label, active: true, createdAt: Date.now() }
+        if ((error as { code?: string }).code !== '23505') throw error
+      }
+      throw new Error('Could not mint a connection code — try again.')
+    },
+
+    async deactivateTherapistCode(code: string) {
+      const { error } = await sb.from('therapist_codes').update({ active: false }).eq('code', code)
+      if (error) throw error
+    },
+
+    /* --- the thread -------------------------------------------------------
+
+       One table, both sides. `patientId` is the therapist's way of naming a
+       thread; the patient's own app omits it and their link supplies it. */
+
+    async listMessages(patientId?: string) {
+      const pid = patientId ?? (await this.getMyTherapistLink())?.patientId
+      if (!pid) return []
+      const { data, error } = await sb.from('messages')
+        .select('id, patient_id, sender, body, at, read_by_patient, read_by_therapist')
+        .eq('patient_id', pid)
+        .order('at', { ascending: true })
+      if (error) return []
+      return (data ?? []).map((r: {
+        id: string; patient_id: string; sender: 'patient' | 'therapist'
+        body: string; at: string; read_by_patient: boolean; read_by_therapist: boolean
+      }) => ({
+        id: r.id,
+        patientId: r.patient_id,
+        from: r.sender,
+        text: r.body,
+        at: toMs(r.at),
+        readByPatient: r.read_by_patient,
+        readByTherapist: r.read_by_therapist,
+      }))
+    },
+
+    async sendMessage(text: string, patientId?: string) {
+      const body = text.trim().slice(0, MESSAGE_MAX_LENGTH)
+      if (!body) return
+      const mine = patientId ? null : await this.getMyTherapistLink()
+      const pid = patientId ?? mine?.patientId
+      if (!pid) throw new Error('No therapist is connected to this account.')
+      const from: 'patient' | 'therapist' = patientId ? 'therapist' : 'patient'
+      const { error } = await sb.from('messages').insert({
+        patient_id: pid,
+        sender: from,
+        body,
+        // the sender has, by definition, read what they just wrote
+        read_by_patient: from === 'patient',
+        read_by_therapist: from === 'therapist',
+      })
+      if (error) throw error
+    },
+
+    async markMessagesRead(patientId?: string) {
+      const pid = patientId ?? (await this.getMyTherapistLink())?.patientId
+      if (!pid) return
+      const side = patientId ? 'read_by_therapist' : 'read_by_patient'
+      const other = patientId ? 'patient' : 'therapist'
+      await sb.from('messages')
+        .update({ [side]: true })
+        .eq('patient_id', pid)
+        .eq('sender', other)
+        .eq(side, false)
     },
 
     // --- Protocol catalog ---

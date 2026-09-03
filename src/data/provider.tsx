@@ -3,6 +3,8 @@ import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
 import type { Plan, PlanItem } from './plan'
+import type { ChatMessage } from './messageStore'
+import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -59,6 +61,30 @@ export interface DataProvider {
   addPatientNote(patientId: string, text: string): Promise<void>
   updatePatientNote(patientId: string, noteId: string, text: string): Promise<void>
   deletePatientNote(patientId: string, noteId: string): Promise<void>
+
+  /* --- The therapist ↔ patient link, and everything keyed to it -----------
+
+     One `patients` row IS the link: `therapist_id` on one side,
+     `b2c_profile_id` on the other. The chat, the prescribed pathway and the
+     clinical record all hang off it. Before these methods each side kept its
+     own copy in its own browser and neither ever reached the other. */
+
+  /** The signed-in person's therapist, or null when they have none. */
+  getMyTherapistLink(): Promise<TherapistLink | null>
+  /** Connect to a therapist with the code they gave you. Idempotent. */
+  redeemTherapistCode(code: string): Promise<TherapistLink>
+  /** Codes this therapist has minted, newest first. */
+  listMyTherapistCodes(): Promise<TherapistCode[]>
+  /** Mint a new connection code for this therapist. */
+  createTherapistCode(label?: string): Promise<TherapistCode>
+  /** Retire a code without deleting the patients who used it. */
+  deactivateTherapistCode(code: string): Promise<void>
+
+  /** The thread for one patient. Omit `patientId` on the patient's own app. */
+  listMessages(patientId?: string): Promise<ChatMessage[]>
+  sendMessage(text: string, patientId?: string): Promise<void>
+  /** Mark everything the OTHER side wrote as seen by this side. */
+  markMessagesRead(patientId?: string): Promise<void>
 
   // --- Protocol catalog (shared, admin-managed) ---
   /** Every protocol in the catalog (enabled + disabled). */

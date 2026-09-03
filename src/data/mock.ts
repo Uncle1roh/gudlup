@@ -4,6 +4,8 @@ import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
+import { generateConnectionCode, type TherapistLink, type TherapistCode } from './link'
+import { MAX_LENGTH as MESSAGE_MAX_LENGTH, type ChatMessage } from './messageStore'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from '../admin/types'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
@@ -57,6 +59,31 @@ const DEMO_PLAN: Plan = {
    trip through the therapist console. */
 const plans = new Map<string, Plan>([[LINKED_PATIENT_ID, DEMO_PLAN]])
 const clonePlan = (p: Plan | null): Plan | null => (p ? { ...p, items: p.items.map((i) => ({ ...i })) } : null)
+
+
+/* The link and the thread, in memory.
+
+   The mock is one shared store for the whole browser session, so unlike the
+   old two-localStorage arrangement the therapist console and the patient app
+   genuinely read the SAME messages here — which is what makes the demo an
+   honest rehearsal of the wired version rather than a mime of it. */
+const link: TherapistLink = {
+  patientId: LINKED_PATIENT_ID,
+  therapistId: 'th-silva',
+  therapistName: 'Dra. Ana Silva',
+  crp: 'CRP 06/12345',
+  since: Date.now() - 21 * 86_400_000,
+}
+let therapistCodes: TherapistCode[] = [
+  { code: 'GL-DEMO-CODE', label: 'Demo', active: true, createdAt: Date.now() - 86_400_000 },
+]
+let thread: ChatMessage[] = [
+  {
+    id: 'm1', patientId: LINKED_PATIENT_ID, from: 'therapist',
+    text: 'Ciao! Ho aggiornato il percorso per questa settimana.',
+    at: Date.now() - 2 * 86_400_000, readByPatient: true, readByTherapist: true,
+  },
+]
 
 let sessions: SessionRecord[] = [...SEED_HISTORY]
 const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
@@ -363,6 +390,51 @@ export function createMockProvider(): DataProvider {
       const p = patients.find((x) => x.id === patientId)
       if (p) p.notes = p.notes.filter((n) => n.id !== noteId)
       await wait()
+    },
+
+    // --- the therapist ↔ patient link ---
+    getMyTherapistLink: () => delay({ ...link }),
+    redeemTherapistCode: async (code: string) => {
+      await wait()
+      const known = therapistCodes.find((c) => c.active && c.code.toUpperCase() === code.trim().toUpperCase())
+      if (!known) throw new Error('CODE_UNKNOWN')
+      return { ...link }
+    },
+    listMyTherapistCodes: () => delay(therapistCodes.map((c) => ({ ...c }))),
+    createTherapistCode: async (label?: string) => {
+      await wait()
+      const made: TherapistCode = { code: generateConnectionCode(), label, active: true, createdAt: Date.now() }
+      therapistCodes = [made, ...therapistCodes]
+      return { ...made }
+    },
+    deactivateTherapistCode: async (code: string) => {
+      await wait()
+      therapistCodes = therapistCodes.map((c) => (c.code === code ? { ...c, active: false } : c))
+    },
+
+    // --- the thread ---
+    listMessages: (patientId?: string) =>
+      delay(thread.filter((m) => m.patientId === (patientId ?? link.patientId)).map((m) => ({ ...m }))),
+    sendMessage: async (text: string, patientId?: string) => {
+      await wait()
+      const body = text.trim().slice(0, MESSAGE_MAX_LENGTH)
+      if (!body) return
+      const from: 'patient' | 'therapist' = patientId ? 'therapist' : 'patient'
+      thread = [...thread, {
+        id: `m-${Date.now()}`,
+        patientId: patientId ?? link.patientId,
+        from,
+        text: body,
+        at: Date.now(),
+        readByPatient: from === 'patient',
+        readByTherapist: from === 'therapist',
+      }]
+    },
+    markMessagesRead: async (patientId?: string) => {
+      await wait()
+      const pid = patientId ?? link.patientId
+      const side = patientId ? 'readByTherapist' : 'readByPatient'
+      thread = thread.map((m) => (m.patientId === pid ? { ...m, [side]: true } : m))
     },
 
     // --- Protocol catalog ---
