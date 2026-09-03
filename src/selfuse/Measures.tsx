@@ -90,7 +90,7 @@ export function GlCheckFlow({ previous, onDone, onClose }: GlCheckProps) {
   }
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
           <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
@@ -169,7 +169,7 @@ export function Who5Flow({ previous, onDone, onClose }: Who5Props) {
   }
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
           <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
@@ -254,7 +254,7 @@ export function DailyMoodFlow({ today, onDone, onClose, inline }: MoodProps) {
   if (inline) return <div className="mood-inline">{body}</div>
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
           <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
@@ -277,7 +277,7 @@ export function DailyMoodFlow({ today, onDone, onClose, inline }: MoodProps) {
 function MeasureDone({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   const { t } = useI18n()
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen screen--center fade-in">
         <div className="screen__body msr__done">
           <h2 className="display">{title}</h2>

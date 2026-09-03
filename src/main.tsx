@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './selfuse.css'
+// the dark "Studio" restyle of the Self Use surface — must follow selfuse.css
+import './selfuse-studio.css'
 import './corporate.css'
 import './workspace.css'
 

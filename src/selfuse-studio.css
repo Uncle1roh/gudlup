@@ -1,0 +1,474 @@
+/* ============================================================================
+   GOOD LOOP — Self Use, "Studio" (dark, player-first)
+
+   From the Claude Design canvas `Good Loop - Redesign.dc.html`, direction 2a.
+   Its brief, in its own words: "the same dark, player-first idea, executed with
+   restraint. ONE accent instead of three: emerald carries data and state, cream
+   is reserved for the single primary action on any screen."
+
+   This file is a RESTYLE. It adds no behaviour and removes none: every rule is
+   a colour, a radius, a weight or a piece of chrome. The markup it styles is
+   the markup that was already there.
+
+   ── how it is scoped ────────────────────────────────────────────────────────
+   Everything hangs off `.su-studio`, which sits on the Self Use frames and
+   nowhere else. The therapist workspace, the admin console and the legacy
+   consumer app share `index.css` tokens and `.app-frame` with this surface, so
+   an unscoped dark palette would have turned all four dark at once. Inside the
+   scope the tokens are REDEFINED rather than the rules rewritten — 919 lines of
+   existing `selfuse.css` already read `--ink`, `--slate`, `--line`, `--mist-2`
+   and `--aura`, so re-pointing those seven names moves the whole surface into
+   night without touching the rules that consume them. What follows the token
+   block is only what 2a adds on top: grain, duotone covers, the cream primary,
+   the progress-ring orb.
+
+   ── the palette ─────────────────────────────────────────────────────────────
+   Ground and surfaces are the app's own studio greens, already in index.css as
+   `--deep-1` / `--deep-2`. Emerald is lifted from #009b77 to #1FBF94 because
+   the brand emerald is mixed for cream paper and goes muddy on near-black; it
+   is the same hue, raised for the ground it sits on. Cream is `--lemon`
+   (#F4F0BE) at full strength. No third accent, per the brief.
+   ============================================================================ */
+
+.su-studio {
+  /* --- ground & surfaces --- */
+  --su-void:    #070d0c;   /* outside the content, and the status bar        */
+  --su-ground:  #0a1211;   /* the screen itself                              */
+  --su-raised:  #101a18;   /* cards, sheets, the tab bar                     */
+  --su-raised-2:#16211f;   /* a card on a card: inputs, chips, wells         */
+  --su-hair:    rgba(255, 255, 255, 0.07);  /* the one border weight         */
+  --su-hair-2:  rgba(255, 255, 255, 0.12);  /* hover / selected              */
+
+  /* --- ink --- */
+  --su-fg:      #ecf2ef;   /* headings and primary copy                      */
+  --su-fg-2:    #c6d3cd;   /* body                                           */
+  --su-muted:   #8da29a;   /* secondary                                      */
+  --su-faint:   #5f7269;   /* eyebrows, captions, disabled                   */
+
+  /* --- the one accent, and the one highlight --- */
+  --su-accent:  #1fbf94;   /* emerald: DATA and STATE. Never a button fill.  */
+  --su-accent-2:#a7e8d0;   /* emerald text on dark, where #1fbf94 is thin    */
+  --su-cream:   #f4f0be;   /* the single primary action on a screen          */
+  --su-cream-d: #f8f5de;
+
+  /* Re-point the tokens the existing rules already read. This is the whole
+     trick: no rule below has to know the surface went dark. */
+  --mist:       var(--su-ground);
+  --mist-2:     var(--su-raised-2);
+  --ink:        var(--su-fg);
+  --slate:      var(--su-muted);
+  --line:       var(--su-hair);
+  --aura:       var(--su-accent);
+  --aura-deep:  #0f6b52;
+  --core:       var(--su-cream);
+  --halo:       var(--su-accent-2);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 18px 40px -22px rgba(0, 0, 0, 0.95);
+
+  background: var(--su-ground);
+  color: var(--su-fg-2);
+  /* the frame is a phone against a dark room, not a card on paper */
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.9);
+}
+
+/* The body behind the frame has to go with it, or a dark phone floats on a
+   cream page. Scoped through :has so only a Self Use frame does this. */
+body:has(.su-studio) { background: var(--su-void, #070d0c); }
+
+/* ---------------------------------------------------------------- grain ---
+
+   2a asks for film grain over the cover art and the hero. One tiled SVG of
+   fractal noise, blended over — cheap, resolution-independent, and it stops
+   large flat gradients from banding on an OLED phone. */
+.su-studio .gl-grain,
+.su-studio .su-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-size: 170px 170px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --------------------------------------------------------------- type ----- */
+
+.su-studio .su-h1,
+.su-studio h1,
+.su-studio h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--su-fg);
+  text-wrap: balance;
+}
+.su-studio .su-greet {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--su-faint);
+}
+.su-studio .lead { color: var(--su-muted); }
+.su-studio .small,
+.su-studio .muted { color: var(--su-faint); }
+
+/* --------------------------------------------------------------- chrome --- */
+
+.su-studio .su-back { color: var(--su-muted); }
+.su-studio .su-back:hover { color: var(--su-fg); }
+
+.su-studio .avatar {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg);
+}
+
+.su-studio .badge {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+  color: var(--su-muted);
+}
+.su-studio .badge--on {
+  background: rgba(31, 191, 148, 0.14);
+  border-color: rgba(31, 191, 148, 0.4);
+  color: var(--su-accent-2);
+}
+
+/* ------------------------------------------------------------ the tab bar */
+
+.su-studio .tabbar {
+  background: rgba(16, 26, 24, 0.92);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--su-hair);
+}
+.su-studio .tabbar__btn { color: var(--su-faint); }
+.su-studio .tabbar__btn.is-on { color: var(--su-fg); }
+.su-studio .tabbar__icon { font-size: 23px; line-height: 1; }
+.su-studio .tabbar__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ------------------------------------------------------------- surfaces --- */
+
+.su-studio .sheet,
+.su-studio .sess-card,
+.su-studio .cat-card,
+.su-studio .pw-card,
+.su-studio .rx-card,
+.su-studio .msr,
+.su-studio .statgrid > *,
+.su-studio .mood-card,
+.su-studio .thr-card,
+.su-studio .safety-card,
+.su-studio .asmt-card {
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.su-studio .segmented,
+.su-studio .chip-row,
+.su-studio .filter-row { gap: 7px; }
+
+.su-studio .segmented {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+}
+.su-studio .segmented button { color: var(--su-muted); }
+.su-studio .segmented button[aria-pressed='true'] {
+  background: var(--su-raised);
+  color: var(--su-fg);
+  box-shadow: none;
+}
+
+.su-studio .chip,
+.su-studio .filter-chip {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+  color: var(--su-muted);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.su-studio .chip[aria-pressed='true'],
+.su-studio .filter-chip.is-on {
+  background: rgba(31, 191, 148, 0.13);
+  border-color: rgba(31, 191, 148, 0.42);
+  color: var(--su-accent-2);
+  font-weight: 600;
+  box-shadow: none;
+}
+.su-studio .chip__hint { color: var(--su-faint); }
+
+.su-studio input,
+.su-studio textarea,
+.su-studio select,
+.su-studio .ob-input {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg);
+  border-radius: 13px;
+}
+.su-studio input::placeholder,
+.su-studio textarea::placeholder { color: var(--su-faint); }
+.su-studio input:focus-visible,
+.su-studio textarea:focus-visible {
+  border-color: rgba(31, 191, 148, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 191, 148, 0.16);
+}
+
+/* --------------------------------------------------------------- buttons --
+
+   The rule 2a is built on: ONE cream action per screen. Emerald never fills a
+   button here — it is reserved for data and state, so a chart, a progress bar
+   and a "live" dot all read as the same language and a button never joins it. */
+
+.su-studio .btn {
+  border-radius: var(--r-pill);
+  font-weight: 600;
+}
+.su-studio .btn--primary,
+.su-studio .btn--light {
+  background: var(--su-cream);
+  color: #070d0c;
+  border: 0;
+}
+.su-studio .btn--primary:hover,
+.su-studio .btn--light:hover { background: var(--su-cream-d); }
+.su-studio .btn--ghost,
+.su-studio .btn--quiet {
+  background: transparent;
+  border: 1px solid var(--su-hair-2);
+  color: var(--su-fg-2);
+}
+.su-studio .btn--ghost:hover,
+.su-studio .btn--quiet:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--su-fg);
+}
+
+/* ------------------------------------------------------------- cover art --
+
+   The covers are generated in `selfuse/artwork.ts` and already carry their own
+   ground; on a dark surface they need a hairline and grain rather than the
+   soft drop shadow they were given for cream paper. */
+
+.su-studio .cat-card__cover,
+.su-studio .sess-detail__cover {
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--su-hair);
+  position: relative;
+  isolation: isolate;
+}
+.su-studio .cat-card__cover::after,
+.su-studio .sess-detail__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-size: 170px 170px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.su-studio .cat-card__title { color: var(--su-fg); font-size: 13.5px; font-weight: 500; }
+.su-studio .cat-card__blurb { color: var(--su-faint); font-size: 11.5px; }
+.su-studio .cat-card__lengths span {
+  background: rgba(7, 13, 12, 0.55);
+  backdrop-filter: blur(3px);
+  color: #fff;
+  border-radius: 5px;
+  font-size: 10px;
+}
+.su-studio .cat-card__soon {
+  background: rgba(7, 13, 12, 0.66);
+  color: var(--su-cream);
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* the editorial hero at the top of the catalog: the one cream play button */
+.su-studio .cat-hero {
+  border-radius: 28px;
+  border: 1px solid var(--su-hair);
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+.su-studio .cat-hero__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--su-accent-2);
+}
+.su-studio .cat-hero__title { font-family: var(--display); font-weight: 500; color: #fff; }
+.su-studio .cat-hero__blurb { color: rgba(236, 242, 239, 0.72); }
+
+.su-studio .cat-rail__arrows button {
+  background: var(--su-raised-2);
+  border: 1px solid var(--su-hair);
+  color: var(--su-muted);
+}
+
+/* ---------------------------------------------------------------- data ----
+
+   Emerald's actual job. Bars are 3px on a 2px radius throughout 2a, and the
+   track is the hairline rather than a filled grey. */
+
+.su-studio .msr-bar,
+.su-studio .asmt-bar,
+.su-studio .vas-block,
+.su-studio .weeks,
+.su-studio .week {
+  border-radius: 2px;
+}
+.su-studio .msr-bar i,
+.su-studio .asmt-bar i { background: var(--su-accent); }
+.su-studio .metric b,
+.su-studio .statgrid b { color: var(--su-fg); font-family: var(--display); font-weight: 500; }
+.su-studio .metric span,
+.su-studio .statgrid span { color: var(--su-faint); }
+.su-studio .goal-dot { background: var(--su-accent); }
+
+/* --------------------------------------------------------------- player ---
+
+   The one screen that was already dark. 2a changes its proportions rather than
+   its palette: an oversized clock, a phase strip that shows all six at once,
+   and a cream transport button that is the only filled thing on the screen. */
+
+.su-studio .player {
+  background:
+    radial-gradient(120% 80% at 50% 12%, rgba(31, 191, 148, 0.16), rgba(0, 0, 0, 0) 62%),
+    linear-gradient(180deg, #0a1211, #060b0a);
+}
+.su-studio .player__time,
+.su-studio .hud__time {
+  font-family: var(--display);
+  font-size: 46px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--su-fg);
+  font-variant-numeric: tabular-nums;
+}
+.su-studio .player__sub { font-size: 12px; color: var(--su-muted); }
+
+/* the six-phase strip: every phase visible, the current one cream */
+.su-studio .player__phases {
+  display: flex;
+  gap: 3px;
+  height: 4px;
+}
+.su-studio .player__phases i {
+  flex: 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.su-studio .player__phases i.is-done { background: var(--su-accent); }
+.su-studio .player__phases i.is-now { background: var(--su-cream); }
+
+.su-studio .player__transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.su-studio .player__play {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--su-cream);
+  color: #070d0c;
+  border: 0;
+  box-shadow: 0 10px 40px -12px rgba(244, 240, 190, 0.5);
+}
+.su-studio .player__skip {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--su-hair);
+  color: var(--su-muted);
+}
+
+/* ------------------------------------------------------------------ orb ---
+
+   2a makes the orb load-bearing: smaller, quieter, and wrapped by the session
+   progress ring rather than sitting beside a separate bar. The ring is drawn
+   by the component; this only quiets the orb underneath it so the two do not
+   compete. */
+.su-studio .orb { filter: saturate(1.05); }
+.su-studio .ring { border-color: rgba(167, 232, 208, 0.3); }
+
+/* -------------------------------------------------------------- overlays -- */
+
+.su-studio .sheet-scrim { background: rgba(4, 8, 7, 0.72); }
+.su-studio .sheet {
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+  border-radius: 22px 22px 0 0;
+}
+.su-studio .sheet__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--su-faint);
+}
+
+/* ----------------------------------------------------------- onboarding --- */
+
+.su-studio.ob { background: var(--su-ground); }
+.su-studio .ob-opt,
+.su-studio .ob-radio,
+.su-studio .who5-opt,
+.su-studio .vas-opt,
+.su-studio .scale5 button,
+.su-studio .mood-opt {
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg-2);
+  border-radius: 13px;
+}
+.su-studio .ob-opt[aria-pressed='true'],
+.su-studio .who5-opt[aria-pressed='true'],
+.su-studio .vas-opt[aria-pressed='true'],
+.su-studio .scale5 button[aria-pressed='true'],
+.su-studio .mood-opt[aria-pressed='true'] {
+  background: rgba(31, 191, 148, 0.14);
+  border-color: rgba(31, 191, 148, 0.45);
+  color: var(--su-fg);
+}
+.su-studio .ob-dots i { background: var(--su-hair-2); }
+.su-studio .ob-dots i.is-on { background: var(--su-cream); }
+
+/* ------------------------------------------------------------- safety ----
+
+   The one place the palette is allowed to raise its voice. Kept warm rather
+   than red-alert: this is a support route, not an error state. */
+.su-studio .safety-l1,
+.su-studio .safety-sheet {
+  background: #150d07;
+  border: 1px solid rgba(232, 157, 100, 0.34);
+  color: #f6e6d4;
+}
+
+/* --------------------------------------------------------------- motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .su-studio .gl-grain,
+  .su-studio .su-grain::after { opacity: 0.1; }
+}

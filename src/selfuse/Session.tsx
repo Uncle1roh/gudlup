@@ -175,7 +175,7 @@ function PreSession({
   const { t } = useI18n()
   const [vas, setVas] = useState<number | null>(null)
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen screen--center pre-session">
         <div className="screen__body pre-session__body">
           <span className="pre-session__len">{t('{n} min', { n: duration })}</span>
@@ -225,7 +225,7 @@ function StereoCheck({ onDone, onBack }: { onDone: () => void; onBack: () => voi
   }
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen screen--center stereo">
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true">🎧</div>
@@ -427,7 +427,7 @@ function ImmersiveSession({
      played: rather than substituting another protocol, say so. */
   if (!protocol) {
     return (
-      <div className="app-frame">
+      <div className="app-frame su-studio">
         <div className="player">
           <div className="fade-in player__ready">
             <p className="lead player__readytext">
@@ -442,7 +442,7 @@ function ImmersiveSession({
 
   if (!started) {
     return (
-      <div className="app-frame">
+      <div className="app-frame su-studio">
         <div className="player">
           <div className="fade-in player__ready">
             <BreathingOrb size={150} breathing={false} />
@@ -464,7 +464,7 @@ function ImmersiveSession({
   const showControls = controls || !playing
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="player" onClick={armFade}>
         {isBreath ? (
           <div className="fade-in"><BreathingOrb size={230} /></div>
@@ -569,7 +569,7 @@ function PostSession({
   }
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen screen--center post fade-in">
         <div className="screen__body post__body">
           <h2 className="display">{t('Well done')}</h2>

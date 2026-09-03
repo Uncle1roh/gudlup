@@ -39,7 +39,7 @@ function ContactCard({ c, kind }: { c: EapContact; kind: string }) {
 export function SafetyLevel3({ eap, onClose }: GatewayProps) {
   const { t } = useI18n()
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen screen--center safety">
         <div className="screen__body safety__body">
           <div className="safety__mark" aria-hidden="true">🤝</div>

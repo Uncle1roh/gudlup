@@ -103,7 +103,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   /* ------------------------------------------------------------ ON-1 ----- */
   if (step === 1) {
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen screen--center">
           <Dots step={1} />
           <div className="screen__body ob-hero">
@@ -142,7 +142,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }
 
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen">
           <button className="ob-back" onClick={() => setStep(1)} aria-label={t('Back')}>‹</button>
           <Dots step={2} />
@@ -227,7 +227,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   /* ------------------------------------------------------------ ON-3 ----- */
   if (step === 3) {
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen">
           <button className="ob-back" onClick={() => setStep(2)} aria-label={t('Back')}>‹</button>
           <Dots step={3} />
@@ -270,7 +270,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   if (step === 4) {
     const answered = [challenge, duration, time, matters].filter(Boolean).length
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen">
           <button className="ob-back" onClick={() => setStep(3)} aria-label={t('Back')}>‹</button>
           <Dots step={4} />
@@ -351,7 +351,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   /* ------------------------------------------------------------ ON-5 ----- */
   if (step === 5 && pathway) {
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen">
           <button className="ob-back" onClick={() => setStep(4)} aria-label={t('Back')}>‹</button>
           <Dots step={5} />
@@ -381,7 +381,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   /* ------------------------------------------------------------ ON-6 ----- */
   if (step === 6) {
     return (
-      <div className="app-frame ob">
+      <div className="app-frame ob su-studio">
         <div className="screen">
           <button className="ob-back" onClick={() => setStep(5)} aria-label={t('Back')}>‹</button>
           <Dots step={6} />
@@ -410,7 +410,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   /* ------------------------------------------------------------ ON-7 ----- */
   return (
-    <div className="app-frame ob">
+    <div className="app-frame ob su-studio">
       <div className="screen">
         <button className="ob-back" onClick={() => setStep(6)} aria-label={t('Back')}>‹</button>
         <Dots step={7} />

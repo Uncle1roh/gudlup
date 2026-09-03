@@ -112,7 +112,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
   if (stage === 'waiting') {
     const ready = call.camStatus === 'live'
     return (
-      <div className="app-frame call">
+      <div className="app-frame call su-studio">
         <div className="call__waiting">
           <p className="small muted">{t('Your session with')}</p>
           <h1 className="display">{therapist.name}</h1>
@@ -193,7 +193,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
 
   if (stage === 'ended') {
     return (
-      <div className="app-frame call">
+      <div className="app-frame call su-studio">
         <div className="call__ended">
           <h2 className="display">{t('Session ended')}</h2>
           <p className="small muted">
@@ -208,7 +208,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
   /* VID-2 — rapport before the protocol, debrief after it. */
   const debrief = stage === 'debrief'
   return (
-    <div className="app-frame call">
+    <div className="app-frame call su-studio">
       <div className="call__video">
         <PeerView call={call} name={therapist.name} />
         <div className="call__name">{therapist.name}</div>
@@ -300,7 +300,7 @@ function TransitionCountdown({ therapist, onDone }: { therapist: TherapistProfil
   }, [n, onDone])
 
   return (
-    <div className="app-frame call">
+    <div className="app-frame call su-studio">
       <div className="call__transition">
         <p className="lead">{t('Your therapist is starting your session')}</p>
         <p className="small muted">{t('Put on your headphones, close your eyes, and get comfortable.')}</p>
@@ -418,7 +418,7 @@ function TreatmentMode({
   const isBreath = phaseIdx === 1
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="player player--guided">
         {isBreath ? <BreathingOrb size={210} /> : <div className="ambient-pulse" />}
         <div className="player__veil" style={{ opacity: 0.88 }} />

@@ -31,6 +31,7 @@ import { useSelfUseStore, sessionsThisWeek, suggestedPathway } from '../data/sel
 import { useTherapyStore } from './therapyStore'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
+import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
@@ -40,12 +41,12 @@ import type { Duration } from '../types/domain'
 
 type Tab = 'home' | 'explore' | 'therapist' | 'progress' | 'profile'
 
-const TABS: { id: Tab; icon: string; label: string }[] = [
-  { id: 'home', icon: '🏠', label: 'Home' },
-  { id: 'explore', icon: '🧭', label: 'Explore' },
-  { id: 'therapist', icon: '🎧', label: 'Therapist' },
-  { id: 'progress', icon: '📈', label: 'Progress' },
-  { id: 'profile', icon: '🙂', label: 'Profile' },
+const TABS: { id: Tab; icon: IconName; label: string }[] = [
+  { id: 'home', icon: 'today', label: 'Home' },
+  { id: 'explore', icon: 'library', label: 'Explore' },
+  { id: 'therapist', icon: 'therapist', label: 'Therapist' },
+  { id: 'progress', icon: 'progress', label: 'Progress' },
+  { id: 'profile', icon: 'profile', label: 'Profile' },
 ]
 
 type Overlay =
@@ -349,7 +350,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   return (
-    <div className="app-frame app-frame--tabs">
+    <div className="app-frame app-frame--tabs su-studio">
       <div className="tabview">
         {tab === 'home' && (
           <Home
@@ -421,7 +422,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       <nav className="tabbar">
         {TABS.map((tb) => (
           <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => setTab(tb.id)}>
-            <span className="tabbar__icon">{tb.icon}</span>
+            <span className="tabbar__icon"><Icon name={tb.icon} /></span>
             <span className="tabbar__label">{t(tb.label)}</span>
           </button>
         ))}

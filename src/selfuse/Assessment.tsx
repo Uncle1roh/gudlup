@@ -63,7 +63,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
      patient's verbal answer, and there is no patient-facing VAS widget. */
   if (!instrument) {
     return (
-      <div className="app-frame">
+      <div className="app-frame su-studio">
         <div className="screen msr">
           <div className="msr__top">
             <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>
@@ -78,7 +78,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
 
   if (done) {
     return (
-      <div className="app-frame">
+      <div className="app-frame su-studio">
         <div className="screen msr">
           <div className="screen__body msr__body msr__body--center">
             <div className="asmt-done" aria-hidden="true">✓</div>
@@ -114,7 +114,7 @@ export function Assessment({ record, therapistName, onSaveProgress, onSubmit, on
   }
 
   return (
-    <div className="app-frame">
+    <div className="app-frame su-studio">
       <div className="screen msr">
         <div className="msr__top">
           <button className="msr__x" onClick={onClose} aria-label={t('Close')}>✕</button>

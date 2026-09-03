@@ -10,12 +10,12 @@
 
    Three constraints it has to respect at once:
 
-   · The brand is green-forward and deliberately not multicoloured. A catalog
-     that looks like a paint chart would fight the rest of the app. So the
-     palette is keyed on the five THEMES, and every one of them is a tonal
-     variation inside the brand range — deep forest through emerald, celadon,
-     teal, warm sand and the single violet accent. Two sessions in the same
-     theme are recognisably related without being identical.
+   · The surface is dark and spends its brightness on ONE thing per screen —
+     the cream primary action. A cover may not compete with it. So each theme
+     is a DUOTONE from the Studio redesign: a lit corner falling to near-black
+     along the same 155deg light, one hue per theme, drawn in the light end of
+     its own colour and never in the emerald reserved for data. Two sessions in
+     the same theme are recognisably related without being identical.
 
    · A cover must be legible as a thumbnail AND as a 150px-tall banner: the
      card rail is 3:4 portrait and the session detail is a wide strip. Every
@@ -61,33 +61,40 @@ export interface Cover {
   seed: number
 }
 
-/* Each theme gets a band of the brand palette rather than a single colour, so
-   the sessions inside it read as a family without being interchangeable. */
+/* Each theme gets a band rather than a single colour, so the sessions inside
+   it read as a family without being interchangeable.
+
+   These are the DUOTONE pairs from the Studio redesign (direction 2a): a lit
+   corner falling to near-black along 155deg, one hue per theme. They replaced
+   a set mixed for cream paper, which glowed on the dark surface and pulled the
+   eye away from the one cream action each screen is allowed. `ink` is the
+   light end of the same hue — the motif is drawn in the cover's own colour,
+   never in the emerald reserved for data. */
 const THEME_BANDS: Record<SelfUseTheme, { from: string; to: string; ink: string }[]> = {
   calm: [
-    { from: '#0c2a22', to: '#1f6b57', ink: '#d8f0e4' },
-    { from: '#12362c', to: '#2f8168', ink: '#e2f4ea' },
-    { from: '#17423a', to: '#4aa183', ink: '#eaf7f0' },
+    { from: '#1b4a3e', to: '#08201b', ink: '#a7e8d0' },
+    { from: '#12463a', to: '#071412', ink: '#9fe2c8' },
+    { from: '#14483b', to: '#0a241e', ink: '#b3edd8' },
   ],
   focus: [
-    { from: '#0d2b34', to: '#1d6274', ink: '#dcf0f6' },
-    { from: '#12353f', to: '#2a7489', ink: '#e4f3f8' },
-    { from: '#173f47', to: '#3d8ba0', ink: '#ecf7fa' },
+    { from: '#1b2c52', to: '#080f1a', ink: '#a8c4ee' },
+    { from: '#17284b', to: '#070d18', ink: '#9dbce9' },
+    { from: '#1f3159', to: '#0a1220', ink: '#b6cef2' },
   ],
   energy: [
-    { from: '#3a2411', to: '#a2612a', ink: '#fdefdf' },
-    { from: '#42290f', to: '#b87338', ink: '#fdf1e4' },
-    { from: '#4a3312', to: '#c98c46', ink: '#fef5ea' },
+    { from: '#4a3520', to: '#150d07', ink: '#f0cfa4' },
+    { from: '#523a22', to: '#180f08', ink: '#f5d8b1' },
+    { from: '#44301d', to: '#120b06', ink: '#eac79a' },
   ],
   balance: [
-    { from: '#1d3324', to: '#5c8f5a', ink: '#e9f4e6' },
-    { from: '#233a29', to: '#6ea36a', ink: '#eef7ec' },
-    { from: '#2a4230', to: '#84b57e', ink: '#f3faf1' },
+    { from: '#12463a', to: '#0a2420', ink: '#a7e8d0' },
+    { from: '#164e40', to: '#0b2a24', ink: '#b0ecd6' },
+    { from: '#0f3d33', to: '#081714', ink: '#9ce0c4' },
   ],
   growth: [
-    { from: '#2b1e3a', to: '#6b4a86', ink: '#f0e8f7' },
-    { from: '#33234a', to: '#7d589b', ink: '#f3ecf9' },
-    { from: '#3a2a52', to: '#906aae', ink: '#f6f0fb' },
+    { from: '#2b2452', to: '#0c0a18', ink: '#c4b4ee' },
+    { from: '#3a2430', to: '#14080e', ink: '#eab4c6' },
+    { from: '#312a5c', to: '#0e0b1c', ink: '#cebff2' },
   ],
 }
 
@@ -142,8 +149,9 @@ export function coverFor(slug: string, theme: SelfUseTheme): Cover {
   return {
     ...tone,
     motif: MOTIFS[slug] ?? THEME_MOTIF[theme] ?? 'horizon',
-    // A spread of angles stops a whole rail from looking like one striped block.
-    angle: 120 + (n % 5) * 24,
+    /* 155deg is the canvas's light: a lit top-left corner falling to near-black.
+       The small spread stops a whole rail reading as one striped block. */
+    angle: 148 + (n % 5) * 7,
     seed: n,
   }
 }
