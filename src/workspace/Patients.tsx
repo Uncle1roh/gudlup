@@ -26,6 +26,7 @@ import { useI18n, fmtDate as localeDate } from '../i18n'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
 import { useDataProvider } from '../data/provider'
+import { planItemsForPrescription } from '../data/plan'
 import {
   CLUSTER_LABEL,
   adherenceBand,
@@ -356,6 +357,7 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
   const [assessOpen, setAssessOpen] = useState(false)
   const { rows, update: updateAssessments } = useAssessments()
   const { rows: msgRows } = useThreads()
+  const dp = useDataProvider()
   /* A bridged patient is the one whose Self Use app this build actually drives,
      so their queue is read under the Self Use id. Everyone else keeps their own
      — the two never share a row. */
@@ -649,6 +651,27 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
           onAssign={(rx) => {
             patchPatient((p) => ({ ...p, prescriptions: [...p.prescriptions, rx] }))
             setRxOpen(false)
+            /* AND send it to the person. The local copy above is what this
+               screen renders; the plan below is what the patient's app reads.
+               Writing only the first is what made a prescription a note the
+               therapist wrote to themselves. */
+            const linked = patient.linkedPatientId
+            if (!linked) return
+            void (async () => {
+              const existing = await dp.getPlan(linked)
+              const items = existing?.items ?? []
+              const weeks = Math.max(1, Math.round((rx.toAt - rx.fromAt) / (7 * DAY)))
+              const startWeek = items.length ? Math.max(...items.map((i: { week: number }) => i.week)) + 1 : 1
+              await dp.savePlan(linked, [
+                ...items,
+                ...planItemsForPrescription(
+                  { protocolCode: rx.protocolCode, duration: rx.version, perWeek: rx.perWeek, weeks, note: rx.clinicalNote },
+                  items.length,
+                  startWeek,
+                ),
+              ], existing?.title)
+            })().catch(() => { /* offline: the local copy stands, and the
+                                  therapist can re-send from the patient card */ })
           }}
         />
       )}

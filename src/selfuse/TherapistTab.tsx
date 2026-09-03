@@ -17,9 +17,10 @@
      toward the Self Use pathway.
    ============================================================================ */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
+import { prescriptionsFromPlan, type Plan } from '../data/plan'
 import { normalizeConnectionCode } from '../data/link'
 import {
   expandOpenings,
@@ -80,6 +81,12 @@ export function TherapistTab(props: TherapistTabProps) {
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'root' })
   const { therapy, update } = props
+  const [plan, setPlan] = useState<Plan | null>(null)
+  useEffect(() => {
+    let alive = true
+    void dp.getMyPlan().then((p) => { if (alive) setPlan(p) }).catch(() => undefined)
+    return () => { alive = false }
+  }, [dp])
   const { rows, update: updateAssessments } = useAssessments()
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
@@ -235,6 +242,27 @@ export function TherapistTab(props: TherapistTabProps) {
   /* The join window is computed from the REAL appointment, not from the
      link's remembered time — a rescheduled session must move the button. */
   const nextAt = props.appointment?.startsAtMs ?? link.nextSessionAt
+
+  /* Prescriptions come from the therapist's PLAN on the server. They used to
+     come from `seedLink` fixtures written into this app's own storage, so
+     anything a real clinician prescribed reached nobody. The local list is
+     still the fallback for the demo, where there is no plan to read. */
+  const prescriptions = useMemo(() => {
+    const fromPlan = prescriptionsFromPlan(plan)
+    if (!fromPlan.length) return link.prescriptions
+    return fromPlan.map((rx, i) => {
+      const session = catalog.sessions.find((x) => x.protocolCode === rx.protocolCode)
+      return {
+        id: `plan-${rx.protocolCode}-${rx.duration}-${i}`,
+        slug: session?.slug ?? '',
+        duration: rx.duration,
+        perWeek: rx.perWeek,
+        assignedAt: plan?.updatedAt ?? Date.now(),
+        done: rx.done,
+        status: (rx.done >= rx.total ? 'completed' : 'active') as 'active' | 'completed',
+      }
+    })
+  }, [plan, link.prescriptions, catalog.sessions])
   const joinable = props.appointment ? joinWindowOpen(props.appointment, Date.now()) : false
 
   return (
@@ -315,10 +343,15 @@ export function TherapistTab(props: TherapistTabProps) {
       )}
 
       <h3 className="home__sect">{t('Prescriptions')}</h3>
-      {!link.prescriptions.length && <p className="small muted">{t('No prescriptions yet.')}</p>}
-      {link.prescriptions.map((rx) => {
+      {!prescriptions.length && <p className="small muted">{t('No prescriptions yet.')}</p>}
+      {prescriptions.map((rx) => {
         const s = catalog.sessions.find((x) => x.slug === rx.slug)
         if (!s) return null
+        /* Offer Start only when the session can actually be started at the
+           prescribed length. A protocol a PO disabled this morning, or a
+           length that was never rendered, used to open anyway and play the
+           placeholder bed under a clinical prescription. */
+        const playable = s.available && s.durations.includes(rx.duration)
         return (
           <article key={rx.id} className="card rx-card">
             <div className="rx-card__top">
@@ -327,13 +360,18 @@ export function TherapistTab(props: TherapistTabProps) {
             </div>
             <div className="rx-card__bar" aria-hidden="true"><span style={{ width: `${adherence(rx)}%` }} /></div>
             <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.perWeek })}</div>
-            {rx.done < rx.perWeek && (
+            {rx.done < rx.perWeek && playable && (
               <button
                 className="btn btn--ghost"
                 onClick={() => props.onStartPrescription({ slug: rx.slug, duration: rx.duration }, rx.id)}
               >
                 {t('Start session')}
               </button>
+            )}
+            {!playable && (
+              <p className="small muted">
+                {t('Not available to play yet — your therapist has been told.')}
+              </p>
             )}
           </article>
         )

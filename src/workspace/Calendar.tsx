@@ -13,6 +13,8 @@
    ============================================================================ */
 
 import { useMemo, useState } from 'react'
+import { useDataProvider } from '../data/provider'
+import { slotsFromAvailability } from './data'
 import { useI18n, fmtDate } from '../i18n'
 import { fmtWhen, initials } from './Patients'
 import type { AvailabilityDay, WorkspaceState } from './data'
@@ -244,6 +246,8 @@ export function AvailabilityModal({
   onClose: () => void
 }) {
   const { t } = useI18n()
+  const dp = useDataProvider()
+  const [publishFailed, setPublishFailed] = useState(false)
   const [days, setDays] = useState<AvailabilityDay[]>(state.settings.availability)
   const [minutes, setMinutes] = useState(state.settings.sessionMinutes)
   const [buffer, setBuffer] = useState(state.settings.bufferMinutes)
@@ -340,6 +344,11 @@ export function AvailabilityModal({
           </button>
         </div>
         <p className="w-note">{t('Events in a connected calendar automatically block those times.')}</p>
+        {publishFailed && (
+          <p className="w-note w-note--warn">
+            {t('Saved here, but your patients could not be told. Check your connection and save again.')}
+          </p>
+        )}
 
         <div className="w-actions">
           <button className="w-btn w-btn--ghost" onClick={onClose}>{t('Cancel')}</button>
@@ -350,6 +359,13 @@ export function AvailabilityModal({
                 ...s,
                 settings: { ...s.settings, availability: days, sessionMinutes: minutes, bufferMinutes: buffer, calendarSync: sync },
               }))
+              /* PUBLISH it. Saving to this browser is what the modal used to
+                 do, and `therapist_availability` — the table a patient's
+                 booking grid reads — was written by nothing in the workspace.
+                 A therapist had no way to offer a time, so every patient saw
+                 "no free times" no matter what they set here. */
+              void dp.setMyAvailability(slotsFromAvailability(days, minutes, buffer))
+                .catch(() => setPublishFailed(true))
               onClose()
             }}
           >

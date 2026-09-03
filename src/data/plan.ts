@@ -83,3 +83,87 @@ export function skeletonPlan(entryCode: string, duration: Duration, weeks = PLAN
     week: n + 1,
   }))
 }
+
+
+/* ================================================== prescriptions ↔ plan ===
+
+   A therapist prescribes "this protocol, three times a week, for four weeks".
+   The database stores a PATHWAY: one row per session, each with a week. The
+   two are the same fact at different resolutions, and before this the
+   therapist wrote the first shape into their browser while the patient read a
+   fixture — so a prescription reached nobody.
+
+   Expanding here rather than at either screen means both sides agree about
+   what "three times a week" means without either owning the definition. */
+
+export interface PrescriptionSpec {
+  protocolCode: string
+  duration: Duration
+  perWeek: number
+  weeks: number
+  note?: string
+}
+
+/** One plan item per prescribed session, appended after whatever exists. */
+export function planItemsForPrescription(
+  spec: PrescriptionSpec,
+  startPosition: number,
+  startWeek = 1,
+): PlanItem[] {
+  const out: PlanItem[] = []
+  const weeks = Math.max(1, Math.round(spec.weeks))
+  const perWeek = Math.max(1, Math.round(spec.perWeek))
+  for (let w = 0; w < weeks; w += 1) {
+    for (let i = 0; i < perWeek; i += 1) {
+      out.push({
+        id: `rx-${startPosition + out.length}-${Date.now().toString(36)}`,
+        position: startPosition + out.length,
+        protocolCode: spec.protocolCode,
+        duration: spec.duration,
+        week: startWeek + w,
+        note: i === 0 ? spec.note : undefined,
+      })
+    }
+  }
+  return out
+}
+
+export interface PlanPrescription {
+  protocolCode: string
+  duration: Duration
+  perWeek: number
+  weeks: number
+  done: number
+  total: number
+  note?: string
+}
+
+/**
+ * Read a plan back as the prescriptions it came from.
+ *
+ * Grouped by protocol AND length, because "GL-ANX 1.1 for 12 minutes" and the
+ * same protocol for 24 are different prescriptions to a clinician even though
+ * they share a code.
+ */
+export function prescriptionsFromPlan(plan: Plan | null): PlanPrescription[] {
+  if (!plan) return []
+  const groups = new Map<string, PlanItem[]>()
+  for (const it of plan.items) {
+    const key = `${it.protocolCode}|${it.duration}`
+    const arr = groups.get(key) ?? []
+    arr.push(it)
+    groups.set(key, arr)
+  }
+  return [...groups.values()].map((items) => {
+    const weeks = new Set(items.map((i) => i.week))
+    return {
+      protocolCode: items[0].protocolCode,
+      duration: items[0].duration,
+      perWeek: Math.max(1, Math.round(items.length / Math.max(1, weeks.size))),
+      weeks: weeks.size,
+      done: items.filter((i) => i.doneAt).length,
+      total: items.length,
+      note: items.find((i) => i.note)?.note,
+    }
+  })
+}

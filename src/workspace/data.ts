@@ -22,6 +22,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useState } from 'react'
+import type { WeeklySlot } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { PROTOCOLS } from '../data/protocols'
 import { isClinicalOnly, sessionForProtocol } from '../data/selfuse'
@@ -577,6 +578,47 @@ export function mergeServerPatients(state: WorkspaceState, server: ServerPatient
 
   if (!fresh.length && !adopted.size) return state
   return { ...state, patients: [...patients, ...fresh] }
+}
+
+/* ------------------------------------------------- availability, published --
+
+   The therapist edits DAYS with ranges ("Tuesday, 09:00–12:00"); the booking
+   grid a patient sees is built from SLOTS ("Tuesday 09:00, 09:50, 10:40…").
+   Nothing converted between them, so the modal saved to this browser and
+   `therapist_availability` — the table the patient reads — was never written
+   by the workspace at all. A therapist using the current app had no way to
+   publish availability, and every patient saw "no free times".
+
+   The step is the session length plus the buffer, because that is what the
+   therapist is actually offering: back-to-back slots with no gap would
+   double-book the buffer they just configured. */
+
+export function slotsFromAvailability(
+  days: AvailabilityDay[],
+  sessionMinutes: number,
+  bufferMinutes: number,
+): WeeklySlot[] {
+  const step = Math.max(15, Math.round(sessionMinutes + bufferMinutes))
+  const out: WeeklySlot[] = []
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map((n) => Number(n))
+    return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+  }
+  const pad = (n: number) => String(n).padStart(2, '0')
+
+  for (const day of days) {
+    if (!day.enabled) continue
+    for (const range of day.ranges) {
+      const from = toMin(range.from)
+      const to = toMin(range.to)
+      /* A slot must FIT: offering 11:40 inside a window that closes at 12:00
+         for a 50-minute session is offering something that cannot happen. */
+      for (let at = from; at + sessionMinutes <= to; at += step) {
+        out.push({ weekday: day.weekday, hhmm: `${pad(Math.floor(at / 60))}:${pad(at % 60)}` })
+      }
+    }
+  }
+  return out
 }
 
 export function unreadCount(state: WorkspaceState): number {
