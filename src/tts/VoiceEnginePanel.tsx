@@ -52,6 +52,9 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [account, setAccount] = useState<AccountInfo | null>(null)
   /* whether the DATABASE copy of the key is usable — null until first read */
   const [shared, setShared] = useState<SharedState | null>(null)
+  /* when the shared key was last changed. The POs rotate keys often, so the
+     question "am I on the current one?" has to be answerable at a glance. */
+  const [sharedAt, setSharedAt] = useState<number | null>(null)
 
   /** Pull the account's voices — the POs add one in ElevenLabs and it lands
       here, no code change. */
@@ -78,9 +81,10 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   useEffect(() => {
     let alive = true
     void (async () => {
-      const { changed, state } = await hydrateTtsSettings()
+      const { changed, state, sharedAt: at } = await hydrateTtsSettings()
       if (!alive) return
       setShared(state)
+      if (at) setSharedAt(at)
       if (changed) {
         const s = getTtsSettings()
         if (s) {
@@ -98,7 +102,8 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const syncedAt = voicesSyncedAt()
   const provider = getTtsProvider()
   const source = elevenLabsSource()
-  const sourceNote = source === 'shared' ? 'chiave condivisa — salvata nel database'
+  const sourceNote = source === 'shared'
+    ? `chiave condivisa${sharedAt ? ` — aggiornata ${new Date(sharedAt).toLocaleString('it-IT')}` : ' — salvata nel database'}`
     : source === 'settings' ? 'chiave salvata solo in questo browser'
     : source === 'env' ? 'chiave dall’ambiente di build'
     : 'nessuna chiave ElevenLabs — voce di ripiego'
@@ -121,7 +126,9 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     const res = await saveSharedTtsSettings(next)
     setShared(res.state)
     if (res.state === 'ok') {
-      saveTtsSettings({ ...next, shared: true })
+      // the SERVER's timestamp, not this machine's clock — see SharedResult
+      setSharedAt(res.savedAt ?? next.savedAt)
+      saveTtsSettings({ ...next, shared: true, savedAt: res.savedAt ?? next.savedAt })
       setStatus(`Salvato per tutti — la chiave è nel database e vale su ogni computer. Voci: ${pName} + ${mName}.`)
     } else if (res.state === 'no-table') {
       setStatus(`Salvato solo in questo browser. Per condividerla su ogni computer esegui supabase/3-shared-voice-key.sql. Voci: ${pName} + ${mName}.`)
@@ -141,7 +148,10 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     /* The shared row goes too: leaving it would silently restore the key on
        the next load, which is not what "Cancella" can be allowed to mean. */
     const res = await clearSharedTtsSettings()
-    if (res.state === 'ok') setStatus('Cancellato ovunque — rimossa anche la chiave condivisa nel database.')
+    if (res.state === 'ok') {
+      setSharedAt(null)
+      setStatus('Cancellato ovunque — rimossa anche la chiave condivisa nel database.')
+    }
   }
 
   async function test(which: 'primary' | 'secondary') {

@@ -102,7 +102,14 @@ interface SharedRow { apiKey: string; voiceId: string; voiceIdSecondary?: string
 
 export type SharedState = 'ok' | 'unavailable' | 'no-table' | 'forbidden'
 
-export interface SharedResult { state: SharedState; message?: string }
+export interface SharedResult {
+  state: SharedState
+  message?: string
+  /** The server's own `updated_at` for the row just written. Used instead of
+      the local clock: two operators rotating a key from two machines whose
+      clocks disagree by a minute would otherwise let the older write win. */
+  savedAt?: number
+}
 
 /** Read the shared credentials, or null when there are none / it is off. */
 export async function loadSharedTtsSettings(): Promise<{ settings: TtsSettings | null; state: SharedState }> {
@@ -139,13 +146,15 @@ export async function saveSharedTtsSettings(s: TtsSettings): Promise<SharedResul
     ...(s.voiceIdSecondary?.trim() ? { voiceIdSecondary: s.voiceIdSecondary.trim() } : {}),
   }
   try {
-    const { error } = await c.from('app_settings')
+    const { data, error } = await c.from('app_settings')
       .upsert({ key: SHARED_KEY, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .select('updated_at')
+      .maybeSingle()
     if (error) {
       if (/relation|does not exist|schema cache/i.test(error.message)) return { state: 'no-table', message: error.message }
       return { state: 'forbidden', message: error.message }
     }
-    return { state: 'ok' }
+    return { state: 'ok', savedAt: data?.updated_at ? Date.parse(data.updated_at as string) : undefined }
   } catch (e) {
     return { state: 'unavailable', message: (e as Error).message }
   }
@@ -171,14 +180,14 @@ export async function clearSharedTtsSettings(): Promise<SharedResult> {
  * admin who rotates the key on one machine must not have it silently reverted
  * by an older copy sitting in another browser's localStorage.
  */
-export async function hydrateTtsSettings(): Promise<{ changed: boolean; state: SharedState }> {
+export async function hydrateTtsSettings(): Promise<{ changed: boolean; state: SharedState; sharedAt?: number }> {
   const { settings: remote, state } = await loadSharedTtsSettings()
   if (!remote) return { changed: false, state }
   const local = getTtsSettings()
   const localAt = local?.savedAt ?? 0
-  if (local && localAt >= (remote.savedAt ?? 0)) return { changed: false, state }
+  if (local && localAt >= (remote.savedAt ?? 0)) return { changed: false, state, sharedAt: remote.savedAt }
   saveTtsSettings(remote)
-  return { changed: true, state }
+  return { changed: true, state, sharedAt: remote.savedAt }
 }
 
 

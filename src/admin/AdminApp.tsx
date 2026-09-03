@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
+import { hydrateTtsSettings } from '../tts/settings'
 import { AvatarUpload } from '../components/AvatarUpload'
 import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
@@ -25,6 +26,14 @@ export function AdminApp() {
   const { user } = useAuth()
   const actor = user?.email ?? 'admin@goodloop.app'
   const [section, setSection] = useState<Section>('overview')
+
+  /* Pull the shared ElevenLabs key the moment the console opens.
+     The Voice engine panel does this too, but it only MOUNTS when someone
+     opens Dettagli — so an operator on a new machine who went straight to
+     Pubblica was told there was no key while the key sat in the database
+     unread. Publishing is the thing that needs it; the console is where
+     publishing happens; so the console is where it is fetched. */
+  useEffect(() => { void hydrateTtsSettings() }, [])
 
   return (
     <div className="adm">
