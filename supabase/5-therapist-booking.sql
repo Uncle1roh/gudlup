@@ -77,7 +77,7 @@ as $$
          a.starts_at, a.duration_min, a.status::text
   from appointments a
   join profiles p on p.id = a.therapist_id
-  where a.patient_profile_id = current_profile()
+  where a.profile_id = current_profile()
   order by a.starts_at
 $$;
 
@@ -113,7 +113,34 @@ grant execute on function booked_times(uuid, timestamptz, timestamptz) to authen
 -- The unconditional unique constraint is replaced by a PARTIAL index that
 -- only counts live bookings.
 -- ---------------------------------------------------------------------------
-alter table appointments drop constraint if exists appointments_therapist_id_starts_at_key;
+-- Drop whatever the unconditional constraint is actually called here. It was
+-- declared inline, so its name is generated, and a database first created from
+-- an older schema file may have named it something else again.
+do $$
+declare
+  c record;
+begin
+  for c in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace ns on ns.oid = rel.relnamespace
+    where ns.nspname = 'public'
+      and rel.relname = 'appointments'
+      and con.contype = 'u'
+      -- ONLY the (therapist_id, starts_at) one. Dropping every unique
+      -- constraint on the table would be a much bigger promise than this
+      -- script is making.
+      and (
+        select array_agg(att.attname order by att.attname)
+        from unnest(con.conkey) k
+        join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k
+      ) = array['starts_at', 'therapist_id']
+  loop
+    execute format('alter table appointments drop constraint %I', c.conname);
+  end loop;
+end $$;
+
 drop index if exists appointments_booked_slot;
 create unique index appointments_booked_slot
   on appointments (therapist_id, starts_at)

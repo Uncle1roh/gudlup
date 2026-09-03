@@ -123,7 +123,8 @@ begin
     returning id into v_patient;
 
     insert into patient_consents (patient_id, kind, granted)
-    values (v_patient, 'therapy', true);
+    values (v_patient, 'therapy', true)
+    on conflict (patient_id, kind) do nothing;
   end if;
 
   return query
