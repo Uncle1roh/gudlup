@@ -24,7 +24,7 @@
    sessions (the ones people actually fit into a day), then by theme.
    ============================================================================ */
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import {
   SELF_USE_THEMES,
@@ -44,6 +44,13 @@ interface CatalogProps {
   onOpen: (slug: string) => void
   /** Start immediately at this length, skipping the detail screen. */
   onQuickStart: (slug: string, duration: Duration) => void
+  /** Sits above everything — the "continue your pathway" card, when there is
+      a pathway to continue. Hidden while a filter is on, along with the hero:
+      filtering means the person is looking for something specific. */
+  topSlot?: ReactNode
+  /** The PATHWAYS rail, rendered first among the categories. A pathway is one
+      more thing to browse, not a separate mode with its own tab. */
+  pathwaysSlot?: ReactNode
 }
 
 interface Rail {
@@ -53,7 +60,7 @@ interface Rail {
   items: ResolvedSession[]
 }
 
-export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart }: CatalogProps) {
+export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, topSlot, pathwaysSlot }: CatalogProps) {
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
@@ -127,6 +134,8 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart }: Catalog
 
   return (
     <div className="cat">
+      {!filtering && topSlot}
+
       {!filtering && hero && (
         <Hero
           session={hero}
@@ -158,6 +167,8 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart }: Catalog
           ))}
         </div>
       </div>
+
+      {!filtering && pathwaysSlot}
 
       {filtering ? (
         <>

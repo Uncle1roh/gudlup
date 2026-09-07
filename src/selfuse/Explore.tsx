@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import { useI18n } from '../i18n'
-import { durationLabel, durationTag, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
+import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
 import { coverFor, coverStyle } from './artwork'
 import {
@@ -25,14 +25,11 @@ import {
   type ResolvedSession,
 } from '../data/liveCatalog'
 import { currentWeek, type PathwayState } from '../data/selfUseStore'
-import type { Duration } from '../types/domain'
 import type { Launch } from './Home'
 
 interface ExploreProps {
   pathway: PathwayState | null
   completed: PathwayId[]
-  /** Which segment to open on — Home's teasers deep-link into either. */
-  initialTab?: 'pathways' | 'sessions'
   onStartPathway: (id: PathwayId) => void
   onStart: (l: Launch) => void
 }
@@ -43,10 +40,9 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ pathway, completed, initialTab = 'pathways', onStartPathway, onStart }: ExploreProps) {
+export function Explore({ pathway, completed, onStartPathway, onStart }: ExploreProps) {
   const { t } = useI18n()
   const catalog = useCatalog()
-  const [tab, setTab] = useState<'pathways' | 'sessions'>(initialTab)
   const [view, setView] = useState<View>({ kind: 'list' })
 
   /* The catalog's hero leads with what the person is already doing, so the
@@ -89,91 +85,119 @@ export function Explore({ pathway, completed, initialTab = 'pathways', onStartPa
 
   return (
     <div className="su-page explore">
-      <h1 className="display su-h1">{t('Explore')}</h1>
-
-      <div className="segmented" role="tablist">
-        <button role="tab" aria-selected={tab === 'pathways'} onClick={() => setTab('pathways')}>
-          {t('Pathways')}
-        </button>
-        <button role="tab" aria-selected={tab === 'sessions'} onClick={() => setTab('sessions')}>
-          {t('All Sessions')}
-        </button>
-      </div>
-
-      {tab === 'pathways' ? (
-        <PathwayList
-          pathway={pathway}
-          catalog={catalog}
-          completed={completed}
-          onOpen={(id) => setView({ kind: 'pathway', id })}
-          onContinue={() => setView({ kind: 'weekly' })}
-        />
-      ) : (
-        <Catalog
-          catalog={catalog}
-          featuredSlug={todaySlug}
-          onOpen={(slug) => setView({ kind: 'session', slug })}
-          onQuickStart={(slug, duration) => onStart({ slug, duration })}
-        />
-      )}
+      <Catalog
+        catalog={catalog}
+        featuredSlug={todaySlug}
+        onOpen={(slug) => setView({ kind: 'session', slug })}
+        onQuickStart={(slug, duration) => onStart({ slug, duration })}
+        topSlot={
+          activePathway && pathway ? (
+            <ContinuePathway
+              pathway={activePathway}
+              state={pathway}
+              onContinue={() => setView({ kind: 'weekly' })}
+            />
+          ) : undefined
+        }
+        pathwaysSlot={
+          <PathwayRail
+            pathways={catalog.pathways}
+            active={pathway?.id ?? null}
+            completed={completed}
+            onOpen={(id) => setView({ kind: 'pathway', id })}
+          />
+        }
+      />
     </div>
   )
 }
 
-/* ------------------------------------------------------------- EXP-1 ----- */
+/* ------------------------------------------------- continue a pathway ----
 
-function PathwayList({
+   Above the rails, and only while one is running. It is the one thing on this
+   screen a person did not have to choose — everything else is a library, this
+   is where they already are. */
+function ContinuePathway({
   pathway,
-  catalog,
-  completed,
-  onOpen,
+  state,
   onContinue,
 }: {
-  pathway: PathwayState | null
-  catalog: LiveCatalog
-  completed: PathwayId[]
-  onOpen: (id: PathwayId) => void
+  pathway: ResolvedPathway
+  state: PathwayState
   onContinue: () => void
 }) {
   const { t } = useI18n()
+  const week = currentWeek(state, pathway)
+  const plan = pathway.plan.find((w) => w.week === week)
+  const done = state.done[week] ?? 0
+  const target = plan ? weekCount(plan) : 0
+
   return (
-    <div className="pw-list">
-      {catalog.pathways.map((p) => {
-        const isActive = pathway?.id === p.id && !pathway.completedAt
-        const isDone = completed.includes(p.id) || (pathway?.id === p.id && Boolean(pathway.completedAt))
-        const week = isActive ? currentWeek(pathway, p) : 0
-        return (
-          <article key={p.id} className={`card pw-card${isActive ? ' is-active' : ''}`}>
-            <button className="pw-card__head" onClick={() => onOpen(p.id)}>
-              <span className="pw-card__name">{t(p.name)}</span>
-              {isActive && <span className="badge badge--on">{t('ACTIVE')}</span>}
-              {isDone && !isActive && <span className="badge">{t('COMPLETED')}</span>}
-              <span className="pw-card__chev" aria-hidden="true">›</span>
-            </button>
-            <p className="small muted">{t(p.blurb)}</p>
-            {isActive ? (
-              <>
-                <div className="pw-card__meta">{t('Week {n} of {total}', { n: week, total: p.weeks })}</div>
-                <button className="btn btn--primary" onClick={onContinue}>{t('Continue')}</button>
-              </>
-            ) : (
-              <>
-                <div className="pw-card__meta">
-                  {t(p.lengthLabel)} · {t('{per}/wk', { per: p.perWeekLabel })}
-                </div>
-                <button className="btn btn--ghost" onClick={() => onOpen(p.id)}>
-                  {isDone ? t('Restart') : t('Start Pathway')}
-                </button>
-              </>
-            )}
-          </article>
-        )
-      })}
-    </div>
+    <button className="card pw-continue" onClick={onContinue}>
+      <span className="eyebrow">{t('Your pathway')}</span>
+      <strong className="pw-continue__name">{t(pathway.name)}</strong>
+      <span className="small muted">
+        {t('Week {n} of {total}', { n: week, total: pathway.weeks })}
+        {target ? ` · ${t('{done} of {total} this week', { done, total: target })}` : ''}
+      </span>
+      <span className="pw-continue__bar" aria-hidden="true">
+        <i style={{ width: `${Math.round((week - 1 + (target ? done / target : 0)) / pathway.weeks * 100)}%` }} />
+      </span>
+      <span className="pw-continue__go">{t('Continue')}</span>
+    </button>
   )
 }
 
-/* ------------------------------------------------------------- EXP-3 ----- */
+/* ------------------------------------------------------- pathways rail ---
+
+   A category among the categories. The tab that used to hold these is gone:
+   a pathway is one more thing to browse, and putting it behind a mode switch
+   made the library feel like two apps. Big buttons rather than cover cards,
+   because a pathway is a commitment of weeks and should not look like a
+   six-minute session. */
+function PathwayRail({
+  pathways,
+  active,
+  completed,
+  onOpen,
+}: {
+  pathways: ResolvedPathway[]
+  active: PathwayId | null
+  completed: PathwayId[]
+  onOpen: (id: PathwayId) => void
+}) {
+  const { t } = useI18n()
+  if (!pathways.length) return null
+  return (
+    <section className="cat-rail pw-rail">
+      <header className="cat-rail__head">
+        <h3 className="cat__railtitle">{t('Pathways')}</h3>
+        <span className="small muted">{t('Several weeks, one theme')}</span>
+      </header>
+      <div className="cat-rail__track pw-rail__track">
+        {pathways.map((p) => (
+          <button
+            key={p.id}
+            className={`pw-big${active === p.id ? ' is-active' : ''}`}
+            onClick={() => onOpen(p.id)}
+          >
+            <span className="pw-big__name">{t(p.name)}</span>
+            <span className="pw-big__meta">
+              {t('{n} weeks', { n: p.weeks })}
+              {active === p.id ? ` · ${t('In progress')}` : completed.includes(p.id) ? ` · ${t('Completed')}` : ''}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ------------------------------------------------------------- EXP-1 -----
+
+   The pathway LIST is gone with its tab: `PathwayRail` above is what browsing
+   pathways looks like now. `PathwayDetail` stays — it is what opening one
+   shows. */
 
 function PathwayDetail({
   pathway,
@@ -359,9 +383,6 @@ function SessionDetail({
   onStart: (l: Launch) => void
 }) {
   const { t } = useI18n()
-  const [duration, setDuration] = useState<Duration>(
-    session.durations.includes(6) ? 6 : (session.durations[0] ?? 6),
-  )
   const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.blocks.some((b) => b.slug === session.slug)))
 
   const cover = coverFor(session.slug, session.theme)
@@ -377,10 +398,17 @@ function SessionDetail({
           {t('No recorded voice is published for this session yet — it plays an ambient bed.')}
         </p>
       )}
-      <div className="sheet__label">{t('Duration')}</div>
-      <div className="chip-row">
+      {/* The length IS the start. Choosing one and then pressing a second
+          button to confirm it added a step to the only decision left on this
+          screen — and the person had already decided by tapping. */}
+      <div className="sheet__label">{t('Choose a length to begin')}</div>
+      <div className="chip-row chip-row--start">
         {session.durations.map((d) => (
-          <button key={d} className="chip" aria-pressed={duration === d} onClick={() => setDuration(d)}>
+          <button
+            key={d}
+            className="chip chip--start"
+            onClick={() => onStart({ slug: session.slug, duration: d })}
+          >
             <span className="chip__label">{t(durationLabel(d))}</span>
             <span className="chip__hint">{t('{n} min', { n: d })}</span>
           </button>
@@ -398,9 +426,6 @@ function SessionDetail({
         </>
       )}
 
-      <button className="btn btn--primary" onClick={() => onStart({ slug: session.slug, duration })}>
-        {t('Start Session')} · {t(durationTag(duration))}
-      </button>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { useAuth, type Role } from './auth'
+import { stashSignupIntake } from '../data/selfUseStore'
 import { useI18n } from '../i18n'
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
@@ -21,6 +22,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
   const [companyCode, setCompanyCode] = useState('')
+  /* Consent is given HERE now. The seven onboarding screens are gone — a
+     person lands on the library the moment their account exists — so the two
+     answers that must precede any data being gathered are asked at
+     registration, which is the last honest moment to ask them. */
+  const [consentUsage, setConsentUsage] = useState(false)
+  const [consentMeasure, setConsentMeasure] = useState(true)
   const [team, setTeam] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +36,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     setError(null); setBusy(true)
     try {
       if (signup) {
+        /* Recorded BEFORE the account call, so a sign-up that succeeds can
+           never land on a library with no consent behind it. */
+        if (needsConsent) {
+          stashSignupIntake({
+            usage: consentUsage,
+            measurement: consentMeasure,
+            companyCode: companyCode.trim() || null,
+          })
+        }
         await auth.signUp(email.trim(), password, role, {
           name: name.trim() || undefined,
           crp: crp.trim() || undefined,
@@ -45,7 +61,11 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     }
   }
 
-  const canSubmit = !!email && !!password && (!signup || !isB2b || (!!name.trim() && !!crp.trim()))
+  const needsConsent = signup && !isB2b && !isAdmin && !isHr
+  const canSubmit =
+    !!email && !!password &&
+    (!signup || !isB2b || (!!name.trim() && !!crp.trim())) &&
+    (!needsConsent || consentUsage)
 
   return (
     /* The b2c door belongs to the Self Use surface, so it carries that
@@ -85,6 +105,25 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             </>}
           </>}
         </div>
+
+        {needsConsent && (
+          <div className="auth__consents">
+            <label className="auth__consent">
+              <input type="checkbox" checked={consentUsage} onChange={() => setConsentUsage((v) => !v)} />
+              <span>
+                <b>{t('App usage & session data')}</b> <em>{t('REQUIRED')}</em>
+                <small>{t('Used to remember your preferences and suggest the right sessions.')}</small>
+              </span>
+            </label>
+            <label className="auth__consent">
+              <input type="checkbox" checked={consentMeasure} onChange={() => setConsentMeasure((v) => !v)} />
+              <span>
+                <b>{t('Wellbeing check-ins')}</b>
+                <small>{t('Lets the app measure how you are doing over time. You can turn this off later.')}</small>
+              </span>
+            </label>
+          </div>
+        )}
 
         {error && <div className="auth__error">{error}</div>}
 

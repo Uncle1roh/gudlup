@@ -160,9 +160,24 @@ renders('HOME · A  pathway active', <Home {...homeProps} pathway={populated.pat
 renders('HOME · B  done today', <Home {...homeProps} pathway={populated.pathway} logs={populated.logs} weekLogs={populated.logs} />)
 renders('HOME · D  pathway complete', <Home {...homeProps} pathway={{ ...populated.pathway!, completedAt: Date.now() }} />)
 
-renders('EXP-1 Pathways', <Explore pathway={null} completed={[]} initialTab="pathways" onStartPathway={noop} onStart={noop} />)
-renders('EXP-2 All sessions', <Explore pathway={null} completed={[]} initialTab="sessions" onStartPathway={noop} onStart={noop} />)
-renders('EXP  active pathway', <Explore pathway={populated.pathway} completed={['focus-performance']} onStartPathway={noop} onStart={noop} />)
+/* Explore IS the home screen now — one library holding the rails, the
+   pathways rail and the continue card. The `initialTab` prop went with the
+   tab it selected; it lingered here for a while because tools/ is outside the
+   tsconfig include and never type-checked. */
+renders('HOME · library, no pathway', <Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />)
+renders('HOME · library, pathway running', <Explore pathway={populated.pathway} completed={['focus-performance']} onStartPathway={noop} onStart={noop} />)
+
+const homeHtml = renderToString(shell(<Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />))
+/* Asserted on the class, not the copy: this renders in the default locale
+   and "Pathways" is "Percorsi" there. */
+assert(homeHtml.includes('pw-rail'), 'the library carries a Pathways rail')
+assert(homeHtml.includes('pw-big'), 'and the pathways are big buttons, not cover cards')
+assert(!homeHtml.includes('role="tablist"'), 'and there is no tab bar to switch modes with')
+const homeRunning = renderToString(
+  shell(<Explore pathway={populated.pathway} completed={[]} onStartPathway={noop} onStart={noop} />),
+)
+assert(homeRunning.includes('pw-continue'), 'a running pathway puts its continue card above the rails')
+assert(!homeHtml.includes('pw-continue'), 'and there is no continue card when nothing is running')
 
 /* The catalog replaced the wireframe's vertical list. It has to render its
    hero, its rails and its cards — and still work with nothing published. */
@@ -424,7 +439,7 @@ renders('SAFE-3 modal', <SafetyLevel3 eap={null} onClose={noop} />)
 /* A person must never meet a protocol code on their own screens. */
 absent('THR · C', <TherapistTab {...therapistProps} hasConvention therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-ANX')
 absent('PRG-2', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-STRESS')
-absent('EXP-2', <Explore pathway={null} completed={[]} initialTab="sessions" onStartPathway={noop} onStart={noop} />, 'GL-')
+absent('HOME library', <Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />, 'GL-')
 
 /* ------------------------------------------------- Corporate Dashboard -- */
 console.log('\n--- Corporate Dashboard ---')

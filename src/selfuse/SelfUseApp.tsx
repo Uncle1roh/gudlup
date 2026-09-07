@@ -17,8 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/auth'
 import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
-import { Onboarding, type OnboardingResult } from './Onboarding'
-import { Home, type Launch } from './Home'
+import type { Launch } from './Home'
 import { Explore } from './Explore'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
@@ -27,23 +26,26 @@ import { ProfileTab } from './ProfileTab'
 import { GlCheckFlow, Who5Flow, DailyMoodFlow } from './Measures'
 import { SafetyLevel2, SafetyLevel3 } from './Safety'
 import { PatientVideoCall } from './VideoCall'
-import { useSelfUseStore, sessionsThisWeek, suggestedPathway } from '../data/selfUseStore'
+import { useSelfUseStore, takeSignupIntake } from '../data/selfUseStore'
 import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
 import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
-import { primaryBlock, weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
+import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
 import { safetyLevel2Trigger, dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 
-type Tab = 'home' | 'explore' | 'therapist' | 'progress' | 'profile'
+/* Home IS the library. There is no separate Explore tab: the rails, the
+   pathways and the continue card are one screen, because a person opening the
+   app wants to choose something, and a Home that only linked to the place
+   where you choose was a hop with nothing in it. */
+type Tab = 'home' | 'therapist' | 'progress' | 'profile'
 
 const TABS: { id: Tab; icon: IconName; label: string }[] = [
-  { id: 'home', icon: 'today', label: 'Home' },
-  { id: 'explore', icon: 'library', label: 'Explore' },
+  { id: 'home', icon: 'library', label: 'Home' },
   { id: 'therapist', icon: 'therapist', label: 'Therapist' },
   { id: 'progress', icon: 'progress', label: 'Progress' },
   { id: 'profile', icon: 'profile', label: 'Profile' },
@@ -83,7 +85,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { state: therapy, update: updateTherapy } = useTherapyStore(user?.id)
 
   const [tab, setTab] = useState<Tab>('home')
-  const [exploreTab, setExploreTab] = useState<'pathways' | 'sessions'>('pathways')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
   const [safety2, setSafety2] = useState(false)
@@ -194,43 +195,39 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     }
   }, [state.glChecks, state.moods, state.logs, state.onboardedAt, state.safetyShown, update])
 
-  /* ------------------------------------------------------- onboarding --- */
-  if (!state.onboardedAt) {
-    return (
-      <Onboarding
-        onComplete={(r: OnboardingResult) => {
-          const pathwayId = suggestedPathway(r.intake)
-          update((s) => ({
-            ...s,
-            onboardedAt: Date.now(),
-            companyCode: r.companyCode,
-            intake: r.intake,
-            consents: { ...s.consents, ...r.consents },
-            notifications: { ...s.notifications, selfUseReminderTime: r.intake.time ?? s.notifications.selfUseReminderTime },
-            prefs: { ...s.prefs, defaultDuration: r.intake.duration ?? s.prefs.defaultDuration, preferredTime: r.intake.time ?? s.prefs.preferredTime },
-            pathway: { id: pathwayId, startedAt: Date.now(), done: {} },
-          }))
-          if (r.startNow) {
-            const p = findPathway(catalog.pathways, pathwayId)
-            const first = p?.plan[0]
-            // The first session is always Quick, whatever length they chose —
-            // six minutes is the promise the welcome screen made.
-            const lead = first ? primaryBlock(first) : undefined
-            /* Six minutes is the promise the welcome screen made — but only
-               if six minutes exists. `resolvePathway` guarantees the block's
-               own duration is published, not that 6 is, so hard-coding it
-               made the very first session a new person ever hears the
-               placeholder bed whenever the PO published 12 and 24 only. */
-            if (lead) {
-              const offered = catalog.sessions.find((x) => x.slug === lead.slug)?.durations ?? []
-              const duration = offered.includes(6) ? 6 : (offered[0] ?? lead.duration)
-              setLaunch({ slug: lead.slug, duration, pathwayWeek: 1 })
-            }
-          }
-        }}
-      />
-    )
-  }
+  /* ------------------------------------------------------ first run -----
+
+     There is no onboarding any more. A person registers and lands on the
+     library: the seven screens that used to stand between the two — welcome,
+     account, consents, four intake questions, a recommended pathway and a
+     "ready for your first session?" flourish — are gone. Consent is taken at
+     registration, which is the last honest moment to ask for it, and the
+     company code is a field on the same form.
+
+     Nobody is recommended a pathway any more either. They browse the Pathways
+     rail and choose one, which is a smaller promise than a recommendation
+     built from four questions.
+
+     This effect is what "first run" now means: apply what registration
+     answered and mark the account started. An account that arrives without a
+     handoff — an existing person signing in on a new device — is marked
+     started with usage consent only, because they consented when they
+     registered and this device simply has not heard about it. */
+  useEffect(() => {
+    if (state.onboardedAt) return
+    const signup = takeSignupIntake()
+    const now = Date.now()
+    update((s) => (s.onboardedAt ? s : {
+      ...s,
+      onboardedAt: now,
+      companyCode: signup?.companyCode ?? s.companyCode,
+      consents: {
+        ...s.consents,
+        usageAt: s.consents.usageAt ?? now,
+        measurementAt: signup ? (signup.measurement ? now : null) : s.consents.measurementAt,
+      },
+    }))
+  }, [state.onboardedAt, update])
 
   /* ------------------------------------------------------ the session --- */
   if (launch) {
@@ -399,7 +396,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   /* ------------------------------------------------------------ tabs ---- */
-  const weekLogs = sessionsThisWeek(state.logs)
 
   function startPathway(id: PathwayId) {
     update((s) => ({ ...s, pathway: { id, startedAt: Date.now(), done: {} } }))
@@ -457,26 +453,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     <div className="app-frame app-frame--tabs su-studio">
       <div className="tabview">
         {tab === 'home' && (
-          <Home
-            name={displayName(user?.email)}
-            pathway={state.pathway}
-            logs={state.logs}
-            weekLogs={weekLogs}
-            hasNotifications={false}
-            onStart={(l) => setLaunch(l)}
-            onExplore={() => { setExploreTab('pathways'); setTab('explore') }}
-            onAllSessions={() => { setExploreTab('sessions'); setTab('explore') }}
-            onHistory={() => setTab('progress')}
-            onNotifications={() => setTab('progress')}
-          />
-        )}
-
-        {tab === 'explore' && (
           <Explore
-            key={exploreTab}
             pathway={state.pathway}
             completed={state.completedPathways.map((c) => c.id)}
-            initialTab={exploreTab}
             onStartPathway={startPathway}
             onStart={startFromExplore}
           />

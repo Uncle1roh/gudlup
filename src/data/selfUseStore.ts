@@ -28,6 +28,51 @@ const VERSION = 1
 
 /** ON-3 + ON-7. Each consent carries its OWN timestamp — that is the whole
     point of the two screens being separate. `null` = never answered. */
+/* ------------------------------------------------- the registration handoff
+
+   Consent is given during REGISTRATION now — the seven onboarding screens are
+   gone and a person lands on the library as soon as their account exists. The
+   sign-in screen is generic (it serves clinicians and admins too) and has no
+   access to this store, which is keyed by a user id that does not exist until
+   the account is made. So the two answers travel here in one small record and
+   are applied the first time the Self Use app renders for that account.
+
+   Deliberately not a component prop: the sign-up screen unmounts the moment
+   the session appears, and the app that reads this may mount on the other side
+   of a page load. */
+
+const SIGNUP_KEY = 'gl.signup'
+
+export interface SignupIntake {
+  /** REQUIRED — app usage & session data. Registration cannot proceed without it. */
+  usage: boolean
+  /** Wellbeing check-ins: measurement is off unless it is given. */
+  measurement: boolean
+  companyCode: string | null
+}
+
+export function stashSignupIntake(v: SignupIntake): void {
+  try { localStorage.setItem(SIGNUP_KEY, JSON.stringify(v)) } catch { /* private mode */ }
+}
+
+/** Read it once and clear it — a second account on this device must answer
+    for itself rather than inheriting the last person's consent. */
+export function takeSignupIntake(): SignupIntake | null {
+  try {
+    const raw = localStorage.getItem(SIGNUP_KEY)
+    localStorage.removeItem(SIGNUP_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw) as Partial<SignupIntake>
+    return {
+      usage: p.usage === true,
+      measurement: p.measurement === true,
+      companyCode: typeof p.companyCode === 'string' && p.companyCode.trim() ? p.companyCode.trim() : null,
+    }
+  } catch {
+    return null
+  }
+}
+
 export interface Consents {
   /** REQUIRED — app usage & session data. */
   usageAt: number | null
