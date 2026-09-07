@@ -131,11 +131,13 @@ begin
       -- ONLY the (therapist_id, starts_at) one. Dropping every unique
       -- constraint on the table would be a much bigger promise than this
       -- script is making.
-      and (
-        select array_agg(att.attname order by att.attname)
-        from unnest(con.conkey) k
-        join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k
-      ) = array['starts_at', 'therapist_id']
+      --
+      -- Matched on the constraint's own DEFINITION text rather than by
+      -- assembling its column list from pg_attribute: that version compared a
+      -- name[] to a text[] and there is no operator for it, which is a class
+      -- of mistake this comparison cannot make.
+      and pg_get_constraintdef(con.oid) ilike '%therapist_id%'
+      and pg_get_constraintdef(con.oid) ilike '%starts_at%'
   loop
     execute format('alter table appointments drop constraint %I', c.conname);
   end loop;
