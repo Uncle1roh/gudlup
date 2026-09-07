@@ -69,6 +69,15 @@ export interface DataProvider {
      clinical record all hang off it. Before these methods each side kept its
      own copy in its own browser and neither ever reached the other. */
 
+  /**
+   * The company code on the signed-in person's own profile.
+   *
+   * Onboarding asks for it and keeps it in this browser, which is fine until
+   * the person signs in somewhere else — or is provisioned server-side, where
+   * onboarding never ran. The convention (professional support, the company's
+   * own crisis contacts) then silently resolved to nothing.
+   */
+  getMyCompanyCode(): Promise<string | null>
   /** The signed-in person's therapist, or null when they have none. */
   getMyTherapistLink(): Promise<TherapistLink | null>
   /** Connect to a therapist with the code they gave you. Idempotent. */

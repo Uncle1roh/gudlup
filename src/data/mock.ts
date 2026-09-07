@@ -393,6 +393,7 @@ export function createMockProvider(): DataProvider {
     },
 
     // --- the therapist ↔ patient link ---
+    getMyCompanyCode: () => delay('ACME-2026' as string | null),
     getMyTherapistLink: () => delay({ ...link }),
     redeemTherapistCode: async (code: string) => {
       await wait()

@@ -166,8 +166,18 @@ export function TherapistTab(props: TherapistTabProps) {
     )
   }
 
-  /* --------------------------------------------------------- State B ----- */
-  if (!props.hasConvention) {
+  /* --------------------------------------------------------- State B -----
+
+     "Your plan does not include professional support" — and therefore NOT
+     when the person is already in therapy. A linked patient reaching this
+     screen was told their plan has no therapist while having one, and handed
+     a button back to Self Use: the therapist tab simply disappeared for them.
+
+     The convention is read from the company code in this browser, so anyone
+     whose link came from anywhere else — a therapist connecting them from the
+     console, a second device, an account provisioned server-side — landed
+     here. The link is the fact that matters, so it is checked first. */
+  if (!props.hasConvention && !therapy.link) {
     return (
       <div className="su-page thr-info">
         <h1 className="display su-h1">{t('Therapist')}</h1>

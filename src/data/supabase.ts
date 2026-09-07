@@ -716,6 +716,13 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
        own row (supabase/6-two-sided-care.sql). Everything below is either
        that one row or a SECURITY DEFINER function that writes it. */
 
+    async getMyCompanyCode() {
+      const uid = await authUid()
+      const { data, error } = await sb.from('profiles').select('company_id').eq('auth_uid', uid).maybeSingle()
+      if (error) return null
+      return ((data as { company_id: string | null } | null)?.company_id) ?? null
+    },
+
     async getMyTherapistLink() {
       const { data, error } = await sb.rpc('my_therapist_link')
       if (error) return null

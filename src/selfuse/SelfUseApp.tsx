@@ -139,6 +139,23 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     return () => { alive = false }
   }, [dp, update])
 
+  /* The company on the person's PROFILE, when this browser does not know one.
+     Onboarding writes it locally; an account that never went through
+     onboarding here — a second device, or one provisioned server-side — had no
+     company, so the convention resolved to nothing and the app told them their
+     plan has no professional support. A code typed here is never overwritten. */
+  useEffect(() => {
+    if (state.companyCode) return
+    let alive = true
+    void dp.getMyCompanyCode()
+      .then((code) => {
+        if (!alive || !code) return
+        update((s) => (s.companyCode ? s : { ...s, companyCode: code }))
+      })
+      .catch(() => { /* offline: no convention, which is the safe default */ })
+    return () => { alive = false }
+  }, [dp, state.companyCode, update])
+
   useEffect(() => {
     let alive = true
     void dp.getMyTherapistLink()
