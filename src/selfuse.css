@@ -18,7 +18,16 @@
 .su-page {
   flex: 1;
   padding: max(22px, env(safe-area-inset-top)) 22px 28px;
-  animation: screen-in 320ms var(--ease) both;
+  /* `backwards`, not `both`.
+
+     With `both` the last keyframe stayed applied after the animation ended,
+     which left a `transform` on this element forever. A transformed ancestor
+     becomes the containing block for `position: fixed` descendants, so the
+     floating help button was fixed to THE PAGE rather than to the viewport
+     and scrolled away with it. `backwards` applies the first keyframe before
+     the animation starts and nothing at all after it ends, which is the same
+     entrance with no residue. */
+  animation: screen-in 320ms var(--ease) backwards;
 }
 .su-h1 { font-size: clamp(24px, 7vw, 30px); line-height: 1.15; }
 .su-back {

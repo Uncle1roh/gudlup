@@ -36,6 +36,9 @@ interface ExploreProps {
   completed: PathwayId[]
   onStartPathway: (id: PathwayId) => void
   onStart: (l: Launch) => void
+  /** What is typed in the top bar's search field. */
+  query?: string
+  onQuery?: (q: string) => void
 }
 
 type View =
@@ -45,7 +48,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery }: ExploreProps) {
   const { t } = useI18n()
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'list' })
@@ -124,6 +127,22 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart }: E
         </h1>
       </header>
 
+      {/* The same search as the top bar's, for the widths that have no top
+          bar. One state behind both, so it is one search field that happens
+          to be drawn in the place each layout has room for. */}
+      {onQuery && (
+        <label className="su-search su-search--page">
+          <Icon name="search" size={16} />
+          <input
+            type="search"
+            value={query}
+            placeholder={t('Search sessions')}
+            aria-label={t('Search sessions')}
+            onChange={(e) => onQuery(e.target.value)}
+          />
+        </label>
+      )}
+
       <Catalog
         catalog={catalog}
         featuredSlug={todaySlug}
@@ -143,10 +162,24 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart }: E
             active={pathway?.id ?? null}
             completed={completed}
             onOpen={(id) => setView({ kind: 'pathway', id })}
-            onHelp={() => setView({ kind: 'finder' })}
           />
         }
+        query={query}
+        onClearQuery={() => onQuery?.('')}
       />
+
+      {/* The four intake questions, one tap from anywhere on the library.
+          They used to be a gate everybody answered before seeing the app,
+          then a text link in the Pathways rail header — which is where a
+          person who is already lost is least likely to look. */}
+      <button
+        className="btn cat-rail__help"
+        onClick={() => setView({ kind: 'finder' })}
+        title={t('Help me choose')}
+        aria-label={t('Help me choose')}
+      >
+        <Icon name="help" size={22} />
+      </button>
     </div>
   )
 }
@@ -198,13 +231,11 @@ function PathwayRail({
   active,
   completed,
   onOpen,
-  onHelp,
 }: {
   pathways: ResolvedPathway[]
   active: PathwayId | null
   completed: PathwayId[]
   onOpen: (id: PathwayId) => void
-  onHelp: () => void
 }) {
   const { t } = useI18n()
   if (!pathways.length) return null
@@ -212,22 +243,6 @@ function PathwayRail({
     <section className="cat-rail pw-rail">
       <header className="cat-rail__head">
         <h3 className="cat__railtitle">{t('Pathways')}</h3>
-        {/* The four intake questions live behind this now. They used to be a
-            gate everybody answered before seeing the app; they are an offer
-            for the person who opens this rail and does not know which to
-            pick. */}
-        {/* A floating button, not a text link in a rail header. Someone who
-            does not know which pathway to pick is the last person who will
-            find help in 12px type beside a heading — so it follows them down
-            the page and says what it is on hover and to a screen reader. */}
-        <button
-          className="btn cat-rail__help"
-          onClick={onHelp}
-          title={t('Help me choose')}
-          aria-label={t('Help me choose')}
-        >
-          <span aria-hidden="true">?</span>
-        </button>
       </header>
       <div className="cat-rail__track pw-rail__track">
         {pathways.map((p) => (

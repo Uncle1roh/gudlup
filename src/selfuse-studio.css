@@ -409,8 +409,23 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   grid-template-rows: auto 1fr auto;
   padding: max(28px, env(safe-area-inset-top)) var(--su-inset) max(30px, env(safe-area-inset-bottom));
 }
-.su-studio .hud__top { align-items: center; gap: 12px; }
-.su-studio .hud__spacer { width: 38px; }
+/* Three columns, not space-between: with a close button on one side and a
+   spacer on the other, "centred" only held while the two happened to be the
+   same width, and they were not — so the phase label sat left of centre on
+   every screen. The outer columns are equal by construction now. */
+.su-studio .hud__top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.su-studio .hud__phase { text-align: center; }
+.su-studio .hud__x { justify-self: start; }
+.su-studio .hud__spacer { width: 38px; justify-self: end; }
+/* Everything on the player is centred on the orb's axis. */
+.su-studio .player,
+.su-studio .player__hint,
+.su-studio .hud { text-align: center; }
 .su-studio .hud__foot {
   grid-row: 3;
   display: flex;
@@ -441,6 +456,19 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   color: var(--su-muted);
   text-align: center;
 }
+
+/* The support route on the post-session screen: quiet, but a real target. */
+.su-studio .post__support {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 10px 16px;
+  margin-top: 4px;
+  color: var(--su-muted);
+}
+.su-studio .post__support:hover { color: var(--su-fg-2); }
 .su-studio .player__sub,
 .su-studio .player .small { font-size: 12px; color: var(--su-muted); }
 
@@ -972,6 +1000,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .filter-row { gap: var(--su-gap-sm); margin: 0; }
 
 /* --- cards agree about their own insides --------------------------------- */
+/* Cards were 16/18 with a 12px gap, and on the Therapist and Progress tabs —
+   the two screens whose cards carry a heading, a paragraph, a row of data AND
+   an action — that put five things inside one border with no air between any
+   of them. A card is a held thought; it needs room to be one. */
 .su-studio .card,
 .su-studio .sess-card,
 .su-studio .pw-card,
@@ -979,11 +1011,28 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .msr,
 .su-studio .thr-card,
 .su-studio .asmt-card {
-  padding: 16px 18px;
+  padding: 20px 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: var(--su-gap-sm);
+  gap: 14px;
 }
+/* A card's own action stands clear of the reading above it. */
+.su-studio .card > .btn:last-child:not(:only-child) { margin-top: 4px; }
+
+/* The rows INSIDE those cards, which were the tightest thing on either tab. */
+.su-studio .thr-card { gap: 14px; }
+.su-studio .thr-hero { gap: 14px; }
+.su-studio .thr-card__id { gap: 14px; }
+.su-studio .chron__row { padding-top: 12px; padding-bottom: 12px; }
+.su-studio .goals { gap: 12px; }
+.su-studio .statgrid { gap: 14px; margin-top: 0; }
+.su-studio .msgs { gap: 14px; margin: 4px 0; }
+.su-studio .slotday { margin-bottom: 18px; }
+.su-studio .slotday__row { gap: 10px; margin-top: 10px; }
+.su-studio .slot { padding: 10px 14px; }
+.su-studio .msr-bars { gap: 12px; }
+.su-studio .consent-row + .consent-row { margin-top: 14px; }
+.su-studio .rx-card__top { gap: 10px; }
 .su-studio .card > * { margin: 0; }
 
 /* --- lists ---------------------------------------------------------------- */
@@ -1053,11 +1102,28 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .mood-grid,
 .su-studio .statgrid,
 .su-studio .chip-row,
-.su-studio .filter-row,
 .su-studio .msr-bars,
 .su-studio .scorelist,
 .su-studio .chron,
 .su-studio .goals { margin-left: 0; margin-right: 0; width: 100%; }
+
+/* The filter chips SCROLL, so they belong with the rails and not with the
+   grids above. Held inside the column they were clipped dead at the inset:
+   the last chip lost its right half with nothing to say it could be scrolled
+   to, which read as a broken row rather than a long one. Bleeding them to the
+   edge means a chip is half-visible on purpose, which is the invitation. */
+.su-studio .cat__filters .filter-row,
+.su-studio .filter-row {
+  margin-left: calc(var(--su-inset) * -1);
+  margin-right: calc(var(--su-inset) * -1);
+  padding-left: var(--su-inset);
+  /* a little more on the trailing edge so the last chip clears the corner */
+  padding-right: calc(var(--su-inset) + 8px);
+  padding-bottom: 2px;
+  scroll-padding-left: var(--su-inset);
+  width: auto;
+}
+.su-studio .filter-chip { white-space: nowrap; }
 
 /* --- the measures read as one table, not as rows that each chose a width -- */
 .su-studio .msr-bars { margin: 0; }
@@ -1390,6 +1456,57 @@ body:has(.su-studio) { overflow: hidden; }
 .su-studio .cat-rail__help:hover { background: var(--su-cream-2); color: #070d0c; }
 .su-studio .cat-rail__help span { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1; }
 
+/* --- search -------------------------------------------------------------
+
+   One field, drawn where each layout has room for it: in the top bar on a
+   desktop, under the greeting on a phone. Both write the same state, so it is
+   one search that happens to have two places to stand. */
+
+.su-studio .su-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--su-well);
+  border: 1px solid var(--su-hair);
+  color: var(--su-muted);
+  transition: border-color 160ms, background 160ms;
+}
+.su-studio .su-search:focus-within {
+  border-color: rgba(31, 191, 148, 0.5);
+  background: var(--su-raised);
+}
+.su-studio .su-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--su-fg);
+  font: inherit;
+  font-size: 14px;
+}
+.su-studio .su-search input::placeholder { color: var(--su-faint); }
+/* the browser's own clear affordance, in the page's colours */
+.su-studio .su-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--su-faint);
+  mask: radial-gradient(circle, #000 99%, transparent) exclude;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* On a phone the top bar is four icons at the foot of the screen: no room,
+   and no sense in putting a text field there. */
+.su-studio .su-search--bar { display: none; }
+.su-studio .su-search--page { width: 100%; }
+
+.su-studio .tabbar__brand { display: none; }
+
 /* ========================================================= 05 · DESKTOP ===
 
    The canvas's fifth frame is 1440x900: a 232px rail on the left, content on
@@ -1447,7 +1564,11 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio { --su-inset: 40px; }
   .su-studio .su-page {
     padding: 34px var(--su-inset) 40px;
-    max-width: 1180px;
+    /* No cap. A 1180px column pinned to the left of a wide window left most
+       of the screen empty and the app looking like it had failed to load the
+       rest of itself. The category column and the rails take the width. */
+    max-width: none;
+    width: 100%;
   }
 
   /* ---- the categories, standing down the side ----
@@ -1510,24 +1631,37 @@ body:has(.su-studio) { overflow: hidden; }
     border-top: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
-  /* the wordmark the canvas puts at the head of the rail: one pseudo-element
-     carrying the breathing orb as its bullet, so it needs no markup */
-  .su-studio .tabbar::before {
-    content: 'Good Loop';
+  /* The wordmark, with the breathing orb as its bullet. It was a
+     pseudo-element while it was the only thing here; it is real markup now
+     because the search field has to sit between it and the tabs. */
+  .su-studio .tabbar__brand {
     display: flex;
     align-items: center;
-    margin: 0 26px 0 0;
-    padding: 0 0 0 32px;
-    min-height: 22px;
+    gap: 10px;
+    flex: 0 0 auto;
+    margin-right: 22px;
     font-family: var(--display);
     font-size: 16px;
     font-weight: 500;
     color: var(--su-fg);
-    background-image: radial-gradient(circle at 34% 30%, #f6f3d6 0%, #1fbf94 54%, #0f6b52 100%);
-    background-repeat: no-repeat;
-    background-position: 10px center;
-    background-size: 22px 22px;
   }
+  .su-studio .tabbar__mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-image: radial-gradient(circle at 34% 30%, #f6f3d6 0%, #1fbf94 54%, #0f6b52 100%);
+  }
+
+  /* Between the logo and the buttons, and it takes the slack: the tabs keep
+     their width, the field grows into whatever is left. */
+  .su-studio .su-search--bar {
+    display: flex;
+    flex: 1 1 auto;
+    max-width: 460px;
+    margin-right: 22px;
+  }
+  /* one field per layout: the page one steps aside where the bar has one */
+  .su-studio .su-search--page { display: none; }
   .su-studio .tabbar__btn {
     flex: 0 0 auto;
     flex-direction: row;

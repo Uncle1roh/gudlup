@@ -28,7 +28,7 @@ import { durationLabel } from '../data/selfuse'
 import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
 import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
-import { Icon, type IconName } from './icons'
+import { Icon } from './icons'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -593,13 +593,6 @@ function ImmersiveSession({
 
 /* --------------------------------------------------------- SES-4 / SES-5 -- */
 
-const FEEDBACK: { id: PostFeedback; icon: IconName; label: string }[] = [
-  { id: 'relaxed', icon: 'relaxed', label: 'Relaxed' },
-  { id: 'neutral', icon: 'neutral', label: 'Neutral' },
-  { id: 'restless', icon: 'restless', label: 'Restless' },
-  { id: 'support', icon: 'support', label: 'Need support' },
-]
-
 function PostSession({
   session,
   duration,
@@ -618,8 +611,8 @@ function PostSession({
 
   function choose(f: PostFeedback) {
     setPicked(f)
-    // "Need support" hands over immediately; the others are stored silently and
-    // acknowledged with one line, then the person leaves at their own pace.
+    // Support hands over immediately rather than waiting for the person to
+    // press on to the next screen first.
     if (f === 'support') onFeedback('support', vas)
   }
 
@@ -631,35 +624,29 @@ function PostSession({
           <p className="muted post__what">{t(session.name)} · {t('{n} min', { n: duration })}</p>
           {isDeep && <p className="lead post__reorient">{t('Take a moment before moving on.')}</p>}
 
-          {/* The second half of the pair, asked in the reorientation moment the
-              session ends on. It is the same scale as before the session — a
-              delta between two different questions would mean nothing. */}
+          {/* ONE question, asked once.
+
+              This screen used to ask the same thing twice: the VAS faces, and
+              then a row of mood chips underneath — "How do you feel right
+              now?" followed by "How are you feeling?". Two askings of one
+              question read as not having listened to the first answer, and
+              the second reading was never used for anything the first was not.
+
+              The VAS is the half that stays, because it is the same scale as
+              the one before the session and the delta between them is the
+              only number here that means anything. */}
           <div className="vas-block">
             <p className="small">{t('How do you feel right now?')}</p>
             <VasRow value={vas} onPick={setVas} />
           </div>
 
-          <div className="post__feedback">
-            <div className="post__q">
-              {t('How are you feeling?')} <span className="post__opt">{t('Optional')}</span>
-            </div>
-            <div className="post__row">
-              {FEEDBACK.map((f) => (
-                <button
-                  key={f.id}
-                  className="post__chip"
-                  aria-pressed={picked === f.id}
-                  onClick={() => choose(f.id)}
-                >
-                  <span className="post__icon" aria-hidden="true"><Icon name={f.icon} size={24} /></span>
-                  <span>{t(f.label)}</span>
-                </button>
-              ))}
-            </div>
-            {picked && picked !== 'support' && (
-              <p className="small muted fade-in">{t('Thanks for sharing.')}</p>
-            )}
-          </div>
+          {/* What the chip row carried that the VAS cannot: the way out. It is
+              not a mood option among four — asking someone to rank "I need
+              support" beside "Relaxed" was always the wrong shape — it is a
+              door, standing open. */}
+          <button className="btn btn--quiet post__support" onClick={() => choose('support')}>
+            <Icon name="support" size={16} /> {t('I need support')}
+          </button>
 
           {contextLine && <p className="small muted post__context">{contextLine}</p>}
         </div>

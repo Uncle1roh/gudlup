@@ -29,6 +29,7 @@ export type IconName =
   | 'forward10'
   | 'close'
   | 'search'
+  | 'help'
   | 'tune'
   | 'bell'
   | 'check'
@@ -109,6 +110,14 @@ const PATHS: Record<IconName, JSX.Element> = {
   ),
   close: <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></>,
+  /* a question mark drawn as strokes, so it inherits the set's weight
+     instead of arriving as a glyph in whatever font happens to load */
+  help: (
+    <>
+      <path d="M9 9a3 3 0 1 1 3.6 2.94c-.9.2-1.6 1-1.6 1.96V15" />
+      <path d="M12 18.2v.1" />
+    </>
+  ),
   tune: (
     <>
       <path d="M4 7h10" /><path d="M18 7h2" /><circle cx="16" cy="7" r="2" />

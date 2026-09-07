@@ -25,7 +25,7 @@ import { PathwayFinder } from '../src/selfuse/PathwayFinder'
 import { Explore } from '../src/selfuse/Explore'
 import { Catalog } from '../src/selfuse/Catalog'
 import { coverFor, coverStyle, coverSvg } from '../src/selfuse/artwork'
-import { ProgressTab, GuidedProgress } from '../src/selfuse/ProgressTab'
+import { ProgressTab } from '../src/selfuse/ProgressTab'
 import { ProfileTab } from '../src/selfuse/ProfileTab'
 import { TherapistTab } from '../src/selfuse/TherapistTab'
 import { GlCheckFlow, Who5Flow, DailyMoodFlow } from '../src/selfuse/Measures'
@@ -201,9 +201,9 @@ const progressProps = {
   onGlCheck: noop, onWho5: noop, onMood: noop, onGoTherapist: noop,
   onExportSelfUse: noop, onExportTherapy: noop,
 }
-renders('PRG-1 Self Use, empty', <ProgressTab {...progressProps} state={fresh} />)
-renders('PRG-1 Self Use, populated', <ProgressTab {...progressProps} state={populated} />)
-renders('PRG-2 Therapist Guided', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />)
+renders('PRG empty', <ProgressTab {...progressProps} state={fresh} />)
+renders('PRG populated', <ProgressTab {...progressProps} state={populated} />)
+renders('PRG with a therapist', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />)
 
 const profileProps = {
   name: 'Sofia Marchetti', email: 'sofia.m@company.com',
@@ -397,14 +397,24 @@ assert(
 )
 assert(VAS_DELTA_RANGE === 4, 'a 1-5 delta spans 4, which is what a chart of it must be scaled to')
 
-/* The Progress tab told the person the VAS was never collected in the app.
-   It is, now: one tap either side of every session. */
+/* Progress is two cards now: how the week felt, and the mood calendar. The
+   session counts, streaks, minutes, pathway bars and adherence readings that
+   used to sit around them are gone on purpose - a person opens this tab to
+   see themselves, not to be counted - so the tab must NOT grow them back. */
 const progHtml = renderToString(
-  shell(<GuidedProgress {...progressProps} state={populated} therapy={{ link: seeded, request: null }} />),
+  shell(<ProgressTab {...progressProps} state={populated} therapy={{ link: seeded, request: null }} />),
 )
 const progText = progHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 assert(!/mai raccolt|never collected/i.test(progText), 'the Progress tab no longer denies collecting the VAS in the app')
-assert(/prima e dopo|before and after/i.test(progText), 'and says what the check actually is')
+assert(/Mood calendar|Calendario/i.test(progText), 'Progress keeps the mood calendar')
+for (const gone of ['day streak', 'giorni di fila', 'minutes total', 'Pathway progress', 'Therapist Guided']) {
+  assert(!progText.includes(gone), `Progress no longer shows "${gone}"`)
+}
+/* The VAS pre/post card it used to check for belonged to the Therapist
+   Guided view, which is gone: the pair is still collected either side of
+   every session and still reaches the clinician, it is simply no longer
+   read back to the person on this tab. */
+assert(/settimana|week/i.test(progText), 'Progress still reports the week against the one before it')
 
 /* --- the Therapist tab, reviewed as a page ---------------------------------
    Three defects it used to ship with, each asserted against here. */
@@ -449,7 +459,7 @@ renders('SAFE-3 modal', <SafetyLevel3 eap={null} onClose={noop} />)
 
 /* A person must never meet a protocol code on their own screens. */
 absent('THR · C', <TherapistTab {...therapistProps} hasConvention therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-ANX')
-absent('PRG-2', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-STRESS')
+absent('PRG', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-STRESS')
 absent('HOME library', <Explore name="Sofia" pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />, 'GL-')
 
 /* ------------------------------------------------- Corporate Dashboard -- */

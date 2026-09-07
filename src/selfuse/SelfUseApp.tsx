@@ -85,6 +85,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { state: therapy, update: updateTherapy } = useTherapyStore(user?.id)
 
   const [tab, setTab] = useState<Tab>('home')
+  /* One search, shared by the top bar and the library's own header, so a
+     query typed in either place is the same query. */
+  const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
   const [safety2, setSafety2] = useState(false)
@@ -459,6 +462,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             completed={state.completedPathways.map((c) => c.id)}
             onStartPathway={startPathway}
             onStart={startFromExplore}
+            query={query}
+            onQuery={setQuery}
           />
         )}
 
@@ -504,6 +509,30 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       </div>
 
       <nav className="tabbar">
+        {/* The wordmark was a `::before` on this nav — fine while it was
+            decoration, wrong the moment anything had to sit next to it. It is
+            an element now so the search field can stand between it and the
+            tabs, which is where the desktop layout has room for one. Both are
+            hidden at phone widths, where this nav is four icons at the foot
+            of the screen and the search lives in the library's own header. */}
+        <span className="tabbar__brand" aria-hidden="true">
+          <span className="tabbar__mark" />
+          Good Loop
+        </span>
+
+        <label className="su-search su-search--bar">
+          <Icon name="search" size={16} />
+          <input
+            type="search"
+            value={query}
+            placeholder={t('Search sessions')}
+            aria-label={t('Search sessions')}
+            /* Searching is a thing you do to the library, so it takes you
+               there rather than filtering a screen you cannot see. */
+            onChange={(e) => { setQuery(e.target.value); if (e.target.value) setTab('home') }}
+          />
+        </label>
+
         {TABS.map((tb) => (
           <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => setTab(tb.id)}>
             <span className="tabbar__icon"><Icon name={tb.icon} /></span>

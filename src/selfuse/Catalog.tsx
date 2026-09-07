@@ -56,6 +56,12 @@ interface CatalogProps {
   /** The PATHWAYS rail, rendered among the categories. A pathway is one more
       thing to browse, not a separate mode with its own tab. */
   pathwaysSlot?: ReactNode
+  /** What was typed in the search field in the top bar. A non-empty query
+      narrows this screen exactly the way a category does — same results grid,
+      same "clear" — because to a person searching and filtering are one act,
+      and giving them two different-looking answers would say otherwise. */
+  query?: string
+  onClearQuery?: () => void
 }
 
 interface Rail {
@@ -65,7 +71,18 @@ interface Rail {
   items: ResolvedSession[]
 }
 
-export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathway, onOpenPathway, moodsSlot, pathwaysSlot }: CatalogProps) {
+export function Catalog({
+  catalog,
+  featuredSlug,
+  onOpen,
+  onQuickStart,
+  heroPathway,
+  onOpenPathway,
+  moodsSlot,
+  pathwaysSlot,
+  query = '',
+  onClearQuery,
+}: CatalogProps) {
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
@@ -73,16 +90,24 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
      other category does — everything else steps aside rather than the person
      scrolling past it. */
   const [onlyPathways, setOnlyPathways] = useState(false)
-  const filtering = dur !== 'all' || theme !== 'all'
+  const q = query.trim().toLowerCase()
+  const filtering = dur !== 'all' || theme !== 'all' || q !== ''
 
   const all = catalog.browsable
 
   const filtered = useMemo(
     () =>
-      all.filter(
-        (s) => (dur === 'all' || s.durations.includes(dur)) && (theme === 'all' || s.theme === theme),
-      ),
-    [all, dur, theme],
+      all.filter((s) => {
+        if (dur !== 'all' && !s.durations.includes(dur)) return false
+        if (theme !== 'all' && s.theme !== theme) return false
+        if (!q) return true
+        /* The name a person reads, what it is for, and its category — never
+           the protocol code. A code is a clinical identifier and must not be
+           a way a person finds anything, or typing one would confirm it
+           exists and what it treats. */
+        return [s.name, s.blurb, s.theme].some((f) => (f ?? '').toLowerCase().includes(q))
+      }),
+    [all, dur, theme, q],
   )
 
   const hero = useMemo(() => {
@@ -234,14 +259,20 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
             <h3 className="cat__railtitle">
               {t('{n} sessions', { n: filtered.length })}
             </h3>
-            <button className="btn btn--quiet" onClick={() => { setDur('all'); setTheme('all') }}>
+            <button
+              className="btn btn--quiet"
+              onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}
+            >
               {t('Clear filters')}
             </button>
           </div>
           {!filtered.length ? (
             <div className="empty">
-              <p>{t('No sessions match.')}</p>
-              <button className="btn btn--ghost" onClick={() => { setDur('all'); setTheme('all') }}>
+              <p>{q ? t('Nothing matches "{q}".', { q: query.trim() }) : t('No sessions match.')}</p>
+              <button
+                className="btn btn--ghost"
+                onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}
+              >
                 {t('Clear filters')}
               </button>
             </div>
