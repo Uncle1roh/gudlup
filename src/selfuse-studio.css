@@ -385,8 +385,48 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
     radial-gradient(120% 80% at 50% 10%, rgba(31, 191, 148, 0.18), rgba(0, 0, 0, 0) 62%),
     linear-gradient(180deg, #0a1211 0%, #060b0a 100%);
 }
-.su-studio .player__time,
+/* --- the session screen, top to bottom -----------------------------------
+
+   The orb sits in the middle of the stage and never fades; the clock, the
+   phase strip and the transport stack at the foot. The clock used to live in
+   the TOP bar beside the phase label at this size, which is where a 46px
+   numeral has nowhere to go — that is what made the screen read as broken. */
+
+.su-studio .player {
+  display: grid;
+  place-items: center;
+}
+.su-studio .player__orb {
+  position: relative;
+  z-index: 1;
+  /* lifted off centre so the clock and controls below have their own room */
+  margin-bottom: 18vh;
+  pointer-events: none;
+}
+
+.su-studio .hud {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: max(28px, env(safe-area-inset-top)) var(--su-inset) max(30px, env(safe-area-inset-bottom));
+}
+.su-studio .hud__top { align-items: center; gap: 12px; }
+.su-studio .hud__spacer { width: 38px; }
+.su-studio .hud__foot {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.su-studio .hud__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 .su-studio .hud__time,
+.su-studio .player__time,
 .su-studio .player .display {
   font-family: var(--display);
   font-size: 46px;
@@ -395,6 +435,11 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   letter-spacing: -0.01em;
   color: var(--su-fg);
   font-variant-numeric: tabular-nums;
+}
+.su-studio .hud__sub {
+  font-size: 12.5px;
+  color: var(--su-muted);
+  text-align: center;
 }
 .su-studio .player__sub,
 .su-studio .player .small { font-size: 12px; color: var(--su-muted); }
@@ -1260,6 +1305,91 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .finder .ob-optlist { display: flex; flex-direction: column; gap: 8px; }
 .su-studio .finder__result { display: flex; flex-direction: column; gap: var(--su-gap-sm); }
 
+/* ============================================== the screen is the screen ===
+
+   No visible scrollbar, anywhere, and the app fills the viewport.
+
+   The frame is a fixed-height column and the surfaces inside it scroll; on a
+   desktop that put a permanent grey gutter down the right of every screen,
+   and the rails already scroll horizontally with theirs hidden — so one of
+   the two was always going to look like a mistake. Content still scrolls, and
+   on a trackpad or a touch screen there is nothing to grab anyway. */
+
+.su-studio,
+.su-studio .tabview,
+.su-studio .su-page,
+.su-studio .cat-rail__track,
+.su-studio .mood-rail__track,
+.su-studio .pw-rail__track,
+.su-studio .teaser-row,
+.su-studio .ob-scroll,
+.su-studio .cat__side {
+  scrollbar-width: none;            /* Firefox */
+  -ms-overflow-style: none;         /* old Edge */
+}
+.su-studio::-webkit-scrollbar,
+.su-studio .tabview::-webkit-scrollbar,
+.su-studio .su-page::-webkit-scrollbar,
+.su-studio .cat-rail__track::-webkit-scrollbar,
+.su-studio .mood-rail__track::-webkit-scrollbar,
+.su-studio .pw-rail__track::-webkit-scrollbar,
+.su-studio .teaser-row::-webkit-scrollbar,
+.su-studio .ob-scroll::-webkit-scrollbar,
+.su-studio .cat__side::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* The page behind the frame never scrolls either: the frame is exactly the
+   viewport and everything moves inside it. */
+body:has(.su-studio) { overflow: hidden; }
+
+/* --- titles that can be read ---------------------------------------------
+
+   A card title was 13.5px at weight 500 — the same weight as the sentence
+   under it — so the two read as one grey paragraph and the NAME, which is the
+   only thing being chosen between, was the quietest thing on the card. */
+.su-studio .cat-card__title {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  color: var(--su-fg);
+}
+.su-studio .cat-card__blurb { font-size: 11.5px; color: var(--su-faint); }
+.su-studio .cat__railtitle {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--su-fg);
+}
+.su-studio .cat-hero__title { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+.su-studio .pw-big__name { font-size: 18px; font-weight: 600; }
+.su-studio .mood-chip__label { font-size: 13.5px; font-weight: 600; }
+.su-studio .su-h1 { font-weight: 600; }
+
+/* --- help me choose, as a floating button --------------------------------
+
+   It was a quiet text link in a rail header, which is where a person who is
+   already lost is least likely to look. A floating button is reachable from
+   anywhere on the screen and asks for no reading at all. */
+.su-studio .cat-rail__help {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(78px + max(16px, env(safe-area-inset-bottom)));
+  z-index: 40;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--su-cream);
+  color: #070d0c;
+  border: 0;
+  box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(7, 13, 12, 0.1) inset;
+}
+.su-studio .cat-rail__help:hover { background: var(--su-cream-2); color: #070d0c; }
+.su-studio .cat-rail__help span { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1; }
+
 /* ========================================================= 05 · DESKTOP ===
 
    The canvas's fifth frame is 1440x900: a 232px rail on the left, content on
@@ -1277,7 +1407,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 @media (min-width: 1100px) {
   .su-studio.app-frame,
   .su-studio.app-frame--tabs {
-    max-width: 1440px;
+    /* Fill the window. A 1440px column centred in a 2560px display left two
+       dark margins that read as letterboxing rather than as a layout. */
+    max-width: none;
+    width: 100%;
     border-radius: 0;
     box-shadow: none;
   }
@@ -1447,14 +1580,19 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 
   /* the door centres in the window rather than filling a phone */
   .su-studio.auth .auth__card { max-width: 420px; }
+
+  /* no tab bar at the foot on desktop, so the button sits where it can */
+  .su-studio .cat-rail__help { bottom: max(28px, env(safe-area-inset-bottom)); right: 28px; }
 }
 
 /* Between the phone and the desktop there is a tablet, and a 460px column
    marooned in the middle of an iPad is the worst of both. Give it the width
    without the rail. */
 @media (min-width: 760px) and (max-width: 1099px) {
+  /* Fills the window here too. A 720px column centred in a 1000px tablet is
+     the same two dark margins as the desktop had, only narrower. */
   .su-studio.app-frame,
-  .su-studio.app-frame--tabs { max-width: 720px; }
+  .su-studio.app-frame--tabs { max-width: none; width: 100%; }
   .su-studio { --su-inset: 32px; }
   .su-studio .su-page { padding: 30px var(--su-inset) 0; }
   .su-studio .mood-grid { grid-template-columns: repeat(3, 1fr); }

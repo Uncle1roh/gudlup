@@ -24,7 +24,7 @@
    sessions (the ones people actually fit into a day), then by theme.
    ============================================================================ */
 
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import {
   SELF_USE_THEMES,
@@ -222,8 +222,11 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
         </div>
       </div>
 
-      {!filtering && moodsSlot}
       {!filtering && pathwaysSlot}
+
+      {/* Fewer than two rails (a small catalogue, an early tenant) would never
+          reach the insertion point above, so the moods rail goes last. */}
+      {!filtering && rails.length < 2 && moodsSlot}
 
       {filtering ? (
         <>
@@ -251,7 +254,17 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
           )}
         </>
       ) : (
-        rails.map((rail) => <RailRow key={rail.id} rail={rail} onOpen={onOpen} />)
+        /* The moods rail is the FOURTH thing on the page, not the first.
+           Opening on "how are you feeling right now?" asks a person to report
+           on themselves before they have been shown anything — the rail is
+           useful once you are already browsing and nothing has caught you,
+           which is where it now sits: pathways, two rails, then the moods. */
+        rails.map((rail, i) => (
+          <Fragment key={rail.id}>
+            <RailRow rail={rail} onOpen={onOpen} />
+            {i === 1 && moodsSlot}
+          </Fragment>
+        ))
       )}
         </>
       )}

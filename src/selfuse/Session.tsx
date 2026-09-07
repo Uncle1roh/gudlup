@@ -494,11 +494,15 @@ function ImmersiveSession({
   return (
     <div className="app-frame su-studio">
       <div className="player" onClick={armFade}>
-        {isBreath ? (
-          <div className="fade-in"><BreathingOrb size={230} /></div>
-        ) : (
-          <div className="ambient-pulse" />
-        )}
+        {/* The orb, for the WHOLE session, not only phase 2.
+            It used to appear during the breathing phase and be replaced by a
+            flat radial glow everywhere else, so a twelve-minute session was
+            eleven minutes of a still screen. It is the one thing on here that
+            says the session is running — it breathes while the audio plays and
+            holds still when paused, which is also the honest signal. */}
+        <div className="player__orb">
+          <BreathingOrb size={216} breathing={playing} />
+        </div>
         <div className="player__veil" style={{ opacity: veil }} />
 
         {isBreath && controls && !audioFailed && <div className="player__hint">{t('Breathe in…')}</div>}
@@ -521,9 +525,31 @@ function ImmersiveSession({
               <Icon name="close" size={18} />
             </button>
             <span className="hud__phase">{t('Phase {n}', { n: phaseIdx + 1 })}{phase ? ` · ${t(phase.name)}` : ''}</span>
-            <span className="hud__time">{fmt(elapsed)} / {fmt(total)}</span>
+            <span className="hud__spacer" aria-hidden="true" />
           </div>
-          <div className="hud__controls">
+
+          {/* The clock belongs UNDER the orb, at the size a person can read
+              with their eyes half closed — it was in the top bar beside the
+              phase label, where a 46px numeral has nowhere to go. */}
+          <div className="hud__foot">
+            <div className="hud__meta">
+              <span className="hud__time">{fmt(elapsed)}</span>
+              <span className="hud__sub">{t(session.name)} · {t('{n} min', { n: duration })}</span>
+            </div>
+
+            {/* Every phase at once, so the shape of the session is visible
+                rather than only the one it is in. */}
+            <div className="hud__ticks" aria-hidden="true">
+              {fractions.map((f, i) => (
+                <i
+                  key={i}
+                  style={{ flex: f }}
+                  className={i < phaseIdx ? 'is-done' : i === phaseIdx ? 'is-now' : undefined}
+                />
+              ))}
+            </div>
+
+            <div className="hud__controls">
             <button
               className="hud__btn"
               onClick={(e) => { e.stopPropagation(); nudgeVolume(-0.1) }}
@@ -545,6 +571,7 @@ function ImmersiveSession({
             >
               +
             </button>
+            </div>
           </div>
         </div>
 

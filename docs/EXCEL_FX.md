@@ -143,16 +143,4 @@ Two things changed together:
    `⚠ "…": nessun clip — la traccia esiste ma non suona.` A track that cannot
    make a sound is never shipped quietly again.
 
----
 
-## Proof
-
-`tools/test-plain-fx.ts` — 56 assertions: the grammar, the clamps, the
-Italian/English aliases, the rack landing on the right lane (including the
-split `· eco` and `· loop` companions), `sequenza` expansion, the silent-lane
-report, and a round trip through a real generated `.xlsx`.
-
-```
-node_modules/.bin/esbuild tools/test-plain-fx.ts --bundle --platform=node \
-  --define:import.meta.env={} --outfile=$TEMP/fx.cjs && node $TEMP/fx.cjs
-```

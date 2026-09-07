@@ -216,8 +216,17 @@ function PathwayRail({
             gate everybody answered before seeing the app; they are an offer
             for the person who opens this rail and does not know which to
             pick. */}
-        <button className="btn btn--quiet cat-rail__help" onClick={onHelp}>
-          {t('Help me choose')}
+        {/* A floating button, not a text link in a rail header. Someone who
+            does not know which pathway to pick is the last person who will
+            find help in 12px type beside a heading — so it follows them down
+            the page and says what it is on hover and to a screen reader. */}
+        <button
+          className="btn cat-rail__help"
+          onClick={onHelp}
+          title={t('Help me choose')}
+          aria-label={t('Help me choose')}
+        >
+          <span aria-hidden="true">?</span>
         </button>
       </header>
       <div className="cat-rail__track pw-rail__track">
