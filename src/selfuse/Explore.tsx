@@ -12,7 +12,7 @@
    session has a clinical identity, and the person listening never sees it.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
@@ -54,6 +54,21 @@ export function Explore({ pathway, completed, onStartPathway, onStart }: Explore
       : undefined
   const todaySlug = todayWeek ? primaryBlock(todayWeek)?.slug : undefined
 
+  /* The pathway's state travels INTO the hero rather than sitting in a second
+     card above it: one card about one thing. */
+  const heroPathway = useMemo(() => {
+    if (!pathway || !activePathway) return undefined
+    const week = currentWeek(pathway, activePathway)
+    const plan = activePathway.plan.find((w) => w.week === week)
+    return {
+      name: activePathway.name,
+      week,
+      weeks: activePathway.weeks,
+      done: pathway.done[week] ?? 0,
+      target: plan ? weekCount(plan) : 0,
+    }
+  }, [pathway, activePathway])
+
   if (catalog.loading) {
     return <div className="su-page"><p className="small muted">{t('Loading…')}</p></div>
   }
@@ -90,15 +105,8 @@ export function Explore({ pathway, completed, onStartPathway, onStart }: Explore
         featuredSlug={todaySlug}
         onOpen={(slug) => setView({ kind: 'session', slug })}
         onQuickStart={(slug, duration) => onStart({ slug, duration })}
-        topSlot={
-          activePathway && pathway ? (
-            <ContinuePathway
-              pathway={activePathway}
-              state={pathway}
-              onContinue={() => setView({ kind: 'weekly' })}
-            />
-          ) : undefined
-        }
+        heroPathway={heroPathway}
+        onOpenPathway={() => setView({ kind: 'weekly' })}
         pathwaysSlot={
           <PathwayRail
             pathways={catalog.pathways}
@@ -109,42 +117,6 @@ export function Explore({ pathway, completed, onStartPathway, onStart }: Explore
         }
       />
     </div>
-  )
-}
-
-/* ------------------------------------------------- continue a pathway ----
-
-   Above the rails, and only while one is running. It is the one thing on this
-   screen a person did not have to choose — everything else is a library, this
-   is where they already are. */
-function ContinuePathway({
-  pathway,
-  state,
-  onContinue,
-}: {
-  pathway: ResolvedPathway
-  state: PathwayState
-  onContinue: () => void
-}) {
-  const { t } = useI18n()
-  const week = currentWeek(state, pathway)
-  const plan = pathway.plan.find((w) => w.week === week)
-  const done = state.done[week] ?? 0
-  const target = plan ? weekCount(plan) : 0
-
-  return (
-    <button className="card pw-continue" onClick={onContinue}>
-      <span className="eyebrow">{t('Your pathway')}</span>
-      <strong className="pw-continue__name">{t(pathway.name)}</strong>
-      <span className="small muted">
-        {t('Week {n} of {total}', { n: week, total: pathway.weeks })}
-        {target ? ` · ${t('{done} of {total} this week', { done, total: target })}` : ''}
-      </span>
-      <span className="pw-continue__bar" aria-hidden="true">
-        <i style={{ width: `${Math.round((week - 1 + (target ? done / target : 0)) / pathway.weeks * 100)}%` }} />
-      </span>
-      <span className="pw-continue__go">{t('Continue')}</span>
-    </button>
   )
 }
 

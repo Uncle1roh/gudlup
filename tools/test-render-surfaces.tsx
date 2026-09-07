@@ -176,8 +176,16 @@ assert(!homeHtml.includes('role="tablist"'), 'and there is no tab bar to switch 
 const homeRunning = renderToString(
   shell(<Explore pathway={populated.pathway} completed={[]} onStartPathway={noop} onStart={noop} />),
 )
-assert(homeRunning.includes('pw-continue'), 'a running pathway puts its continue card above the rails')
-assert(!homeHtml.includes('pw-continue'), 'and there is no continue card when nothing is running')
+/* ONE card, not two. A running pathway used to get a plain progress card
+   stacked on top of the hero — two cards about the same thing, and the one
+   with the artwork did not say what it belonged to. The hero carries it. */
+assert(homeRunning.includes('cat-hero__bar'), 'a running pathway shows its progress inside the hero')
+assert(!homeHtml.includes('cat-hero__bar'), 'and no progress bar when nothing is running')
+assert(!homeRunning.includes('pw-continue'), 'and there is no second card above it')
+assert(
+  (homeRunning.match(/class="cat-hero"/g) ?? []).length === 1,
+  'exactly one hero on the library',
+)
 
 /* The catalog replaced the wireframe's vertical list. It has to render its
    hero, its rails and its cards — and still work with nothing published. */

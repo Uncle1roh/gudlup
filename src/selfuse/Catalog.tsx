@@ -44,10 +44,10 @@ interface CatalogProps {
   onOpen: (slug: string) => void
   /** Start immediately at this length, skipping the detail screen. */
   onQuickStart: (slug: string, duration: Duration) => void
-  /** Sits above everything — the "continue your pathway" card, when there is
-      a pathway to continue. Hidden while a filter is on, along with the hero:
-      filtering means the person is looking for something specific. */
-  topSlot?: ReactNode
+  /** The running pathway this session belongs to, when there is one. It is
+      shown INSIDE the hero rather than as a second card above it. */
+  heroPathway?: { name: string; week: number; weeks: number; done: number; target: number }
+  onOpenPathway?: () => void
   /** The PATHWAYS rail, rendered first among the categories. A pathway is one
       more thing to browse, not a separate mode with its own tab. */
   pathwaysSlot?: ReactNode
@@ -60,7 +60,7 @@ interface Rail {
   items: ResolvedSession[]
 }
 
-export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, topSlot, pathwaysSlot }: CatalogProps) {
+export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathway, onOpenPathway, pathwaysSlot }: CatalogProps) {
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
@@ -134,16 +134,50 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, topSlot, 
 
   return (
     <div className="cat">
-      {!filtering && topSlot}
-
       {!filtering && hero && (
         <Hero
           session={hero}
-          isPathway={Boolean(featuredSlug) && hero.slug === featuredSlug}
+          pathway={featuredSlug && hero.slug === featuredSlug ? heroPathway : undefined}
           onOpen={() => onOpen(hero.slug)}
           onStart={(d) => onQuickStart(hero.slug, d)}
+          onOpenPathway={onOpenPathway}
         />
       )}
+
+      {/* The same choices twice, placed differently: a scrolling chip row on a
+          phone, a standing list down the side on a desktop. One state behind
+          both, so a category chosen in either place is the category the rails
+          answer to. */}
+      <nav className="cat__side" aria-label={t('Categories')}>
+        <button
+          className="cat__sideitem"
+          aria-pressed={!filtering}
+          onClick={() => { setDur('all'); setTheme('all') }}
+        >
+          {t('All themes')}
+        </button>
+        {SELF_USE_THEMES.map((th) => (
+          <button
+            key={th.id}
+            className="cat__sideitem"
+            aria-pressed={theme === th.id}
+            onClick={() => setTheme(theme === th.id ? 'all' : th.id)}
+          >
+            {t(th.label)}
+          </button>
+        ))}
+        <span className="cat__sidesep" aria-hidden="true" />
+        {DURATIONS.map((d) => (
+          <button
+            key={d}
+            className="cat__sideitem"
+            aria-pressed={dur === d}
+            onClick={() => setDur(dur === d ? 'all' : d)}
+          >
+            {t(durationLabel(d))} · {d}m
+          </button>
+        ))}
+      </nav>
 
       <div className="cat__filters">
         <div className="filter-row" role="group" aria-label={t('Duration')}>
@@ -204,34 +238,62 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, topSlot, 
 
 /* ---------------------------------------------------------------- hero --- */
 
+/**
+ * The one card at the top of the library.
+ *
+ * There used to be two when a pathway was running: a plain progress card, and
+ * this one underneath it with the cover art. Two cards about the same thing,
+ * and the good-looking one did not say what it was part of. The pathway's
+ * state and the way into it live in here now, and the card above is gone.
+ */
 function Hero({
   session,
-  isPathway,
+  pathway,
   onOpen,
   onStart,
+  onOpenPathway,
 }: {
   session: ResolvedSession
-  isPathway: boolean
+  /** Set when this is today's session in a running pathway. */
+  pathway?: { name: string; week: number; weeks: number; done: number; target: number }
   onOpen: () => void
   onStart: (d: Duration) => void
+  onOpenPathway?: () => void
 }) {
   const { t } = useI18n()
   const cover = coverFor(session.slug, session.theme)
   const shortest = session.durations.includes(6) ? 6 : session.durations[0]
+  const progress = pathway
+    ? Math.round(((pathway.week - 1 + (pathway.target ? pathway.done / pathway.target : 0)) / pathway.weeks) * 100)
+    : 0
 
   return (
     <section className="cat-hero" style={coverStyle(cover)}>
       <div className="cat-hero__body">
         <span className="cat-hero__eyebrow">
-          {isPathway ? t('Today in your pathway') : t('A good place to start')}
+          {pathway ? t('Today in your pathway') : t('A good place to start')}
         </span>
         <h2 className="cat-hero__title">{t(session.name)}</h2>
-        <p className="cat-hero__blurb">{t(session.blurb)}</p>
+        {pathway ? (
+          <>
+            <p className="cat-hero__blurb">
+              {t(pathway.name)} · {t('Week {n} of {total}', { n: pathway.week, total: pathway.weeks })}
+              {pathway.target ? ` · ${t('{done} of {total} this week', { done: pathway.done, total: pathway.target })}` : ''}
+            </p>
+            <span className="cat-hero__bar" aria-hidden="true"><i style={{ width: `${progress}%` }} /></span>
+          </>
+        ) : (
+          <p className="cat-hero__blurb">{t(session.blurb)}</p>
+        )}
         <div className="cat-hero__actions">
           <button className="btn btn--light" onClick={() => onStart(shortest)}>
             <Icon name="play" size={17} /> {t('Play')} · {shortest}m
           </button>
-          <button className="btn btn--light btn--outline" onClick={onOpen}>{t('More')}</button>
+          {pathway && onOpenPathway ? (
+            <button className="btn btn--light btn--outline" onClick={onOpenPathway}>{t('See pathway')}</button>
+          ) : (
+            <button className="btn btn--light btn--outline" onClick={onOpen}>{t('More')}</button>
+          )}
         </div>
       </div>
     </section>

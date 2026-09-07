@@ -204,6 +204,13 @@ export const IT_SELF_USE: Record<string, string> = {
   'Right': 'Destro',
   'Play the tone again': 'Riproduci di nuovo il suono',
   'Play the tone': 'Riproduci il suono',
+  'See pathway': 'Vedi il percorso',
+  'Choose a length to begin': 'Scegli una durata per iniziare',
+  'Several weeks, one theme': 'Più settimane, un tema',
+  'Categories': 'Categorie',
+  '{n} weeks': '{n} settimane',
+  'Lets the app measure how you are doing over time. You can turn this off later.':
+    'Permette all’app di misurare come stai nel tempo. Puoi disattivarlo più tardi.',
   'This session is not available': 'Questa sessione non è disponibile',
   'It is no longer in the catalog. If your therapist prescribed it, they can prescribe it again.':
     'Non è più nel catalogo. Se te l’ha prescritta la tua terapeuta, può prescriverla di nuovo.',

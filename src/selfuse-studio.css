@@ -860,6 +860,84 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .cat-card,
 .su-studio .teaser { transition: transform 140ms cubic-bezier(0.22, 0.8, 0.3, 1), border-color 160ms linear; }
 
+/* ============================================================== rhythm ====
+
+   ONE rule owns vertical spacing on this surface.
+
+   Before this, every block carried its own margin — `.home__sect` had
+   `22px 0 4px`, `.cat-rail` had `18px 0 2px`, `.cat` set `gap: 4px`, cards
+   added their own — so the distance between two things depended on which two
+   things they were, and adjacent margins collapsed differently in different
+   parents. That is the uneven spacing: not one wrong number, but a dozen
+   numbers each defensible on its own.
+
+   So: the page is a flex column with a single gap, its children have no
+   vertical margins of their own, and anything that needs to sit closer says
+   so once, here, next to everything else that does. */
+
+.su-studio {
+  --su-gap:    24px;   /* between blocks on a page */
+  --su-gap-sm: 12px;   /* inside a block */
+  --su-gap-lg: 32px;   /* between a page's major regions */
+}
+
+.su-studio .su-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--su-gap);
+}
+/* No block sets its own vertical margin. Horizontal is left alone: it is used
+   for deliberate insets, not for rhythm. */
+.su-studio .su-page > * { margin-top: 0; margin-bottom: 0; }
+
+/* --- the library ---------------------------------------------------------- */
+.su-studio .cat { gap: var(--su-gap); row-gap: var(--su-gap); }
+.su-studio .cat > * { margin: 0; }
+.su-studio .cat-rail {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--su-gap-sm);
+}
+.su-studio .cat-rail__head { margin: 0; align-items: baseline; }
+.su-studio .cat-rail__track { margin: 0; }
+.su-studio .cat__filters { gap: var(--su-gap-sm); padding: 0; }
+.su-studio .cat__resulthead { margin: 0; align-items: baseline; }
+
+/* --- headings sit with what they title, not adrift between two things ----- */
+.su-studio .home__sect,
+.su-studio .sheet__label {
+  margin: 0;
+}
+/* A heading and the thing it names are one block. */
+.su-studio .su-page > .home__sect + *,
+.su-studio .su-page > .sheet__label + * { margin-top: calc(var(--su-gap-sm) - var(--su-gap)); }
+
+/* --- rows of chips are one gap wherever they appear ----------------------- */
+.su-studio .chip-row,
+.su-studio .filter-row { gap: var(--su-gap-sm); margin: 0; }
+
+/* --- cards agree about their own insides --------------------------------- */
+.su-studio .card,
+.su-studio .sess-card,
+.su-studio .pw-card,
+.su-studio .rx-card,
+.su-studio .msr,
+.su-studio .thr-card,
+.su-studio .asmt-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--su-gap-sm);
+}
+.su-studio .card > * { margin: 0; }
+
+/* --- lists ---------------------------------------------------------------- */
+.su-studio .chron,
+.su-studio .scorelist,
+.su-studio .expect,
+.su-studio .goals { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+
 /* ================================================ the merged library =====
 
    Home IS the library now: a continue card when a pathway is running, the
@@ -995,6 +1073,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 }
 .su-studio.auth .auth__consent small { display: block; color: var(--su-faint); font-size: 12px; margin-top: 2px; }
 
+/* The category list exists in the markup at every width; below the desktop
+   breakpoint the chip rows are the interface and this is hidden. */
+.su-studio .cat__side { display: none; }
+
 /* ========================================================= 05 · DESKTOP ===
 
    The canvas's fifth frame is 1440x900: a 232px rail on the left, content on
@@ -1017,10 +1099,18 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
     box-shadow: none;
   }
 
+  /* Navigation across the TOP, categories down the side.
+     The four places a person can be are a small, fixed set and belong on one
+     line; the categories are a long list that grows with the library, and a
+     list that grows belongs in a column. Putting both in the same left rail
+     made the nav look like the first five categories. */
   .su-studio.app-frame--tabs {
     display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
-    grid-template-areas: 'rail main';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'topbar'
+      'main';
   }
 
   /* the bloom sits behind the CONTENT, not behind the rail */
@@ -1040,22 +1130,68 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   }
   .su-studio .su-page {
     padding: 34px 40px 40px;
-    max-width: 1100px;
+    max-width: 1180px;
   }
 
-  /* ---- the tab bar, stood up ---- */
-  .su-studio .tabbar {
-    grid-area: rail;
+  /* ---- the categories, standing down the side ----
+     The library is the one screen with a long enough list to need it, so the
+     column belongs to the library rather than to the frame. */
+  .su-studio .cat {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-areas: 'side body';
+    align-items: start;
+    column-gap: 34px;
+  }
+  .su-studio .cat > :not(.cat__side) { grid-column: body; }
+  .su-studio .cat__side {
+    grid-area: side;
+    position: sticky;
+    top: 34px;
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    justify-content: flex-start;
     gap: 2px;
-    height: 100%;
-    padding: 26px 16px;
+    padding-right: 18px;
+    border-right: 1px solid var(--su-hair);
+  }
+  .su-studio .cat__sideitem {
+    text-align: left;
+    padding: 9px 11px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--su-muted);
     background: transparent;
-    backdrop-filter: none;
+    border: 0;
+  }
+  .su-studio .cat__sideitem:hover { background: rgba(255, 255, 255, 0.04); color: var(--su-fg-2); }
+  .su-studio .cat__sideitem[aria-pressed='true'] {
+    background: rgba(242, 238, 196, 0.09);
+    color: var(--su-cream);
+    font-weight: 600;
+  }
+  .su-studio .cat__sidesep {
+    height: 1px;
+    margin: 10px 11px;
+    background: var(--su-hair);
+  }
+  /* The chip rows are the phone's interface; the column replaces them here. */
+  .su-studio .cat__filters { display: none; }
+
+  /* ---- the tab bar, laid across the top ---- */
+  .su-studio .tabbar {
+    grid-area: topbar;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    height: auto;
+    padding: 14px 32px;
+    background: rgba(10, 18, 17, 0.86);
+    backdrop-filter: blur(14px);
     border-top: 0;
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   /* the wordmark the canvas puts at the head of the rail: one pseudo-element
      carrying the breathing orb as its bullet, so it needs no markup */
@@ -1063,8 +1199,8 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
     content: 'Good Loop';
     display: flex;
     align-items: center;
-    margin: 0 0 28px;
-    padding: 0 10px 0 42px;
+    margin: 0 26px 0 0;
+    padding: 0 0 0 32px;
     min-height: 22px;
     font-family: var(--display);
     font-size: 16px;
@@ -1078,10 +1214,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   .su-studio .tabbar__btn {
     flex: 0 0 auto;
     flex-direction: row;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
-    gap: 11px;
-    padding: 10px 11px;
+    gap: 9px;
+    padding: 9px 14px;
     border-radius: 10px;
     font-size: 13.5px;
     font-weight: 500;
