@@ -18,6 +18,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { prescriptionsFromPlan, type Plan } from '../data/plan'
@@ -39,7 +40,6 @@ import {
   type TherapyState,
   type PatientIntake,
 } from './therapyStore'
-import type { Launch } from './Home'
 import { Assessment } from './Assessment'
 import {
   useAssessments,

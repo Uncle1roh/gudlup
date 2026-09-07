@@ -124,6 +124,18 @@ export interface PathwayState {
 
 /** One finished Self Use session, for the streak / minutes / history readouts.
     The clinical record still goes through `DataProvider.recordSession`. */
+/**
+ * What to start: a session, at a length, optionally ticking off a pathway week.
+ *
+ * Lived in the old Home screen, which no longer exists. It belongs beside
+ * `SelfUseLog` — one says what is about to be played, the other what was.
+ */
+export interface Launch {
+  slug: string
+  duration: Duration
+  pathwayWeek?: number
+}
+
 export interface SelfUseLog {
   at: number
   slug: string

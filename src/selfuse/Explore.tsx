@@ -15,6 +15,8 @@
 import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { greeting, longDate } from './greeting'
+import { PathwayFinder } from './PathwayFinder'
+import { Icon, type IconName } from './icons'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
 import { coverFor, coverStyle } from './artwork'
@@ -25,8 +27,7 @@ import {
   type ResolvedPathway,
   type ResolvedSession,
 } from '../data/liveCatalog'
-import { currentWeek, type PathwayState } from '../data/selfUseStore'
-import type { Launch } from './Home'
+import { currentWeek, type PathwayState, type Launch } from '../data/selfUseStore'
 
 interface ExploreProps {
   /** First name, when the account gives one. Null says hello without it. */
@@ -39,6 +40,7 @@ interface ExploreProps {
 
 type View =
   | { kind: 'list' }
+  | { kind: 'finder' }
   | { kind: 'pathway'; id: PathwayId }
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
@@ -74,6 +76,15 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart }: E
 
   if (catalog.loading) {
     return <div className="su-page"><p className="small muted">{t('Loading…')}</p></div>
+  }
+
+  if (view.kind === 'finder') {
+    return (
+      <PathwayFinder
+        onClose={() => setView({ kind: 'list' })}
+        onChoose={(id) => setView({ kind: 'pathway', id })}
+      />
+    )
   }
 
   if (view.kind === 'pathway') {
@@ -120,16 +131,58 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart }: E
         onQuickStart={(slug, duration) => onStart({ slug, duration })}
         heroPathway={heroPathway}
         onOpenPathway={() => setView({ kind: 'weekly' })}
+        moodsSlot={
+          <MoodRail
+            moods={catalog.moodCards}
+            onOpen={(slug) => setView({ kind: 'session', slug })}
+          />
+        }
         pathwaysSlot={
           <PathwayRail
             pathways={catalog.pathways}
             active={pathway?.id ?? null}
             completed={completed}
             onOpen={(id) => setView({ kind: 'pathway', id })}
+            onHelp={() => setView({ kind: 'finder' })}
           />
         }
       />
     </div>
+  )
+}
+
+/* ----------------------------------------------------------- mood rail ---
+
+   The other way in. Browsing by category asks a person to know what kind of
+   thing they want; this asks how they feel and picks. It is the one part of
+   the old Home the library does not otherwise replace, so it moved here
+   rather than being lost with that screen.
+
+   Tapping opens the session rather than starting it: a mood is a rougher
+   signal than a category, and the length is still the person's to choose. */
+function MoodRail({
+  moods,
+  onOpen,
+}: {
+  moods: { id: string; icon: IconName; label: string; slug: string }[]
+  onOpen: (slug: string) => void
+}) {
+  const { t } = useI18n()
+  if (!moods.length) return null
+  return (
+    <section className="cat-rail mood-rail">
+      <header className="cat-rail__head">
+        <h3 className="cat__railtitle">{t('How are you feeling right now?')}</h3>
+      </header>
+      <div className="cat-rail__track mood-rail__track">
+        {moods.map((m) => (
+          <button key={m.id} className="mood-chip" onClick={() => onOpen(m.slug)}>
+            <span className="mood-chip__icon" aria-hidden="true"><Icon name={m.icon} size={22} /></span>
+            <span className="mood-chip__label">{t(m.label)}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -145,11 +198,13 @@ function PathwayRail({
   active,
   completed,
   onOpen,
+  onHelp,
 }: {
   pathways: ResolvedPathway[]
   active: PathwayId | null
   completed: PathwayId[]
   onOpen: (id: PathwayId) => void
+  onHelp: () => void
 }) {
   const { t } = useI18n()
   if (!pathways.length) return null
@@ -157,7 +212,13 @@ function PathwayRail({
     <section className="cat-rail pw-rail">
       <header className="cat-rail__head">
         <h3 className="cat__railtitle">{t('Pathways')}</h3>
-        <span className="small muted">{t('Several weeks, one theme')}</span>
+        {/* The four intake questions live behind this now. They used to be a
+            gate everybody answered before seeing the app; they are an offer
+            for the person who opens this rail and does not know which to
+            pick. */}
+        <button className="btn btn--quiet cat-rail__help" onClick={onHelp}>
+          {t('Help me choose')}
+        </button>
       </header>
       <div className="cat-rail__track pw-rail__track">
         {pathways.map((p) => (

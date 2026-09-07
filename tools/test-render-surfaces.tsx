@@ -21,8 +21,7 @@ import { I18nProvider } from '../src/i18n'
 import { DataLayerProvider } from '../src/data/provider'
 import { LiveCatalogProvider, resolveCatalog } from '../src/data/liveCatalog'
 import { seedCatalog } from '../src/data/catalog'
-import { Onboarding } from '../src/selfuse/Onboarding'
-import { Home } from '../src/selfuse/Home'
+import { PathwayFinder } from '../src/selfuse/PathwayFinder'
 import { Explore } from '../src/selfuse/Explore'
 import { Catalog } from '../src/selfuse/Catalog'
 import { coverFor, coverSvg } from '../src/selfuse/artwork'
@@ -130,7 +129,9 @@ function assert(cond: unknown, msg: string) {
 /* ------------------------------------------------------------- Self Use -- */
 console.log('\n--- Self Use ---')
 
-renders('ON-1…7 Onboarding', <Onboarding onComplete={noop} />)
+/* The seven onboarding screens are gone: registration is the onboarding, and
+   the four intake questions became "help me choose" behind the Pathways rail. */
+renders('FIND · help me choose', <PathwayFinder onClose={noop} onChoose={noop} />)
 
 const fresh = emptyState()
 const populated: SelfUseState = {
@@ -151,14 +152,6 @@ const populated: SelfUseState = {
   consents: { ...fresh.consents, usageAt: Date.now(), measurementAt: Date.now() },
 }
 
-const homeProps = {
-  name: 'Sofia', logs: [], weekLogs: [], hasNotifications: false,
-  onStart: noop, onExplore: noop, onAllSessions: noop, onHistory: noop, onNotifications: noop,
-}
-renders('HOME · C  no pathway', <Home {...homeProps} pathway={null} />)
-renders('HOME · A  pathway active', <Home {...homeProps} pathway={populated.pathway} logs={populated.logs} weekLogs={[]} />)
-renders('HOME · B  done today', <Home {...homeProps} pathway={populated.pathway} logs={populated.logs} weekLogs={populated.logs} />)
-renders('HOME · D  pathway complete', <Home {...homeProps} pathway={{ ...populated.pathway!, completedAt: Date.now() }} />)
 
 /* Explore IS the home screen now — one library holding the rails, the
    pathways rail and the continue card. The `initialTab` prop went with the
@@ -519,30 +512,25 @@ renders('TH-PERF, no sessions', <Performance state={wsEmpty} />)
 renders('TH-SETTINGS', <WorkspaceSettings state={ws} update={noop} onOpenAvailability={noop} />)
 
 /* ------------------------------------------- the catalog reached the UI --- */
-console.log('\n--- the weekly dots ---')
+console.log('')
+console.log('--- the week, inside the hero ---')
 
-/* The caption used to live INSIDE .home__dots, where `> span` styled it as a
-   9px circle: the text spilled out below the row and the caption itself drew
-   as an extra dot. Asserting on the structure keeps the two apart. */
+/* The weekly dots are gone with the old Home screen, and with them the bug
+   they guarded: a caption rendered INSIDE `.home__dots`, where `> span` styled
+   it as a 9px circle, so the text spilled below the row and drew as an extra
+   dot. The week now reads as a progress rail inside the hero, where a caption
+   cannot be mistaken for a unit. */
 const weekHtml = renderToString(
-  shell(<Home {...homeProps} pathway={populated.pathway} logs={populated.logs} weekLogs={[]} />),
+  shell(<Explore name="Sofia" pathway={populated.pathway} completed={[]} onStartPathway={noop} onStart={noop} />),
 )
-const dotsBlock = /<div[^>]*class="home__dots"[^>]*>([\s\S]*?)<\/div>/.exec(weekHtml)
-assert(dotsBlock != null, 'the weekly dots row renders')
+assert(!weekHtml.includes('home__dots'), 'the dots row is gone with the screen that held it')
+const bar = /<span class="cat-hero__bar"[^>]*>([\s\S]*?)<\/span>/.exec(weekHtml)
+assert(bar != null, 'the hero carries the week as a progress rail')
 assert(
-  // Strip the tags before looking for text: `span` is itself letters, so a
-  // naive search finds the markup rather than the caption.
-  dotsBlock != null && dotsBlock[1].replace(/<[^>]*>/g, '').trim() === '',
-  'the dots row contains ONLY dots — no caption text inside it',
+  bar != null && bar[1].replace(/<[^>]*>/g, '').trim() === '',
+  'and the rail holds no text -- the count is beside it, not inside it',
 )
-assert(
-  dotsBlock != null && (dotsBlock[1].match(/<span/g) ?? []).length === 5,
-  'week 1 of Stress Management draws exactly its five dots, not six',
-)
-assert(weekHtml.includes('home__week-progress'), 'the caption sits beside the dots, not inside them')
-// The label is localized (the product default is Italian), so assert on the
-// numbers it carries rather than on English wording.
-assert(/<div class="home__dots"[^>]*aria-label="2 [^"]*5 /.test(weekHtml), 'the dots carry the count for a screen reader')
+assert(/cat-hero__bar[\s\S]*?width:\s*\d+%/.test(weekHtml), 'and the rail is filled to a real percentage')
 
 console.log('\n--- the catalog view ---')
 

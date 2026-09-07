@@ -1104,6 +1104,78 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
    breakpoint the chip rows are the interface and this is hidden. */
 .su-studio .cat__side { display: none; }
 
+/* --- how are you feeling right now? --------------------------------------
+   The other way in. Smaller than a cover card, because a mood is a shortcut
+   rather than a thing to browse, and it scrolls in the same rail rhythm. */
+.su-studio .mood-rail__track { gap: 10px; }
+.su-studio .mood-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 132px;
+  min-height: 96px;
+  padding: 14px;
+  text-align: left;
+  border-radius: 14px;
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg-2);
+}
+.su-studio .mood-chip:hover { border-color: var(--su-hair-2); }
+.su-studio .mood-chip__icon { color: var(--su-accent-2); line-height: 0; }
+.su-studio .mood-chip__label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--su-fg);
+  text-wrap: balance;
+}
+
+/* --- help me choose ------------------------------------------------------- */
+.su-studio .cat-rail__help {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--su-accent-2);
+}
+.su-studio .cat-rail__help:hover { color: var(--su-cream); }
+
+.su-studio .finder .ob-qhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.su-studio .finder .ob-qcount {
+  font-family: var(--mono, ui-monospace), ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--su-faint);
+  font-variant-numeric: tabular-nums;
+}
+.su-studio .finder .ob-q {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--su-gap-sm);
+}
+.su-studio .finder .field-label,
+.su-studio .finder legend {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--su-faint);
+  padding: 0;
+}
+.su-studio .finder .ob-optlist { display: flex; flex-direction: column; gap: 8px; }
+.su-studio .finder__result { display: flex; flex-direction: column; gap: var(--su-gap-sm); }
+
 /* ========================================================= 05 · DESKTOP ===
 
    The canvas's fifth frame is 1440x900: a 232px rail on the left, content on

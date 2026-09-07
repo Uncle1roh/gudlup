@@ -205,6 +205,13 @@ export const IT_SELF_USE: Record<string, string> = {
   'Play the tone again': 'Riproduci di nuovo il suono',
   'Play the tone': 'Riproduci il suono',
   'See pathway': 'Vedi il percorso',
+  'Help me choose': 'Aiutami a scegliere',
+  'See this pathway': 'Vedi questo percorso',
+  'Change my answers': 'Cambia le risposte',
+  'Show me a pathway': 'Mostrami un percorso',
+  'Just suggest something': 'Suggerisci tu',
+  'Four questions, and we will point you at a pathway. Skip any of them.':
+    'Quattro domande e ti indichiamo un percorso. Puoi saltarne quante vuoi.',
   'Choose a length to begin': 'Scegli una durata per iniziare',
   'Several weeks, one theme': 'Più settimane, un tema',
   'Categories': 'Categorie',

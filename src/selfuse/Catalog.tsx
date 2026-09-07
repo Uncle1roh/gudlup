@@ -48,8 +48,13 @@ interface CatalogProps {
       shown INSIDE the hero rather than as a second card above it. */
   heroPathway?: { name: string; week: number; weeks: number; done: number; target: number }
   onOpenPathway?: () => void
-  /** The PATHWAYS rail, rendered first among the categories. A pathway is one
-      more thing to browse, not a separate mode with its own tab. */
+  /** The MOOD rail — "how are you feeling right now?" — rendered above the
+      categories. It is a different way in: you say how you feel and the app
+      picks, rather than browsing by theme. Nothing else on this screen
+      replaces it, which is why it survived the old Home. */
+  moodsSlot?: ReactNode
+  /** The PATHWAYS rail, rendered among the categories. A pathway is one more
+      thing to browse, not a separate mode with its own tab. */
   pathwaysSlot?: ReactNode
 }
 
@@ -60,7 +65,7 @@ interface Rail {
   items: ResolvedSession[]
 }
 
-export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathway, onOpenPathway, pathwaysSlot }: CatalogProps) {
+export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathway, onOpenPathway, moodsSlot, pathwaysSlot }: CatalogProps) {
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
@@ -202,6 +207,7 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
         </div>
       </div>
 
+      {!filtering && moodsSlot}
       {!filtering && pathwaysSlot}
 
       {filtering ? (
