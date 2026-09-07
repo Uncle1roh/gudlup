@@ -334,6 +334,37 @@ export function canJoin(nextSessionAt: number | null, now = Date.now()): boolean
 
 /** A demo link, used when a person connects with a valid code so every screen
     downstream (progress, prescriptions, chronology) has something to show. */
+/**
+ * A REAL link, from the server: the therapist, when it started, and nothing
+ * invented.
+ *
+ * `seedLink` above is demo furniture — it fills a link with prescriptions,
+ * sessions, goals, VAS points, clinical scores and a message attributed to the
+ * therapist, all fictional. That is right for a demo the operator knows is a
+ * demo, and it would be a serious thing to show a real person: they would read
+ * scores nobody measured and a message their clinician never sent.
+ *
+ * So the arrays start empty and are filled from where the data actually lives:
+ * prescriptions from the plan (`getMyPlan`), the conversation from the
+ * messages table (`useThreads`), the next appointment from `appointments`.
+ * What has no server source yet stays empty rather than being imagined.
+ */
+export function linkFromServer(therapist: TherapistProfile, since: number): TherapyLink {
+  return {
+    therapist,
+    linkedAt: since,
+    intake: null,
+    nextSessionAt: null,
+    prescriptions: [],
+    sessions: [],
+    goals: [],
+    messages: [],
+    vas: [],
+    scores: [],
+    weeksInTherapy: Math.max(1, Math.floor((Date.now() - since) / (7 * DAY))),
+  }
+}
+
 export function seedLink(therapist: TherapistProfile, now = Date.now()): TherapyLink {
   return {
     therapist,

@@ -28,12 +28,12 @@ import { GlCheckFlow, Who5Flow, DailyMoodFlow } from './Measures'
 import { SafetyLevel2, SafetyLevel3 } from './Safety'
 import { PatientVideoCall } from './VideoCall'
 import { useSelfUseStore, sessionsThisWeek, suggestedPathway } from '../data/selfUseStore'
-import { useTherapyStore } from './therapyStore'
+import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
 import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
-import { primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
+import { primaryBlock, weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
 import { safetyLevel2Trigger, dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
@@ -100,6 +100,63 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     void dp.getMyAppointment().then(setAppointment).catch(() => setAppointment(null))
   }, [dp])
   useEffect(loadAppointment, [loadAppointment])
+
+  /* ------------------------------------------- what the server knows -----
+
+     Both of these live in localStorage, which is right for a person's own
+     device and wrong as the ONLY source: a session recorded on their phone,
+     or a therapist who linked them from the console, exists in the database
+     and this app could not see it. Signing in on a second device — or on a
+     demo account provisioned entirely server-side — showed "you have not done
+     a session yet" and no therapist, both of which were false.
+
+     Merged, never replaced. The local copy is the newer one during a session
+     and must survive; the server fills in what this device has not seen. */
+
+  useEffect(() => {
+    let alive = true
+    void dp.listSessions()
+      .then((rows) => {
+        if (!alive || !rows.length) return
+        update((s) => {
+          const seen = new Set(s.logs.map((l) => `${l.at}|${l.duration}`))
+          const extra = rows
+            .filter((r) => !seen.has(`${r.startedAt}|${r.duration}`))
+            .map((r) => ({
+              at: r.startedAt,
+              /* The log is keyed by SESSION SLUG and the record carries a
+                 protocol code; a code the catalog cannot place is kept with an
+                 empty slug rather than dropped, so the count and the streak
+                 stay true even when the name cannot be shown. */
+              slug: SELF_USE_SESSIONS.find((x) => x.protocolCode === r.protocolCode)?.slug ?? '',
+              duration: r.duration,
+            }))
+          if (!extra.length) return s
+          return { ...s, logs: [...s.logs, ...extra].sort((a, b) => a.at - b.at) }
+        })
+      })
+      .catch(() => { /* offline: the local history stands */ })
+    return () => { alive = false }
+  }, [dp, update])
+
+  useEffect(() => {
+    let alive = true
+    void dp.getMyTherapistLink()
+      .then((found) => {
+        if (!alive || !found) return
+        updateTherapy((s) => {
+          // a link already on this device wins: it carries the session
+          // history, goals and intake this app has collected since
+          if (s.link) return s
+          return {
+            request: null,
+            link: linkFromServer(profileFor({ id: found.therapistId, name: found.therapistName }), found.since),
+          }
+        })
+      })
+      .catch(() => { /* no backend, or no therapist: State A stands */ })
+    return () => { alive = false }
+  }, [dp, updateTherapy])
 
   /* ------------------------------------------------- Safety Gateway L2 --- */
   useEffect(() => {
