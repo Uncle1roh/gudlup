@@ -284,8 +284,26 @@ assert(actButtons.length === 5, 'and shows all five actions')
 assert(wsHtml.includes('Modifica nello Studio') && wsHtml.includes('Pubblica'), 'Studio and Pubblica among them')
 assert(wsHtml.includes('GL-ANX 1.1'), 'headed by the protocol it belongs to')
 
-/* The four that need a timeline are disabled, and the one way forward is not. */
-assert(actButtons.filter((b) => b.includes('disabled')).length === 4, 'the four timeline actions are closed')
+/* With no Excel for this duration, what stays open is what does not need one.
+   Counting disabled buttons hid WHICH — so each is named. */
+const actionState = (label: string): 'open' | 'closed' | 'absent' => {
+  const parts = wsHtml.split('<button').slice(1).map((p) => `<button${p.split('</button>')[0]}`)
+  /* Matched on the VISIBLE label, with the tags stripped. Searching the raw
+     HTML matched a `title` attribute instead — the upload button's tooltip
+     mentions Pubblica — and the answer was about the wrong button. */
+  const btn = parts.find((p) => p.replace(/<[^>]*>/g, ' ').includes(label))
+  if (!btn) return 'absent'
+  return btn.includes('disabled') ? 'closed' : 'open'
+}
+assert(actionState('Modifica nello Studio') === 'closed', 'the Studio needs a timeline to open')
+assert(actionState('Scarica') === 'closed', 'and a render needs one to render from')
+assert(actionState('Pubblica') === 'closed', 'and Pubblica is closed while there is neither sheet nor file')
+assert(actionState('Importa Excel') === 'open', 'importing a sheet is always available')
+/* The audio and the Excel are separate material: a finished file can be
+   attached to a time signature that has no workbook, which is how a demo
+   protocol is made. Requiring a sheet to accept a file was a rule this screen
+   enforced and the data model never had. */
+assert(actionState('Carica audio') === 'open', 'and so is uploading a finished audio')
 assert(!actButtons[0].includes('disabled'), 'Importa Excel stays open — it is the way out')
 assert(/Nessun Excel importato/.test(wsHtml), 'and the screen says why, in the open rather than in a tooltip')
 assert(/Importa Excel/.test(wsHtml), 'naming the action that fixes it')

@@ -112,7 +112,11 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
     title: intoExisting && existing?.title ? existing.title : (t.title ?? code).trim(),
     blurb: existing?.blurb ?? '',
     phases: catalogPhases.length ? catalogPhases : existing?.phases ?? [],
-    versions: mergeVersions(existing?.versions, durations.length ? durations : [12]),
+    /* With no sheet at all — an audio-only protocol, where a file is uploaded
+       against a time signature and no Excel exists yet — the duration is the
+       one the operator SELECTED, not a hardcoded 12. Falling back to 12 wrote
+       the file into the wrong slot and left the chosen one empty. */
+    versions: mergeVersions(existing?.versions, durations.length ? durations : (selected ? [selected] : [12])),
     enabled: keepDraft ? existing?.enabled ?? false : true,
     source: 'imported',
     tenants: existing?.tenants ?? 'all',
@@ -122,7 +126,11 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
     /* Legacy mirror, kept only for readers that predate per-duration storage.
        `plainByDuration` is the authority and every reader in the app goes
        through `mergedPlain()` / `plainFor()`. */
-    plain: incoming[selected ?? durations[0] ?? 12] ?? t,
+    /* Never overwrite the legacy mirror with an EMPTY timeline. A protocol
+       whose only material is an uploaded audio has no sheets to mirror, and
+       writing `t` here would blank a legacy `plain` that may still be the only
+       home of a duration written before per-duration storage existed. */
+    plain: durations.length ? (incoming[selected ?? durations[0] ?? 12] ?? t) : existing?.plain,
     plainByDuration,
     assetMap: existing?.assetMap,
     updatedAt: now,

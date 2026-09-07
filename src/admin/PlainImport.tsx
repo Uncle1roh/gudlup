@@ -331,7 +331,12 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     /* A publish that cannot be reopened is the failure this screen exists to
        prevent, so it is checked against what came BACK from the catalog rather
        than against what we sent. */
-    const unreadable = (versionDuration != null ? [versionDuration] : durations).filter((d) => !plainFor(stored, d))
+    /* Only meaningful when a workbook was imported. An audio-only protocol has
+       no `plain` to read back, and demanding one would fail a publish that is
+       working exactly as intended. */
+    const unreadable = t.versions.length
+      ? (versionDuration != null ? [versionDuration] : durations).filter((d) => !plainFor(stored, d))
+      : []
     if (unreadable.length) {
       throw new Error(
         `Salvato, ma ${unreadable.map((d) => `${d}m`).join(' · ')} non si rilegge dal catalogo — ` +
@@ -353,19 +358,24 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       entry → render (with voice) → upload & attach → live in the app. The other
       durations of this protocol are left exactly as they are. */
   async function publish() {
-    if (!version) return
+    /* Two ways in: a workbook to render from, or a finished file to ship.
+       The second is how a demo protocol is made — and how a PO ships a mix
+       mastered outside the app against a time signature that has no Excel. */
+    if (!version && !mastered) return
     setBusy(true)
     setError(null)
     try {
       setStatus('Pubblicazione nel catalogo…')
       const proto = await publishToCatalog()
       const dur = versionDuration
-      if (dur == null) throw new Error(`${version.durationMin} min non è una durata di catalogo (6/12/24).`)
+      if (dur == null) throw new Error(`${version?.durationMin ?? picked} min non è una durata di catalogo (6/12/24).`)
       let audioBuffer: AudioBuffer
       if (mastered) {
         // the externally-mastered upload IS the published audio
         setStatus(`Uso il file masterizzato "${mastered.name}"…`)
         audioBuffer = mastered.buffer
+      } else if (!version) {
+        throw new Error('Nessun Excel per questa durata: carica un file audio masterizzato, oppure importa il foglio.')
       } else {
         if (!tts.canRender) {
           setDetailsOpen(true)
@@ -443,10 +453,28 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
    * while everything they would act on was empty.
    */
   const hasTimeline = !!version
+  /* Actions that RENDER need a timeline to render from: the Studio and the
+     local WAV. Nothing can conjure one. */
   const disabled = busy || !hasTimeline || errors.length > 0 || poolsLoading
   const noTimelineWhy = hasTimeline
     ? undefined
     : `Nessun Excel importato per la versione da ${picked} minuti — usa Importa Excel.`
+
+  /* Uploading a finished file needs nothing but the file.
+     The Excel and the audio are separate material on a protocol: the sheet is
+     what the Studio edits and re-renders, the audio is what a person hears.
+     Requiring the first to attach the second is what made an audio-only demo
+     protocol impossible — and it was never a rule the data model had, only
+     one this screen enforced. */
+  const canUpload = !busy
+  /* Publish ships either a render (needs a clean timeline) or an uploaded
+     file (needs the file). */
+  const canPublish = !busy && (mastered ? true : hasTimeline && errors.length === 0 && !poolsLoading)
+  const publishWhy = canPublish
+    ? undefined
+    : mastered
+      ? undefined
+      : `${noTimelineWhy ?? ''} Oppure carica un audio masterizzato per pubblicarlo così com'è.`.trim()
 
   return (
     <div className="adm-page adm-plain">
@@ -514,13 +542,12 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
         <button
           className={`adm-plain__act${mastered ? ' adm-plain__act--done' : ''}`}
           onClick={() => masteredRef.current?.click()}
-          disabled={disabled}
-          data-why={noTimelineWhy}
-          title="Carica il WAV/MP3 masterizzato esternamente — Pubblica userà esattamente questo file"
+          disabled={!canUpload}
+          title={`Carica il WAV/MP3 per la versione da ${picked} minuti — Pubblica userà esattamente questo file, con o senza Excel`}
         >
-          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Masterizzato ✓' : 'Carica masterizzato'}
+          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Masterizzato ✓' : 'Carica audio'}
         </button>
-        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={disabled} title={noTimelineWhy}>
+        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={!canPublish} title={publishWhy}>
           <span className="adm-plain__act-ico">🚀</span> Pubblica
         </button>
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
@@ -535,8 +562,15 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
         </div>
       )}
 
-      {mastered && !live && (
-        <div className="adm-plain__status">File masterizzato caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) — Pubblica userà questo file. <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>Usa invece il render dell’app</a></div>
+      {mastered && (
+        <div className="adm-plain__status">
+          Audio caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) per la versione da {picked} min — Pubblica userà questo file
+          {hasTimeline ? ' invece del render.' : '; per questa durata non c’è ancora un Excel, e non serve.'}
+          {' '}
+          <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>
+            {hasTimeline ? 'Usa invece il render dell’app' : 'Annulla'}
+          </a>
+        </div>
       )}
 
       {!hasTimeline && (

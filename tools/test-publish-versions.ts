@@ -34,6 +34,7 @@ import {
   tagSlug,
   tagsInUse,
 } from '../src/data/tags'
+import { entryForPublish } from '../src/admin/publishPlain'
 import { applyCardDraft, cardDraftFrom } from '../src/admin/ProtocolCard'
 import type { PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
 
@@ -278,5 +279,59 @@ assert(filterByTags(shelf, [DURATION_TAG_IDS[6]]).map((p) => p.code).join(',') =
 assert(filterByTags(shelf, ['sera', DURATION_TAG_IDS[6]]).map((p) => p.code).join(',') === 'b', 'a tag and a duration combine')
 assert(filterByTags(shelf, ['mai-usato']).length === 0, 'a tag nobody carries returns nothing, it does not throw')
 assert(tagsInUse(shelf).map((t) => `${t.id}:${t.count}`).join(',') === 'sera:2,cuffie:1', 'the filter row offers used tags, most-used first')
+
+/* ========================================================================== *
+   AUDIO AND EXCEL ARE SEPARATE MATERIAL ON A PROTOCOL
+
+   A time signature may carry an uploaded audio and no workbook at all — that
+   is how a demo protocol is made, and how a PO ships a mix mastered outside
+   the app. Importing the Excel for that duration later must not disturb the
+   file, and must leave the other durations alone.
+
+   These call `entryForPublish` directly rather than the local reimplementation
+   above: the point is to hold the SHIPPED merge to the rule, not a copy of it.
+ * ========================================================================== */
+
+const emptyBook = (code: string): PlainTimeline =>
+  ({ code, title: 'Demo', versions: [], affirmations: [], issues: [] })
+
+const demoStart: CatalogProtocol = {
+  code: 'GL-DEMO 9.1', family: 'GL-DEMO', title: 'Demo', blurb: '',
+  phases: [], versions: [], enabled: false, source: 'imported', tenants: 'all',
+  audioReady: false, updatedAt: 1,
+}
+
+/* 1. an upload with no sheet creates the duration the operator PICKED */
+const uploaded = entryForPublish({ timeline: emptyBook('GL-DEMO 9.1'), existing: demoStart, selected: 24 })
+assert(
+  uploaded.versions.map((v) => v.duration).join(',') === '24',
+  'audio-only publish creates the SELECTED duration, not a hardcoded 12',
+)
+assert(!plainFor(uploaded, 24), 'and invents no timeline for it')
+assert(uploaded.plain === undefined, 'and does not blank the legacy mirror with an empty workbook')
+
+const demoLive = attach(uploaded, 24, 'https://cdn/demo-24.mp3')
+
+/* 2. importing the Excel for that same duration keeps the uploaded file */
+const demoWithBook = entryForPublish({
+  timeline: { ...workbook(24, 3), code: 'GL-DEMO 9.1' },
+  existing: demoLive,
+  selected: 24,
+  keepDraft: true,
+})
+assert(urlOf(demoWithBook, 24) === 'https://cdn/demo-24.mp3', 'importing the Excel later does NOT erase the uploaded audio')
+assert(!!plainFor(demoWithBook, 24), 'and the timeline is now there to edit and re-render')
+assert(demoWithBook.enabled === demoLive.enabled, 'and importing does not switch the protocol on by itself')
+
+/* 3. a different duration touches neither */
+const demoBoth = entryForPublish({
+  timeline: { ...workbook(6, 2), code: 'GL-DEMO 9.1' },
+  existing: demoWithBook,
+  selected: 6,
+  keepDraft: true,
+})
+assert(urlOf(demoBoth, 24) === 'https://cdn/demo-24.mp3', 'importing the 6-minute sheet leaves the 24-minute audio alone')
+assert(!!plainFor(demoBoth, 24) && !!plainFor(demoBoth, 6), 'and both timelines coexist')
+assert(urlOf(demoBoth, 6) === undefined, 'while 6m has no audio — importing a sheet never invents one')
 
 console.log('\ndone.')
