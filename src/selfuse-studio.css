@@ -938,6 +938,33 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .expect,
 .su-studio .goals { display: flex; flex-direction: column; gap: 10px; margin: 0; }
 
+/* --- hello ---------------------------------------------------------------
+   The date small and spaced above, the greeting large below: the shape the
+   canvas opens with, and the reason a person is greeted before being shown a
+   shelf of clinical material. */
+.su-studio .su-hello {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+}
+.su-studio .su-hello__date {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--su-faint);
+}
+.su-studio .su-hello__line {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--su-fg);
+  margin: 0;
+  text-wrap: balance;
+}
+
 /* ================================================ the merged library =====
 
    Home IS the library now: a continue card when a pathway is running, the
@@ -1234,6 +1261,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 
   /* ---- the content, given the room it now has ---- */
   .su-studio .su-greet,
+  .su-studio .su-hello__line,
   .su-studio .home__head h1 { font-size: 36px; }
 
   /* the hero stops being a full-width block and takes two thirds, with the

@@ -164,17 +164,27 @@ renders('HOME · D  pathway complete', <Home {...homeProps} pathway={{ ...popula
    pathways rail and the continue card. The `initialTab` prop went with the
    tab it selected; it lingered here for a while because tools/ is outside the
    tsconfig include and never type-checked. */
-renders('HOME · library, no pathway', <Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />)
-renders('HOME · library, pathway running', <Explore pathway={populated.pathway} completed={['focus-performance']} onStartPathway={noop} onStart={noop} />)
+renders('HOME · library, no pathway', <Explore name="Sofia" pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />)
+renders('HOME · library, pathway running', <Explore name="Sofia" pathway={populated.pathway} completed={['focus-performance']} onStartPathway={noop} onStart={noop} />)
 
-const homeHtml = renderToString(shell(<Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />))
+const homeHtml = renderToString(shell(<Explore name="Sofia" pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />))
 /* Asserted on the class, not the copy: this renders in the default locale
    and "Pathways" is "Percorsi" there. */
+assert(homeHtml.includes('Sofia'), 'the library says hello by name')
+const homeAnon = renderToString(shell(<Explore name={null} pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />))
+/* Read the greeting LINE, not the page: a page is full of commas. */
+const helloLine = (html: string) =>
+  (html.match(/class="[^"]*su-hello__line[^"]*"[^>]*>([^<]*)/) ?? [])[1] ?? ''
+assert(helloLine(homeHtml).includes('Sofia'), 'the greeting names the person')
+assert(
+  helloLine(homeAnon).length > 0 && !helloLine(homeAnon).includes(','),
+  'and greets without a name rather than trailing a comma when there is none',
+)
 assert(homeHtml.includes('pw-rail'), 'the library carries a Pathways rail')
 assert(homeHtml.includes('pw-big'), 'and the pathways are big buttons, not cover cards')
 assert(!homeHtml.includes('role="tablist"'), 'and there is no tab bar to switch modes with')
 const homeRunning = renderToString(
-  shell(<Explore pathway={populated.pathway} completed={[]} onStartPathway={noop} onStart={noop} />),
+  shell(<Explore name="Sofia" pathway={populated.pathway} completed={[]} onStartPathway={noop} onStart={noop} />),
 )
 /* ONE card, not two. A running pathway used to get a plain progress card
    stacked on top of the hero — two cards about the same thing, and the one
@@ -447,7 +457,7 @@ renders('SAFE-3 modal', <SafetyLevel3 eap={null} onClose={noop} />)
 /* A person must never meet a protocol code on their own screens. */
 absent('THR · C', <TherapistTab {...therapistProps} hasConvention therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-ANX')
 absent('PRG-2', <ProgressTab {...progressProps} state={populated} therapy={{ link: seedLink(DEMO_THERAPISTS[0]), request: null }} />, 'GL-STRESS')
-absent('HOME library', <Explore pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />, 'GL-')
+absent('HOME library', <Explore name="Sofia" pathway={null} completed={[]} onStartPathway={noop} onStart={noop} />, 'GL-')
 
 /* ------------------------------------------------- Corporate Dashboard -- */
 console.log('\n--- Corporate Dashboard ---')

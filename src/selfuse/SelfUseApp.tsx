@@ -27,6 +27,7 @@ import { GlCheckFlow, Who5Flow, DailyMoodFlow } from './Measures'
 import { SafetyLevel2, SafetyLevel3 } from './Safety'
 import { PatientVideoCall } from './VideoCall'
 import { useSelfUseStore, takeSignupIntake } from '../data/selfUseStore'
+import { accountName, displayName } from './greeting'
 import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
@@ -413,13 +414,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       state,
       sessions: catalog.sessions,
       pathway: findPathway(catalog.pathways, state.pathway?.id),
-      personName: displayName(user?.email),
+      personName: accountName(user?.email),
     }).save(`good-loop-${dayKey(Date.now())}.pdf`)
   }
 
   function exportTherapy() {
     if (!therapy.link) return
-    buildTherapyReportPdf(therapy.link, catalog.sessions, displayName(user?.email))
+    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email))
       .save(`good-loop-therapy-${dayKey(Date.now())}.pdf`)
   }
 
@@ -454,6 +455,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       <div className="tabview">
         {tab === 'home' && (
           <Explore
+            name={displayName(user?.email)}
             pathway={state.pathway}
             completed={state.completedPathways.map((c) => c.id)}
             onStartPathway={startPathway}
@@ -489,7 +491,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'profile' && (
           <ProfileTab
-            name={displayName(user?.email)}
+            name={accountName(user?.email)}
             email={user?.email ?? ''}
             convention={convention}
             hasTherapist={Boolean(therapy.link)}
@@ -524,11 +526,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
 /* ------------------------------------------------------------------------- */
 
-function displayName(email?: string | null): string {
-  if (!email) return 'there'
-  const local = email.split('@')[0]
-  return local.split(/[._-]/)[0].replace(/^./, (c) => c.toUpperCase())
-}
 
 function downloadJson(filename: string, data: unknown): void {
   try {

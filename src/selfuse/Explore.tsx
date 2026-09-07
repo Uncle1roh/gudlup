@@ -14,6 +14,7 @@
 
 import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
+import { greeting, longDate } from './greeting'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
 import { coverFor, coverStyle } from './artwork'
@@ -28,6 +29,8 @@ import { currentWeek, type PathwayState } from '../data/selfUseStore'
 import type { Launch } from './Home'
 
 interface ExploreProps {
+  /** First name, when the account gives one. Null says hello without it. */
+  name: string | null
   pathway: PathwayState | null
   completed: PathwayId[]
   onStartPathway: (id: PathwayId) => void
@@ -40,7 +43,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ pathway, completed, onStartPathway, onStart }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart }: ExploreProps) {
   const { t } = useI18n()
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'list' })
@@ -100,6 +103,16 @@ export function Explore({ pathway, completed, onStartPathway, onStart }: Explore
 
   return (
     <div className="su-page explore">
+      {/* The date above, the greeting below — the shape the app opens with.
+          A person arriving at a library of clinical material should be
+          greeted by name before they are shown a shelf. */}
+      <header className="su-hello">
+        <span className="su-hello__date">{t(longDate())}</span>
+        <h1 className="display su-hello__line">
+          {name ? `${t(greeting())}, ${name}` : t(greeting())}
+        </h1>
+      </header>
+
       <Catalog
         catalog={catalog}
         featuredSlug={todaySlug}
