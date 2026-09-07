@@ -26,6 +26,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
      person lands on the library the moment their account exists — so the two
      answers that must precede any data being gathered are asked at
      registration, which is the last honest moment to ask them. */
+  const [resetSent, setResetSent] = useState(false)
   const [consentUsage, setConsentUsage] = useState(false)
   const [consentMeasure, setConsentMeasure] = useState(true)
   const [team, setTeam] = useState('')
@@ -62,6 +63,30 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   }
 
   const needsConsent = signup && !isB2b && !isAdmin && !isHr
+  /**
+   * Forgotten password.
+   *
+   * The confirmation is the SAME whether or not the address has an account:
+   * "if that address has an account, a link is on its way". Saying "no such
+   * user" turns the login form into a way to find out who has an account
+   * here — and on a mental-health product that is a disclosure, not a
+   * convenience.
+   */
+  async function forgot() {
+    const address = email.trim()
+    if (!address) { setError(t('Enter your email address first.')); return }
+    setError(null)
+    setBusy(true)
+    try {
+      await auth.resetPassword(address)
+      setResetSent(true)
+    } catch {
+      setError(t('We could not send the link just now. Try again in a moment.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const canSubmit =
     !!email && !!password &&
     (!signup || !isB2b || (!!name.trim() && !!crp.trim())) &&
@@ -126,12 +151,24 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
         )}
 
         {error && <div className="auth__error">{error}</div>}
+        {resetSent && (
+          <div className="auth__sent">
+            {t('If that address has an account, a reset link is on its way. Check your inbox.')}
+          </div>
+        )}
 
         <button className="auth__btn" disabled={busy || !canSubmit} onClick={() => void submit()}>
           {busy ? t('Please wait…') : signup ? t('Create account') : t('Sign in')}
         </button>
+        {/* Signing in only. On the sign-up form there is no password to have
+            forgotten, and the link would just be noise. */}
+        {!signup && !demo && (
+          <button className="auth__forgot" disabled={busy} onClick={() => void forgot()}>
+            {t('Forgot your password?')}
+          </button>
+        )}
         {!noSignup && (
-          <button className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null) }}>
+          <button className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setResetSent(false) }}>
             {signup ? t('Have an account? Sign in') : t('New here? Create an account')}
           </button>
         )}

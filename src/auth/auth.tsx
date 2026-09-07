@@ -26,6 +26,13 @@ export interface AuthApi {
   signIn(email: string, password: string): Promise<void>
   signUp(email: string, password: string, role: Role, extra?: SignUpExtra): Promise<void>
   signOut(): Promise<void>
+  /**
+   * Send a reset link. Resolves whether or not the address has an account —
+   * telling a stranger which emails are registered is an account-enumeration
+   * leak, and the screen says "if that address has an account" for the same
+   * reason.
+   */
+  resetPassword(email: string): Promise<void>
 }
 
 const AuthCtx = createContext<AuthApi | null>(null)
@@ -73,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         ready: true, user, mode: 'demo',
         async signIn(email) { enter(email) },
+        async resetPassword() { /* demo mode has no mailbox to send to */ },
         async signUp(email) { enter(email) },
         async signOut() { try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ } setUser(null) },
       }
@@ -110,6 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       },
       async signOut() { await sb.auth.signOut() },
+      async resetPassword(email: string) {
+        /* The redirect comes back to THIS app with a recovery token in the
+           URL fragment; Supabase's client picks it up and the person is signed
+           in long enough to set a new password. */
+        const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}${window.location.pathname}`,
+        })
+        /* A rejected address is not reported: the caller shows the same
+           message either way. Only a transport failure is worth raising. */
+        if (error && !/user not found/i.test(error.message)) throw error
+      },
     }
   }, [supa, ready, user])
 

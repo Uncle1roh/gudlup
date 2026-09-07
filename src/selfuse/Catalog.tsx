@@ -69,6 +69,10 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
+  /* Pathways are a category, so choosing them narrows the screen the way any
+     other category does — everything else steps aside rather than the person
+     scrolling past it. */
+  const [onlyPathways, setOnlyPathways] = useState(false)
   const filtering = dur !== 'all' || theme !== 'all'
 
   const all = catalog.browsable
@@ -139,6 +143,10 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
 
   return (
     <div className="cat">
+      {onlyPathways ? (
+        pathwaysSlot
+      ) : (
+        <>
       {!filtering && hero && (
         <Hero
           session={hero}
@@ -156,17 +164,24 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
       <nav className="cat__side" aria-label={t('Categories')}>
         <button
           className="cat__sideitem"
-          aria-pressed={!filtering}
-          onClick={() => { setDur('all'); setTheme('all') }}
+          aria-pressed={!filtering && !onlyPathways}
+          onClick={() => { setDur('all'); setTheme('all'); setOnlyPathways(false) }}
         >
           {t('All themes')}
+        </button>
+        <button
+          className="cat__sideitem"
+          aria-pressed={onlyPathways}
+          onClick={() => { setDur('all'); setTheme('all'); setOnlyPathways((v) => !v) }}
+        >
+          {t('Pathways')}
         </button>
         {SELF_USE_THEMES.map((th) => (
           <button
             key={th.id}
             className="cat__sideitem"
             aria-pressed={theme === th.id}
-            onClick={() => setTheme(theme === th.id ? 'all' : th.id)}
+            onClick={() => { setOnlyPathways(false); setTheme(theme === th.id ? 'all' : th.id) }}
           >
             {t(th.label)}
           </button>
@@ -177,7 +192,7 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
             key={d}
             className="cat__sideitem"
             aria-pressed={dur === d}
-            onClick={() => setDur(dur === d ? 'all' : d)}
+            onClick={() => { setOnlyPathways(false); setDur(dur === d ? 'all' : d) }}
           >
             {t(durationLabel(d))} · {d}m
           </button>
@@ -237,6 +252,8 @@ export function Catalog({ catalog, featuredSlug, onOpen, onQuickStart, heroPathw
         </>
       ) : (
         rails.map((rail) => <RailRow key={rail.id} rail={rail} onOpen={onOpen} />)
+      )}
+        </>
       )}
     </div>
   )

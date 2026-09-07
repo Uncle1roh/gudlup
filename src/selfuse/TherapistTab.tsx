@@ -103,10 +103,15 @@ export function TherapistTab(props: TherapistTabProps) {
         therapistId={view.id}
         onBack={() => setView({ kind: 'list' })}
         onBooked={(th, slotMs) => {
-          update((s) => ({
-            ...s,
-            request: { therapistId: th.id, therapistName: th.name, therapistRole: th.role, slotMs, sentAt: Date.now() },
-          }))
+          /* Someone already linked is BOOKING, not asking to be taken on:
+             sending them to "waiting for confirmation" would hide the
+             appointment they just made behind a state that nothing resolves. */
+          if (!therapy.link) {
+            update((s) => ({
+              ...s,
+              request: { therapistId: th.id, therapistName: th.name, therapistRole: th.role, slotMs, sentAt: Date.now() },
+            }))
+          }
           props.onAppointmentChanged()
           setView({ kind: 'root' })
         }}
@@ -297,6 +302,16 @@ export function TherapistTab(props: TherapistTabProps) {
         )}
         <button className="btn btn--primary" disabled={!joinable} onClick={props.onJoinCall}>
           {t('Join Session')}
+        </button>
+        {/* A linked person had NO way to book. The slot picker was reachable
+            only from the unlinked state, through "find a therapist" — so once
+            somebody had a therapist the app told them "your therapist will
+            propose a time" and offered nothing, on either side. */}
+        <button
+          className="btn btn--ghost"
+          onClick={() => setView({ kind: 'profile', id: link.therapist.id })}
+        >
+          {nextAt ? t('Change the time') : t('Book a session')}
         </button>
         {/* The line under the button explains the DISABLED button, so it has to
             agree with the line above it. It used to say "no session is

@@ -513,6 +513,31 @@ renders('TH-SETTINGS', <WorkspaceSettings state={ws} update={noop} onOpenAvailab
 
 /* ------------------------------------------- the catalog reached the UI --- */
 console.log('')
+/* --- the player's transport belongs at the foot of the screen -------------
+
+   `.player` is `position: absolute; inset: 0` and fills the frame, and the HUD
+   inside it is `space-between` — top row up, three transport buttons down. A
+   rule that turned every child of the frame `position: relative` collapsed the
+   player to its content height and the buttons floated wherever that ended. */
+const playerHtml = renderToString(
+  shell(
+    <SessionFlow
+      session={vasSession}
+      duration={12}
+      needsStereoCheck={false}
+      onStereoChecked={noop}
+      onDone={noop}
+      onCancel={noop}
+      onNeedSupport={noop}
+    />,
+  ),
+)
+assert(playerHtml.includes('app-frame'), 'the player renders inside the frame')
+/* The layout itself is CSS and cannot be asserted from a string; what CAN
+   be held here is that the frame carries the theme scope the player's
+   positioning now depends on. */
+assert(playerHtml.includes('su-studio'), 'and the frame carries the theme scope')
+
 console.log('--- the week, inside the hero ---')
 
 /* The weekly dots are gone with the old Home screen, and with them the bug

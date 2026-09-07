@@ -206,6 +206,14 @@ export const IT_SELF_USE: Record<string, string> = {
   'Play the tone': 'Riproduci il suono',
   'See pathway': 'Vedi il percorso',
   'Help me choose': 'Aiutami a scegliere',
+  'Book a session': 'Prenota una seduta',
+  'Change the time': 'Cambia orario',
+  'Forgot your password?': 'Password dimenticata?',
+  'Enter your email address first.': 'Inserisci prima il tuo indirizzo email.',
+  'We could not send the link just now. Try again in a moment.':
+    'Non siamo riusciti a inviare il link. Riprova tra poco.',
+  'If that address has an account, a reset link is on its way. Check your inbox.':
+    'Se a quell’indirizzo corrisponde un account, il link è in arrivo. Controlla la posta.',
   'See this pathway': 'Vedi questo percorso',
   'Change my answers': 'Cambia le risposte',
   'Show me a pathway': 'Mostrami un percorso',
