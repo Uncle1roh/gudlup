@@ -222,7 +222,11 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
               </button>
             )}
             <span className="pe-hint">
-              JPG, PNG, WebP o AVIF · massimo 4 MB · orizzontale o quadrata, il ritaglio è automatico
+              JPG, PNG, WebP o AVIF · fino a 12 MB<br />
+              <b>Consigliato: 1600 × 1200 px (4:3)</b>, soggetto al centro.<br />
+              La stessa immagine riempie tre riquadri — la card verticale, la
+              copertina larga e la striscia del dettaglio — e viene ritagliata
+              dal centro: tieni il soggetto dentro il quadrato centrale.
             </span>
             {coverErr && <span className="pe-err">{coverErr}</span>}
           </div>

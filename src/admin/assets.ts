@@ -187,8 +187,18 @@ const COVER_DIR = `${ASSET_ROOT}/covers`
 
 /** What a browser can decode and a phone will not choke on. */
 const COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
-/** A cover is a background behind type, not a print asset. */
-export const COVER_MAX_BYTES = 4 * 1024 * 1024
+/**
+ * How big a cover may be.
+ *
+ * The widest box one image has to fill is the desktop hero at 858x380 CSS px,
+ * so 1716x760 covers a 2x screen and there is no rendering reason to go past
+ * roughly 2000px on the long edge. But a photographer hands over what a camera
+ * produced, and refusing a 9 MB JPEG with "too big" makes the person shrink it
+ * by hand before they can see whether it even suits the session. 12 MB takes
+ * anything that is plausibly a chosen photograph and still refuses a RAW
+ * export or a video someone dropped in by mistake.
+ */
+export const COVER_MAX_BYTES = 12 * 1024 * 1024
 
 export function coverPathFor(code: string, fileName: string): string {
   const safe = code.replace(/[^A-Za-z0-9_-]+/g, '_')
@@ -209,7 +219,10 @@ export async function uploadProtocolCover(code: string, file: File): Promise<str
     throw new Error('Formato non supportato — usa JPG, PNG, WebP o AVIF.')
   }
   if (file.size > COVER_MAX_BYTES) {
-    throw new Error(`Immagine troppo grande (${Math.round(file.size / 1024 / 1024)} MB) — massimo 4 MB.`)
+    throw new Error(
+      `Immagine troppo grande (${(file.size / 1024 / 1024).toFixed(1)} MB) — massimo ` +
+      `${COVER_MAX_BYTES / 1024 / 1024} MB. Esporta a circa 1600 px sul lato lungo.`,
+    )
   }
   const sb = client()
   const path = coverPathFor(code, file.name)
