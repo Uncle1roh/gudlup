@@ -50,7 +50,7 @@ function materialLabel(p: CatalogProtocol): string {
   return bits.length ? bits.join(' · ') : 'nessun workbook'
 }
 
-const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', tags: [] }
+const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', tags: [], coverUrl: '' }
 
 /** A GL code, the way the workbooks write it: "GL-ANX 1.1". */
 const CODE_SHAPE = /^GL-[A-Z]{2,8}\s+\d+\.\d+$/

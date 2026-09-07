@@ -431,7 +431,7 @@ function SessionDetail({
   const { t } = useI18n()
   const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.blocks.some((b) => b.slug === session.slug)))
 
-  const cover = coverFor(session.slug, session.theme)
+  const cover = coverFor(session.slug, session.theme, session.coverUrl)
 
   return (
     <div className="su-page sess-detail">

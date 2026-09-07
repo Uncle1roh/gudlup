@@ -24,7 +24,7 @@ import { seedCatalog } from '../src/data/catalog'
 import { PathwayFinder } from '../src/selfuse/PathwayFinder'
 import { Explore } from '../src/selfuse/Explore'
 import { Catalog } from '../src/selfuse/Catalog'
-import { coverFor, coverSvg } from '../src/selfuse/artwork'
+import { coverFor, coverStyle, coverSvg } from '../src/selfuse/artwork'
 import { ProgressTab, GuidedProgress } from '../src/selfuse/ProgressTab'
 import { ProfileTab } from '../src/selfuse/ProfileTab'
 import { TherapistTab } from '../src/selfuse/TherapistTab'
@@ -537,6 +537,22 @@ assert(playerHtml.includes('app-frame'), 'the player renders inside the frame')
    be held here is that the frame carries the theme scope the player's
    positioning now depends on. */
 assert(playerHtml.includes('su-studio'), 'and the frame carries the theme scope')
+
+/* --- an uploaded cover replaces the drawing ------------------------------
+
+   Generated artwork is the default and stays the fallback. Where a PO has
+   uploaded a photograph it IS the cover: a duotone gradient behind white type
+   is only ever as much contrast as a gradient can give, which is what people
+   were reporting. */
+const drawn = coverFor('calm-safety', 'calm')
+const shot = coverFor('calm-safety', 'calm', 'https://cdn.test/calm.jpg')
+assert(coverStyle(drawn).backgroundImage?.includes('data:image/svg+xml') === true, 'with no upload the cover is the drawn scene')
+assert(coverStyle(shot).backgroundImage === 'url("https://cdn.test/calm.jpg")', 'an uploaded image is used as-is, not composited over the drawing')
+assert(drawn.motif === shot.motif, 'and the drawing is still there underneath if the image is removed')
+
+const withCover = seedCatalog().map((p) => (p.code === 'GL-ANX 1.1' ? { ...p, coverUrl: 'https://cdn.test/anx.jpg' } : p))
+const coveredSession = resolveCatalog(withCover, 'en').sessions.find((x) => x.protocolCode === 'GL-ANX 1.1')
+assert(coveredSession?.coverUrl === 'https://cdn.test/anx.jpg', 'the cover travels from the catalog row to the session')
 
 console.log('--- the week, inside the hero ---')
 

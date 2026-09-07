@@ -173,6 +173,63 @@ export async function listAssets(): Promise<AudioAsset[]> {
   return out
 }
 
+/* ------------------------------------------------------- protocol covers --
+
+   A real image per protocol, uploaded from the Scheda inside a protocol's
+   Details. Generated artwork is the default and stays the fallback; this is
+   what replaces it where a PO has chosen a photograph.
+
+   Filed beside the audio library in the same bucket, under assets/covers/,
+   keyed by the protocol code — so a re-upload REPLACES the cover rather than
+   accumulating orphans nobody can find and nothing points at. */
+
+const COVER_DIR = `${ASSET_ROOT}/covers`
+
+/** What a browser can decode and a phone will not choke on. */
+const COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+/** A cover is a background behind type, not a print asset. */
+export const COVER_MAX_BYTES = 4 * 1024 * 1024
+
+export function coverPathFor(code: string, fileName: string): string {
+  const safe = code.replace(/[^A-Za-z0-9_-]+/g, '_')
+  const ext = (/\.([a-z0-9]+)$/i.exec(fileName)?.[1] ?? 'jpg').toLowerCase()
+  return `${COVER_DIR}/${safe}.${ext}`
+}
+
+/**
+ * Upload a protocol cover and return its public URL.
+ *
+ * `upsert` is on so replacing a cover overwrites the same path — and the
+ * returned URL carries a cache-busting stamp, because the CDN would otherwise
+ * keep serving the old picture from the identical path for hours and the
+ * upload would look as if it had silently failed.
+ */
+export async function uploadProtocolCover(code: string, file: File): Promise<string> {
+  if (!COVER_TYPES.includes(file.type)) {
+    throw new Error('Formato non supportato — usa JPG, PNG, WebP o AVIF.')
+  }
+  if (file.size > COVER_MAX_BYTES) {
+    throw new Error(`Immagine troppo grande (${Math.round(file.size / 1024 / 1024)} MB) — massimo 4 MB.`)
+  }
+  const sb = client()
+  const path = coverPathFor(code, file.name)
+  const { error } = await sb.storage.from(ASSET_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
+  if (error) throw new Error(`Caricamento non riuscito: ${error.message}`)
+  return `${publicUrl(sb, path)}?v=${Date.now()}`
+}
+
+/** Remove a protocol's cover. The generated artwork takes over again. */
+export async function deleteProtocolCover(code: string, url: string): Promise<void> {
+  const sb = client()
+  /* Derive the path from the URL rather than guessing the extension: the
+     stored file may be a .png where the next upload was a .jpg. */
+  const bare = url.split('?')[0]
+  const at = bare.indexOf(`${COVER_DIR}/`)
+  const path = at >= 0 ? bare.slice(at) : coverPathFor(code, 'x.jpg')
+  await sb.storage.from(ASSET_BUCKET).remove([path])
+}
+
 /**
  * Every library file, grouped the way a picker lists them.
  *

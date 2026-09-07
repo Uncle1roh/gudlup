@@ -27,7 +27,7 @@
    used, how it is delivered. They filter lists; they never route a session.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   MAX_TAGS,
   PROTOCOL_TAGS,
@@ -39,6 +39,7 @@ import {
   type TagGroup,
 } from '../data/tags'
 import type { CatalogProtocol } from '../data/catalog'
+import { uploadProtocolCover } from './assets'
 
 export interface ProtocolCardDraft {
   code: string
@@ -47,6 +48,8 @@ export interface ProtocolCardDraft {
   publicTitle: string
   publicBlurb: string
   tags: string[]
+  /** A real cover image. Empty = the generated artwork stands. */
+  coverUrl: string
 }
 
 export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
@@ -55,6 +58,7 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     title: p.title,
     publicTitle: p.publicTitle ?? '',
     publicBlurb: p.publicBlurb ?? '',
+    coverUrl: p.coverUrl ?? '',
     tags: tagsOf(p),
   }
 }
@@ -75,6 +79,7 @@ export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtoc
     title: title || existing.title,
     publicTitle: publicTitle || undefined,
     publicBlurb: publicBlurb || undefined,
+    coverUrl: draft.coverUrl.trim() || undefined,
     tags: normalizeTags(draft.tags),
     updatedAt: Date.now(),
   }
@@ -98,7 +103,35 @@ interface Props {
 
 export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCancel }: Props) {
   const [custom, setCustom] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [coverErr, setCoverErr] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const set = (p: Partial<ProtocolCardDraft>) => onChange({ ...draft, ...p })
+
+  /**
+   * Upload the chosen file and put its URL on the draft.
+   *
+   * It uploads IMMEDIATELY rather than on Save. The file has to reach storage
+   * to have a URL at all, and holding it until Save would mean either keeping
+   * a File in component state across an unmount or writing a row that points
+   * at nothing. Save then persists the URL like any other field — and removing
+   * a cover only clears that field, leaving the file in place: an image the
+   * POs uploaded is worth more than the bytes it costs, and deleting on Remove
+   * would destroy it on a mis-tap with no undo.
+   */
+  async function pickCover(file?: File) {
+    if (!file) return
+    if (!draft.code.trim()) { setCoverErr('Salva prima il protocollo: la copertina è archiviata sotto il suo codice.'); return }
+    setCoverErr(null)
+    setUploading(true)
+    try {
+      set({ coverUrl: await uploadProtocolCover(draft.code, file) })
+    } catch (e) {
+      setCoverErr((e as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
   const full = draft.tags.length >= MAX_TAGS
   const invalid = cardDraftError(draft)
 
@@ -155,6 +188,46 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
           onChange={(e) => set({ publicBlurb: e.target.value })}
         />
       </label>
+
+      {/* ---- the cover -------------------------------------------------
+          The card art a person sees while browsing. Without one the app draws
+          a scene from the session's own slug, which is honest about there
+          being no commissioned art and is as much contrast as a gradient can
+          give behind white type. A photograph chosen for the session is the
+          fix people are actually asking for. */}
+      <div className="pe-field">
+        <span className="pe-label">Immagine di copertina <em>quella che si vede sfogliando</em></span>
+        <div className="pe-cover">
+          <div
+            className="pe-cover__prev"
+            style={draft.coverUrl ? { backgroundImage: `url("${draft.coverUrl}")` } : undefined}
+            aria-hidden="true"
+          >
+            {!draft.coverUrl && <span>generata</span>}
+          </div>
+          <div className="pe-cover__side">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              hidden
+              onChange={(e) => { void pickCover(e.target.files?.[0]); e.target.value = '' }}
+            />
+            <button className="b2b-btn" disabled={uploading || busy} onClick={() => fileRef.current?.click()}>
+              {uploading ? 'Caricamento…' : draft.coverUrl ? 'Sostituisci' : 'Carica immagine'}
+            </button>
+            {draft.coverUrl && (
+              <button className="b2b-btn b2b-btn--quiet" disabled={uploading || busy} onClick={() => set({ coverUrl: '' })}>
+                Togli
+              </button>
+            )}
+            <span className="pe-hint">
+              JPG, PNG, WebP o AVIF · massimo 4 MB · orizzontale o quadrata, il ritaglio è automatico
+            </span>
+            {coverErr && <span className="pe-err">{coverErr}</span>}
+          </div>
+        </div>
+      </div>
 
       {TAG_GROUPS.map((g: { id: TagGroup; label: string; hint: string }) => (
         <div key={g.id} style={{ marginTop: 10 }}>

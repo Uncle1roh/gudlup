@@ -86,6 +86,16 @@ export interface CatalogProtocol extends Protocol {
   audience?: Audience
   /** Browse metadata: only on `audience: 'library'` entries. */
   library?: LibraryMeta
+  /**
+   * A real cover image, when a PO has uploaded one.
+   *
+   * Absent means the generated artwork stands — which is the honest default
+   * while nothing is commissioned, and the reason contrast on the browse
+   * screens is only as good as a gradient can be. A photograph chosen for the
+   * session beats a drawing generated from its slug, and this is where it
+   * goes; nothing else about the card changes.
+   */
+  coverUrl?: string
 }
 
 /* ======================================================== time signatures ==

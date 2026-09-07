@@ -284,7 +284,7 @@ function Hero({
   onOpenPathway?: () => void
 }) {
   const { t } = useI18n()
-  const cover = coverFor(session.slug, session.theme)
+  const cover = coverFor(session.slug, session.theme, session.coverUrl)
   const shortest = session.durations.includes(6) ? 6 : session.durations[0]
   const progress = pathway
     ? Math.round(((pathway.week - 1 + (pathway.target ? pathway.done / pathway.target : 0)) / pathway.weeks) * 100)
@@ -362,7 +362,7 @@ function RailRow({ rail, onOpen }: { rail: Rail; onOpen: (slug: string) => void 
 
 export function CoverCard({ session, onOpen }: { session: ResolvedSession; onOpen: () => void }) {
   const { t } = useI18n()
-  const cover = coverFor(session.slug, session.theme)
+  const cover = coverFor(session.slug, session.theme, session.coverUrl)
 
   return (
     <button className="cat-card" onClick={onOpen}>

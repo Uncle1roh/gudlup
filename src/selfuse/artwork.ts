@@ -59,6 +59,9 @@ export interface Cover {
   angle: number
   /** Stable per-slug number — nudges the composition off dead centre. */
   seed: number
+  /** A real photograph a PO uploaded. When present it IS the cover and the
+      drawing below is not built. */
+  imageUrl?: string
 }
 
 /* Each theme gets a band rather than a single colour, so the sessions inside
@@ -142,7 +145,7 @@ function hash(text: string): number {
   return Math.abs(h)
 }
 
-export function coverFor(slug: string, theme: SelfUseTheme): Cover {
+export function coverFor(slug: string, theme: SelfUseTheme, imageUrl?: string): Cover {
   const band = THEME_BANDS[theme] ?? THEME_BANDS.calm
   const n = hash(slug)
   const tone = band[n % band.length]
@@ -153,6 +156,7 @@ export function coverFor(slug: string, theme: SelfUseTheme): Cover {
        The small spread stops a whole rail reading as one striped block. */
     angle: 148 + (n % 5) * 7,
     seed: n,
+    imageUrl: imageUrl || undefined,
   }
 }
 
@@ -345,8 +349,12 @@ export function coverDataUri(c: Cover): string {
     to know how a cover is built — swapping in commissioned art means changing
     this one function. */
 export function coverStyle(c: Cover): React.CSSProperties {
+  /* A real image wins outright. The generated scene is the honest default
+     while nothing is commissioned; it is not a layer to composite a
+     photograph onto, and a duotone gradient behind white type is only ever as
+     much contrast as a gradient can give. */
   return {
-    backgroundImage: `url("${coverDataUri(c)}")`,
+    backgroundImage: `url("${c.imageUrl ?? coverDataUri(c)}")`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     // kept so overlays drawn on top of a cover (durations, badges) stay legible

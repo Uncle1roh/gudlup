@@ -135,6 +135,9 @@ export function hasRenderedAudio(p: CatalogProtocol | undefined, locale: Locale)
 /* ------------------------------------------------- resolved Self Use ----- */
 
 export interface ResolvedSession extends SelfUseSession {
+  /** A real cover image a PO uploaded, when there is one. Absent = the
+      generated artwork. */
+  coverUrl?: string
   /** True when the catalog carries this session's protocol and it is enabled. */
   available: boolean
   /** True when a PO has published rendered audio for at least one duration. */
@@ -186,6 +189,7 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
       durations,
       available: durations.length > 0,
       audioReady: hasRenderedAudio(entry, locale),
+      coverUrl: entry.coverUrl,
       entry,
     }
   })
@@ -205,6 +209,7 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
       durations: playableDurations(p),
       available: true,
       audioReady: hasRenderedAudio(p, locale),
+      coverUrl: p.coverUrl,
       entry: p,
       fromCatalog: true,
     }))

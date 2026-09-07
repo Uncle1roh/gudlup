@@ -435,6 +435,21 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 
 :focus-visible { outline: 2px solid var(--aura); outline-offset: 3px; border-radius: 4px; }
 
+/* --- protocol cover, in the Scheda ---------------------------------------- */
+.pe-cover { display: flex; gap: 14px; align-items: flex-start; }
+.pe-cover__prev {
+  width: 132px; height: 99px; flex-shrink: 0;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--mist-2);
+  border: 1px solid var(--line);
+  display: grid; place-items: center;
+  font-size: 11px; color: var(--slate);
+}
+.pe-cover__side { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 0; }
+.pe-hint { font-size: 11.5px; color: var(--slate); }
+
 /* ============================================================================
    BRAND (from Goodloop_Identity.pdf) — fonts, palette, and the Sound Studio.
    Drop the licensed font files in /public/fonts and these @font-face rules pick
