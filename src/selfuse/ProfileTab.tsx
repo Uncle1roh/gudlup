@@ -17,6 +17,7 @@
 
 import { useState } from 'react'
 import { useI18n, LOCALES } from '../i18n'
+import { THEME_OPTIONS, readThemeChoice, setThemeChoice, type ThemeChoice } from './theme'
 import { SafetyLevel1 } from './Safety'
 import { DURATIONS, INTAKE_TIMES, durationLabel } from '../data/selfuse'
 import type { SelfUseState } from '../data/selfUseStore'
@@ -103,6 +104,10 @@ export function ProfileTab(props: ProfileProps) {
 
 function AccountSettings({ name, email, convention }: ProfileProps) {
   const { t, locale, setLocale } = useI18n()
+  /* Not in the store with the session preferences: the theme belongs to the
+     DEVICE, not to the account. A phone read in bed and a laptop read at a
+     desk want different answers from the same person. */
+  const [theme, setTheme] = useState<ThemeChoice>(() => readThemeChoice())
   return (
     <>
       <h2 className="display su-h1">{t('Account Settings')}</h2>
@@ -115,6 +120,21 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
           {LOCALES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
       </label>
+
+      <div className="ob-field__label">{t('Appearance')}</div>
+      <div className="chip-row">
+        {THEME_OPTIONS.map((o) => (
+          <button
+            key={o.id}
+            className="chip"
+            aria-pressed={theme === o.id}
+            onClick={() => { setTheme(o.id); setThemeChoice(o.id) }}
+          >
+            <span className="chip__label">{t(o.label)}</span>
+          </button>
+        ))}
+      </div>
+      <p className="small muted">{t('A session always plays on a dark screen, whichever you pick.')}</p>
     </>
   )
 }

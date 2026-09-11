@@ -39,6 +39,7 @@ import { safetyLevel2Trigger, dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { BrandLogo } from '../components/Brand'
+import { useSuTheme } from './theme'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -79,6 +80,9 @@ export function SelfUseApp(props: SelfUseAppProps) {
 
 function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { t } = useI18n()
+  /* The only thing in the app that reads the theme: the logo is a PNG in two
+     colourways and CSS cannot repaint it. */
+  const theme = useSuTheme()
   const catalog = useCatalog()
   const { user, signOut } = useAuth()
   const dp = useDataProvider()
@@ -533,7 +537,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             hidden at phone widths, where this nav is four icons at the foot
             of the screen and the search lives in the library's own header. */}
         <span className="tabbar__brand">
-          <BrandLogo variant="cream" />
+          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} />
         </span>
 
         <label className="su-search su-search--bar">

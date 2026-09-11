@@ -644,4 +644,20 @@ export const PT: Record<string, string> = {
     'Proteger seu tempo, colocar limites, reconectar com o que importa.',
   'Long-term development: flexibility, strength, vision.':
     'Desenvolvimento de longo prazo: flexibilidade, força, visão.',
+
+  /* ---- noite ou dia ---- */
+  'Appearance': 'Aparência',
+  'Night': 'Noite',
+  'Day': 'Dia',
+  'Automatic': 'Automático',
+  'A session always plays on a dark screen, whichever you pick.':
+    'A sessão sempre toca com a tela escura, qualquer que seja a sua escolha.',
+
+  /* ---- the rails the library groups itself into ---- */
+  'Six minutes': 'Seis minutos',
+  'When that is all you have': 'Quando é todo o tempo que você tem',
+  'Longer sessions': 'Sessões mais longas',
+  'For when you will not be interrupted': 'Para quando ninguém vai te interromper',
+  'New in the library': 'Novo na biblioteca',
+  'Categories': 'Categorias',
 }

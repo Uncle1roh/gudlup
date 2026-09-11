@@ -475,6 +475,14 @@ export const IT_SELF_USE: Record<string, string> = {
   'Good Loop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
     'Good Loop è un programma personale di benessere e sviluppo. Non sostituisce il supporto professionale per la salute mentale. Se ti serve un’assistenza specialistica, parlane con il tuo medico o con il servizio di supporto della tua azienda.',
 
+  /* ---- night or day ---- */
+  'Appearance': 'Aspetto',
+  'Night': 'Notte',
+  'Day': 'Giorno',
+  'Automatic': 'Automatico',
+  'A session always plays on a dark screen, whichever you pick.':
+    'La sessione si ascolta sempre a schermo scuro, qualunque cosa tu scelga.',
+
   /* ---- the door: which account, and which app it opens ---- */
   'What is this account for?': 'A che cosa serve questo account?',
   'For me': 'Per me',
@@ -805,4 +813,68 @@ export const IT_SELF_USE: Record<string, string> = {
     'Proteggere il tuo tempo, mettere limiti, ricollegarti a ciò che conta.',
   'Long-term development: flexibility, strength, vision.':
     'Sviluppo a lungo termine: flessibilità, forza, visione.',
+
+  /* ---- the rails the library groups itself into ---- */
+  'Six minutes': 'Sei minuti',
+  'When that is all you have': 'Quando è tutto il tempo che hai',
+  'Longer sessions': 'Sessioni più lunghe',
+  'For when you will not be interrupted': 'Per quando nessuno ti interrompe',
+  'New in the library': 'Nuovo in libreria',
+
+  /* ---- everything else the surface says ---------------------------------
+     Swept from the `t()` calls in src/selfuse: the dictionary answered 262 of
+     them and silently fell back to English for the rest, which is why an app
+     set to Italian still had "Any length" and "Play" on it. */
+  'A consolidation week — repeat whichever of these worked best for you.':
+    'Una settimana di consolidamento: ripeti quella che ti ha fatto più bene.',
+  'A good place to start': 'Un buon punto di partenza',
+  'All themes': 'Tutti i temi',
+  'Ambient bed': 'Tappeto sonoro',
+  'Any length': 'Qualsiasi durata',
+  'Camera blocked': 'Fotocamera bloccata',
+  'Connecting to {name}…': 'Connessione a {name}…',
+  'Connecting…': 'Connessione…',
+  'I need support': 'Ho bisogno di aiuto',
+  'More': 'Dettagli',
+  'Name': 'Nome',
+  'No camera': 'Nessuna fotocamera',
+  'No camera available. A session needs a secure connection and a working camera.':
+    'Nessuna fotocamera disponibile. Per una seduta servono una connessione sicura e una fotocamera che funzioni.',
+  'No recorded voice is published for this session yet — it plays an ambient bed.':
+    'Per questa sessione non è ancora pubblicata una voce registrata: senti un tappeto sonoro.',
+  'Not available to play yet — your therapist has been told.':
+    'Non è ancora riproducibile: il tuo terapeuta è stato avvisato.',
+  'Nothing here yet.': 'Ancora niente qui.',
+  'Nothing matches "{q}".': 'Nessun risultato per "{q}".',
+  'Play': 'Ascolta',
+  'Retry': 'Riprova',
+  'Save': 'Salva',
+  'Scroll left': 'Scorri a sinistra',
+  'Scroll right': 'Scorri a destra',
+  'Search sessions': 'Cerca una sessione',
+  'Sessions appear here as soon as they are published.': 'Le sessioni compaiono qui appena vengono pubblicate.',
+  'Starting camera…': 'Avvio della fotocamera…',
+  'Stay on this screen — the call opens on its own.':
+    'Resta su questa schermata: la videochiamata si apre da sola.',
+  'The library is being prepared.': 'La libreria è in preparazione.',
+  'Today in your pathway': 'Oggi nel tuo percorso',
+  'Waiting for your therapist to open the room…': 'Aspettiamo che il tuo terapeuta apra la stanza…',
+  'We could not connect you just now. Check your connection and try again.':
+    'Non è stato possibile connetterti in questo momento. Controlla la connessione e riprova.',
+  'Your camera is blocked. Allow it in your browser settings, then tap retry.':
+    'La fotocamera è bloccata. Autorizzala nelle impostazioni del browser, poi tocca Riprova.',
+  'Your check-in and your mood calendar appear here once you start filling them in.':
+    'Il tuo check-in e il calendario dell’umore compaiono qui appena inizi a compilarli.',
+  'Your own mix': 'La tua scelta',
+  'Your therapist is here. The session will open by itself.':
+    'Il tuo terapeuta è arrivato. La seduta si apre da sola.',
+  'Your therapist is speaking': 'Il tuo terapeuta sta parlando',
+  'Your therapist will start the session when you are both ready.':
+    'Il tuo terapeuta avvierà la seduta quando sarete pronti entrambi.',
+  'demo {n}s': 'demo {n}s',
+  'full length': 'durata intera',
+  '{done} of {total} this week': '{done} di {total} questa settimana',
+  '{n} of 4': '{n} di 4',
+  '{n} week(s) of this pathway are not available right now, so it is shorter than usual.':
+    '{n} settimane di questo percorso non sono disponibili al momento, quindi è più corto del solito.',
 }

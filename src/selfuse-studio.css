@@ -96,6 +96,21 @@
   --su-cream:    #f2eec4;
   --su-cream-2:  #f6f3d6;
 
+  /* The values that used to be written into the rules themselves. They are
+     names now for one reason: a second palette. `rgba(255,255,255,0.08)` is
+     "a faint fill" on a dark ground and a white smear on a light one, and a
+     stylesheet that says the colour instead of the job can only ever have one
+     ground. See the daylight block at the end of this file. */
+  --su-on-accent: #070d0c;                    /* text on the one filled action */
+  --su-hover:     rgba(255, 255, 255, 0.04);  /* a row lifting under the cursor */
+  --su-fill:      rgba(255, 255, 255, 0.08);  /* tracks, bars, ticks */
+  --su-fill-2:    rgba(255, 255, 255, 0.16);  /* the same, one step up */
+  --su-on:        rgba(242, 238, 196, 0.09);  /* the selected thing */
+  --su-bloom:     rgba(31, 191, 148, 0.2);    /* the light above the fold */
+  --su-glow:      rgba(242, 238, 196, 0.5);   /* what the action casts */
+  --su-warm:      #150d07;                    /* the support route: warm, never red */
+  --su-warm-fg:   #f6e6d4;
+
   /* the token re-point: no existing rule has to know the surface went dark */
   --mist:        var(--su-ground);
   --mist-2:      var(--su-well);
@@ -106,13 +121,14 @@
   --aura-deep:   #0f6b52;
   --core:        var(--su-cream);
   --halo:        var(--su-accent-2);
+  --su-cast:     rgba(0, 0, 0, 0.95);         /* what the frame drops */
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-lift: 0 18px 40px -22px rgba(0, 0, 0, 0.95);
+  --shadow-lift: 0 18px 40px -22px var(--su-cast);
 
   position: relative;
   background: var(--su-ground);
   color: var(--su-fg-2);
-  box-shadow: 0 50px 100px -40px rgba(0, 0, 0, 0.95);
+  box-shadow: 0 50px 100px -40px var(--su-cast);
 }
 
 /* The emerald bloom every canvas frame opens with: one soft light above the
@@ -126,7 +142,7 @@
   width: 600px;
   height: 520px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(31, 191, 148, 0.2), rgba(31, 191, 148, 0) 65%);
+  background: radial-gradient(circle, var(--su-bloom), rgba(31, 191, 148, 0) 65%);
   filter: blur(30px);
   pointer-events: none;
   /* BEHIND the content, not merely under a z-index it has to be lifted over.
@@ -143,7 +159,7 @@
 }
 
 /* A dark phone must not float on a cream page. */
-body:has(.su-studio) { background: var(--su-void, #070d0c); }
+body:has(.su-studio) { background: var(--su-void); }
 
 /* the shared grain: one tile of fractal noise, blended over */
 .su-studio .gl-grain { position: absolute; inset: 0; pointer-events: none; }
@@ -218,7 +234,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
     radial-gradient(115% 80% at 74% 12%, rgba(167, 232, 208, 0.4), rgba(31, 191, 148, 0.1) 44%, rgba(0, 0, 0, 0) 72%),
     linear-gradient(158deg, #12463a 0%, #0b2a24 52%, #071412 100%);
   background-size: 170px 170px, auto, auto;
-  box-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 56px -30px var(--su-cast), inset 0 0 0 1px var(--su-fill);
 }
 /* THE ORB, bloomed into the top-right corner. A real element rather than a
    background layer, so it can breathe and shed a ring the way the canvas
@@ -285,7 +301,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .home__bar {
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--su-fill-2);
   margin: 14px 0 9px;
 }
 .su-studio .home__bar > span { background: var(--su-accent); border-radius: 2px; }
@@ -306,17 +322,17 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .home__pathway .small.muted { color: var(--su-meta); }
 
 .su-studio .home__week-progress { margin-top: 12px; }
-.su-studio .home__dots > span { background: rgba(255, 255, 255, 0.16); }
+.su-studio .home__dots > span { background: var(--su-fill-2); }
 .su-studio .home__dots > span.is-on { background: var(--su-accent); }
 
 /* the one cream action */
 .su-studio .home__pathway .btn--primary {
   margin-top: 16px;
   background: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
   border: 0;
   font-weight: 700;
-  box-shadow: 0 12px 30px -10px rgba(242, 238, 196, 0.5);
+  box-shadow: 0 12px 30px -10px var(--su-glow);
 }
 .su-studio .home__pathway .btn--primary:hover { background: var(--su-cream-2); }
 .su-studio .home__pathway .btn--quiet { color: rgba(236, 242, 239, 0.7); }
@@ -488,16 +504,16 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   height: 80px;
   border-radius: 50%;
   background: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
   border: 0;
-  box-shadow: 0 12px 40px -12px rgba(242, 238, 196, 0.5);
+  box-shadow: 0 12px 40px -12px var(--su-glow);
 }
 .su-studio .player__btn,
 .su-studio .hud__btn {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--su-hover);
   border: 1px solid var(--su-hair);
   color: var(--su-muted);
 }
@@ -506,7 +522,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .player__ticks,
 .su-studio .hud__ticks { gap: 3px; height: 4px; }
 .su-studio .player__ticks > *,
-.su-studio .hud__ticks > * { border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+.su-studio .hud__ticks > * { border-radius: 2px; background: var(--su-fill); }
 .su-studio .player__ticks > .is-done,
 .su-studio .hud__ticks > .is-done { background: var(--su-accent); }
 .su-studio .player__ticks > .is-now,
@@ -578,7 +594,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .cat-hero {
   border-radius: 28px;
   border: 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--su-fill);
   overflow: hidden;
   position: relative;
   isolation: isolate;
@@ -610,10 +626,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .cat-hero__blurb { font-size: 12.5px; color: var(--su-meta); }
 .su-studio .cat-hero .btn--light {
   background: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
   border: 0;
   font-weight: 700;
-  box-shadow: 0 12px 30px -10px rgba(242, 238, 196, 0.5);
+  box-shadow: 0 12px 30px -10px var(--su-glow);
 }
 
 /* search + filters */
@@ -651,7 +667,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .segmented button[aria-pressed='true'] {
   background: var(--su-fg);
   border-color: var(--su-fg);
-  color: #070d0c;
+  color: var(--su-on-accent);
   font-weight: 600;
   box-shadow: none;
 }
@@ -667,7 +683,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .weeks,
 .su-studio .week { border-radius: 2px; }
 .su-studio .msr-bar,
-.su-studio .asmt-bar { background: rgba(255, 255, 255, 0.08); }
+.su-studio .asmt-bar { background: var(--su-fill); }
 .su-studio .msr-bar i,
 .su-studio .asmt-bar i { background: var(--su-accent); }
 .su-studio .metric b,
@@ -699,9 +715,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
    has to a primary action. */
 
 .su-studio .tabbar {
-  background: linear-gradient(to top, #0a1211 55%, rgba(10, 18, 17, 0));
+  /* the ground fading up, so the bar belongs to whichever ground it is on */
+  background: linear-gradient(to top, var(--su-ground) 55%, transparent);
   backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--su-hair);
   padding: 14px 12px 8px;
 }
 .su-studio .tabbar__btn { color: var(--su-faint); gap: 5px; }
@@ -751,10 +768,10 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .btn--primary,
 .su-studio .btn--light {
   background: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
   border: 0;
   font-weight: 700;
-  box-shadow: 0 12px 30px -12px rgba(242, 238, 196, 0.45);
+  box-shadow: 0 12px 30px -12px var(--su-glow);
 }
 .su-studio .btn--primary:hover,
 .su-studio .btn--light:hover { background: var(--su-cream-2); }
@@ -763,7 +780,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border: 1px solid var(--su-hair-2);
   color: var(--su-fg-2);
 }
-.su-studio .btn--ghost:hover { border-color: rgba(255, 255, 255, 0.24); color: var(--su-fg); }
+.su-studio .btn--ghost:hover { border-color: var(--su-hair-2); color: var(--su-fg); }
 .su-studio .btn--quiet { color: var(--su-muted); }
 .su-studio .btn--quiet:hover { color: var(--su-fg); }
 
@@ -831,7 +848,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 }
 .su-studio.auth .auth__input::placeholder { color: var(--su-faint); }
 .su-studio.auth .auth__kindbtn {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--su-hover);
   border-color: var(--su-hair-2);
   color: var(--su-muted);
 }
@@ -891,9 +908,9 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 .su-studio .safety-l1,
 .su-studio .safety-sheet,
 .su-studio .safety-card {
-  background: #150d07;
+  background: var(--su-warm);
   border: 1px solid rgba(232, 157, 100, 0.34);
-  color: #f6e6d4;
+  color: var(--su-warm-fg);
 }
 
 /* ----------------------------------------------------------------- orb ---- */
@@ -1127,7 +1144,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 /* --- the measures read as one table, not as rows that each chose a width -- */
 .su-studio .msr-bars { margin: 0; }
 .su-studio .msr-bar { gap: 12px; grid-template-columns: 92px minmax(0, 1fr) 46px; }
-.su-studio .msr-bar__track { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+.su-studio .msr-bar__track { height: 3px; border-radius: 2px; background: var(--su-fill); }
 .su-studio .msr-bar__track > span { background: var(--su-accent); }
 .su-studio .msr-bar__label { font-size: 12.5px; font-weight: 500; color: var(--su-fg-2); }
 .su-studio .msr-bar__val { font-size: 12.5px; font-weight: 600; color: var(--su-fg); font-variant-numeric: tabular-nums; }
@@ -1191,7 +1208,7 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   height: 3px;
   border-radius: 2px;
   margin-top: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--su-fill);
 }
 .su-studio .pw-continue__bar i {
   display: block;
@@ -1262,9 +1279,9 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
      this row is that action — all of it. */
   background: var(--su-cream);
   border-color: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
 }
-.su-studio .chip--start .chip__label { font-weight: 700; color: #070d0c; }
+.su-studio .chip--start .chip__label { font-weight: 700; color: var(--su-on-accent); }
 .su-studio .chip--start .chip__hint { color: rgba(7, 13, 12, 0.66); font-weight: 600; }
 .su-studio .chip--start:hover { background: var(--su-cream-2); border-color: var(--su-cream-2); }
 
@@ -1448,11 +1465,11 @@ body:has(.su-studio) { overflow: hidden; }
   display: grid;
   place-items: center;
   background: var(--su-cream);
-  color: #070d0c;
+  color: var(--su-on-accent);
   border: 0;
   box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(7, 13, 12, 0.1) inset;
 }
-.su-studio .cat-rail__help:hover { background: var(--su-cream-2); color: #070d0c; }
+.su-studio .cat-rail__help:hover { background: var(--su-cream-2); color: var(--su-on-accent); }
 .su-studio .cat-rail__help span { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1; }
 
 /* --- search -------------------------------------------------------------
@@ -1607,9 +1624,9 @@ body:has(.su-studio) { overflow: hidden; }
     background: transparent;
     border: 0;
   }
-  .su-studio .cat__sideitem:hover { background: rgba(255, 255, 255, 0.04); color: var(--su-fg-2); }
+  .su-studio .cat__sideitem:hover { background: var(--su-hover); color: var(--su-fg-2); }
   .su-studio .cat__sideitem[aria-pressed='true'] {
-    background: rgba(242, 238, 196, 0.09);
+    background: var(--su-on);
     color: var(--su-cream);
     font-weight: 600;
   }
@@ -1633,7 +1650,7 @@ body:has(.su-studio) { overflow: hidden; }
     background: rgba(10, 18, 17, 0.86);
     backdrop-filter: blur(14px);
     border-top: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--su-hair);
   }
   /* The logo, left of the search field and the tabs. */
   .su-studio .tabbar__brand {
@@ -1664,9 +1681,9 @@ body:has(.su-studio) { overflow: hidden; }
     font-weight: 500;
     color: var(--su-muted);
   }
-  .su-studio .tabbar__btn:hover { background: rgba(255, 255, 255, 0.04); color: var(--su-fg-2); }
+  .su-studio .tabbar__btn:hover { background: var(--su-hover); color: var(--su-fg-2); }
   .su-studio .tabbar__btn.is-on {
-    background: rgba(242, 238, 196, 0.09);
+    background: var(--su-on);
     color: var(--su-cream);
     font-weight: 600;
   }
@@ -1737,3 +1754,148 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio .cat-card,
   .su-studio .teaser { transition: none; }
 }
+
+
+/* ============================================================= 06 · DAY ===
+
+   The same surface in daylight.
+
+   People told us the dark app felt heavy. It is not a different design: it is
+   the same 1700 lines reading the same token names, with the names pointing
+   somewhere else. That is the whole reason the block at the top of this file
+   exists, and why every `rgba(255,255,255,0.08)` written into a rule had to
+   become a word first — a stylesheet that says the colour instead of the job
+   can only ever have one ground.
+
+   It is PAPER, not white. The brand's cream is the ground here, the emerald
+   is the ink it was mixed for (#009b77 goes muddy on near-black, which is why
+   the night palette lifts it to #1fbf94 — on paper it is itself again), and
+   the one filled action per screen becomes deep emerald with white on it,
+   because a cream button on cream is not a button.
+
+   Set by `data-su-theme` on the document, so one attribute switches every
+   frame the surface renders: the door, the app, the first run.
+   ---------------------------------------------------------------------- */
+
+html[data-su-theme='light'] .su-studio {
+  --su-void:     #eceee6;   /* behind the frame */
+  --su-ground:   #f8f7f0;   /* the paper */
+  --su-raised:   #ffffff;
+  --su-well:     #f1efe4;
+  --su-hair:     rgba(16, 38, 32, 0.10);
+  --su-hair-2:   rgba(16, 38, 32, 0.18);
+
+  --su-fg:       #11241e;
+  --su-fg-2:     #2a413a;
+  --su-muted:    #5d746b;
+  --su-faint:    #8b9d94;
+  --su-meta:     #4e665e;
+
+  --su-accent:   #007a5e;   /* the brand emerald, on the paper it was mixed for */
+  --su-accent-2: #0f6b52;   /* deeper, where the night palette went lighter */
+  --su-cream:    #0f6b52;   /* the ONE action: filled, and readable */
+  --su-cream-2:  #0b5742;
+
+  --su-on-accent: #ffffff;
+  --su-hover:     rgba(16, 38, 32, 0.05);
+  --su-fill:      rgba(16, 38, 32, 0.10);
+  --su-fill-2:    rgba(16, 38, 32, 0.20);
+  --su-on:        rgba(0, 122, 94, 0.10);
+  --su-bloom:     rgba(0, 155, 119, 0.13);
+  --su-glow:      rgba(15, 107, 82, 0.28);
+  --su-cast:      rgba(20, 45, 38, 0.22);
+  --su-warm:      #fdf1e3;
+  --su-warm-fg:   #4a2c12;
+
+  /* the re-point, again: the same seven names the rest of the surface reads */
+  --mist:        var(--su-ground);
+  --mist-2:      var(--su-well);
+  --ink:         var(--su-fg);
+  --slate:       var(--su-muted);
+  --line:        var(--su-hair);
+  --aura:        var(--su-accent);
+  --aura-deep:   #0b5742;
+  --core:        var(--su-accent-2);
+  --halo:        #6fc7a8;
+  --shadow-soft: 0 1px 2px rgba(20, 45, 38, 0.10);
+  --shadow-lift: 0 18px 40px -22px var(--su-cast);
+
+  color: var(--su-fg-2);
+  box-shadow: 0 30px 70px -40px var(--su-cast);
+}
+
+/* The grain is an overlay blend: on a dark ground it adds tooth, on a light
+   one it only dirties it. Nearly off, not gone — a completely flat paper
+   reads as a screenshot. */
+html[data-su-theme='light'] .su-studio .gl-grain,
+html[data-su-theme='light'] .su-studio .su-grained::after { opacity: 0.05; }
+
+/* Cards on paper need an edge; on night they were separated by being lighter
+   than the ground, which paper cannot do. */
+html[data-su-theme='light'] .su-studio .card,
+html[data-su-theme='light'] .su-studio .sess-card,
+html[data-su-theme='light'] .su-studio .pw-card,
+html[data-su-theme='light'] .su-studio .rx-card,
+html[data-su-theme='light'] .su-studio .mood-chip,
+html[data-su-theme='light'] .su-studio .teaser { border-color: var(--su-hair); }
+
+/* A cover is artwork with white type set on it, so it keeps its own night. */
+html[data-su-theme='light'] .su-studio .cat-card__cover,
+html[data-su-theme='light'] .su-studio .cat-hero { color: #f4f8f6; }
+
+/* ---- the screens that are night whatever the setting -------------------
+
+   A session is a dark room on purpose: the screen goes out, the eyes close,
+   and the orb is the only thing on it. Handing that screen a paper ground
+   because the library is easier to read in daylight would be answering a
+   question nobody asked — so the whole session flow carries `su-dark` and
+   keeps the night palette inside a light app. */
+
+html[data-su-theme='light'] .su-studio.su-dark {
+  --su-void:     #070d0c;
+  --su-ground:   #0a1211;
+  --su-raised:   #101a18;
+  --su-well:     #16211f;
+  --su-hair:     rgba(255, 255, 255, 0.07);
+  --su-hair-2:   rgba(255, 255, 255, 0.12);
+
+  --su-fg:       #ecf2ef;
+  --su-fg-2:     #c6d3cd;
+  --su-muted:    #8da29a;
+  --su-faint:    #5f7269;
+  --su-meta:     #a7b8b0;
+
+  --su-accent:   #1fbf94;
+  --su-accent-2: #a7e8d0;
+  --su-cream:    #f2eec4;
+  --su-cream-2:  #f6f3d6;
+
+  --su-on-accent: #070d0c;
+  --su-hover:     rgba(255, 255, 255, 0.04);
+  --su-fill:      rgba(255, 255, 255, 0.08);
+  --su-fill-2:    rgba(255, 255, 255, 0.16);
+  --su-on:        rgba(242, 238, 196, 0.09);
+  --su-bloom:     rgba(31, 191, 148, 0.2);
+  --su-glow:      rgba(242, 238, 196, 0.5);
+  --su-cast:      rgba(0, 0, 0, 0.95);
+  --su-warm:      #150d07;
+  --su-warm-fg:   #f6e6d4;
+
+  --mist:        var(--su-ground);
+  --mist-2:      var(--su-well);
+  --ink:         var(--su-fg);
+  --slate:       var(--su-muted);
+  --line:        var(--su-hair);
+  --aura:        var(--su-accent);
+  --aura-deep:   #0f6b52;
+  --core:        var(--su-cream);
+  --halo:        var(--su-accent-2);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 18px 40px -22px var(--su-cast);
+
+  background: var(--su-ground);
+  color: var(--su-fg-2);
+}
+html[data-su-theme='light'] .su-studio.su-dark .gl-grain,
+html[data-su-theme='light'] .su-studio.su-dark .su-grained::after { opacity: 0.16; }
+html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; }

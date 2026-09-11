@@ -26,6 +26,7 @@
 import { useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
+import { useSuTheme } from './theme'
 
 interface Step {
   title: string
@@ -121,6 +122,7 @@ const STEPS: Step[] = [
 
 export function FirstRun({ onDone }: { onDone: () => void }) {
   const { t } = useI18n()
+  const theme = useSuTheme()
   const [i, setI] = useState(0)
   const step = STEPS[i]
   const last = i === STEPS.length - 1
@@ -129,7 +131,7 @@ export function FirstRun({ onDone }: { onDone: () => void }) {
     <div className="app-frame su-studio">
       <div className="screen fr">
         <div className="fr__top">
-          <BrandLogo variant="cream" className="fr__brand" />
+          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
           {/* Skipping is not a different outcome: it is seen either way, and
               the whole thing stays in Profile. Nobody is held here. */}
           <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>

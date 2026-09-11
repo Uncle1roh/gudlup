@@ -7,10 +7,13 @@ import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
+import { useSuTheme } from '../selfuse/theme'
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const auth = useAuth()
   const { t } = useI18n()
+  // the b2c door carries the Self Use ground, so its logo follows that theme
+  const theme = useSuTheme()
   const isB2b = mode === 'b2b'
   const isAdmin = mode === 'admin'
   const isHr = mode === 'hr'
@@ -143,7 +146,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
         {/* The b2c door is the dark Self Use ground; the clinician, employer
             and admin doors are light. Same logo, the colourway its ground asks
             for. */}
-        <div className="auth__brand"><BrandLogo variant={isB2b || isAdmin || isHr ? 'green' : 'cream'} /></div>
+        <div className="auth__brand"><BrandLogo variant={isB2b || isAdmin || isHr || theme === 'light' ? 'green' : 'cream'} /></div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
         <p className="auth__sub">{isAdmin
             ? t('Sign in to the admin console')
@@ -305,6 +308,7 @@ export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr'
 export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
   const { ready, user, role, signOut } = useAuth()
   const { t } = useI18n()
+  const theme = useSuTheme()
   const dark = mode === 'b2c'
 
   /* The account has a surface and it is not this one: go there. A person who
@@ -332,7 +336,7 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
     return (
       <div className={`auth${dark ? ' su-studio' : ''}`}>
         <div className="auth__card">
-          <div className="auth__brand"><BrandLogo variant={dark ? 'cream' : 'green'} /></div>
+          <div className="auth__brand"><BrandLogo variant={dark && theme === 'dark' ? 'cream' : 'green'} /></div>
           <h1 className="auth__title">{t('Taking you to your app')}</h1>
           <p className="auth__sub">
             {t('This account belongs to {surface}.', { surface: SURFACE_NAME[role] })}
@@ -353,7 +357,7 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
     return (
       <div className={`auth${dark ? ' su-studio' : ''}`}>
         <div className="auth__card">
-          <div className="auth__brand"><BrandLogo variant={dark ? 'cream' : 'green'} /></div>
+          <div className="auth__brand"><BrandLogo variant={dark && theme === 'dark' ? 'cream' : 'green'} /></div>
           <h1 className="auth__title">{t('This account is not set up yet')}</h1>
           <p className="auth__sub">
             {t('It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.')}

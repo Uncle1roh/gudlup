@@ -107,6 +107,11 @@ interface SessionFlowProps {
 
 type Stage = 'pre' | 'stereo' | 'play' | 'post'
 
+/* A session is a dark room on purpose: the screen goes out, the eyes close.
+   `su-dark` keeps the night palette on every screen of the flow even when the
+   rest of the app is set to daylight — see selfuse-studio.css § 06. */
+const SESSION_FRAME = 'app-frame su-studio su-dark'
+
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
   const [stage, setStage] = useState<Stage>('pre')
@@ -179,7 +184,7 @@ function PreSession({
   const { t } = useI18n()
   const [vas, setVas] = useState<number | null>(null)
   return (
-    <div className="app-frame su-studio">
+    <div className={SESSION_FRAME}>
       <div className="screen screen--center pre-session">
         <div className="screen__body pre-session__body">
           <span className="pre-session__len">{t('{n} min', { n: duration })}</span>
@@ -240,7 +245,7 @@ function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; on
   }
 
   return (
-    <div className="app-frame su-studio">
+    <div className={SESSION_FRAME}>
       <div className="screen screen--center stereo">
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
@@ -455,7 +460,7 @@ function ImmersiveSession({
      played: rather than substituting another protocol, say so. */
   if (!protocol) {
     return (
-      <div className="app-frame su-studio">
+      <div className={SESSION_FRAME}>
         <div className="player">
           <div className="fade-in player__ready">
             <p className="lead player__readytext">
@@ -470,7 +475,7 @@ function ImmersiveSession({
 
   if (!started) {
     return (
-      <div className="app-frame su-studio">
+      <div className={SESSION_FRAME}>
         <div className="player">
           <div className="fade-in player__ready">
             <BreathingOrb size={150} breathing={false} />
@@ -492,7 +497,7 @@ function ImmersiveSession({
   const showControls = controls || !playing
 
   return (
-    <div className="app-frame su-studio">
+    <div className={SESSION_FRAME}>
       <div className="player" onClick={armFade}>
         {/* The orb, for the WHOLE session, not only phase 2.
             It used to appear during the breathing phase and be replaced by a
@@ -617,7 +622,7 @@ function PostSession({
   }
 
   return (
-    <div className="app-frame su-studio">
+    <div className={SESSION_FRAME}>
       <div className="screen screen--center post fade-in">
         <div className="screen__body post__body">
           <h2 className="display">{t('Well done')}</h2>
