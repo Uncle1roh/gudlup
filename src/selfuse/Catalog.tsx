@@ -104,10 +104,15 @@ export function Catalog({
         /* The name a person reads, what it is for, and its category — never
            the protocol code. A code is a clinical identifier and must not be
            a way a person finds anything, or typing one would confirm it
-           exists and what it treats. */
-        return [s.name, s.blurb, s.theme].some((f) => (f ?? '').toLowerCase().includes(q))
+           exists and what it treats.
+
+           Matched through `t()`, against the words actually on the cards: the
+           library is browsed in Italian or Portuguese, and searching the
+           English source strings meant typing what you could see found
+           nothing. */
+        return [s.name, s.blurb, s.theme].some((f) => t(f ?? '').toLowerCase().includes(q))
       }),
-    [all, dur, theme, q],
+    [all, dur, theme, q, t],
   )
 
   const hero = useMemo(() => {

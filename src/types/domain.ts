@@ -7,6 +7,28 @@
 
 export type Language = 'pt-BR' | 'en' | 'de' | 'es' | 'it'
 
+/**
+ * The interface languages a protocol's own text can be written in.
+ *
+ * The same three the app speaks. Written as a literal union rather than
+ * imported from `src/i18n` on purpose: that module owns the React provider,
+ * and this file is the framework-agnostic contract everything else builds on.
+ * `Language` above is a different axis — it is the language the AUDIO was
+ * recorded in, and a session can be recorded in one and labelled in another.
+ */
+export type TextLocale = 'en' | 'it' | 'pt-BR'
+
+/** One language's version of what a protocol is called. Every field optional:
+    a translation is an overlay on the base text, never a replacement for it. */
+export interface ProtocolText {
+  title?: string
+  blurb?: string
+  publicTitle?: string
+  publicBlurb?: string
+}
+
+export type ProtocolI18n = Partial<Record<TextLocale, ProtocolText>>
+
 /** The 5 clinical families (each has 5 sub-protocols, x.1 .. x.5) plus GL-LIB,
     the non-clinical library: general wellbeing audios a person picks by
     themselves, named after a moment rather than a condition. GL-LIB entries
@@ -63,6 +85,22 @@ export interface Protocol {
   /** Non-therapeutic one-liner that goes with `publicTitle`. */
   publicBlurb?: string
   /**
+   * The same four names, written in the other interface languages.
+   *
+   * The app speaks Italian, Portuguese and English; its protocols spoke
+   * whichever language the PO happened to author them in, and a person who
+   * switched the interface got a translated app around an untranslated
+   * library. This is the overlay that fixes it — per LANGUAGE, per FIELD, and
+   * every field optional, so a half-written translation degrades to the base
+   * text one field at a time instead of all at once.
+   *
+   * The base fields above stay the source of truth: they are what a row shows
+   * with no translation, what the admin console edits, and what the clinical
+   * record keeps. Adding a language never changes the code, the family, the
+   * pathway or the audio — it changes a label, exactly as `publicTitle` does.
+   */
+  i18n?: ProtocolI18n
+  /**
    * Free-form catalog tags (ids from `src/data/tags.ts`). Editorial metadata
    * for finding and grouping published material — never a clinical claim and
    * never a routing decision on its own.
@@ -73,18 +111,44 @@ export interface Protocol {
   versions: ProtocolVersion[]
 }
 
+/* --- what a protocol is CALLED ------------------------------------------
+
+   Two independent choices, resolved in this order and no other:
+
+     1 · LANGUAGE. `i18n[locale].<field>` when it is written, else the base
+         field. Per field, so a translation that names the protocol but has no
+         public blurb yet still shows its translated name.
+     2 · REGISTER. Public before clinical, which is the rule CLAUDE.md sets
+         for every screen a person reads.
+
+   Language first, register second. The other order would hand a person the
+   CLINICAL title in their own language over the PUBLIC one in another, and
+   the register boundary is a legal one — it outranks a language preference. */
+
+type Named = Pick<Protocol, 'title' | 'blurb' | 'publicTitle' | 'publicBlurb' | 'i18n'>
+
+/** One field, in `locale` when that language has it, else the base text. */
+function field(p: Partial<Named>, key: keyof ProtocolText, locale?: TextLocale): string {
+  const translated = locale ? p.i18n?.[locale]?.[key]?.trim() : ''
+  if (translated) return translated
+  return (p[key] as string | undefined)?.trim() ?? ''
+}
+
+/** The CLINICAL title — what a therapist and the admin console read. */
+export function protocolTitle(p: Pick<Protocol, 'title' | 'i18n'>, locale?: TextLocale): string {
+  return field(p, 'title', locale) || p.title
+}
+
 /** The title to print where a PERSON reads it (player, home, history). */
-export function patientTitle(p: Pick<Protocol, 'title' | 'publicTitle'>): string {
-  const pub = p.publicTitle?.trim()
-  return pub && pub.length ? pub : p.title
+export function patientTitle(p: Pick<Protocol, 'title' | 'publicTitle' | 'i18n'>, locale?: TextLocale): string {
+  return field(p, 'publicTitle', locale) || field(p, 'title', locale) || p.title
 }
 
 /** The blurb to print where a PERSON reads it. Falls back to the clinical one
     only when no public blurb was written — a public TITLE with no public blurb
     still shows the clinical blurb, so the pair is worth writing together. */
-export function patientBlurb(p: Pick<Protocol, 'blurb' | 'publicBlurb'>): string {
-  const pub = p.publicBlurb?.trim()
-  return pub && pub.length ? pub : p.blurb
+export function patientBlurb(p: Pick<Protocol, 'blurb' | 'publicBlurb' | 'i18n'>, locale?: TextLocale): string {
+  return field(p, 'publicBlurb', locale) || field(p, 'blurb', locale) || p.blurb
 }
 
 /* --- B2C onboarding ("micro-intake", UC-B2C-02) -------------------------- */

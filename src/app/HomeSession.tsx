@@ -7,7 +7,7 @@ import { nextPlanItem, planComplete, planProgress, type Plan, type PlanItem } fr
 import { isLibraryCode } from '../data/library'
 import { ScheduleModal } from './ScheduleModal'
 import { fmtDay, fmtTime, isUpcoming, joinWindowOpen, type Appointment } from '../data/scheduling'
-import { useI18n } from '../i18n'
+import { useI18n, type Locale } from '../i18n'
 import { patientTitle } from '../types/domain'
 import type { SessionRecord, Duration } from '../types/domain'
 
@@ -25,19 +25,19 @@ interface HomeSessionProps {
     consumer title. Pathway material shows its PUBLIC name when the catalog
     carries one and its clinical title otherwise — the code, the plan and the
     clinical record are unaffected either way, only the label changes. */
-function titleOf(code: string): string {
+function titleOf(code: string, locale: Locale): string {
   const p = getProtocol(code)
-  return p ? patientTitle(p) : code
+  return p ? patientTitle(p, locale) : code
 }
 
 function PlanCta({ item, total, done, onStart }: { item: PlanItem; total: number; done: number; onStart: HomeSessionProps['onStart'] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   return (
     <>
       <button className="start-cta" onClick={() => onStart({ protocolCode: item.protocolCode, duration: item.duration, planItemId: item.id })}>
         <span className="start-cta__label">{t('Next session')}</span>
         <span className="start-cta__sub">
-          {titleOf(item.protocolCode)} · {t('week {n}', { n: item.week })} · {item.duration} {t('min')}
+          {titleOf(item.protocolCode, locale)} · {t('week {n}', { n: item.week })} · {item.duration} {t('min')}
         </span>
       </button>
       <div className="plan-strip">
@@ -112,7 +112,7 @@ export function HomeSession({ history, plan, onStart, onJoin, onLibrary, onAsses
       {lastKnown && (
         <button className="rec-card rec-card--repeat" onClick={() => onStart(last)}>
           <span className="rec-card__eyebrow">{t('Repeat')}</span>
-          <span className="rec-card__title">{titleOf(last.protocolCode)}</span>
+          <span className="rec-card__title">{titleOf(last.protocolCode, locale)}</span>
           <span className="rec-card__reason">
             {t('The session you did last time')} · {last.duration} {t('min')}
             {isLibraryCode(last.protocolCode) ? ` · ${t('from the library')}` : ''}

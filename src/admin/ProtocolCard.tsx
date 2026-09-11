@@ -39,6 +39,7 @@ import {
   type TagGroup,
 } from '../data/tags'
 import type { CatalogProtocol } from '../data/catalog'
+import type { ProtocolI18n, ProtocolText, TextLocale } from '../types/domain'
 import { uploadProtocolCover } from './assets'
 
 export interface ProtocolCardDraft {
@@ -47,10 +48,24 @@ export interface ProtocolCardDraft {
   title: string
   publicTitle: string
   publicBlurb: string
+  /** The same three names in the other interface languages. */
+  i18n: ProtocolI18n
   tags: string[]
   /** A real cover image. Empty = the generated artwork stands. */
   coverUrl: string
 }
+
+/* ---- the languages this card can write ---------------------------------
+
+   The base fields above are written in whatever language the catalogue is
+   authored in; these are the overlays a person reading the app in another one
+   gets. English is on the list because the app offers it and a PO writing in
+   Italian still has to be able to say what an English reader sees. */
+export const CARD_LOCALES: { id: TextLocale; label: string }[] = [
+  { id: 'it', label: 'Italiano' },
+  { id: 'pt-BR', label: 'Português' },
+  { id: 'en', label: 'English' },
+]
 
 export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
   return {
@@ -58,6 +73,7 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     title: p.title,
     publicTitle: p.publicTitle ?? '',
     publicBlurb: p.publicBlurb ?? '',
+    i18n: p.i18n ?? {},
     coverUrl: p.coverUrl ?? '',
     tags: tagsOf(p),
   }
@@ -79,10 +95,31 @@ export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtoc
     title: title || existing.title,
     publicTitle: publicTitle || undefined,
     publicBlurb: publicBlurb || undefined,
+    i18n: cleanI18n(draft.i18n),
     coverUrl: draft.coverUrl.trim() || undefined,
     tags: normalizeTags(draft.tags),
     updatedAt: Date.now(),
   }
+}
+
+/** Drop blank fields and then blank languages, so a language the PO opened
+    and left empty is not stored as one that has a translation. */
+function cleanI18n(src: ProtocolI18n): ProtocolI18n | undefined {
+  const out: ProtocolI18n = {}
+  for (const { id } of CARD_LOCALES) {
+    const one = src[id]
+    if (!one) continue
+    const kept: ProtocolText = {}
+    for (const key of ['title', 'publicTitle', 'publicBlurb'] as const) {
+      const v = one[key]?.trim()
+      if (v) kept[key] = v
+    }
+    // a clinical blurb is not edited here; carry through whatever was stored
+    const blurb = one.blurb?.trim()
+    if (blurb) kept.blurb = blurb
+    if (Object.keys(kept).length) out[id] = kept
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 /** Whether this draft can be saved, and why not. */
@@ -103,6 +140,10 @@ interface Props {
 
 export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCancel }: Props) {
   const [custom, setCustom] = useState('')
+  /* Which translation is open. Null = closed: a catalogue that only ever ships
+     in one language should not have to look at an empty second set of fields
+     every time somebody renames something. */
+  const [lang, setLang] = useState<TextLocale | null>(null)
   const [uploading, setUploading] = useState(false)
   const [coverErr, setCoverErr] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -132,6 +173,15 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
       setUploading(false)
     }
   }
+  /** Write one field of one language. */
+  const setText = (loc: TextLocale, key: keyof ProtocolText, value: string) =>
+    set({ i18n: { ...draft.i18n, [loc]: { ...(draft.i18n[loc] ?? {}), [key]: value } } })
+
+  /** Languages that already carry something — the chip says so, so a PO can
+      see at a glance which ones are written without opening each. */
+  const written = (loc: TextLocale) =>
+    Boolean(draft.i18n[loc] && Object.values(draft.i18n[loc] as ProtocolText).some((v) => v?.trim()))
+
   const full = draft.tags.length >= MAX_TAGS
   const invalid = cardDraftError(draft)
 
@@ -188,6 +238,62 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
           onChange={(e) => set({ publicBlurb: e.target.value })}
         />
       </label>
+
+      {/* ---- the other languages ---------------------------------------
+          The app is read in three; the protocol used to be written in one, so
+          a person who switched the interface got a translated app around an
+          untranslated library. Each field here is an overlay on the one above
+          it: leave it empty and that language shows the text above, field by
+          field, so a half-finished translation is never a half-empty screen. */}
+      <div className="pe-field">
+        <span className="pe-label">Altre lingue <em>come si legge l’app in italiano, portoghese e inglese</em></span>
+        <div className="pe-langs">
+          {CARD_LOCALES.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              className={`pe-lang${lang === l.id ? ' is-on' : ''}${written(l.id) ? ' is-written' : ''}`}
+              aria-pressed={lang === l.id}
+              onClick={() => setLang(lang === l.id ? null : l.id)}
+            >
+              {l.label}{written(l.id) ? ' ·' : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {lang && (() => {
+        const one = draft.i18n[lang] ?? {}
+        return (
+          <div className="pe-trans">
+            <label className="pe-field">
+              <span className="pe-label">Titolo clinico</span>
+              <input
+                className="b2b-input" value={one.title ?? ''} placeholder={draft.title || 'come sopra'}
+                onChange={(e) => setText(lang, 'title', e.target.value)}
+              />
+            </label>
+            <label className="pe-field">
+              <span className="pe-label">Nome pubblico</span>
+              <input
+                className="b2b-input" value={one.publicTitle ?? ''} placeholder={draft.publicTitle || draft.title || 'come sopra'}
+                onChange={(e) => setText(lang, 'publicTitle', e.target.value)}
+              />
+            </label>
+            <label className="pe-field">
+              <span className="pe-label">Descrizione pubblica</span>
+              <input
+                className="b2b-input" value={one.publicBlurb ?? ''} placeholder={draft.publicBlurb || 'come sopra'}
+                onChange={(e) => setText(lang, 'publicBlurb', e.target.value)}
+              />
+            </label>
+            <p className="b2b-sub">
+              Vuoto = si mostra il testo qui sopra. Tradurre non tocca codice, famiglia, durate, audio né cartella
+              clinica: cambia solo l’etichetta, come il nome pubblico.
+            </p>
+          </div>
+        )
+      })()}
 
       {/* ---- the cover -------------------------------------------------
           The card art a person sees while browsing. Without one the app draws

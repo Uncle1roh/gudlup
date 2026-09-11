@@ -195,7 +195,7 @@ export function PatientCall({ appointment, demoSeconds, onDone }: PatientCallPro
     <div className="pcall">
       <div className="pcall__bar">
         <span className="pcall__who">{appointment.therapistName ?? t('Your therapist')}</span>
-        {playingCode && <span className="pcall__proto">{protocol ? patientTitle(protocol) : playingCode}</span>}
+        {playingCode && <span className="pcall__proto">{protocol ? patientTitle(protocol, locale) : playingCode}</span>}
         {intervening && <span className="pcall__flag">🔴 {t('your therapist is speaking')}</span>}
       </div>
 

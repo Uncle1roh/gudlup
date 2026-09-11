@@ -453,4 +453,195 @@ export const PT: Record<string, string> = {
   'Close your eyes and follow the sound.': 'Feche os olhos e siga o som.',
   'Paused by your therapist': 'Pausado pelo seu terapeuta',
   'Leave the session': 'Sair da sessão',
+
+  /* ---- the library's own words ------------------------------------------
+
+     The 19 editorial sessions, the five pathways and the labels that group
+     them. Their English source lives in `src/data/selfuse.ts`, and every
+     screen already printed them through `t()` — the dictionary simply had
+     nothing to answer with, so an app switched to Portuguese kept an English
+     library inside it.
+
+     A PO who publishes a protocol with a translated name overrides these:
+     see `i18n` on the catalog entry (src/types/domain.ts). This is what a
+     person reads until then. */
+  'Focus & Clarity': 'Foco e clareza',
+  'Sharpen attention and think clearly under pressure.':
+    'Afine a atenção e pense com clareza mesmo sob pressão.',
+  'A short reset for a scattered mind. It settles the body first, then narrows attention to one thing at a time, so you can go back to what you were doing without the noise.':
+    'Um reset curto para a mente dispersa. Primeiro acalma o corpo, depois estreita a atenção a uma coisa de cada vez, para você voltar ao que estava fazendo sem o ruído.',
+  'A few slow breaths to settle': 'Algumas respirações lentas para assentar',
+  'Guided attention, one thing at a time': 'Atenção guiada, uma coisa de cada vez',
+  'A clear, unhurried close': 'Um fecho claro, sem pressa',
+  'Demand Management': 'Gestão das demandas',
+  'Reorganize competing tasks without feeling swamped.':
+    'Reorganize tarefas que competem entre si sem se sentir soterrado.',
+  'For the days when everything is urgent. It separates what is actually yours to carry from what only feels that way, and gives the pile an order you can work with.':
+    'Para os dias em que tudo é urgente. Separa o que é de fato seu carregar do que só parece ser, e dá à pilha uma ordem com que dá para trabalhar.',
+  'Naming what is on your plate': 'Dar nome ao que está no seu prato',
+  'Letting the pile settle into an order': 'Deixar a pilha encontrar uma ordem',
+  'One next step, not ten': 'Um próximo passo, não dez',
+  'Personal Balance': 'Equilíbrio pessoal',
+  'Find the line between what you give and what you keep.':
+    'Encontre a linha entre o que você dá e o que guarda para si.',
+  'A session about proportion. It looks at where your time and energy actually go, and gently returns some of it to you.':
+    'Uma sessão sobre proporção. Olha para onde seu tempo e sua energia realmente vão, e devolve um pouco deles a você, sem pressa.',
+  'A slow body scan': 'Uma varredura lenta do corpo',
+  'Noticing where your energy goes': 'Perceber para onde vai a sua energia',
+  'Reclaiming a little of it': 'Retomar um pouco dela',
+  'Inner Strength': 'Força interior',
+  'Steady yourself when the demands keep coming.': 'Mantenha-se firme quando as demandas não param.',
+  'Built for stretches that do not let up. It works with steadiness rather than push — the kind of strength that lasts a whole week, not one afternoon.':
+    'Feita para períodos que não dão trégua. Trabalha com firmeza em vez de impulso — o tipo de força que dura uma semana inteira, não uma tarde.',
+  'Grounding through the body': 'Enraizar-se pelo corpo',
+  'Working with steadiness, not push': 'Trabalhar com firmeza, não com impulso',
+  'A settled, durable close': 'Um fecho assentado e duradouro',
+  'Action & Decision': 'Ação e decisão',
+  'Move from turning it over to actually choosing.': 'Saia de ficar remoendo e escolha de verdade.',
+  'For when a decision has been going round for too long. It quiets the loop and makes room for a choice you can stand behind.':
+    'Para quando uma decisão está girando há tempo demais. Silencia o circuito e abre espaço para uma escolha que você sustenta.',
+  'Quieting the loop': 'Silenciar o circuito',
+  'Making room for one choice': 'Abrir espaço para uma escolha',
+  'Leaving with a first step': 'Sair com um primeiro passo',
+  'Calm & Safety': 'Calma e segurança',
+  'Find calm before high-pressure situations.': 'Encontre calma antes de situações de muita pressão.',
+  'The one to reach for when the pressure is already here. It brings an activated body down to a slower, safer baseline.':
+    'Aquela para buscar quando a pressão já chegou. Traz um corpo ativado de volta a um ritmo mais lento e mais seguro.',
+  'Slowing the breath': 'Desacelerar a respiração',
+  'Settling an activated body': 'Assentar um corpo ativado',
+  'A steady, safe close': 'Um fecho estável e seguro',
+  'Breathing & Presence': 'Respiração e presença',
+  'Come back to the room and to your own breath.': 'Volte para a sala e para a sua respiração.',
+  'The simplest session in the library. Breath, body, room — nothing else asked of you.':
+    'A sessão mais simples da biblioteca. Respiração, corpo, sala — nada mais é pedido de você.',
+  'A guided breath pattern': 'Um padrão de respiração guiado',
+  'Contact with the room around you': 'Contato com a sala ao seu redor',
+  'Nothing else asked of you': 'Nada mais é pedido de você',
+  'Confidence in the Moment': 'Confiança no momento',
+  'Walk into the next ten minutes as yourself.': 'Entre nos próximos dez minutos sendo você mesmo.',
+  'For just before something that matters. It puts the future back at a workable distance so you can be present for what is actually happening.':
+    'Para o instante antes de algo que importa. Recoloca o futuro a uma distância administrável, para você estar presente no que está de fato acontecendo.',
+  'Settling the anticipation': 'Assentar a espera',
+  'Returning to the present': 'Voltar ao presente',
+  'Walking in as yourself': 'Entrar sendo você mesmo',
+  'Permission to Pause': 'Permissão para parar',
+  'Stop, without having to earn it first.': 'Parar sem ter de merecer antes.',
+  'The first session of recovery. It does not ask you to do anything — its whole job is to let you stop.':
+    'A primeira sessão da recuperação. Não pede nada de você — seu único trabalho é deixar você parar.',
+  'Permission to put it down': 'Permissão para pousar tudo',
+  'A long, unhurried settle': 'Um assentar longo, sem pressa',
+  'No task at the end': 'Nenhuma tarefa no final',
+  'Healthy Boundaries': 'Limites saudáveis',
+  'Protect the time and energy that are yours.': 'Proteja o tempo e a energia que são seus.',
+  'About the edges of your day. It rehearses the small, ordinary act of keeping something for yourself.':
+    'Sobre as bordas do seu dia. Ensaia o gesto pequeno e comum de guardar algo para si.',
+  'Finding the edges of your day': 'Encontrar as bordas do seu dia',
+  'Rehearsing keeping something back': 'Ensaiar guardar algo para si',
+  'A firmer, kinder close': 'Um fecho mais firme e mais gentil',
+  'Energy Renewal': 'Renovação de energia',
+  'Rebuild after a long stretch of giving.': 'Reconstrua depois de um longo período se doando.',
+  'For the part of recovery that comes after stopping. Quiet, restorative, and deliberately slow.':
+    'Para a parte da recuperação que vem depois de parar. Silenciosa, restauradora e lenta de propósito.',
+  'A deeply slow pace': 'Um ritmo profundamente lento',
+  'Restoration rather than effort': 'Restauração, não esforço',
+  'Warmth at the close': 'Calor no fecho',
+  'Conscious Priorities': 'Prioridades conscientes',
+  'Decide what deserves you, and what does not.': 'Decida o que merece você e o que não merece.',
+  'A session about choosing. It sorts what actually matters from what is only loud.':
+    'Uma sessão sobre escolher. Separa o que de fato importa do que só faz barulho.',
+  'Sorting loud from important': 'Separar o barulhento do importante',
+  'Choosing on purpose': 'Escolher de propósito',
+  'Leaving lighter': 'Sair mais leve',
+  'Professional Authenticity': 'Autenticidade profissional',
+  'Work in a way that still sounds like you.': 'Trabalhar de um jeito que ainda soe como você.',
+  'For when the role has drifted away from the person. It reconnects what you do with who you are.':
+    'Para quando o papel se afastou da pessoa. Reconecta o que você faz com quem você é.',
+  'Reconnecting role and person': 'Reconectar papel e pessoa',
+  'Naming what you want to keep': 'Dar nome ao que você quer manter',
+  'A grounded, honest close': 'Um fecho enraizado e honesto',
+  'Flexibility & Adaptation': 'Flexibilidade e adaptação',
+  'Bend with what changes instead of bracing against it.':
+    'Curve-se com o que muda em vez de enrijecer contra.',
+  'For periods where the ground keeps moving. It practises adapting without losing your footing.':
+    'Para períodos em que o chão não para de se mover. Treina adaptar-se sem perder o apoio.',
+  'Grounding first': 'Primeiro enraizar',
+  'Practising give rather than brace': 'Treinar ceder em vez de enrijecer',
+  'A steady, mobile close': 'Um fecho estável e móvel',
+  'Overcoming Challenges': 'Superar desafios',
+  'Meet a hard thing with more than dread.': 'Encare algo difícil com mais do que receio.',
+  'It takes something difficult that is coming and rehearses meeting it — not avoiding it, and not pretending it is small.':
+    'Pega algo difícil que está por vir e ensaia o encontro — sem evitar e sem fingir que é pequeno.',
+  'Settling before the hard thing': 'Assentar antes do que é difícil',
+  'Rehearsing meeting it': 'Ensaiar o encontro',
+  'Leaving with your footing': 'Sair com o seu apoio',
+  'Self-Confidence & Efficacy': 'Autoconfiança e eficácia',
+  'Remember what you are actually able to do.': 'Lembre do que você é de fato capaz de fazer.',
+  'A session that works with evidence rather than encouragement — the things you have already handled.':
+    'Uma sessão que trabalha com evidências em vez de incentivo — as coisas que você já deu conta.',
+  'Recalling what you have handled': 'Lembrar do que você já deu conta',
+  'Letting it register in the body': 'Deixar que o corpo registre',
+  'A quietly confident close': 'Um fecho confiante e silencioso',
+  'Supportive Connections': 'Vínculos que sustentam',
+  'Feel the people who are on your side.': 'Sinta as pessoas que estão do seu lado.',
+  'About not doing it alone. It brings the people who steady you back into the room.':
+    'Sobre não fazer isso sozinho. Traz de volta para a sala as pessoas que te sustentam.',
+  'Bringing support to mind': 'Trazer à mente quem te apoia',
+  'Letting it be felt, not just thought': 'Deixar sentir, não só pensar',
+  'A warmer close': 'Um fecho mais caloroso',
+  'Vision & Growth': 'Visão e crescimento',
+  'Look further out than this week.': 'Olhe mais longe do que esta semana.',
+  'The longest view in the library. It lifts your attention past the immediate and asks where you are actually going.':
+    'O olhar mais longo da biblioteca. Levanta sua atenção para além do imediato e pergunta para onde você está indo de verdade.',
+  'Widening the view': 'Ampliar o olhar',
+  'Naming a direction': 'Dar nome a uma direção',
+  'A clear, open close': 'Um fecho claro e aberto',
+  'Vitality & Motivation': 'Vitalidade e motivação',
+  'A gentle way back into movement.': 'Um jeito gentil de voltar ao movimento.',
+  'For the flat days. It does not push — it makes a small amount of momentum available again.':
+    'Para os dias sem brilho. Não empurra — devolve um pouco de impulso.',
+  'A soft, low-demand start': 'Um começo suave, que pede pouco',
+  'A little momentum, gently': 'Um pouco de impulso, com delicadeza',
+  'No pressure at the end': 'Nenhuma pressão no final',
+  'Focus & Performance': 'Foco e desempenho',
+  'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.':
+    'Para quem precisa render sob pressão: mente cheia, dificuldade de concentração, ansiedade de desempenho, adiar enquanto o prazo se aproxima.',
+  'Stress Management': 'Gestão do estresse',
+  'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.':
+    'Um percurso progressivo para a gestão estruturada do estresse do trabalho no dia a dia: primeiro se recupera a calma, depois se reorganizam as demandas, depois se protegem os limites e, por fim, se consolida a confiança.',
+  'Energy & Recovery': 'Energia e recuperação',
+  'For anyone who feels emptied out, exhausted, chronically in energy debt. Progressive regeneration: from allowing yourself to stop, through to a deeper recharge.':
+    'Para quem se sente esvaziado, exausto, cronicamente em dívida de energia. Regeneração progressiva: de se permitir parar até uma recarga mais profunda.',
+  'Balance & Boundaries': 'Equilíbrio e limites',
+  'For anyone who struggles to switch off from work, whose line between professional and personal life has blurred, who is over-connected and relationally overloaded.':
+    'Para quem tem dificuldade de desligar do trabalho, para quem viu a linha entre vida profissional e pessoal se apagar, para quem está hiperconectado e sobrecarregado nas relações.',
+  'Growth & Resilience': 'Crescimento e resiliência',
+  'The longest and deepest journey, oriented towards personal and professional development. For anyone looking for growth, flexibility and a longer view.':
+    'O percurso mais longo e mais profundo, voltado ao desenvolvimento pessoal e profissional. Para quem busca crescimento, flexibilidade e um olhar mais longo.',
+  'Balance': 'Equilíbrio',
+  'Growth': 'Crescimento',
+  'Focus & Management': 'Foco e gestão',
+  'Calm & Presence': 'Calma e presença',
+  'Standalone': 'Avulsas',
+
+  /* ---- the library's own words ------------------------------------------
+
+     The 19 editorial sessions, the five pathways and the labels that group
+     them. Their English source lives in `src/data/selfuse.ts`, and every
+     screen already printed them through `t()` — the dictionary simply had
+     nothing to answer with, so an app switched to Portuguese kept an English
+     library inside it.
+
+     A PO who publishes a protocol with a translated name overrides these:
+     see `i18n` on the catalog entry (src/types/domain.ts). This is what a
+     person reads until then. */
+  'For when your mind is scattered and you need clarity under pressure.':
+    'Para quando a mente está dispersa e você precisa de clareza sob pressão.',
+  'Regain calm, reorganize demands, and build healthy boundaries.':
+    'Recuperar a calma, reorganizar as demandas e construir limites saudáveis.',
+  'From exhaustion to renewed vitality. Permission to pause, then rebuild.':
+    'Da exaustão a uma vitalidade nova. Primeiro a permissão de parar, depois a reconstrução.',
+  'Protect your time, set limits, reconnect with what matters.':
+    'Proteger seu tempo, colocar limites, reconectar com o que importa.',
+  'Long-term development: flexibility, strength, vision.':
+    'Desenvolvimento de longo prazo: flexibilidade, força, visão.',
 }

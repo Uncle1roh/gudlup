@@ -262,6 +262,14 @@ alter table protocols  add column if not exists public_blurb text;
 -- never a routing decision — the vocabulary lives in src/data/tags.ts.
 alter table protocols  add column if not exists tags jsonb not null default '[]';
 
+-- LANGUAGES. The app is read in Italian, Portuguese and English; its protocols
+-- were written in whichever language the PO authored them in, so switching the
+-- interface gave a person a translated app around an untranslated library.
+-- This is the overlay: { "it": { "title": …, "publicTitle": …, "publicBlurb": … },
+-- "pt-BR": { … } }, per language and per field. The columns above stay the
+-- source of truth and are what a row shows when a language has nothing.
+alter table protocols  add column if not exists i18n jsonb not null default '{}';
+
 create table if not exists audit_events (
   id        uuid primary key default gen_random_uuid(),
   at        timestamptz not null default now(),

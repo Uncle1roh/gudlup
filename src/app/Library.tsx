@@ -42,19 +42,19 @@ function firstDuration(p: CatalogProtocol): Duration {
 }
 
 function Card({ p, onStart }: { p: CatalogProtocol; onStart: LibraryProps['onStart'] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   return (
     <button className="libcard" onClick={() => onStart({ protocolCode: p.code, duration: firstDuration(p) })}>
       <span className="libcard__cover" aria-hidden="true">{p.library?.emoji ?? '🎧'}</span>
-      <span className="libcard__title">{patientTitle(p)}</span>
-      <span className="libcard__blurb">{patientBlurb(p)}</span>
+      <span className="libcard__title">{patientTitle(p, locale)}</span>
+      <span className="libcard__blurb">{patientBlurb(p, locale)}</span>
       <span className="libcard__meta">{minutesOf(p)} {t('min')}</span>
     </button>
   )
 }
 
 export function Library({ onStart, onChooseForMe }: LibraryProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { data: all = [], loading } = useProtocols()
   const [query, setQuery] = useState('')
 
@@ -62,8 +62,8 @@ export function Library({ onStart, onChooseForMe }: LibraryProps) {
   const found = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return null
-    return items.filter((p) => `${patientTitle(p)} ${patientBlurb(p)} ${p.title}`.toLowerCase().includes(q))
-  }, [items, query])
+    return items.filter((p) => `${patientTitle(p, locale)} ${patientBlurb(p, locale)} ${p.title}`.toLowerCase().includes(q))
+  }, [items, query, locale])
 
   const shelves: { id: LibraryCategory; label: string; blurb: string; items: CatalogProtocol[] }[] =
     LIBRARY_CATEGORIES.map((c) => ({

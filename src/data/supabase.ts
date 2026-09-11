@@ -176,6 +176,8 @@ function mapCatalog(r: any): CatalogProtocol {
     // one a person reads. Absent → the clinical title is shown, as before.
     publicTitle: r.public_title ?? undefined,
     publicBlurb: r.public_blurb ?? undefined,
+    // the per-language overlay on those names (src/types/domain.ts)
+    i18n: r.i18n && typeof r.i18n === 'object' ? r.i18n : undefined,
     tags: Array.isArray(r.tags) ? (r.tags as string[]) : undefined,
     // rows written before the clinical/library split are clinical
     audience: r.audience === 'library' ? 'library' : 'clinical',
@@ -873,6 +875,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         cover_url: p.coverUrl ?? null,
         public_title: p.publicTitle ?? null,
         public_blurb: p.publicBlurb ?? null,
+        i18n: p.i18n ?? {},
         tags: normalizeTags(p.tags),
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })

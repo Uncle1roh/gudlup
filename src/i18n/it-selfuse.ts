@@ -601,4 +601,193 @@ export const IT_SELF_USE: Record<string, string> = {
     'Il check che tocchi prima e dopo ogni sessione viene condiviso con il tuo terapeuta.',
   'This session is not available at the moment. Your therapist or the Good Loop team can restore it.':
     'Questa sessione non è disponibile al momento. Il tuo terapeuta o il team Good Loop possono ripristinarla.',
+
+  /* ---- the library's own words ------------------------------------------
+
+     The 19 editorial sessions, the five pathways and the labels that group
+     them. Their English source lives in `src/data/selfuse.ts`, and every
+     screen already printed them through `t()` — the dictionary simply had
+     nothing to answer with, so an app switched to Italian kept an English
+     library inside it.
+
+     A PO who publishes a protocol with a translated name overrides these:
+     see `i18n` on the catalog entry (src/types/domain.ts). This is what a
+     person reads until then. */
+  'Focus & Clarity': 'Focus e chiarezza',
+  'Sharpen attention and think clearly under pressure.':
+    'Affina l’attenzione e pensa con lucidità anche sotto pressione.',
+  'A short reset for a scattered mind. It settles the body first, then narrows attention to one thing at a time, so you can go back to what you were doing without the noise.':
+    'Un reset breve per una mente dispersa. Prima fa posare il corpo, poi restringe l’attenzione a una cosa per volta, così puoi tornare a quello che stavi facendo senza il rumore.',
+  'A few slow breaths to settle': 'Qualche respiro lento per posarsi',
+  'Guided attention, one thing at a time': 'Attenzione guidata, una cosa per volta',
+  'A clear, unhurried close': 'Una chiusura chiara, senza fretta',
+  'Demand Management': 'Gestire le richieste',
+  'Reorganize competing tasks without feeling swamped.':
+    'Rimetti in ordine le richieste che si accavallano senza sentirti sommerso.',
+  'For the days when everything is urgent. It separates what is actually yours to carry from what only feels that way, and gives the pile an order you can work with.':
+    'Per i giorni in cui tutto è urgente. Separa ciò che davvero tocca a te da ciò che solo sembra tuo, e dà alla pila un ordine con cui si può lavorare.',
+  'Naming what is on your plate': 'Dare un nome a ciò che hai davanti',
+  'Letting the pile settle into an order': 'Lasciare che la pila trovi un ordine',
+  'One next step, not ten': 'Un passo successivo, non dieci',
+  'Personal Balance': 'Equilibrio personale',
+  'Find the line between what you give and what you keep.':
+    'Trova la linea tra ciò che dai e ciò che tieni per te.',
+  'A session about proportion. It looks at where your time and energy actually go, and gently returns some of it to you.':
+    'Una sessione sulla proporzione. Guarda dove vanno davvero il tuo tempo e la tua energia, e con calma te ne restituisce un po’.',
+  'A slow body scan': 'Una lenta scansione del corpo',
+  'Noticing where your energy goes': 'Notare dove va la tua energia',
+  'Reclaiming a little of it': 'Riprenderne un po’',
+  'Inner Strength': 'Forza interiore',
+  'Steady yourself when the demands keep coming.': 'Tieni il passo quando le richieste non si fermano.',
+  'Built for stretches that do not let up. It works with steadiness rather than push — the kind of strength that lasts a whole week, not one afternoon.':
+    'Pensata per i periodi che non mollano. Lavora sulla stabilità più che sulla spinta: il tipo di forza che regge una settimana intera, non un pomeriggio.',
+  'Grounding through the body': 'Radicarsi attraverso il corpo',
+  'Working with steadiness, not push': 'Lavorare sulla stabilità, non sulla spinta',
+  'A settled, durable close': 'Una chiusura posata e duratura',
+  'Action & Decision': 'Azione e decisione',
+  'Move from turning it over to actually choosing.': 'Passa dal rimuginare allo scegliere davvero.',
+  'For when a decision has been going round for too long. It quiets the loop and makes room for a choice you can stand behind.':
+    'Per quando una decisione gira da troppo tempo. Abbassa il rumore del giro e fa spazio a una scelta su cui puoi stare.',
+  'Quieting the loop': 'Far tacere il giro',
+  'Making room for one choice': 'Fare spazio a una scelta',
+  'Leaving with a first step': 'Uscire con un primo passo',
+  'Calm & Safety': 'Calma e sicurezza',
+  'Find calm before high-pressure situations.': 'Ritrova la calma prima delle situazioni ad alta pressione.',
+  'The one to reach for when the pressure is already here. It brings an activated body down to a slower, safer baseline.':
+    'Quella da cercare quando la pressione è già arrivata. Riporta un corpo attivato a un ritmo più lento e più sicuro.',
+  'Slowing the breath': 'Rallentare il respiro',
+  'Settling an activated body': 'Far posare un corpo attivato',
+  'A steady, safe close': 'Una chiusura stabile e sicura',
+  'Breathing & Presence': 'Respiro e presenza',
+  'Come back to the room and to your own breath.': 'Torna alla stanza e al tuo respiro.',
+  'The simplest session in the library. Breath, body, room — nothing else asked of you.':
+    'La sessione più semplice della libreria. Respiro, corpo, stanza: nient’altro ti viene chiesto.',
+  'A guided breath pattern': 'Uno schema di respiro guidato',
+  'Contact with the room around you': 'Il contatto con la stanza intorno a te',
+  'Nothing else asked of you': 'Nient’altro ti viene chiesto',
+  'Confidence in the Moment': 'Sicurezza nel momento',
+  'Walk into the next ten minutes as yourself.': 'Entra nei prossimi dieci minuti restando te stesso.',
+  'For just before something that matters. It puts the future back at a workable distance so you can be present for what is actually happening.':
+    'Per il momento appena prima di qualcosa che conta. Rimette il futuro a una distanza gestibile, così puoi essere presente a ciò che sta davvero accadendo.',
+  'Settling the anticipation': 'Calmare l’attesa',
+  'Returning to the present': 'Tornare al presente',
+  'Walking in as yourself': 'Entrare restando te stesso',
+  'Permission to Pause': 'Il permesso di fermarti',
+  'Stop, without having to earn it first.': 'Fermarti senza doverlo prima meritare.',
+  'The first session of recovery. It does not ask you to do anything — its whole job is to let you stop.':
+    'La prima sessione del recupero. Non ti chiede di fare nulla: il suo unico compito è lasciarti fermare.',
+  'Permission to put it down': 'Il permesso di posare tutto',
+  'A long, unhurried settle': 'Un lungo posarsi, senza fretta',
+  'No task at the end': 'Nessun compito alla fine',
+  'Healthy Boundaries': 'Confini sani',
+  'Protect the time and energy that are yours.': 'Proteggi il tempo e l’energia che sono tuoi.',
+  'About the edges of your day. It rehearses the small, ordinary act of keeping something for yourself.':
+    'Parla dei bordi della tua giornata. Fa provare il gesto piccolo e ordinario di tenere qualcosa per te.',
+  'Finding the edges of your day': 'Trovare i bordi della giornata',
+  'Rehearsing keeping something back': 'Provare a tenere qualcosa per sé',
+  'A firmer, kinder close': 'Una chiusura più ferma e più gentile',
+  'Energy Renewal': 'Rinnovare l’energia',
+  'Rebuild after a long stretch of giving.': 'Ricostruisci dopo un lungo periodo speso a dare.',
+  'For the part of recovery that comes after stopping. Quiet, restorative, and deliberately slow.':
+    'Per la parte del recupero che viene dopo essersi fermati. Silenziosa, ristoratrice e volutamente lenta.',
+  'A deeply slow pace': 'Un ritmo profondamente lento',
+  'Restoration rather than effort': 'Ristoro, non sforzo',
+  'Warmth at the close': 'Calore nella chiusura',
+  'Conscious Priorities': 'Priorità consapevoli',
+  'Decide what deserves you, and what does not.': 'Decidi che cosa ti merita e che cosa no.',
+  'A session about choosing. It sorts what actually matters from what is only loud.':
+    'Una sessione sullo scegliere. Separa ciò che conta davvero da ciò che fa solo rumore.',
+  'Sorting loud from important': 'Distinguere il rumoroso dall’importante',
+  'Choosing on purpose': 'Scegliere con intenzione',
+  'Leaving lighter': 'Uscire più leggero',
+  'Professional Authenticity': 'Autenticità professionale',
+  'Work in a way that still sounds like you.': 'Lavorare in un modo che ti somigli ancora.',
+  'For when the role has drifted away from the person. It reconnects what you do with who you are.':
+    'Per quando il ruolo si è allontanato dalla persona. Ricollega quello che fai a chi sei.',
+  'Reconnecting role and person': 'Ricollegare ruolo e persona',
+  'Naming what you want to keep': 'Dare un nome a ciò che vuoi tenere',
+  'A grounded, honest close': 'Una chiusura radicata e onesta',
+  'Flexibility & Adaptation': 'Flessibilità e adattamento',
+  'Bend with what changes instead of bracing against it.':
+    'Piegati con ciò che cambia invece di irrigidirti contro.',
+  'For periods where the ground keeps moving. It practises adapting without losing your footing.':
+    'Per i periodi in cui il terreno continua a muoversi. Allena l’adattarsi senza perdere l’appoggio.',
+  'Grounding first': 'Prima radicarsi',
+  'Practising give rather than brace': 'Allenare la cedevolezza, non la rigidità',
+  'A steady, mobile close': 'Una chiusura stabile e mobile',
+  'Overcoming Challenges': 'Superare le sfide',
+  'Meet a hard thing with more than dread.': 'Affronta una cosa difficile con qualcosa in più del timore.',
+  'It takes something difficult that is coming and rehearses meeting it — not avoiding it, and not pretending it is small.':
+    'Prende una cosa difficile che sta arrivando e ne prova l’incontro: senza evitarla e senza far finta che sia piccola.',
+  'Settling before the hard thing': 'Posarsi prima della cosa difficile',
+  'Rehearsing meeting it': 'Provare l’incontro',
+  'Leaving with your footing': 'Uscire con l’appoggio ritrovato',
+  'Self-Confidence & Efficacy': 'Fiducia in sé ed efficacia',
+  'Remember what you are actually able to do.': 'Ricorda che cosa sei davvero in grado di fare.',
+  'A session that works with evidence rather than encouragement — the things you have already handled.':
+    'Una sessione che lavora con le prove più che con l’incoraggiamento: le cose che hai già affrontato.',
+  'Recalling what you have handled': 'Richiamare ciò che hai già affrontato',
+  'Letting it register in the body': 'Lasciare che il corpo lo registri',
+  'A quietly confident close': 'Una chiusura fiduciosa e silenziosa',
+  'Supportive Connections': 'Legami che sostengono',
+  'Feel the people who are on your side.': 'Senti le persone che stanno dalla tua parte.',
+  'About not doing it alone. It brings the people who steady you back into the room.':
+    'Parla del non farcela da soli. Riporta nella stanza le persone che ti tengono in piedi.',
+  'Bringing support to mind': 'Richiamare alla mente chi ti sostiene',
+  'Letting it be felt, not just thought': 'Lasciarlo sentire, non solo pensare',
+  'A warmer close': 'Una chiusura più calda',
+  'Vision & Growth': 'Visione e crescita',
+  'Look further out than this week.': 'Guarda più in là di questa settimana.',
+  'The longest view in the library. It lifts your attention past the immediate and asks where you are actually going.':
+    'Lo sguardo più lungo della libreria. Solleva l’attenzione oltre l’immediato e chiede dove stai andando davvero.',
+  'Widening the view': 'Allargare lo sguardo',
+  'Naming a direction': 'Dare un nome a una direzione',
+  'A clear, open close': 'Una chiusura chiara e aperta',
+  'Vitality & Motivation': 'Vitalità e motivazione',
+  'A gentle way back into movement.': 'Un modo gentile per rimetterti in movimento.',
+  'For the flat days. It does not push — it makes a small amount of momentum available again.':
+    'Per i giorni piatti. Non spinge: rimette a disposizione un po’ di slancio.',
+  'A soft, low-demand start': 'Un avvio morbido, che chiede poco',
+  'A little momentum, gently': 'Un po’ di slancio, con delicatezza',
+  'No pressure at the end': 'Nessuna pressione alla fine',
+  'Focus & Performance': 'Focus e prestazione',
+  'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.':
+    'Per chi deve rendere sotto pressione: mente affollata, difficoltà a concentrarsi, ansia da prestazione, rimandare mentre la scadenza si avvicina.',
+  'Stress Management': 'Gestione dello stress',
+  'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.':
+    'Un percorso progressivo per gestire in modo strutturato lo stress lavorativo di ogni giorno: prima si ritrova la calma, poi si riordinano le richieste, poi si proteggono i confini e infine si consolida la fiducia.',
+  'Energy & Recovery': 'Energia e recupero',
+  'For anyone who feels emptied out, exhausted, chronically in energy debt. Progressive regeneration: from allowing yourself to stop, through to a deeper recharge.':
+    'Per chi si sente svuotato, esausto, cronicamente in debito di energia. Una rigenerazione progressiva: dal permettersi di fermarsi fino a una ricarica più profonda.',
+  'Balance & Boundaries': 'Equilibrio e confini',
+  'For anyone who struggles to switch off from work, whose line between professional and personal life has blurred, who is over-connected and relationally overloaded.':
+    'Per chi fatica a staccare dal lavoro, per chi ha visto sfumare la linea tra vita professionale e personale, per chi è iperconnesso e sovraccarico nelle relazioni.',
+  'Growth & Resilience': 'Crescita e resilienza',
+  'The longest and deepest journey, oriented towards personal and professional development. For anyone looking for growth, flexibility and a longer view.':
+    'Il percorso più lungo e più profondo, orientato allo sviluppo personale e professionale. Per chi cerca crescita, flessibilità e uno sguardo più lungo.',
+  'Focus & Management': 'Focus e gestione',
+  'Calm & Presence': 'Calma e presenza',
+  'Standalone': 'Singole',
+
+  /* ---- the library's own words ------------------------------------------
+
+     The 19 editorial sessions, the five pathways and the labels that group
+     them. Their English source lives in `src/data/selfuse.ts`, and every
+     screen already printed them through `t()` — the dictionary simply had
+     nothing to answer with, so an app switched to Italian kept an English
+     library inside it.
+
+     A PO who publishes a protocol with a translated name overrides these:
+     see `i18n` on the catalog entry (src/types/domain.ts). This is what a
+     person reads until then. */
+  'For when your mind is scattered and you need clarity under pressure.':
+    'Per quando la mente è dispersa e ti serve lucidità sotto pressione.',
+  'Regain calm, reorganize demands, and build healthy boundaries.':
+    'Ritrovare la calma, riordinare le richieste, costruire confini sani.',
+  'From exhaustion to renewed vitality. Permission to pause, then rebuild.':
+    'Dall’esaurimento a una vitalità nuova. Prima il permesso di fermarti, poi la ricostruzione.',
+  'Protect your time, set limits, reconnect with what matters.':
+    'Proteggere il tuo tempo, mettere limiti, ricollegarti a ciò che conta.',
+  'Long-term development: flexibility, strength, vision.':
+    'Sviluppo a lungo termine: flessibilità, forza, visione.',
 }

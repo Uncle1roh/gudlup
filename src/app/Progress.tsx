@@ -46,7 +46,7 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 export function Progress({ history }: ProgressProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
 
   const recent = history.slice(-8)
@@ -125,7 +125,7 @@ export function Progress({ history }: ProgressProps) {
             return (
               <li key={r.id} className="history__item">
                 <div>
-                  <div className="history__title">{p ? patientTitle(p) : r.protocolCode}</div>
+                  <div className="history__title">{p ? patientTitle(p, locale) : r.protocolCode}</div>
                   <div className="muted small">{relDate(r.startedAt, t)} · {r.duration} {t('min')}</div>
                 </div>
                 {d != null && <span className={`history__delta${d >= 0 ? '' : ' is-neg'}`}>{d >= 0 ? '+' : ''}{d.toFixed(1)}</span>}

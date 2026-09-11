@@ -48,7 +48,7 @@ import {
   type SelfUseSession,
   type SelfUseTheme,
 } from './selfuse'
-import { patientTitle, patientBlurb, type Duration, type Language, type Protocol } from '../types/domain'
+import { patientTitle, patientBlurb, protocolTitle, type Duration, type Language, type Protocol } from '../types/domain'
 import { useI18n, type Locale } from '../i18n'
 
 /* ------------------------------------------------------------- audio ----- */
@@ -166,6 +166,15 @@ const THEME_BY_LIBRARY_CATEGORY: Record<string, SelfUseTheme> = {
  * audio should see it appear without it reshuffling the list a person already
  * knows.
  */
+/** The public NAME a PO has written for this language, if any — the base
+    column when the language has nothing of its own. Empty string = none. */
+function publicName(p: CatalogProtocol, locale: Locale): string {
+  return (p.i18n?.[locale]?.publicTitle ?? p.publicTitle ?? '').trim()
+}
+function publicLine(p: CatalogProtocol, locale: Locale): string {
+  return (p.i18n?.[locale]?.publicBlurb ?? p.publicBlurb ?? '').trim()
+}
+
 export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): ResolvedSession[] {
   const byCode = new Map(catalog.map((p) => [p.code, p]))
 
@@ -177,11 +186,16 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
     const durations = playableDurations(entry)
     return {
       ...s,
-      // CLAUDE.md: a patient-facing screen prints patientTitle(). Where no PO
-      // has written a public name, that resolves to the clinical title — which
-      // is NOT what a person should read, so the editorial name stays instead.
-      name: entry.publicTitle?.trim() ? patientTitle(entry) : s.name,
-      blurb: entry.publicBlurb?.trim() ? patientBlurb(entry) : s.blurb,
+      /* CLAUDE.md: a patient-facing screen prints patientTitle(). Where no PO
+         has written a public name, that resolves to the clinical title — which
+         is NOT what a person should read, so the editorial name stays instead.
+
+         "Written" has to be asked of the LANGUAGE being read, not of the base
+         field: a PO who names a protocol only in Italian has written a public
+         name for an Italian reader, and asking the base column alone would
+         drop them back to the English editorial one. */
+      name: publicName(entry, locale) ? patientTitle(entry, locale) : s.name,
+      blurb: publicLine(entry, locale) ? patientBlurb(entry, locale) : s.blurb,
       /* No fallback to the editorial durations. When the catalog has nothing
          rendered, the honest answer is that this session cannot be started —
          falling back to the spine's 6 / 12 / 24 offered THREE buttons that all
@@ -199,9 +213,9 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
     .filter((p) => p.enabled && audienceOf(p) === 'library' && !covered.has(p.code))
     .map((p) => ({
       slug: `catalog:${p.code}`,
-      name: patientTitle(p),
-      blurb: patientBlurb(p),
-      about: patientBlurb(p),
+      name: patientTitle(p, locale),
+      blurb: patientBlurb(p, locale),
+      about: patientBlurb(p, locale),
       expect: [],
       series: 'standalone' as const,
       theme: THEME_BY_LIBRARY_CATEGORY[p.library?.category ?? ''] ?? 'calm',
@@ -310,13 +324,14 @@ export function resolveClinical(catalog: CatalogProtocol[], locale: Locale, sess
     .filter((p) => p.enabled && audienceOf(p) === 'clinical')
     .map((p) => ({
       code: p.code,
+      // the CLINICAL name, in the language the clinician is reading the app in
+      title: protocolTitle(p, locale),
       family: p.family,
-      title: p.title,
-      blurb: p.blurb,
+      blurb: p.i18n?.[locale]?.blurb?.trim() || p.blurb,
       durations: playableDurations(p),
       clinicalOnly: isClinicalOnly(p.code),
       audioReady: hasRenderedAudio(p, locale),
-      patientName: nameOf.get(p.code) ?? patientTitle(p),
+      patientName: nameOf.get(p.code) ?? patientTitle(p, locale),
       entry: p,
     }))
     .sort((a, b) => a.code.localeCompare(b.code))
