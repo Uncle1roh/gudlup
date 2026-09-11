@@ -29,6 +29,7 @@ import { Management } from './Management'
 import { Settings } from './Settings'
 import { buildAggregates, useCorporateState } from './data'
 import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
+import { BrandLogo } from '../components/Brand'
 
 type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'management' | 'settings'
 
@@ -81,7 +82,7 @@ export function CorporateApp() {
     <div className="c-app">
       <header className="c-topbar">
         <div className="c-topbar__left">
-          <span className="c-brand">Good Loop</span>
+          <span className="c-brand"><BrandLogo /></span>
           <span className="c-topbar__company">{state.profile.name}</span>
         </div>
 

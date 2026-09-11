@@ -404,7 +404,7 @@
 .w-panel__tabs button[aria-selected='true'] { color: var(--w-ink); font-weight: 700; border-bottom-color: var(--w-ink); }
 .w-panel__body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .w-panel__empty { align-items: center; justify-content: center; text-align: center; }
-.w-glmark { font-size: 30px; color: var(--w-accent); }
+.w-glmark { width: 34px; height: 34px; margin: 0 auto; }
 
 .w-vaswidget { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px; border-radius: 9px; background: var(--w-bg); }
 .w-vaswidget__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }

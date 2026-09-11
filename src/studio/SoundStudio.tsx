@@ -62,6 +62,7 @@ import type { CatalogProtocol } from '../data/catalog'
 import type { StudioProject } from '../compose/types'
 import { useDataProvider } from '../data/provider'
 import type { SeedTrack } from '../compose/types'
+import { BrandLogo } from '../components/Brand'
 
 /* ---- layout constants ---- */
 const LANE_H = 104
@@ -1414,7 +1415,7 @@ function StudioDesktop() {
     <div className="mt-studio">
       {/* ---- top transport bar ---- */}
       <header className="mt-topbar">
-        <div className="mt-brand"><span className="mt-brand__mark">◠◡</span>goodloop <span className="mt-brand__sub">studio</span></div>
+        <div className="mt-brand"><BrandLogo variant="cream" /><span className="mt-brand__sub">studio</span></div>
         <input className="mt-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
         <div className="mt-transport">
           <button className="mt-tbtn" onClick={stopT} title="Stop / torna all’inizio">⏹</button>

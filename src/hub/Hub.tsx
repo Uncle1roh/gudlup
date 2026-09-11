@@ -6,6 +6,7 @@
    ============================================================================ */
 
 import { useI18n } from '../i18n'
+import { BrandLogo } from '../components/Brand'
 
 interface Surface {
   href: string
@@ -60,7 +61,7 @@ export function Hub() {
     <div className="hub">
       <div className="hub__inner">
         <header className="hub__head">
-          <div className="auth__brand">goodloop</div>
+          <div className="auth__brand"><BrandLogo /></div>
           <h1 className="hub__title">{t('One platform, every surface')}</h1>
           <p className="hub__sub">{t('Pick a surface to test. Each one has its own login.')}</p>
         </header>

@@ -49,6 +49,7 @@ import { SessionPlayer } from '../lib/audio'
 import { CLUSTER_LABEL, adherencePct, nextSessionNumber, vasSeries, type SessionRow, type WorkspacePatient } from './data'
 import { initials, versionShort } from './Patients'
 import type { Duration } from '../types/domain'
+import { BrandIcon } from '../components/Brand'
 
 type Tab = 'notes' | 'goodloop' | 'reference'
 
@@ -566,7 +567,7 @@ function GoodLoopTab({
   if (state.stage === 'idle') {
     return (
       <div className="w-panel__body w-panel__empty">
-        <div className="w-glmark" aria-hidden="true">◠◡</div>
+        <BrandIcon className="w-glmark" />
         <h3>{t('Start a Good Loop session')}</h3>
         <p className="w-small">{t('Select a protocol to begin treatment during this call.')}</p>
         <button className="w-btn w-btn--primary" onClick={() => setState({ stage: 'wizard' })}>{t('Select protocol')}</button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BrandLogo } from '../components/Brand'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { hydrateTtsSettings } from '../tts/settings'
 import { AvatarUpload } from '../components/AvatarUpload'
@@ -39,8 +40,8 @@ export function AdminApp() {
     <div className="adm">
       <aside className="adm-side">
         <div className="adm-brand">
-          <span className="adm-brand__mark">◠◡</span>
-          <span className="adm-brand__name">goodloop <span className="adm-brand__sub">admin</span></span>
+          <BrandLogo variant="cream" />
+          <span className="adm-brand__sub">admin</span>
         </div>
         <nav className="adm-nav">
           {NAV.map((n) => (

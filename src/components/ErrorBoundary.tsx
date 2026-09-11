@@ -18,6 +18,7 @@
    ============================================================================ */
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { BrandIcon } from './Brand'
 
 interface Props {
   children: ReactNode
@@ -64,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="eb">
         <div className="eb__card">
-          <div className="eb__mark" aria-hidden="true">◍</div>
+          <BrandIcon className="eb__mark" />
           <h1 className="eb__title">Qualcosa si è interrotto</h1>
           <p className="eb__body">
             Questa schermata non è riuscita a caricarsi. Nessun dato è andato perso:

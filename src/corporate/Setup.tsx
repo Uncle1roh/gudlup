@@ -25,6 +25,7 @@ import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { conventionBlurb, conventionLabel, type EapContact } from '../data/convention'
 import { generateCompanyCode, type CorporateState, type TherapistRow } from './metrics'
+import { BrandLogo } from '../components/Brand'
 
 interface SetupProps {
   state: CorporateState
@@ -81,7 +82,7 @@ export function SetupWizard({ state, onDone }: SetupProps) {
   return (
     <div className="c-setup">
       <div className="c-setup__card">
-        <div className="c-brand">Good Loop</div>
+        <div className="c-brand"><BrandLogo /></div>
         <Rail step={step} plus={plus} />
 
         {step === 1 && (

@@ -809,27 +809,12 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border-radius: 22px;
   box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95);
 }
-/* The canvas puts a small breathing orb beside the wordmark in every header.
-   The door is the one place the app can carry it without new markup, and it
-   gives the first screen something alive on it — which is the whole point of
-   opening on a breath. */
-.su-studio.auth .auth__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--display);
-  color: var(--su-fg);
-  letter-spacing: 0.02em;
-}
-.su-studio.auth .auth__brand::before {
-  content: '';
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #f6f3d6 0%, #1fbf94 54%, #0f6b52 100%);
-  animation: gl-core 9s ease-in-out infinite, gl-listen 9s ease-out infinite;
-}
+/* The door used to carry a small breathing orb beside a wordmark set in the
+   display face — an invented lockup, in the one place a person meets the
+   brand first. The real logo stands there now, in the cream colourway its
+   ground asks for, and at the size the card was drawn for. */
+.su-studio.auth .auth__brand { display: flex; }
+.su-studio.auth .auth__brand .gl-logo { height: 32px; }
 .su-studio.auth .auth__title {
   font-family: var(--display);
   font-weight: 500;
@@ -1640,26 +1625,14 @@ body:has(.su-studio) { overflow: hidden; }
     border-top: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
-  /* The wordmark, with the breathing orb as its bullet. It was a
-     pseudo-element while it was the only thing here; it is real markup now
-     because the search field has to sit between it and the tabs. */
+  /* The logo, left of the search field and the tabs. */
   .su-studio .tabbar__brand {
     display: flex;
     align-items: center;
-    gap: 10px;
     flex: 0 0 auto;
     margin-right: 22px;
-    font-family: var(--display);
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--su-fg);
   }
-  .su-studio .tabbar__mark {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background-image: radial-gradient(circle at 34% 30%, #f6f3d6 0%, #1fbf94 54%, #0f6b52 100%);
-  }
+  .su-studio .tabbar__brand .gl-logo { height: 24px; }
 
   /* Between the logo and the buttons, and it takes the slack: the tabs keep
      their width, the field grows into whatever is left. */
@@ -1743,7 +1716,6 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio .gl-grain { opacity: 0.1; }
   .su-studio::before,
   .su-studio .home__pathway::before,
-  .su-studio .auth__brand::before,
   .su-studio .home__pathway,
   .su-studio .cat-hero,
   .su-studio .cat-rail__track > *,

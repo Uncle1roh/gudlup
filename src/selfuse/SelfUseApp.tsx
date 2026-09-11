@@ -38,6 +38,7 @@ import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessme
 import { safetyLevel2Trigger, dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
+import { BrandLogo } from '../components/Brand'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -531,9 +532,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             tabs, which is where the desktop layout has room for one. Both are
             hidden at phone widths, where this nav is four icons at the foot
             of the screen and the search lives in the library's own header. */}
-        <span className="tabbar__brand" aria-hidden="true">
-          <span className="tabbar__mark" />
-          Good Loop
+        <span className="tabbar__brand">
+          <BrandLogo variant="cream" />
         </span>
 
         <label className="su-search su-search--bar">

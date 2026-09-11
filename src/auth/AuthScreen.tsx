@@ -6,6 +6,7 @@ import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, resolveCompanyCode } from '../data/convention'
 import { useI18n } from '../i18n'
+import { BrandLogo } from '../components/Brand'
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const auth = useAuth()
@@ -122,7 +123,10 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
        surfaces are still light. */
     <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr ? '' : ' su-studio'}`}>
       <div className="auth__card">
-        <div className="auth__brand">goodloop</div>
+        {/* The b2c door is the dark Self Use ground; the clinician, employer
+            and admin doors are light. Same logo, the colourway its ground asks
+            for. */}
+        <div className="auth__brand"><BrandLogo variant={isB2b || isAdmin || isHr ? 'green' : 'cream'} /></div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
         <p className="auth__sub">{isAdmin ? t('Sign in to the admin console') : isHr ? t('Sign in to the employer dashboard') : signup ? t('Create your account') : t('Sign in to continue')}</p>
 

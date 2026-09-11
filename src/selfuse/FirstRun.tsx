@@ -25,6 +25,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { BrandLogo } from '../components/Brand'
 
 interface Step {
   title: string
@@ -128,10 +129,7 @@ export function FirstRun({ onDone }: { onDone: () => void }) {
     <div className="app-frame su-studio">
       <div className="screen fr">
         <div className="fr__top">
-          <span className="fr__brand" aria-hidden="true">
-            <span className="fr__mark" />
-            Good Loop
-          </span>
+          <BrandLogo variant="cream" className="fr__brand" />
           {/* Skipping is not a different outcome: it is seen either way, and
               the whole thing stays in Profile. Nobody is held here. */}
           <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>

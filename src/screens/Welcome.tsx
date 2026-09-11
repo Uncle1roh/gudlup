@@ -1,6 +1,7 @@
 import { BreathingOrb } from '../components/BreathingOrb'
 import { useI18n } from '../i18n'
 import { useAuth } from '../auth/auth'
+import { BrandLogo } from '../components/Brand'
 
 interface WelcomeProps {
   onContinue: () => void
@@ -15,7 +16,7 @@ export function Welcome({ onContinue }: WelcomeProps) {
       <div className="screen__body" style={{ justifyContent: 'center', gap: 28 }}>
         <div className="brand">
           <BreathingOrb size={160} />
-          <span className="wordmark">GOOD LOOP</span>
+          <BrandLogo className="wordmark" />
         </div>
         <div className="stack-md" style={{ maxWidth: 320 }}>
           <h1 className="display">{t('Where transformation becomes listening.')}</h1>

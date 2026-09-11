@@ -2,6 +2,7 @@ import { useAuth, SignOutButton } from '../auth/auth'
 import { AvatarUpload } from '../components/AvatarUpload'
 import { Nr1Dashboard } from './Nr1Dashboard'
 import { useI18n } from '../i18n'
+import { BrandLogo } from '../components/Brand'
 
 export function EmployerApp() {
   const { user } = useAuth()
@@ -10,8 +11,8 @@ export function EmployerApp() {
     <div className="emp-app">
       <header className="emp-topbar">
         <div className="emp-brand">
-          <span className="emp-brand__mark">◠◡</span>
-          <span className="emp-brand__name">goodloop <span className="emp-brand__sub">{t('for employers')}</span></span>
+          <BrandLogo />
+          <span className="emp-brand__sub">{t('for employers')}</span>
         </div>
         <div className="emp-topbar__right">
           <AvatarUpload size={32} fallback="🏢" className="avatarup--bar" />

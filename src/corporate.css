@@ -38,7 +38,8 @@
   background: var(--c-surface); border-bottom: 1px solid var(--c-line);
 }
 .c-topbar__left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-.c-brand { font-family: var(--display); font-size: 19px; font-weight: 600; color: var(--c-accent); }
+.c-brand { display: inline-flex; align-items: center; }
+.c-brand .gl-logo { height: 26px; }
 .c-topbar__company { font-size: 14px; color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .c-nav { display: flex; gap: 4px; margin-left: auto; }

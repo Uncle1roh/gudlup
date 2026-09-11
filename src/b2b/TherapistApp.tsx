@@ -17,6 +17,7 @@ import { AvatarUpload } from '../components/AvatarUpload'
 import { Agenda } from './Agenda'
 import { joinWindowOpen, fmtTime, type Appointment } from '../data/scheduling'
 import type { B2bSession } from './data'
+import { BrandLogo } from '../components/Brand'
 
 type Screen = 'agenda' | 'roster' | 'card' | 'edit' | 'wizard' | 'compose' | 'session' | 'debrief' | 'report' | 'credentials'
 
@@ -154,8 +155,8 @@ export function TherapistApp() {
     <div className="b2b-app">
       <header className="b2b-topbar">
         <div className="b2b-brand">
-          <span className="b2b-brand__mark">◠◡</span>
-          <span className="b2b-brand__name">goodloop <span className="b2b-brand__sub">clinic</span></span>
+          <BrandLogo />
+          <span className="b2b-brand__sub">clinic</span>
         </div>
         <div className="b2b-topbar__right">
           <button className="b2b-demobtn" onClick={() => setScreen('agenda')}>🗓 Agenda</button>
