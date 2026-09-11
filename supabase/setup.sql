@@ -65,6 +65,13 @@ create table if not exists therapists (
   decided_at    timestamptz
 );
 
+-- The documents a clinician submits to prove they are one: [{ path, name,
+-- size, at }]. `path` is an object in the private `credentials` bucket, which
+-- only its owner and an admin may read. The registration NUMBER has always been
+-- here; the proof behind it had nowhere to go, so the review was a number
+-- someone typed about themselves.
+alter table therapists add column if not exists documents jsonb not null default '[]';
+
 create table if not exists patients (
   id                uuid primary key default gen_random_uuid(),
   therapist_id      uuid not null references therapists(id) on delete restrict,
@@ -397,6 +404,38 @@ drop policy if exists therapists_admin on therapists;
 create policy therapists_admin on therapists
   for all using (is_admin()) with check (is_admin());
 -- NOTE: approval (pending → approved) is privileged: admin console or dashboard.
+--
+-- A clinician has no UPDATE policy on their own row, deliberately: the one
+-- column that must never be self-served is `status`. Submitting credentials
+-- still has to write two others, so it goes through this function instead —
+-- it sets the number and the documents, and always sets status back to
+-- 'pending'. Editing your own credentials therefore re-opens the review rather
+-- than granting anything, and there is no argument that can approve you.
+create or replace function submit_credentials(p_crp text, p_docs jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare me uuid;
+begin
+  me := current_profile();
+  if me is null then
+    raise exception 'not signed in';
+  end if;
+  update therapists
+     set crp           = coalesce(nullif(btrim(p_crp), ''), crp),
+         documents     = coalesce(p_docs, documents),
+         status        = 'pending',
+         review_reason = null,
+         decided_at    = null
+   where id = me;
+  if not found then
+    raise exception 'no clinician record for this account';
+  end if;
+end $$;
+
+grant execute on function submit_credentials(text, jsonb) to authenticated;
 
 -- patients + clinical satellites: only the owning therapist ------------------
 drop policy if exists therapist_owns_patients on patients;
@@ -814,6 +853,28 @@ begin
     execute $pol$
       create policy avatars_read on storage.objects
         for select using (bucket_id = 'avatars')
+    $pol$;
+
+    -- credentials: a diploma and a registration certificate are identity
+    -- documents, so this bucket is PRIVATE (public = false) and read through
+    -- short-lived signed URLs. A clinician writes and reads only their own
+    -- folder (path = <auth_uid>/…); an admin reads every folder, because
+    -- reviewing them is the whole point; nobody else sees anything.
+    insert into storage.buckets (id, name, public)
+    values ('credentials', 'credentials', false)
+    on conflict (id) do nothing;
+
+    execute 'drop policy if exists credentials_own on storage.objects';
+    execute $pol$
+      create policy credentials_own on storage.objects
+        for all using (bucket_id = 'credentials' and (storage.foldername(name))[1] = auth.uid()::text)
+        with check (bucket_id = 'credentials' and (storage.foldername(name))[1] = auth.uid()::text)
+    $pol$;
+
+    execute 'drop policy if exists credentials_admin_read on storage.objects';
+    execute $pol$
+      create policy credentials_admin_read on storage.objects
+        for select using (bucket_id = 'credentials' and is_admin())
     $pol$;
   end if;
 end $$;

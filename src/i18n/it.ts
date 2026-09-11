@@ -439,4 +439,31 @@ export const IT: Record<string, string> = {
   'Close your eyes and follow the sound.': 'Chiudi gli occhi e segui il suono.',
   'Paused by your therapist': 'Messo in pausa dal tuo terapeuta',
   'Leave the session': 'Esci dalla sessione',
+
+  /* ---- the credential gate (therapist workspace) ------------------------
+     What a clinician reads while the review of their registration is open.
+     The rest of the workspace is still English; these are the strings on the
+     one screen they cannot get past, so they are the ones that had to be in
+     the language the app is set to. */
+  'Verification in progress': 'Verifica in corso',
+  'Our team is reviewing your credentials. You\'ll receive an email within 48 hours.': 'Il nostro team sta verificando le tue credenziali. Riceverai un’email entro 48 ore.',
+  'Approved': 'Approvato',
+  'Continuing to the next step…': 'Passiamo al passo successivo…',
+  'We could not verify your credentials': 'Non siamo riusciti a verificare le tue credenziali',
+  'Please review your submission and try again.': 'Controlla quello che hai inviato e riprova.',
+  'Additional documents needed': 'Servono altri documenti',
+  'Our team needs one more document to complete the review.': 'Al nostro team serve un altro documento per completare la verifica.',
+  'Reference:': 'Riferimento:',
+  'Upload document': 'Carica un documento',
+  'Submit': 'Invia',
+  'Sending…': 'Invio…',
+  'A reviewer at Good Loop decides this. You will not see patients until they do.': 'La decisione spetta a chi revisiona in Good Loop. Fino ad allora non vedrai pazienti.',
+  'One moment': 'Un momento',
+  'Confirming your registration…': 'Sto confermando la tua iscrizione…',
+  'We could not check your credentials': 'Non è stato possibile verificare le tue credenziali',
+  'The workspace stays closed until your registration can be confirmed. Try again in a moment.': 'Lo spazio di lavoro resta chiuso finché non si riesce a confermare la tua iscrizione. Riprova tra poco.',
+  'Try again': 'Riprova',
+  'Submit for verification': 'Invia per la verifica',
+  'Professional certificate': 'Certificato professionale',
+  'Choose file': 'Scegli un file',
 }

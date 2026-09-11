@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDataProvider } from '../data/provider'
+import { credentialDocUrl } from '../b2b/credentials'
 import { useCredentialRequests } from './hooks'
 import { fmtDateTime, relWhen } from '../b2b/data'
 import type { CredentialDecision, CredentialRequest } from './types'
@@ -29,6 +30,15 @@ export function CredentialQueue({ actor }: { actor: string }) {
     } finally {
       setBusy(null)
     }
+  }
+
+  /* A document is opened through a SIGNED URL minted on the click, not through
+     a link sitting in the DOM: the bucket is private, the grant is a few
+     minutes long, and a copied address stops working. */
+  async function open(path: string) {
+    const url = await credentialDocUrl(path)
+    if (!url) { window.alert('Documento non disponibile — potrebbe essere stato rimosso.'); return }
+    window.open(url, '_blank', 'noopener')
   }
 
   const requests = data ?? []
@@ -63,6 +73,20 @@ export function CredentialQueue({ actor }: { actor: string }) {
                 inviata {relWhen(r.submittedAt)}
                 {overdue && <span className="adm-pill adm-pill--bad">fuori tempo</span>}
               </div>
+            </div>
+            {/* What is actually being reviewed. Approving with nothing here is
+                approving a number somebody typed about themselves, so the
+                empty case says so rather than showing an empty row. */}
+            <div className="adm-cred__docs">
+              {r.documents.length === 0 ? (
+                <span className="adm-cred__nodocs">⚠ Nessun documento allegato — chiedi l’iscrizione all’albo prima di approvare.</span>
+              ) : (
+                r.documents.map((d) => (
+                  <button key={d.path} className="adm-doc" onClick={() => void open(d.path)} title="Apri il documento">
+                    📄 {d.name} <em>{(d.sizeBytes / 1024).toFixed(0)} KB</em>
+                  </button>
+                ))
+              )}
             </div>
             <input
               className="b2b-input adm-cred__reason"

@@ -51,6 +51,8 @@ export interface CredentialRequest {
   email: string
   crp: string
   submittedAt: number
+  /** The proof behind the number — what the reviewer actually reads. */
+  documents: import('../b2b/credentials').CredentialDoc[]
   status: CredentialStatus
   /** Reviewer reason on reject / request-more. */
   reason?: string

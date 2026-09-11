@@ -25,6 +25,7 @@ import { useMessages, unreadFor } from '../data/messageStore'
 import { useDataProvider } from '../data/provider'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients } from './data'
+import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
 import { TherapistOnboarding } from './Onboarding'
 import { Roster, PatientCard, initials } from './Patients'
@@ -96,28 +97,70 @@ function virtualPatient(): WorkspacePatient {
 export function WorkspaceApp(props: WorkspaceAppProps) {
   return (
     <LiveCatalogProvider>
-      <WorkspaceSurface {...props} />
+      <WorkspaceGate {...props} />
     </LiveCatalogProvider>
   )
 }
 
-function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
+/**
+ * Who may be in here, decided before the workspace exists.
+ *
+ * Its own component on purpose. The decision is asynchronous — it is a row on
+ * the server — and a gate written as an early return inside the workspace
+ * would change how many hooks that render called, which React refuses. Here,
+ * the workspace below is simply not mounted until the answer is yes.
+ */
+function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
   const { t } = useI18n()
-  const { user } = useAuth()
   const dp = useDataProvider()
   const { state, update } = useWorkspace()
-  const [nav, setNav] = useState<Nav>('patients')
-  const [view, setView] = useState<View>({ kind: 'nav' })
-  const [menu, setMenu] = useState(false)
-  const [availOpen, setAvailOpen] = useState(false)
-  const [messagePatient, setMessagePatient] = useState<string | undefined>(undefined)
+  const [sandboxOnEntry, setSandboxOnEntry] = useState(false)
 
-  const onboarded = state.account.verification === 'approved' && state.account.termsSignedAt
+  /* ---- may this account see patients? ------------------------------------
+
+     The workspace used to ask its own local store, which held a `verification`
+     field this browser wrote — with a button next to it that set the field to
+     'approved'. The answer now comes from the `therapists` row, where only a
+     reviewer can put it, and it is re-read every time the workspace opens.
+
+     While it is unknown the workspace does not render. Failing OPEN here would
+     mean an unreachable server hands out the roster, which is the one outcome
+     this check exists to prevent. */
+  const [cred, setCred] = useState<Therapist | null>(null)
+  const [credErr, setCredErr] = useState<string | null>(null)
+  const loadCred = useCallback(() => {
+    setCredErr(null)
+    void dp.getTherapist()
+      .then(setCred)
+      .catch((e: Error) => { setCred(null); setCredErr(e.message) })
+  }, [dp])
+  useEffect(loadCred, [loadCred])
+
+  if (!cred) {
+    return (
+      <div className="w-auth">
+        <div className="w-auth__card w-auth__card--center">
+          <div className="w-hourglass" aria-hidden="true">⏳</div>
+          <h1 className="w-h1">{credErr ? t('We could not check your credentials') : t('One moment')}</h1>
+          <p className="w-lead">
+            {credErr
+              ? t('The workspace stays closed until your registration can be confirmed. Try again in a moment.')
+              : t('Confirming your registration…')}
+          </p>
+          {credErr && <button className="w-btn w-btn--primary w-btn--block" onClick={loadCred}>{t('Try again')}</button>}
+        </div>
+      </div>
+    )
+  }
+
+  const onboarded = cred.status === 'approved' && state.account.termsSignedAt
 
   if (!onboarded) {
     return (
       <TherapistOnboarding
         account={state.account}
+        cred={cred}
+        onCredChanged={loadCred}
         onSubmit={(patch) => update((s) => ({ ...s, account: { ...s.account, ...patch } }))}
         onSign={() => update((s) => ({ ...s, account: { ...s.account, termsSignedAt: Date.now() } }))}
         onFinish={(sandbox) => {
@@ -128,11 +171,25 @@ function WorkspaceSurface({ demoSeconds = null }: WorkspaceAppProps) {
             // so every downstream screen is reachable.
             patients: s.patients.length ? s.patients : demoWorkspace().patients,
           }))
-          if (sandbox) { setNav('sandbox'); setView({ kind: 'call', id: 'sandbox', sandbox: true }) }
+          // the workspace does not exist yet; it opens on the sandbox instead
+          if (sandbox) setSandboxOnEntry(true)
         }}
       />
     )
   }
+  return <WorkspaceSurface demoSeconds={demoSeconds} sandboxOnEntry={sandboxOnEntry} />
+}
+
+function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppProps & { sandboxOnEntry?: boolean }) {
+  const { t } = useI18n()
+  const { user } = useAuth()
+  const dp = useDataProvider()
+  const { state, update } = useWorkspace()
+  const [nav, setNav] = useState<Nav>(sandboxOnEntry ? 'sandbox' : 'patients')
+  const [view, setView] = useState<View>(sandboxOnEntry ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
+  const [menu, setMenu] = useState(false)
+  const [availOpen, setAvailOpen] = useState(false)
+  const [messagePatient, setMessagePatient] = useState<string | undefined>(undefined)
 
   /* The badge has to count the live thread as well as the seeded fixtures, or
      a message a patient sent from their own app raises no flag anywhere. */

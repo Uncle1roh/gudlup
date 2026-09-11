@@ -1463,6 +1463,29 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* --- the company code, which is also the way in ---------------------------
    Shown as a thing to be COPIED: HR registers with it and every employee
    types it, so it is the one string on this screen that leaves the room. */
+/* --- the documents behind a credential ------------------------------------
+   A private bucket, so these open through a signed URL minted on the click. */
+/* the credential gate, when it holds the whole credentials screen rather than
+   a card: it needs the page width, not a centred badge */
+.b2b-gate--wide { display: block; max-width: 720px; margin: 0 auto; width: 100%; }
+.cred-docs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cred-docs li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  background: var(--mist-2); border: 1px solid var(--line); font-size: 13px;
+}
+
+.adm-cred__docs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.adm-doc {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--mist-2);
+  font-family: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer;
+}
+.adm-doc:hover { border-color: var(--aura); }
+.adm-doc em { font-style: normal; color: var(--slate); }
+.adm-cred__nodocs { font-size: 12.5px; color: #9b6b20; }
+
 .adm-code {
   display: inline-block;
   padding: 3px 8px;

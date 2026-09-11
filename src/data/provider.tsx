@@ -6,6 +6,7 @@ import type { Plan, PlanItem } from './plan'
 import type { ChatMessage } from './messageStore'
 import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
+import type { CredentialDoc } from '../b2b/credentials'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
 import { createMockProvider } from './mock'
@@ -41,6 +42,15 @@ export interface DataProvider {
   markPlanItemDone(itemId: string): Promise<void>
   // --- B2B ---
   getTherapist(): Promise<Therapist>
+  /**
+   * Submit (or re-submit) the registration number and its documents.
+   *
+   * Always returns the account to `pending`: this is an application for
+   * review, and there is no argument to it that can approve anybody. Editing
+   * an already-approved record therefore re-opens the review, which is the
+   * honest consequence of changing the thing that was reviewed.
+   */
+  submitCredentials(crp: string, documents: CredentialDoc[]): Promise<void>
   listPatients(): Promise<Patient[]>
   /** B2C→therapist intake queue. */
   requestSession(note?: string): Promise<void>

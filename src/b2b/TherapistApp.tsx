@@ -114,22 +114,20 @@ export function TherapistApp() {
     )
   }
   if (therapist && therapist.status !== 'approved') {
+    /* Not a waiting room. The one thing a clinician can usefully do while the
+       review is open is answer it, so the gate IS the credentials screen: the
+       number, the documents already sent, and a way to add the one that was
+       asked for. Patients stay behind it either way. */
     return (
-      <div className="b2b-app"><div className="b2b-gate">
-        <div className="b2b-gate__card">
-          <span className="b2b-gate__badge">⏳</span>
-          <h1 className="b2b-h1">Credenziali in verifica</h1>
-          <p className="b2b-sub">
-            {therapist.name} · {therapist.crp}<br />
-            La tua registrazione è stata ricevuta. Un amministratore verifica e approva le credenziali cliniche prima
-            di abilitare l’accesso ai pazienti — entrerai appena sarà approvata.
-          </p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+      <div className="b2b-app">
+        <div className="b2b-gate b2b-gate--wide">
+          <Credentialing therapist={therapist} onChanged={refetchTherapist} />
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', paddingBottom: 24 }}>
             <button className="b2b-btn" onClick={refetchTherapist}>Controlla di nuovo</button>
             <SignOutButton className="b2b-btn" />
           </div>
         </div>
-      </div></div>
+      </div>
     )
   }
 
@@ -228,7 +226,9 @@ export function TherapistApp() {
           <SessionReport patient={patient} therapist={therapist} result={result} debrief={debrief} onConfirm={confirmReport} />
         ) : <Loading />)}
 
-        {screen === 'credentials' && <Credentialing onBack={() => setScreen('roster')} />}
+        {screen === 'credentials' && therapist && (
+          <Credentialing therapist={therapist} onChanged={refetchTherapist} onBack={() => setScreen('roster')} />
+        )}
       </main>
     </div>
   )

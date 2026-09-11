@@ -205,7 +205,13 @@ function mapAdminUser(r: any): AdminUser {
 }
 function mapCredReq(r: any): CredentialRequest {
   const status: CredentialStatus = CRED_STATUSES.includes(r.status) ? r.status : 'pending'
-  return { id: r.id, name: r.profiles?.name ?? '', email: r.profiles?.email ?? '', crp: r.crp ?? '', submittedAt: toMs(r.created_at), status, reason: r.review_reason ?? undefined, decidedAt: r.decided_at ? toMs(r.decided_at) : undefined }
+  return {
+    id: r.id, name: r.profiles?.name ?? '', email: r.profiles?.email ?? '', crp: r.crp ?? '',
+    documents: Array.isArray(r.documents) ? r.documents : [],
+    submittedAt: toMs(r.created_at), status,
+    reason: r.review_reason ?? undefined,
+    decidedAt: r.decided_at ? toMs(r.decided_at) : undefined,
+  }
 }
 function mapAudit(r: any): AuditEvent {
   return { id: r.id, at: toMs(r.at), actor: r.actor ?? '', action: r.action ?? '', target: r.target ?? undefined, detail: r.detail ?? undefined }
@@ -523,6 +529,12 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (upd.error) throw upd.error
     },
 
+    async submitCredentials(crp: string, documents): Promise<void> {
+      /* An RPC, not an update: the client may write the number and the
+         documents and must never be able to write `status`. */
+      const { error } = await sb.rpc('submit_credentials', { p_crp: crp, p_docs: documents })
+      if (error) throw error
+    },
     async getTherapist(): Promise<Therapist> {
       const { data: auth } = await sb.auth.getUser()
       const uid = auth.user?.id
@@ -537,7 +549,11 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return {
         name: row.profiles.name,
         crp: row.crp,
-        status: row.status === 'approved' ? 'approved' : 'pending',
+        // every state the reviewer can leave it in, not just the two the old
+        // mapping kept: "rejected" and "more_info" each need their own screen
+        status: CRED_STATUSES.includes(row.status) ? row.status : 'pending',
+        reason: row.review_reason ?? undefined,
+        documents: Array.isArray(row.documents) ? row.documents : [],
         avatar: DEFAULT_AVATAR,
       }
     },

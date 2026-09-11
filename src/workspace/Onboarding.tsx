@@ -11,6 +11,18 @@
    thing the reviewer asked for. Treating them as one screen with a status line
    would lose the action each one needs.
 
+   That state is the SERVER's. It used to be a field in this browser's own
+   workspace store, next to a button that set it to "approved" — so the screen
+   that exists to check whether somebody is a clinician was answered by the
+   person being checked, and the certificate they chose was never uploaded
+   anywhere: the form kept the file NAME. A reviewer in the admin console was
+   approving a string somebody had typed about themselves.
+
+   Now: the file goes to the private `credentials` bucket, the row is written
+   by `submit_credentials()` which can only ever set status back to 'pending',
+   and this screen reads `therapists.status` back. Nothing here can approve
+   anybody, which is the only property this screen really needs.
+
    TH-ON-3 will not enable its checkbox until the terms have actually been
    scrolled to the bottom, because a signature block records a full name, a
    licence number and a timestamp — an audit trail is only worth having if the
@@ -19,28 +31,73 @@
 
 import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
-import type { TherapistAccount, VerificationState } from './data'
+import { useDataProvider } from '../data/provider'
+import { uploadCredentialDoc, type CredentialDoc } from '../b2b/credentials'
+import type { Therapist } from '../b2b/data'
+import type { TherapistAccount } from './data'
 
 interface OnboardingProps {
   account: TherapistAccount
+  /** The credential record as the SERVER has it. The only thing that decides
+      whether this flow is over. */
+  cred: Therapist
   onSubmit: (patch: Partial<TherapistAccount>) => void
+  /** Re-read the credential record after a submission. */
+  onCredChanged: () => void
   onSign: () => void
   onFinish: (enterSandbox: boolean) => void
 }
 
 const REGIONS = ['SP', 'RJ', 'MG', 'RS', 'PR', 'BA', 'SC', 'PE', 'CE', 'DF', 'Other']
 
-export function TherapistOnboarding({ account, onSubmit, onSign, onFinish }: OnboardingProps) {
-  if (!account.submittedAt) return <Registration account={account} onSubmit={onSubmit} />
-  if (account.verification !== 'approved') return <VerificationPending account={account} onSubmit={onSubmit} />
+export function TherapistOnboarding({ account, cred, onSubmit, onCredChanged, onSign, onFinish }: OnboardingProps) {
+  /* Registration is asked for once; after that the SERVER decides whether this
+     flow continues. A therapist who has submitted sits on TH-ON-2 until a
+     reviewer moves them, and no amount of clicking in here changes that. */
+  if (!account.submittedAt && !cred.documents.length) {
+    return <Registration account={account} cred={cred} onSubmit={onSubmit} onCredChanged={onCredChanged} />
+  }
+  if (cred.status !== 'approved') return <VerificationPending account={account} cred={cred} onCredChanged={onCredChanged} />
   if (!account.termsSignedAt) return <Terms account={account} onSign={onSign} />
   return <SandboxIntro onFinish={onFinish} />
 }
 
 /* ------------------------------------------------------------ TH-ON-1 --- */
 
-function Registration({ account, onSubmit }: { account: TherapistAccount; onSubmit: OnboardingProps['onSubmit'] }) {
+function Registration({ account, cred, onSubmit, onCredChanged }: {
+  account: TherapistAccount
+  cred: Therapist
+  onSubmit: OnboardingProps['onSubmit']
+  onCredChanged: () => void
+}) {
   const { t } = useI18n()
+  const dp = useDataProvider()
+  /* The FILE, not its name. The old form kept `f.name` and dropped the file on
+     the floor, so "Professional certificate" was a field that recorded that a
+     file had once been chosen. */
+  const [certificate, setCertificate] = useState<File | null>(null)
+  const [sending, setSending] = useState(false)
+  const [sendErr, setSendErr] = useState<string | null>(null)
+
+  /** Upload first, then write the row. A row pointing at an object that failed
+      to upload would put an empty review in front of a reviewer. */
+  async function send(form: Partial<TherapistAccount>) {
+    setSendErr(null)
+    setSending(true)
+    try {
+      const docs: CredentialDoc[] = [...cred.documents]
+      if (certificate) docs.push(await uploadCredentialDoc(certificate))
+      /* The registration number the reviewer checks. The local account calls it
+         a licence; the therapists row calls it `crp`. Same number. */
+      await dp.submitCredentials(String(form.licenceNumber ?? account.licenceNumber ?? ''), docs)
+      onSubmit({ ...form, submittedAt: Date.now() })
+      onCredChanged()
+    } catch (e) {
+      setSendErr((e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
   const [form, setForm] = useState({
     fullName: account.fullName,
     email: account.email,
@@ -118,6 +175,7 @@ function Registration({ account, onSubmit }: { account: TherapistAccount; onSubm
                   const f = e.target.files?.[0]
                   if (!f) return
                   if (f.size > 10 * 1024 * 1024) { blur('certificateName'); return }
+                  setCertificate(f)
                   set({ certificateName: f.name })
                 }}
               />
@@ -125,19 +183,13 @@ function Registration({ account, onSubmit }: { account: TherapistAccount; onSubm
           </Field>
         </div>
 
+        {sendErr && <p className="w-small w-err">{sendErr}</p>}
         <button
           className="w-btn w-btn--primary w-btn--block"
-          disabled={!valid}
-          onClick={() =>
-            onSubmit({
-              ...form,
-              verification: 'pending',
-              verificationRef: `GLCP-VR-${Math.floor(10000 + Math.random() * 89999)}`,
-              submittedAt: Date.now(),
-            })
-          }
+          disabled={!valid || sending}
+          onClick={() => void send({ ...form, verificationRef: `GLCP-VR-${Math.floor(10000 + Math.random() * 89999)}` })}
         >
-          {t('Submit for verification')}
+          {sending ? t('Sending…') : t('Submit for verification')}
         </button>
         <p className="w-small w-center">
           {t('Already have an account?')} <a href="#login">{t('Log in')}</a>
@@ -149,11 +201,34 @@ function Registration({ account, onSubmit }: { account: TherapistAccount; onSubm
 
 /* ------------------------------------------------------------ TH-ON-2 --- */
 
-function VerificationPending({ account, onSubmit }: { account: TherapistAccount; onSubmit: OnboardingProps['onSubmit'] }) {
+function VerificationPending({ account, cred, onCredChanged }: {
+  account: TherapistAccount
+  cred: Therapist
+  onCredChanged: () => void
+}) {
   const { t } = useI18n()
-  const [extraDoc, setExtraDoc] = useState('')
+  const dp = useDataProvider()
+  const [extra, setExtra] = useState<File | null>(null)
+  const [sending, setSending] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
 
-  const copy: Record<VerificationState, { title: string; body: string }> = {
+  async function resubmit() {
+    if (!extra) return
+    setErr(null)
+    setSending(true)
+    try {
+      const doc = await uploadCredentialDoc(extra)
+      await dp.submitCredentials(cred.crp, [...cred.documents, doc])
+      setExtra(null)
+      onCredChanged()
+    } catch (e) {
+      setErr((e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const copy: Record<Therapist['status'], { title: string; body: string }> = {
     pending: {
       title: t('Verification in progress'),
       body: t("Our team is reviewing your credentials. You'll receive an email within 48 hours."),
@@ -161,14 +236,14 @@ function VerificationPending({ account, onSubmit }: { account: TherapistAccount;
     approved: { title: t('Approved'), body: t('Continuing to the next step…') },
     rejected: {
       title: t('We could not verify your credentials'),
-      body: account.verificationReason ?? t('Please review your submission and try again.'),
+      body: cred.reason ?? t('Please review your submission and try again.'),
     },
-    'docs-needed': {
+    more_info: {
       title: t('Additional documents needed'),
-      body: account.verificationReason ?? t('Our team needs one more document to complete the review.'),
+      body: cred.reason ?? t('Our team needs one more document to complete the review.'),
     },
   }
-  const c = copy[account.verification]
+  const c = copy[cred.status]
 
   return (
     <div className="w-auth">
@@ -178,39 +253,39 @@ function VerificationPending({ account, onSubmit }: { account: TherapistAccount;
         <p className="w-lead">{c.body}</p>
         <p className="w-small">{t('Reference:')} <span className="w-mono">{account.verificationRef}</span></p>
 
-        {account.verification === 'docs-needed' && (
-          <>
-            <label className="w-btn w-btn--ghost w-filebtn">
-              {extraDoc || t('Upload document')}
-              <input type="file" hidden onChange={(e) => setExtraDoc(e.target.files?.[0]?.name ?? '')} />
-            </label>
-            <button
-              className="w-btn w-btn--primary w-btn--block"
-              disabled={!extraDoc}
-              onClick={() => onSubmit({ verification: 'pending', verificationReason: undefined })}
-            >
-              {t('Submit')}
-            </button>
-          </>
+        {/* What the reviewer is actually looking at. Seeing the list is what
+            tells a clinician whether the thing they were asked for arrived. */}
+        {cred.documents.length > 0 && (
+          <ul className="w-docs">
+            {cred.documents.map((d) => (
+              <li key={d.path}>
+                <span className="w-docs__name">📄 {d.name}</span>
+                <span className="w-small">{(d.sizeBytes / 1024).toFixed(0)} KB</span>
+              </li>
+            ))}
+          </ul>
         )}
 
-        {account.verification === 'rejected' && (
-          <button className="w-btn w-btn--primary w-btn--block" onClick={() => onSubmit({ submittedAt: null })}>
-            {t('Update and resubmit')}
-          </button>
-        )}
+        {/* Adding a document is possible in every un-approved state: waiting,
+            sent back for more, or refused. There is nothing else to do here,
+            and making someone wait to be allowed to answer helps no one. */}
+        <label className="w-btn w-btn--ghost w-filebtn">
+          {extra?.name ?? t('Upload document')}
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            hidden
+            onChange={(e) => setExtra(e.target.files?.[0] ?? null)}
+          />
+        </label>
+        {err && <p className="w-small w-err">{err}</p>}
+        <button className="w-btn w-btn--primary w-btn--block" disabled={!extra || sending} onClick={() => void resubmit()}>
+          {sending ? t('Sending…') : t('Submit')}
+        </button>
 
-        {account.verification === 'pending' && (
-          <>
-            <button className="w-link" onClick={() => onSubmit({ submittedAt: null })}>
-              {t('Need to update your submission?')}
-            </button>
-            {/* Stands in for the reviewer's decision arriving by email. */}
-            <button className="w-link w-link--quiet" onClick={() => onSubmit({ verification: 'approved' })}>
-              {t('Simulate approval (demo)')}
-            </button>
-          </>
-        )}
+        <p className="w-small">
+          {t('A reviewer at Good Loop decides this. You will not see patients until they do.')}
+        </p>
       </div>
     </div>
   )

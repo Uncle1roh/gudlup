@@ -3,6 +3,8 @@
    navigable for the stakeholder demo, before any backend exists.
    ============================================================================ */
 
+import type { CredentialDoc } from './credentials'
+
 const DAY = 86_400_000
 const HOUR = 3_600_000
 const now = Date.now()
@@ -96,7 +98,17 @@ export interface Patient {
 export interface Therapist {
   name: string
   crp: string
-  status: 'pending' | 'approved'
+  /**
+   * Set by a REVIEWER, never by this account. It is what decides whether the
+   * workspace shows patients, so it is read from the server on every open —
+   * the workspace also keeps a local onboarding state, and that one is a UI
+   * step counter, not a permission.
+   */
+  status: 'pending' | 'approved' | 'rejected' | 'more_info'
+  /** Why a reviewer sent it back, when they did. */
+  reason?: string
+  /** What has been submitted so far. */
+  documents: CredentialDoc[]
   avatar: string
 }
 
@@ -104,6 +116,7 @@ export const DEMO_THERAPIST: Therapist = {
   name: 'Dra. Helena Costa',
   crp: 'CRP 04/45821',
   status: 'approved',
+  documents: [],
   avatar: '👩🏻‍⚕️',
 }
 

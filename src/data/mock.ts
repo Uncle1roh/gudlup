@@ -1,7 +1,7 @@
 import type { SessionRecord } from '../types/domain'
 import type { DataProvider, SessionRequest } from './provider'
 import { SEED_HISTORY } from './seed'
-import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient } from '../b2b/data'
+import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient, type Therapist } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode, type TherapistLink, type TherapistCode } from './link'
@@ -110,6 +110,11 @@ let catalog: CatalogProtocol[] = seedCatalog()
    registers with to open the company panel, and it is what an employee types
    at sign-up. Minted in the canonical shape (data/convention.ts) — the demo
    used `c1`, which is not a string anybody could be asked to type. */
+let demoTherapist: Therapist = { ...DEMO_THERAPIST }
+/** The demo clinician's own row in the credential queue, so the console can
+    review the submission the workspace just made. */
+const DEMO_SELF_CRED = 'cr-self'
+
 const companies: Company[] = [
   { id: 'AURORA-2026-Z5', name: 'Aurora Tech', seats: 250, activeUsers: 168, status: 'active', createdAt: nowMs - 90 * DAY },
   { id: 'MERIDIAN-2026-WN', name: 'Meridian Saúde', seats: 120, activeUsers: 74, status: 'active', createdAt: nowMs - 40 * DAY },
@@ -125,9 +130,15 @@ const adminUsers: AdminUser[] = [
 ]
 
 let credentialRequests: CredentialRequest[] = [
-  { id: 'cr1', name: 'Dr. Paulo Mendes', email: 'paulo@clinic.demo', crp: 'CRP 06/98211', submittedAt: nowMs - 20 * 3_600_000, status: 'pending' },
-  { id: 'cr2', name: 'Dra. Sofia Ribeiro', email: 'sofia@clinic.demo', crp: 'CRP 05/33740', submittedAt: nowMs - 2 * DAY, status: 'pending' },
-  { id: 'cr3', name: 'Dr. André Souza', email: 'andre@clinic.demo', crp: 'CRP 04/12345', submittedAt: nowMs - 5 * DAY, status: 'approved', decidedAt: nowMs - 4 * DAY },
+  { id: 'cr1', name: 'Dr. Paulo Mendes', email: 'paulo@clinic.demo', crp: 'CRP 06/98211', submittedAt: nowMs - 20 * 3_600_000, status: 'pending',
+    documents: [{ path: 'demo/cr1/albo.pdf', name: 'iscrizione-albo.pdf', sizeBytes: 412_000, at: nowMs - 20 * 3_600_000 }] },
+  { id: 'cr2', name: 'Dra. Sofia Ribeiro', email: 'sofia@clinic.demo', crp: 'CRP 05/33740', submittedAt: nowMs - 2 * DAY, status: 'pending',
+    documents: [
+      { path: 'demo/cr2/albo.pdf', name: 'certificato-albo.pdf', sizeBytes: 388_000, at: nowMs - 2 * DAY },
+      { path: 'demo/cr2/laurea.jpg', name: 'laurea.jpg', sizeBytes: 1_240_000, at: nowMs - 2 * DAY },
+    ] },
+  { id: 'cr3', name: 'Dr. André Souza', email: 'andre@clinic.demo', crp: 'CRP 04/12345', submittedAt: nowMs - 5 * DAY, status: 'approved', decidedAt: nowMs - 4 * DAY,
+    documents: [{ path: 'demo/cr3/albo.pdf', name: 'albo-04-12345.pdf', sizeBytes: 401_000, at: nowMs - 5 * DAY }] },
 ]
 
 let auditEvents: AuditEvent[] = [
@@ -321,7 +332,22 @@ export function createMockProvider(): DataProvider {
     },
 
     // --- B2B ---
-    getTherapist: () => delay(DEMO_THERAPIST),
+    /* The demo clinician is approved, so a demo opens on the workspace rather
+       than on a review that nobody is going to perform. Submitting from the
+       credentials screen still works and still sends it back to pending, which
+       is the state a tester needs to be able to see. */
+    getTherapist: () => delay(demoTherapist),
+    submitCredentials: async (crp, documents) => {
+      demoTherapist = { ...demoTherapist, crp: crp.trim() || demoTherapist.crp, documents, status: 'pending', reason: undefined }
+      /* And into the queue the admin console reviews, so a demo can walk the
+         whole loop: submit here, approve over there, come back approved. */
+      const row = {
+        id: DEMO_SELF_CRED, name: demoTherapist.name, email: 'helena@clinic.demo',
+        crp: demoTherapist.crp, documents, submittedAt: Date.now(), status: 'pending' as const,
+      }
+      credentialRequests = [row, ...credentialRequests.filter((r) => r.id !== DEMO_SELF_CRED)]
+      await wait()
+    },
     listPatients: () => delay(patients),
     getPlan: (patientId) => delay(clonePlan(plans.get(patientId) ?? null)),
     savePlan: async (patientId, items, title) => {
@@ -469,6 +495,14 @@ export function createMockProvider(): DataProvider {
       credentialRequests = credentialRequests.map((r) =>
         r.id === id ? { ...r, status: decision, reason, decidedAt: Date.now() } : r,
       )
+      /* The demo clinician's own row is the one the workspace reads back. */
+      if (id === DEMO_SELF_CRED) {
+        demoTherapist = {
+          ...demoTherapist,
+          status: decision === 'approved' ? 'approved' : decision === 'rejected' ? 'rejected' : 'more_info',
+          reason,
+        }
+      }
       // approving a credential activates the matching therapist user, if present
       if (decision === 'approved') {
         const req = credentialRequests.find((r) => r.id === id)

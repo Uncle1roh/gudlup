@@ -74,6 +74,23 @@ An account on the wrong surface is not shown a refusal — it is sent to its own
 because a wrong door is a navigation mistake rather than a permissions one. An
 account with no profile row opens nothing and is told to ask the team.
 
+A therapist's surface has a second gate behind the role one: **`therapists.status`**.
+The role says the account is a clinician; the status says whether anyone has
+checked. Until a reviewer sets it to `approved`, the workspace opens on the
+credentials screen — the registration number, the documents submitted so far,
+and a way to add the one that was asked for — and **no patient is reachable**
+through it. Failing to reach the server counts as not approved: an unreachable
+check must not hand out a roster.
+
+The documents live in the private `credentials` bucket under the clinician's own
+auth id. Its policies let them write and read that folder, let an admin read
+every folder (reviewing them is the point), and let nobody else read anything;
+the console opens each one through a signed URL minted on the click. The row is
+written by `submit_credentials()`, a SECURITY DEFINER function that can only
+ever set the status back to `pending` — a clinician can write their number and
+their documents and can never write their own verdict. Changing either re-opens
+the review, because the thing that was approved has changed.
+
 Three rules follow from the table:
 
 1. **The admin console has no sign-up.** An account that can read every company
