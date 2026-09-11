@@ -845,6 +845,8 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border-radius: 13px;
 }
 .su-studio.auth .auth__input::placeholder { color: var(--su-faint); }
+.su-studio.auth .auth__code { color: var(--su-muted); }
+.su-studio.auth .auth__code.is-ok { color: var(--su-accent-2); }
 .su-studio.auth .auth__alt,
 .su-studio.auth .auth__legal,
 .su-studio.auth .auth__switch { color: var(--su-faint); }
@@ -974,7 +976,9 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
 
 /* --- the library ---------------------------------------------------------- */
 .su-studio .cat { gap: var(--su-gap); row-gap: var(--su-gap); }
-.su-studio .cat > * { margin: 0; }
+.su-studio .cat__body { gap: var(--su-gap); }
+.su-studio .cat > *,
+.su-studio .cat__body > * { margin: 0; }
 .su-studio .cat-rail {
   margin: 0;
   display: flex;
@@ -1503,7 +1507,6 @@ body:has(.su-studio) { overflow: hidden; }
 /* On a phone the top bar is four icons at the foot of the screen: no room,
    and no sense in putting a text field there. */
 .su-studio .su-search--bar { display: none; }
-.su-studio .su-search--page { width: 100%; }
 
 .su-studio .tabbar__brand { display: none; }
 
@@ -1581,7 +1584,13 @@ body:has(.su-studio) { overflow: hidden; }
     align-items: start;
     column-gap: 34px;
   }
-  .su-studio .cat > :not(.cat__side) { grid-column: body; }
+  /* One item in the body column, not one per section: a grid row is as tall as
+     its tallest item, and with the sections placed individually the first of
+     them shared row 1 with the category list and everything after it started
+     below the list's full height. Filtering made that plain — the results grid
+     is the SECOND item, so it began some 400px under the "N sessions" heading
+     it belongs to. */
+  .su-studio .cat__body { grid-area: body; min-width: 0; }
   .su-studio .cat__side {
     grid-area: side;
     position: sticky;
@@ -1660,8 +1669,6 @@ body:has(.su-studio) { overflow: hidden; }
     max-width: 460px;
     margin-right: 22px;
   }
-  /* one field per layout: the page one steps aside where the bar has one */
-  .su-studio .su-search--page { display: none; }
   .su-studio .tabbar__btn {
     flex: 0 0 auto;
     flex-direction: row;

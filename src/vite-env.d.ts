@@ -11,6 +11,9 @@ interface ImportMetaEnv {
   readonly VITE_AZURE_TTS_KEY?: string
   readonly VITE_AZURE_TTS_REGION?: string
   readonly VITE_AZURE_TTS_VOICE?: string
+  /** JSON array of Convention — the company codes this deployment registers.
+      See data/convention.ts, "how a code comes to exist". */
+  readonly VITE_COMPANY_CONVENTIONS?: string
 }
 
 interface ImportMeta {

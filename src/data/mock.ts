@@ -393,7 +393,10 @@ export function createMockProvider(): DataProvider {
     },
 
     // --- the therapist ↔ patient link ---
-    getMyCompanyCode: () => delay('ACME-2026' as string | null),
+    /* The demo tenant, so an account that types no code at all still shows
+       the full app — Professional Support included. Typing a code at sign-up
+       overrides this: NOVA-2026 is the without-Professional-Support state. */
+    getMyCompanyCode: () => delay('DEMO-2026-GL' as string | null),
     getMyTherapistLink: () => delay({ ...link }),
     redeemTherapistCode: async (code: string) => {
       await wait()

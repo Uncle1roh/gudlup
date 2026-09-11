@@ -78,9 +78,15 @@ export interface AssetPools {
    * between the two — visible in the Asset Library, absent from every draw.
    */
   bowl: AudioAsset[]
-  /** all soundscapes, for last-resort fallback draws. */
+  /** GENERAL soundscapes only — specials excluded. Last-resort fallback draws. */
   soundscapes: AudioAsset[]
+  /** paths of every special-layer file (bowl / heartbeat), wherever it is filed. */
+  specialPaths: Set<string>
 }
+
+/** Layers a clip must ASK for by name — never handed out by a general draw. */
+const SPECIAL_TAGS = ['heartbeat', 'bowl'] as const
+type SpecialTag = (typeof SPECIAL_TAGS)[number]
 
 /** Tags an asset answers to: its texture folder + filename tokens + meta. */
 function assetTags(a: AudioAsset, meta: Map<string, string[]>): string[] {
@@ -93,23 +99,34 @@ function assetTags(a: AudioAsset, meta: Map<string, string[]>): string[] {
 
 export function buildAssetPools(assets: AudioAsset[], metaRows: AssetMetaRow[] = []): AssetPools {
   const meta = new Map(metaRows.map((r) => [r.path, r.tags]))
-  const pools: AssetPools = { musicByPhase: {}, soundscapeByTag: new Map(), heartbeat: [], bowl: [], soundscapes: [] }
+  const pools: AssetPools = { musicByPhase: {}, soundscapeByTag: new Map(), heartbeat: [], bowl: [], soundscapes: [], specialPaths: new Set() }
   for (const a of assets) {
     if (a.kind === 'music' && a.phase) {
       const arr = pools.musicByPhase[a.phase] ?? []
       arr.push(a)
       pools.musicByPhase[a.phase] = arr
     } else if (a.kind === 'soundscape') {
-      pools.soundscapes.push(a)
-      for (const t of assetTags(a, meta)) {
+      const tags = assetTags(a, meta)
+      /* A singing bowl filed under `assets/soundscape/` is still a bowl: it is
+         a struck accent, not a texture, and it must never turn up in a mix that
+         asked for an ambiente. It joins its own special pool (so a clip that
+         DOES ask for a campana finds it) and stays out of `soundscapes`, the
+         last-resort pool a no-match ambiente falls back to. */
+      const special = SPECIAL_TAGS.find((t) => tags.includes(t))
+      if (special) {
+        pools.specialPaths.add(a.path)
+        pools[special].push(a)
+      } else {
+        pools.soundscapes.push(a)
+      }
+      for (const t of tags) {
         const arr = pools.soundscapeByTag.get(t) ?? []
         arr.push(a)
         pools.soundscapeByTag.set(t, arr)
       }
-    } else if (a.kind === 'heartbeat') {
-      pools.heartbeat.push(a)
-    } else if (a.kind === 'bowl') {
-      pools.bowl.push(a)
+    } else if (a.kind === 'heartbeat' || a.kind === 'bowl') {
+      pools.specialPaths.add(a.path)
+      pools[a.kind].push(a)
     }
   }
   return pools
@@ -149,10 +166,19 @@ export interface DrawLedger {
   counts: Map<string, number>
   /** pool key → the path the previous clip of that pool got */
   last: Map<string, string>
+  /**
+   * Paths this draw must NOT return while the pool holds anything else.
+   *
+   * This is what makes the Studio's 🎲 re-roll a re-roll. A count alone cannot
+   * express it: the file a clip is playing right now is, by every other
+   * measure, the least-used candidate for that clip, so the freshness rule
+   * handed it straight back and the button looked dead.
+   */
+  avoid: Set<string>
 }
 
 export function newDrawLedger(): DrawLedger {
-  return { counts: new Map(), last: new Map() }
+  return { counts: new Map(), last: new Map(), avoid: new Set() }
 }
 
 /** Draw from `cands` preferring files this protocol has not used yet; among
@@ -166,9 +192,14 @@ function pickFresh(
   poolKey: string,
 ): { asset: AudioAsset; reused: boolean } {
   if (!ledger) return { asset: pick(cands, rnd), reused: false }
+  // an explicit re-roll rules its own current files out — unless they are all
+  // the pool has, in which case handing one back IS the honest answer
+  const open = ledger.avoid.size ? cands.filter((a) => !ledger.avoid.has(a.path)) : cands
+  const exhausted = open.length === 0
+  const usable = exhausted ? cands : open
   let fewest = Infinity
-  for (const a of cands) fewest = Math.min(fewest, ledger.counts.get(a.path) ?? 0)
-  let tier = cands.filter((a) => (ledger.counts.get(a.path) ?? 0) === fewest)
+  for (const a of usable) fewest = Math.min(fewest, ledger.counts.get(a.path) ?? 0)
+  let tier = usable.filter((a) => (ledger.counts.get(a.path) ?? 0) === fewest)
   const prev = ledger.last.get(poolKey)
   if (tier.length > 1 && prev) {
     const noRepeat = tier.filter((a) => a.path !== prev)
@@ -177,7 +208,7 @@ function pickFresh(
   const asset = pick(tier, rnd)
   ledger.counts.set(asset.path, (ledger.counts.get(asset.path) ?? 0) + 1)
   ledger.last.set(poolKey, asset.path)
-  return { asset, reused: fewest > 0 }
+  return { asset, reused: exhausted || fewest > 0 }
 }
 
 function poolNote(n: number, reused: boolean): string {
@@ -196,7 +227,7 @@ export interface DrawResult { asset: AudioAsset; how: string }
  * produced a silent clip and a note saying the PO had not delivered it. Both
  * places count now; nothing has to be moved.
  */
-function specialCandidates(pools: AssetPools, tag: string): AudioAsset[] {
+function specialCandidates(pools: AssetPools, tag: SpecialTag): AudioAsset[] {
   const dedicated = tag === 'heartbeat' ? pools.heartbeat : pools.bowl
   const byTag = pools.soundscapeByTag.get(tag) ?? []
   const seen = new Set(dedicated.map((a) => a.path))
@@ -212,17 +243,21 @@ export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => n
      for a singing bowl used to score zero against the texture tags and then be
      handed a lake or a wind from the last-resort pool — the wrong sound,
      delivered silently, which is worse than the silence it replaced. */
-  for (const tag of ['heartbeat', 'bowl'] as const) {
+  for (const tag of SPECIAL_TAGS) {
     if (!want.includes(tag)) continue
     const cands = specialCandidates(pools, tag)
     if (!cands.length) return null
     const d = pickFresh(cands, rnd, ledger, `ss:${tag}`)
     return { asset: d.asset, how: `${tag} pool (${poolNote(cands.length, d.reused)})` }
   }
-  // score every soundscape by tag overlap
+  /* score every soundscape by tag overlap — specials excluded, we are past the
+     only branch that may serve them */
   const scored = new Map<AudioAsset, number>()
   for (const t of want) {
-    for (const a of pools.soundscapeByTag.get(t) ?? []) scored.set(a, (scored.get(a) ?? 0) + 1)
+    for (const a of pools.soundscapeByTag.get(t) ?? []) {
+      if (pools.specialPaths.has(a.path)) continue
+      scored.set(a, (scored.get(a) ?? 0) + 1)
+    }
   }
   if (scored.size) {
     const best = Math.max(...scored.values())
@@ -310,6 +345,9 @@ export function drawMusicPlaylist(
   const pool = pools.musicByPhase[key] ?? []
   if (!pool.length) return null
   const target = seconds * OVERDRAW
+  // a re-roll excludes the songs this clip is already playing, so the number of
+  // DIFFERENT files the queue can still hold is the open part of the pool
+  const distinct = ledger?.avoid.size ? Math.max(1, pool.filter((a) => !ledger.avoid.has(a.path)).length) : pool.length
   const assets: AudioAsset[] = []
   let covered = 0
   while (covered < target && assets.length < max) {
@@ -317,7 +355,7 @@ export function drawMusicPlaylist(
     assets.push(d.asset)
     covered += estimateAssetSeconds(d.asset)
     // the pool has nothing new left: stop rather than queue the same file twice
-    if (assets.length >= pool.length) break
+    if (assets.length >= distinct) break
   }
   // "short" is measured against the REAL window, not the padded target
   const short = covered < seconds

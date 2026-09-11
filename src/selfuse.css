@@ -703,6 +703,11 @@
    ============================================================================ */
 
 .cat { display: flex; flex-direction: column; gap: 4px; }
+/* Everything except the category column. It is one box so that, where the two
+   stand side by side, the column's height belongs to the column alone: as bare
+   siblings the first thing in the body shared the column's row and was pushed
+   down by it, which with a filter on left a tall empty band above the results. */
+.cat__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 
 /* ---------------------------------------------------------------- hero --- */
 
@@ -926,3 +931,90 @@
 .msgs__empty { margin: 10px 0; }
 .msgs__count { margin-top: 6px; text-align: right; }
 .msgs__compose { position: sticky; bottom: 0; padding: 8px 0 2px; background: var(--mist); }
+
+/* --- the first run -------------------------------------------------------
+
+   Three cards, once, before the library. Structure and colour both live here
+   rather than in the Studio restyle, and every colour is a TOKEN the restyle
+   re-points — so the screen is born dark with the rest of the surface instead
+   of needing a second set of rules to be made dark afterwards. */
+
+.fr {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  align-items: center;
+  justify-content: safe center;
+  text-align: center;
+  gap: 20px;
+}
+.fr__top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fr__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.fr__mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-image: radial-gradient(circle at 34% 30%, var(--core) 0%, var(--aura) 54%, var(--aura-deep, #0f6b52) 100%);
+}
+.fr__skip {
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate);
+  cursor: pointer;
+}
+
+.fr__art { margin: 0; width: min(224px, 54vw); aspect-ratio: 1; }
+.fr-art { display: block; width: 100%; height: 100%; }
+/* one soft disc of ground light behind each drawing, so the art sits IN the
+   screen instead of floating on it */
+.fr-art__wash { fill: var(--aura); opacity: 0.08; }
+.fr-art__ring,
+.fr-art__track { fill: none; stroke: var(--line); stroke-width: 2; }
+.fr-art__ring--soft { opacity: 0.5; }
+.fr-art__arc {
+  fill: none;
+  stroke: var(--aura);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.fr-art__arc--full { stroke: var(--halo); }
+.fr-art__stroke { fill: none; stroke: var(--halo); stroke-width: 4; stroke-linecap: round; }
+.fr-art__line { fill: none; stroke: var(--halo); stroke-width: 2.5; stroke-linecap: round; opacity: 0.75; }
+.fr-art__solid { fill: var(--halo); }
+.fr-art__core { fill: var(--core); }
+.fr-art__key { fill: var(--core); }
+.fr-art__bars rect { fill: var(--aura); opacity: 0.5; }
+
+.fr__words { display: flex; flex-direction: column; gap: 10px; max-width: 36ch; }
+.fr__title { font-size: 26px; line-height: 1.16; }
+.fr__body { font-size: 15px; line-height: 1.5; color: var(--slate); }
+
+.fr__foot { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.fr__foot .btn { width: 100%; }
+
+@keyframes fr-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.fr__art,
+.fr__words { animation: fr-in 380ms var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fr__art, .fr__words { animation: none; }
+}

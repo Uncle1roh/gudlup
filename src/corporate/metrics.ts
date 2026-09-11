@@ -270,12 +270,8 @@ export function daysUntil(ms: number, now = Date.now()): number {
 /** Renewal notice appears inside 60 days. */
 export const RENEWAL_NOTICE_DAYS = 60
 
-/** A company code: NAME-YEAR, uppercase, derived from the company name. */
-export function generateCompanyCode(companyName: string, year = new Date().getFullYear()): string {
-  const stem = companyName
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, '')
-    .split(/\s+/)[0]
-    .slice(0, 8)
-  return `${stem || 'COMPANY'}-${year}`
-}
+/* A company code has ONE shape and ONE minter, and it lives with the thing
+   that resolves it — this dashboard minting its own shape is exactly how HR
+   came to read out codes the app could not resolve. Re-exported here because
+   this is where the dashboard has always imported it from. */
+export { generateCompanyCode } from '../data/convention'

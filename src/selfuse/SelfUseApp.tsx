@@ -18,6 +18,7 @@ import { useAuth } from '../auth/auth'
 import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
 import { Explore } from './Explore'
+import { FirstRun } from './FirstRun'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
 import { ProgressTab } from './ProgressTab'
@@ -231,6 +232,21 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       },
     }))
   }, [state.onboardedAt, update])
+
+  /* ----------------------------------------------------- the first run ---
+
+     What the app IS, once, before anything else. Registration hands a person
+     straight to a shelf of covers, and a shelf only works for someone who
+     already knows what is on it — the POs' report was people opening Good
+     Loop and not knowing what it does.
+
+     Three cards answer that and then never appear again: `tutorialSeenAt` is
+     stamped whether they read it or skip it, and it is stored with the rest
+     of the person's state (per account, on this device, like `onboardedAt`).
+     Profile → "How Good Loop Works" is where it lives from then on. */
+  if (!state.tutorialSeenAt) {
+    return <FirstRun onDone={() => update((s) => ({ ...s, tutorialSeenAt: Date.now() }))} />
+  }
 
   /* ------------------------------------------------------ the session --- */
   if (launch) {

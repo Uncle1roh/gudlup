@@ -475,6 +475,28 @@ export const IT_SELF_USE: Record<string, string> = {
   'Good Loop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
     'Good Loop è un programma personale di benessere e sviluppo. Non sostituisce il supporto professionale per la salute mentale. Se ti serve un’assistenza specialistica, parlane con il tuo medico o con il servizio di supporto della tua azienda.',
 
+  /* ---- the company code, at registration ---- */
+  'A company code looks like ACME-2026-K7. Check it with whoever gave it to you.':
+    'Un codice aziendale ha questa forma: ACME-2026-K7. Verificalo con chi te l’ha dato.',
+  'We do not know this code yet. You can create your account without it and add it later.':
+    'Questo codice non ci risulta ancora. Puoi creare l’account senza e aggiungerlo più avanti.',
+  /* The plan a registered code opens, printed under the field. 'Self Use' on
+     its own is already translated above as the way you work, in autonomia. */
+  'Self Use + Professional Support': 'Self Use + Supporto professionale',
+
+  /* ---- the first run: three cards, once, before the library ---- */
+  'Start listening': 'Inizia ad ascoltare',
+  'Step {n} of {total}': 'Passo {n} di {total}',
+  'Press play and listen': 'Premi play e ascolta',
+  'Good Loop is a library of short guided audio sessions. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Nothing to read, nothing to answer.':
+    'Good Loop è una libreria di brevi sessioni audio guidate. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Niente da leggere, niente a cui rispondere.',
+  'Six, twelve or twenty-four minutes': 'Sei, dodici o ventiquattro minuti',
+  'Every session is built in phases: it settles you, it does its work, and it brings you back. Pick the length that fits the day you are having — the short one is a whole session, not a taste of one.':
+    'Ogni sessione è costruita in fasi: ti fa posare, lavora e ti riporta indietro. Scegli la durata che sta nella giornata che hai — quella breve è una sessione intera, non un assaggio.',
+  'A little, often': 'Poco, spesso',
+  'A few minutes on most days does more than one long session now and then. You can note how you feel before and after and watch it move. Good Loop supports your wellbeing — it is not medical or psychological care and does not replace it.':
+    'Pochi minuti quasi ogni giorno fanno più di una sessione lunga ogni tanto. Puoi annotare come stai prima e dopo e vedere come cambia. Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce.',
+
   /* ---- profile ---- */
   'Account Settings': 'Impostazioni dell’account',
   'Session Preferences': 'Preferenze delle sessioni',

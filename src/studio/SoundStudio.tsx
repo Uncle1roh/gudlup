@@ -68,6 +68,17 @@ const LANE_H = 104
 const RULER_H = 30
 const HEADER_W = 254
 const MIN_CLIP = 1
+/**
+ * Breath between two spoken lines on the same lane, in seconds.
+ *
+ * A synthesized line is as long as the voice actually took, which is rarely
+ * the length the sheet planned for it: a slower speed, a longer take or a
+ * different voice pushes the end of one clip past the start of the next and
+ * the two are heard talking over each other. The de-overlap pass slides the
+ * later line down to here, so a pushed line lands just after the one before
+ * it instead of on top of it.
+ */
+const VOICE_GAP = 0.15
 
 /* ---- model ---- */
 /** The per-clip level/tone shaping baked into a rendered buffer. */
@@ -615,7 +626,9 @@ function StudioDesktop() {
           return
         }
         patchClipParams(trackId, clipId, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · tag "${p.drawTag}"`, slots: undefined })
-        setDrawMsg(`Drew "${drawn.asset.name}" — ${drawn.how}.`)
+        setDrawMsg(drawn.asset.publicUrl === p.url
+          ? `"${drawn.asset.name}" is the ONLY file in the pool for the tag "${p.drawTag}" — nothing else to draw. Upload another, or tag one in the Asset Library.`
+          : `Drew "${drawn.asset.name}" — ${drawn.how}.`)
         return
       }
       // music: draw a PLAYLIST long enough for the window, not one song to loop
@@ -625,12 +638,15 @@ function StudioDesktop() {
         return
       }
       const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
+      const before = sampleSlots(p).map((s) => s.url).join('|')
       patchClipParams(trackId, clipId, {
         url: picked[0].url,
         label: picked.length > 1 ? picked.map((s) => s.label).join(' → ') : `${picked[0].label} · F${p.drawPhase} pool`,
         slots: picked,
       })
-      setDrawMsg(`${picked.length === 1 ? 'Drew' : `Drew ${picked.length} brani`} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.${drawn.short ? ' La sequenza è più corta della clip: aggiungi un brano.' : ''}`)
+      setDrawMsg(picked.map((s) => s.url).join('|') === before
+        ? `The F${p.drawPhase} pool has nothing this clip is not already playing — add files to assets/music/f${p.drawPhase} to get a different draw.`
+        : `${picked.length === 1 ? 'Drew' : `Drew ${picked.length} brani`} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.${drawn.short ? ' La sequenza è più corta della clip: aggiungi un brano.' : ''}`)
     } catch (e) {
       setDrawMsg(`Library unreachable: ${(e as Error).message}`)
     } finally {
@@ -804,6 +820,10 @@ function StudioDesktop() {
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       if (renderTokens.current.get(clipId) !== token) return
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, durationSec: buf.duration })
+      /* The clip is now as long as the voice really is, which may be longer
+         than the window the sheet gave it — queued AFTER the buffer update, so
+         the pass sees the new duration. */
+      separateVoiceClips(trackId)
     } catch (e) {
       setTtsError((e as Error).message)
     } finally {
@@ -909,6 +929,9 @@ function StudioDesktop() {
       }
     }
     setSynthAll(null)
+    // every lane at once: each take is now its real length, so lines that grew
+    // past their window are slid clear of the one before them
+    separateVoiceClips()
     if (!failed) setTtsError(null)
   }, [setClipBuffer])
 
@@ -1171,6 +1194,53 @@ function StudioDesktop() {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.filter((c) => c.id !== clipId) })))
     setSelected((s) => (s?.clipId === clipId ? null : s))
   }
+  /**
+   * Stop synthesized voices from talking over each other.
+   *
+   * The Excel plans a window per line; the TTS delivers whatever the sentence
+   * actually takes. Once a take runs long — a slower `speed`, a longer voice,
+   * an edited line — its clip's real duration reaches into the next clip's
+   * window and the mix plays both at once. This walks each voice lane in time
+   * order and slides every line that starts at or before the previous one ends
+   * down to `VOICE_GAP` after it, cascading. Nothing is re-rendered: a baked
+   * voice buffer does not depend on where the clip sits.
+   *
+   * Frozen pieces (a cut/glued clip) that merely BUTT-JOIN are left alone —
+   * that adjacency is one utterance split in two, not a scheduling conflict,
+   * and prising it apart would open a hole inside a word.
+   *
+   * `trackId` limits the pass to one lane; omitted, every voice lane is swept.
+   */
+  function separateVoiceClips(trackId?: string) {
+    const EPS = 1e-3
+    let moved = 0
+    let overflow = false
+    setTracks((prev) => prev.map((t) => {
+      if (t.type !== 'voice' || (trackId && t.id !== trackId)) return t
+      const order = [...t.clips].sort((a, b) => a.startSec - b.startSec)
+      const starts = new Map<string, number>()
+      let last: { end: number; frozen?: boolean } | null = null
+      for (const c of order) {
+        let start = c.startSec
+        if (last && last.end >= start - EPS) {
+          const butt = c.frozen && last.frozen && Math.abs(last.end - start) <= EPS
+          if (!butt) {
+            start = last.end + VOICE_GAP
+            starts.set(c.id, start)
+            moved++
+          }
+        }
+        last = { end: start + c.durationSec, frozen: c.frozen }
+      }
+      if (!starts.size) return t
+      if (last && last.end > lengthSecRef.current + EPS) overflow = true
+      return { ...t, clips: t.clips.map((c) => (starts.has(c.id) ? { ...c, startSec: starts.get(c.id) as number } : c)) }
+    }))
+    if (moved) {
+      setEditMsg(`${moved} clip vocale${moved === 1 ? '' : 'i'} spostata${moved === 1 ? '' : 'e'}: la voce sintetizzata era più lunga della finestra e si sovrapponeva alla successiva.${overflow ? ' ⚠ L’ultima ora supera la durata della sessione — allunga la sessione o accorcia una frase.' : ''}`)
+    }
+  }
+
   function patchTrack(trackId: string, patch: Partial<Track>) {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, ...patch })))
   }
@@ -2315,19 +2385,31 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
 /* ---- library file picker for sample clips (music by phase, soundscapes) ---- */
 let assetListPromise: Promise<AudioAsset[]> | null = null
 
-/** Draw memory built from the files the project ALREADY plays, so a late draw
-    or a manual re-roll can't hand back one that is in use elsewhere in the
-    protocol. `skipClipId` is the clip being redrawn — its own file doesn't
-    count against it. */
-function projectLedger(pools: AssetPools, tracks: Track[], skipClipId?: string): DrawLedger {
+/**
+ * Draw memory built from the files the project ALREADY plays, so a late draw
+ * or a manual re-roll can't hand back one that is in use elsewhere in the
+ * protocol.
+ *
+ * `rerollClipId` is the clip the 🎲 button is re-rolling. Its files are the
+ * ones the operator is asking to get RID of: they count like every other file
+ * in use AND go on the ledger's avoid list, so the draw only returns one of
+ * them again when the pool holds nothing else. Excluding that clip from the
+ * ledger instead — what this used to do — made its current file the least-used
+ * candidate in its own pool, so the draw handed the same file straight back
+ * and the button looked broken.
+ */
+function projectLedger(pools: AssetPools, tracks: Track[], rerollClipId?: string): DrawLedger {
   const inUse = new Set<string>()
+  const rerolling = new Set<string>()
   for (const t of tracks) {
     if (t.type !== 'sample') continue
     for (const c of t.clips) {
-      if (c.id === skipClipId) continue
       // EVERY entry of a playlist counts, not just the first — otherwise a
       // redraw happily hands back a song already queued later in the protocol
-      for (const s of sampleSlots(c.params as SampleParams)) inUse.add(s.url)
+      for (const s of sampleSlots(c.params as SampleParams)) {
+        inUse.add(s.url)
+        if (c.id === rerollClipId) rerolling.add(s.url)
+      }
     }
   }
   const all: AudioAsset[] = [...pools.soundscapes, ...pools.heartbeat, ...pools.bowl]
@@ -2335,6 +2417,7 @@ function projectLedger(pools: AssetPools, tracks: Track[], skipClipId?: string):
   const ledger = newDrawLedger()
   for (const a of all) {
     if (inUse.has(a.publicUrl)) ledger.counts.set(a.path, (ledger.counts.get(a.path) ?? 0) + 1)
+    if (rerolling.has(a.publicUrl)) ledger.avoid.add(a.path)
   }
   return ledger
 }

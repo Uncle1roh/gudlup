@@ -1135,6 +1135,8 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .auth__fields { display: flex; flex-direction: column; gap: 10px; }
 .auth__input { width: 100%; box-sizing: border-box; background: var(--mist-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 14px; font-size: 15px; color: var(--ink); font-family: inherit; }
 .auth__input:focus { outline: none; border-color: var(--aura); background: #fff; }
+.auth__code { margin: -2px 2px 0; font-size: 12.5px; line-height: 1.45; color: var(--slate); }
+.auth__code.is-ok { color: var(--aura-deep); font-weight: 600; }
 .auth__error { margin-top: 14px; background: #fdecea; border: 1px solid #f5c6c0; color: #9b2c20; font-size: 13px; padding: 9px 12px; border-radius: var(--r-sm); line-height: 1.45; }
 .auth__btn { width: 100%; margin-top: 18px; background: var(--aura-deep); color: #fff; border: none; border-radius: var(--r-pill); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .auth__btn:disabled { opacity: 0.45; cursor: default; }

@@ -127,21 +127,11 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         </h1>
       </header>
 
-      {/* The same search as the top bar's, for the widths that have no top
-          bar. One state behind both, so it is one search field that happens
-          to be drawn in the place each layout has room for. */}
-      {onQuery && (
-        <label className="su-search su-search--page">
-          <Icon name="search" size={16} />
-          <input
-            type="search"
-            value={query}
-            placeholder={t('Search sessions')}
-            aria-label={t('Search sessions')}
-            onChange={(e) => onQuery(e.target.value)}
-          />
-        </label>
-      )}
+      {/* No search field on this screen below the desktop breakpoint. The
+          narrow layout has no top bar to hold one and an in-page copy sat in
+          front of the library taking a whole row for a thing few people type
+          into on a phone — the categories and the rails are how you browse
+          here. The state stays: the desktop bar still drives `query`. */}
 
       <Catalog
         catalog={catalog}

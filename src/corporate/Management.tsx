@@ -145,8 +145,15 @@ function CodeTab({ state, agg, update }: ManagementProps) {
     )
   }
 
+  /* Rotation, not a new shape. Bolting a random two-digit tail onto a minted
+     code produced a fourth thing nothing could resolve; the minter takes a
+     rotation seed and returns a code of the SAME canonical shape, which is
+     what has to be registered for the new one to open anything. */
   function regenerate() {
-    update((s) => ({ ...s, companyCode: generateCompanyCode(s.profile.name, new Date().getFullYear()) + '-' + Math.floor(Math.random() * 90 + 10) }))
+    update((s) => ({
+      ...s,
+      companyCode: generateCompanyCode(s.profile.name, new Date(s.conventionStart).getFullYear(), Date.now()),
+    }))
     setConfirm(false)
   }
 

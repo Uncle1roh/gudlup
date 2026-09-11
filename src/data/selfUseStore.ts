@@ -164,7 +164,9 @@ export interface SelfUseState {
   moods: MoodEntry[]
   /** First session done → the stereo check is not shown again. */
   stereoCheckedAt: number | null
-  /** The tutorial card on Home is dismissible; the tutorial itself stays in Profile. */
+  /** Stamped the first time the three first-run cards are finished OR skipped.
+      Null is what makes the shell show them; nothing sets it back, so they are
+      a one-time thing. The same material stays in Profile afterwards. */
   tutorialSeenAt: number | null
   /** Safety Gateway L2: the trigger id last shown, so a cycle shows once. */
   safetyShown: string | null

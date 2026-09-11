@@ -1,9 +1,10 @@
 /* The sign-in / sign-up screen and the gate that decides whether to show it.
    In demo mode any credentials work (prefilled); in Supabase mode it's real. */
 
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
+import { conventionLabel, looksLikeCompanyCode, resolveCompanyCode } from '../data/convention'
 import { useI18n } from '../i18n'
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
@@ -87,6 +88,27 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     }
   }
 
+  /**
+   * What the typed company code actually is, said before the account exists.
+   *
+   * A code is the only thing on this form whose effect a person cannot see:
+   * it decides whether therapist-led treatment is in their app at all, and a
+   * wrong character just quietly meant "no company". So it is answered here —
+   * the company and the plan when the code is registered, a nudge about the
+   * shape when it is a typo, and an honest "not yet" otherwise, because a
+   * pilot company may be registered after its people have signed up.
+   */
+  const codeCheck = useMemo(() => {
+    const raw = companyCode.trim()
+    if (!raw) return null
+    const found = resolveCompanyCode(raw)
+    if (found) return { ok: true, text: `${found.companyName} · ${t(conventionLabel(found.type))}` }
+    if (!looksLikeCompanyCode(raw)) {
+      return { ok: false, text: t('A company code looks like ACME-2026-K7. Check it with whoever gave it to you.') }
+    }
+    return { ok: false, text: t('We do not know this code yet. You can create your account without it and add it later.') }
+  }, [companyCode, t])
+
   const canSubmit =
     !!email && !!password &&
     (!signup || !isB2b || (!!name.trim() && !!crp.trim())) &&
@@ -122,12 +144,19 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           {signup && !isB2b && <>
             <input className="auth__input" type="text" placeholder={t('Your name (optional)')}
               value={name} onChange={(e) => setName(e.target.value)} />
-            {!demo && <>
-              <input className="auth__input" type="text" placeholder={t('Company code (from HR, optional)')}
-                value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            {/* The code field is on the demo door too. It is the only way to
+                hand a demo account a convention — and a demo of Professional
+                Support that cannot be switched on is not a demo of it. */}
+            <input className="auth__input" type="text" placeholder={t('Company code (from HR, optional)')}
+              autoCapitalize="characters" spellCheck={false}
+              value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            {codeCheck && (
+              <p className={`auth__code${codeCheck.ok ? ' is-ok' : ''}`}>{codeCheck.text}</p>
+            )}
+            {!demo && (
               <input className="auth__input" type="text" placeholder={t('Team (optional)')}
                 value={team} onChange={(e) => setTeam(e.target.value)} />
-            </>}
+            )}
           </>}
         </div>
 

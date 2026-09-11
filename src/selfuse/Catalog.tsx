@@ -168,24 +168,14 @@ export function Catalog({
 
   return (
     <div className="cat">
-      {onlyPathways ? (
-        pathwaysSlot
-      ) : (
-        <>
-      {!filtering && hero && (
-        <Hero
-          session={hero}
-          pathway={featuredSlug && hero.slug === featuredSlug ? heroPathway : undefined}
-          onOpen={() => onOpen(hero.slug)}
-          onStart={(d) => onQuickStart(hero.slug, d)}
-          onOpenPathway={onOpenPathway}
-        />
-      )}
-
       {/* The same choices twice, placed differently: a scrolling chip row on a
           phone, a standing list down the side on a desktop. One state behind
           both, so a category chosen in either place is the category the rails
-          answer to. */}
+          answer to.
+
+          It sits OUTSIDE the body box below, and outside the pathways branch:
+          a filter is changed from here, so the column cannot be part of what
+          applying a filter replaces. */}
       <nav className="cat__side" aria-label={t('Categories')}>
         <button
           className="cat__sideitem"
@@ -224,81 +214,102 @@ export function Catalog({
         ))}
       </nav>
 
-      <div className="cat__filters">
-        <div className="filter-row" role="group" aria-label={t('Duration')}>
-          <button className="filter-chip" aria-pressed={dur === 'all'} onClick={() => setDur('all')}>
-            {t('Any length')}
-          </button>
-          {DURATIONS.map((d) => (
-            <button key={d} className="filter-chip" aria-pressed={dur === d} onClick={() => setDur(d)}>
-              {t(durationLabel(d))} {d}m
-            </button>
-          ))}
-        </div>
-        <div className="filter-row" role="group" aria-label={t('Theme')}>
-          <button className="filter-chip" aria-pressed={theme === 'all'} onClick={() => setTheme('all')}>
-            {t('All themes')}
-          </button>
-          {SELF_USE_THEMES.map((th) => (
-            <button key={th.id} className="filter-chip" aria-pressed={theme === th.id} onClick={() => setTheme(th.id)}>
-              {t(th.label)}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Everything the column is NOT: one box, so the column can be as tall as
+          it likes without pushing the results down the page. As a bare row of
+          grid items the first thing here shared a row with the column and
+          inherited its height — with a filter on, that put a 400px hole between
+          the "N sessions" heading and the cards. */}
+      <div className="cat__body">
+        {onlyPathways ? (
+          pathwaysSlot
+        ) : (
+          <>
+        {!filtering && hero && (
+          <Hero
+            session={hero}
+            pathway={featuredSlug && hero.slug === featuredSlug ? heroPathway : undefined}
+            onOpen={() => onOpen(hero.slug)}
+            onStart={(d) => onQuickStart(hero.slug, d)}
+            onOpenPathway={onOpenPathway}
+          />
+        )}
 
-      {!filtering && pathwaysSlot}
-
-      {/* Fewer than two rails (a small catalogue, an early tenant) would never
-          reach the insertion point above, so the moods rail goes last. */}
-      {!filtering && rails.length < 2 && moodsSlot}
-
-      {filtering ? (
-        <>
-          <div className="cat__resulthead">
-            <h3 className="cat__railtitle">
-              {t('{n} sessions', { n: filtered.length })}
-            </h3>
-            <button
-              className="btn btn--quiet"
-              onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}
-            >
-              {t('Clear filters')}
+        <div className="cat__filters">
+          <div className="filter-row" role="group" aria-label={t('Duration')}>
+            <button className="filter-chip" aria-pressed={dur === 'all'} onClick={() => setDur('all')}>
+              {t('Any length')}
             </button>
+            {DURATIONS.map((d) => (
+              <button key={d} className="filter-chip" aria-pressed={dur === d} onClick={() => setDur(d)}>
+                {t(durationLabel(d))} {d}m
+              </button>
+            ))}
           </div>
-          {!filtered.length ? (
-            <div className="empty">
-              <p>{q ? t('Nothing matches "{q}".', { q: query.trim() }) : t('No sessions match.')}</p>
+          <div className="filter-row" role="group" aria-label={t('Theme')}>
+            <button className="filter-chip" aria-pressed={theme === 'all'} onClick={() => setTheme('all')}>
+              {t('All themes')}
+            </button>
+            {SELF_USE_THEMES.map((th) => (
+              <button key={th.id} className="filter-chip" aria-pressed={theme === th.id} onClick={() => setTheme(th.id)}>
+                {t(th.label)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {!filtering && pathwaysSlot}
+
+        {/* Fewer than two rails (a small catalogue, an early tenant) would never
+            reach the insertion point above, so the moods rail goes last. */}
+        {!filtering && rails.length < 2 && moodsSlot}
+
+        {filtering ? (
+          <>
+            <div className="cat__resulthead">
+              <h3 className="cat__railtitle">
+                {t('{n} sessions', { n: filtered.length })}
+              </h3>
               <button
-                className="btn btn--ghost"
+                className="btn btn--quiet"
                 onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}
               >
                 {t('Clear filters')}
               </button>
             </div>
-          ) : (
-            <div className="cat__grid">
-              {filtered.map((s) => (
-                <CoverCard key={s.slug} session={s} onOpen={() => onOpen(s.slug)} />
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        /* The moods rail is the FOURTH thing on the page, not the first.
-           Opening on "how are you feeling right now?" asks a person to report
-           on themselves before they have been shown anything — the rail is
-           useful once you are already browsing and nothing has caught you,
-           which is where it now sits: pathways, two rails, then the moods. */
-        rails.map((rail, i) => (
-          <Fragment key={rail.id}>
-            <RailRow rail={rail} onOpen={onOpen} />
-            {i === 1 && moodsSlot}
-          </Fragment>
-        ))
-      )}
-        </>
-      )}
+            {!filtered.length ? (
+              <div className="empty">
+                <p>{q ? t('Nothing matches "{q}".', { q: query.trim() }) : t('No sessions match.')}</p>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}
+                >
+                  {t('Clear filters')}
+                </button>
+              </div>
+            ) : (
+              <div className="cat__grid">
+                {filtered.map((s) => (
+                  <CoverCard key={s.slug} session={s} onOpen={() => onOpen(s.slug)} />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          /* The moods rail is the FOURTH thing on the page, not the first.
+             Opening on "how are you feeling right now?" asks a person to report
+             on themselves before they have been shown anything — the rail is
+             useful once you are already browsing and nothing has caught you,
+             which is where it now sits: pathways, two rails, then the moods. */
+          rails.map((rail, i) => (
+            <Fragment key={rail.id}>
+              <RailRow rail={rail} onOpen={onOpen} />
+              {i === 1 && moodsSlot}
+            </Fragment>
+          ))
+        )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
