@@ -50,6 +50,44 @@ security policies in `DATA_MODEL.sql` enforce, and what the data-access layer
    data residency in a compliant region, granular revocable consent, and the
    export / delete ("right to disappear") flows already stubbed in the UI.
 
+## Which surface an account may open
+
+Access to DATA is a database concern. Access to a SURFACE is not — RLS can stop
+an account writing, but it cannot stop a browser rendering the admin console
+around it, and for a while nothing did: the gate asked only whether somebody
+was signed in, so any account that could log in anywhere could open `#admin`
+and read the catalogue, the company list and the audit log off the screen.
+
+`AuthGate` (`src/auth/AuthScreen.tsx`) now reads the account's `role` from its
+profile row before the first render of any surface, and one role opens one
+surface:
+
+| Surface | Route | Role |
+|---------|-------|------|
+| Self Use app | `#app` / default | `b2c_user` |
+| Therapist workspace | `#therapist`, `#b2b-legacy` | `therapist` |
+| Company panel · NR-1 | `#hr`, `#employer`, `#nr1` | `hr_admin` |
+| Admin console | `#admin` | `admin` |
+| Sound Studio | `#studio` | `admin` **or** `therapist` (it is authoring, and both author) |
+
+An account on the wrong surface is not shown a refusal — it is sent to its own,
+because a wrong door is a navigation mistake rather than a permissions one. An
+account with no profile row opens nothing and is told to ask the team.
+
+Three rules follow from the table:
+
+1. **The admin console has no sign-up.** An account that can read every company
+   and every protocol is provisioned by hand in the database, never claimed
+   from a form.
+2. **The public door creates two kinds of account**, and asks which: a person
+   who will listen (`b2c_user`) or a clinician (`therapist`, who also gives a
+   CRP/CFP and waits for credentialing). Nothing on any form can create an
+   `admin`.
+3. **A company panel account is minted against a company code.** An admin
+   creates the company in the console, which mints the code; HR registers at
+   `#hr` with it, which is what ties the account to the company whose
+   aggregates it will read. See `COMPANY_CODES.md`.
+
 ## How the app honors this
 
 The screens call a small set of provider methods (`listPatients`, `getPatient`,

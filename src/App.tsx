@@ -52,12 +52,18 @@ export default function App() {
       return <Hub />
     }
 
-    // The Sound Studio is an internal authoring tool — left ungated.
+    /* The Sound Studio is the authoring tool: it publishes audio into the
+       shared catalogue, so it is not a page to be stumbled into. It was
+       ungated — the one surface anybody signed in could open and use. Two
+       roles work in it: the team, and the clinicians who compose a session
+       through the therapist app and hand it over here. */
     if (route === '#studio') {
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <SoundStudio />
+            <AuthGate mode="b2b" allow={['admin', 'therapist']}>
+              <SoundStudio />
+            </AuthGate>
           </DataLayerProvider>
         </AuthProvider>
       )

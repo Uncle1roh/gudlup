@@ -20,10 +20,28 @@ export interface AuthUser { id: string; email: string }
 export interface SignUpExtra { name?: string; crp?: string; companyId?: string; team?: string }
 
 export interface AuthApi {
+  /** The session AND the role are known. A gate must not decide before this. */
   ready: boolean
   user: AuthUser | null
+  /**
+   * What this account IS, read back from its profile row.
+   *
+   * The gate used to ask only whether somebody was signed in, so any account
+   * that could log in anywhere could open the admin console — restricted in
+   * what it could DO, thanks to RLS, but standing inside it and reading the
+   * catalogue, the companies and the audit log. The role is what says which of
+   * the four surfaces an account belongs to, so it has to be loaded before the
+   * first render of any of them.
+   *
+   * Null means signed in with NO profile row: not a role to fall back from,
+   * an account that cannot be placed. It opens nothing.
+   */
+  role: Role | null
   mode: 'demo' | 'supabase'
-  signIn(email: string, password: string): Promise<void>
+  /** `role` is honoured in DEMO mode only — with no profiles table, the door a
+      tester came through is the only thing that can say who they are. In
+      Supabase mode the profile decides and this argument is ignored. */
+  signIn(email: string, password: string, role?: Role): Promise<void>
   signUp(email: string, password: string, role: Role, extra?: SignUpExtra): Promise<void>
   signOut(): Promise<void>
   /**
@@ -43,51 +61,86 @@ const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 /* Demo mode keeps a local "session" in localStorage so the login is real-feeling
    and survives refreshes during a demo — no backend required. */
 const DEMO_KEY = 'gl-demo-session'
-function readDemoUser(): AuthUser | null {
-  try { const s = localStorage.getItem(DEMO_KEY); return s ? (JSON.parse(s) as AuthUser) : null } catch { return null }
+interface DemoSession extends AuthUser { role: Role }
+function readDemoUser(): DemoSession | null {
+  try {
+    const s = localStorage.getItem(DEMO_KEY)
+    if (!s) return null
+    const u = JSON.parse(s) as Partial<DemoSession>
+    if (!u?.id) return null
+    // a session stored before roles existed is a patient account, which is the
+    // surface the app opens on by default
+    return { id: u.id, email: u.email ?? '', role: u.role ?? 'b2c_user' }
+  } catch { return null }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supa = hasSupabaseEnv()
+  const demoSession = supa ? null : readDemoUser()
   const [ready, setReady] = useState(!supa) // demo is ready immediately
-  const [user, setUser] = useState<AuthUser | null>(supa ? null : readDemoUser())
+  const [user, setUser] = useState<AuthUser | null>(demoSession)
+  const [role, setRole] = useState<Role | null>(demoSession?.role ?? null)
 
   useEffect(() => {
     if (!supa) return
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
     let active = true
-    void sb.auth.getSession().then(({ data }) => {
+
+    /** The account's role, from its profile row. A missing row is not an error
+        to throw at a person: it resolves to null, and the gate then says the
+        account has no surface yet instead of showing a failure. */
+    async function loadRole(uid: string): Promise<Role | null> {
+      const { data, error } = await sb.from('profiles').select('role').eq('auth_uid', uid).maybeSingle()
+      if (error) return null
+      return ((data as { role?: Role } | null)?.role as Role | undefined) ?? null
+    }
+
+    async function apply(u: { id: string; email?: string } | undefined) {
+      if (!u) {
+        if (!active) return
+        setUser(null); setRole(null); setReady(true)
+        return
+      }
+      const r = await loadRole(u.id)
       if (!active) return
-      const u = data.session?.user
-      setUser(u ? { id: u.id, email: u.email ?? '' } : null)
+      setUser({ id: u.id, email: u.email ?? '' })
+      setRole(r)
+      /* ready LAST. A gate that rendered between the session arriving and the
+         role arriving would see a signed-in account with no role and bounce it
+         off its own surface. */
       setReady(true)
-    })
-    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user
-      setUser(u ? { id: u.id, email: u.email ?? '' } : null)
-    })
+    }
+
+    void sb.auth.getSession().then(({ data }) => { void apply(data.session?.user) })
+    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => { void apply(session?.user) })
     return () => { active = false; sub.subscription.unsubscribe() }
   }, [supa])
 
   const api = useMemo<AuthApi>(() => {
     if (!supa) {
-      // demo mode — accept any credentials, persist locally
-      const enter = (email: string) => {
-        const u: AuthUser = { id: 'demo-' + (email || 'user'), email: email || 'demo@goodloop.app' }
+      /* Demo mode — any credentials work, and the DOOR decides the role. There
+         is no profiles table to ask, and a demo where one sign-in opened all
+         four surfaces would be a demo of the bug this gate exists to fix. */
+      const enter = (email: string, r: Role) => {
+        const u: DemoSession = { id: 'demo-' + (email || 'user'), email: email || 'demo@goodloop.app', role: r }
         try { localStorage.setItem(DEMO_KEY, JSON.stringify(u)) } catch { /* ignore */ }
-        setUser(u)
+        setUser({ id: u.id, email: u.email })
+        setRole(r)
       }
       return {
-        ready: true, user, mode: 'demo',
-        async signIn(email) { enter(email) },
+        ready: true, user, role, mode: 'demo',
+        async signIn(email, _password, r) { enter(email, r ?? 'b2c_user') },
         async resetPassword() { /* demo mode has no mailbox to send to */ },
-        async signUp(email) { enter(email) },
-        async signOut() { try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ } setUser(null) },
+        async signUp(email, _password, r) { enter(email, r) },
+        async signOut() {
+          try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
+          setUser(null); setRole(null)
+        },
       }
     }
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
     return {
-      ready, user, mode: 'supabase',
+      ready, user, role, mode: 'supabase',
       async signIn(email, password) {
         const { error } = await sb.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -130,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error && !/user not found/i.test(error.message)) throw error
       },
     }
-  }, [supa, ready, user])
+  }, [supa, ready, user, role])
 
   return <AuthCtx.Provider value={api}>{children}</AuthCtx.Provider>
 }

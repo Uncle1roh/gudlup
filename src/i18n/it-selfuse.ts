@@ -475,6 +475,21 @@ export const IT_SELF_USE: Record<string, string> = {
   'Good Loop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
     'Good Loop è un programma personale di benessere e sviluppo. Non sostituisce il supporto professionale per la salute mentale. Se ti serve un’assistenza specialistica, parlane con il tuo medico o con il servizio di supporto della tua azienda.',
 
+  /* ---- the door: which account, and which app it opens ---- */
+  'What is this account for?': 'A che cosa serve questo account?',
+  'For me': 'Per me',
+  'Sessions to listen to on my own': 'Sessioni da ascoltare per conto mio',
+  'I am a therapist': 'Sono un terapeuta',
+  'I see people through Good Loop': 'Seguo persone con Good Loop',
+  'Create the account for your company': 'Crea l’account della tua azienda',
+  'Company code (required)': 'Codice azienda (obbligatorio)',
+  'Taking you to your app': 'Ti porto nella tua app',
+  'This account belongs to {surface}.': 'Questo account appartiene a {surface}.',
+  'Sign in with another account': 'Accedi con un altro account',
+  'This account is not set up yet': 'Questo account non è ancora configurato',
+  'It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.':
+    'Non ha un profilo, quindi non ha un’app da aprire. Chiedi al team Good Loop di completarne la configurazione.',
+
   /* ---- the company code, at registration ---- */
   'A company code looks like ACME-2026-K7. Check it with whoever gave it to you.':
     'Un codice aziendale ha questa forma: ACME-2026-K7. Verificalo con chi te l’ha dato.',

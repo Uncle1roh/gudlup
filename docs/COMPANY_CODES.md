@@ -54,6 +54,24 @@ STEM-YYYY-XX          ACME-2026-9C
 `STEM-YYYY` (no suffix) is still accepted — the first conventions were issued
 that way and those codes are in use.
 
+## It is also the way in
+
+The code is the company row's primary key (`companies.id`), and an account's
+`profiles.company_id` points at it. So one string does three jobs:
+
+1. it identifies the company,
+2. **HR registers with it** at `#hr` to open the company panel — that is how an
+   `hr_admin` account comes to exist, and how it is tied to one company,
+3. an employee types it at sign-up to be linked to their employer.
+
+Creating the company in the admin console is therefore what creates the way in.
+The console mints the code with the company (editable before you press Crea),
+shows it, and copies it.
+
+One step is still separate: a company created in the console is not yet a
+CONVENTION, so Professional Support does not switch on until its convention is
+registered as described below. The code works for linking accounts either way.
+
 ## Registering one
 
 1. **Mint** — `generateCompanyCode(companyName, startYear, rotation?)`. It is

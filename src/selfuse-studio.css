@@ -830,6 +830,16 @@ body:has(.su-studio) { background: var(--su-void, #070d0c); }
   border-radius: 13px;
 }
 .su-studio.auth .auth__input::placeholder { color: var(--su-faint); }
+.su-studio.auth .auth__kindbtn {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--su-hair-2);
+  color: var(--su-muted);
+}
+.su-studio.auth .auth__kindbtn b { color: var(--su-fg); }
+.su-studio.auth .auth__kindbtn.is-on {
+  border-color: var(--su-accent);
+  background: rgba(31, 191, 148, 0.10);
+}
 .su-studio.auth .auth__code { color: var(--su-muted); }
 .su-studio.auth .auth__code.is-ok { color: var(--su-accent-2); }
 .su-studio.auth .auth__alt,

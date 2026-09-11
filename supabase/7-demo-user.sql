@@ -57,6 +57,18 @@ begin
   values ('ACME-2026', 'ACME Brasil', 250, 118, 'active')
   on conflict (id) do update set name = excluded.name;
 
+  -- The other two conventions src/data/convention.ts knows, as real company
+  -- rows. `profiles.company_id` is a FOREIGN KEY onto this table, so a code the
+  -- app can resolve but that has no row here is refused at registration with
+  -- "unknown company code" — the resolver and the database have to agree.
+  -- DEMO-2026-GL is the one to hand to a demo account (Professional Support);
+  -- NOVA-2026 is the without-Professional-Support state.
+  insert into companies (id, name, seats, active_users, status)
+  values
+    ('DEMO-2026-GL', 'Good Loop Demo', 999, 0, 'active'),
+    ('NOVA-2026',    'Nova Industries', 80, 0, 'active')
+  on conflict (id) do update set name = excluded.name;
+
   -- ---- the therapist ------------------------------------------------------
   insert into profiles (auth_uid, role, name, email, locale, active)
   values (therapist_auth, 'therapist', 'Dra. Ana Ribeiro', therapist_email, 'pt-BR', true)

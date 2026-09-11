@@ -106,17 +106,21 @@ const nowMs = Date.now()
 
 let catalog: CatalogProtocol[] = seedCatalog()
 
+/* The id IS the company code: it identifies the row, it is what an HR admin
+   registers with to open the company panel, and it is what an employee types
+   at sign-up. Minted in the canonical shape (data/convention.ts) — the demo
+   used `c1`, which is not a string anybody could be asked to type. */
 const companies: Company[] = [
-  { id: 'c1', name: 'Aurora Tech', seats: 250, activeUsers: 168, status: 'active', createdAt: nowMs - 90 * DAY },
-  { id: 'c2', name: 'Meridian Saúde', seats: 120, activeUsers: 74, status: 'active', createdAt: nowMs - 40 * DAY },
-  { id: 'c3', name: 'Vale Logística', seats: 500, activeUsers: 0, status: 'paused', createdAt: nowMs - 6 * DAY },
+  { id: 'AURORA-2026-Z5', name: 'Aurora Tech', seats: 250, activeUsers: 168, status: 'active', createdAt: nowMs - 90 * DAY },
+  { id: 'MERIDIAN-2026-WN', name: 'Meridian Saúde', seats: 120, activeUsers: 74, status: 'active', createdAt: nowMs - 40 * DAY },
+  { id: 'VALE-2026-JL', name: 'Vale Logística', seats: 500, activeUsers: 0, status: 'paused', createdAt: nowMs - 6 * DAY },
 ]
 
 const adminUsers: AdminUser[] = [
   { id: 'u1', name: 'Dra. Helena Costa', email: 'helena@clinic.demo', role: 'therapist', active: true, createdAt: nowMs - 120 * DAY },
   { id: 'u2', name: 'Dr. Rafael Lima', email: 'rafael@clinic.demo', role: 'therapist', active: true, createdAt: nowMs - 60 * DAY },
-  { id: 'u3', name: 'Camila Rocha', email: 'camila@aurora.co', role: 'hr_admin', companyId: 'c1', active: true, createdAt: nowMs - 88 * DAY },
-  { id: 'u4', name: 'Mariana Alves', email: 'mariana@aurora.co', role: 'b2c_user', companyId: 'c1', active: true, createdAt: nowMs - 30 * DAY },
+  { id: 'u3', name: 'Camila Rocha', email: 'camila@aurora.co', role: 'hr_admin', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 88 * DAY },
+  { id: 'u4', name: 'Mariana Alves', email: 'mariana@aurora.co', role: 'b2c_user', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 30 * DAY },
   { id: 'u5', name: 'Admin (you)', email: 'admin@goodloop.app', role: 'admin', active: true, createdAt: nowMs - 200 * DAY },
 ]
 

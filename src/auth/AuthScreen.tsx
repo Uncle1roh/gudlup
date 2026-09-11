@@ -1,10 +1,10 @@
 /* The sign-in / sign-up screen and the gate that decides whether to show it.
    In demo mode any credentials work (prefilled); in Supabase mode it's real. */
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
-import { conventionLabel, looksLikeCompanyCode, resolveCompanyCode } from '../data/convention'
+import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 
@@ -14,11 +14,21 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const isB2b = mode === 'b2b'
   const isAdmin = mode === 'admin'
   const isHr = mode === 'hr'
-  const noSignup = isAdmin || isHr
-  const role: Role = isAdmin ? 'admin' : isHr ? 'hr_admin' : isB2b ? 'therapist' : 'b2c_user'
+  /* The admin console has no sign-up and never will: an account that can read
+     every company and every protocol is provisioned by hand, not claimed from
+     a form. HR does sign up, but only against a company code an admin minted,
+     which is what ties the account to the company panel it will open. */
+  const noSignup = isAdmin
   const demo = auth.mode === 'demo'
 
   const [signup, setSignup] = useState(false)
+  /* WHO is registering. The public door serves both the people who use the app
+     and the clinicians who work in it — asking here is what lets a therapist
+     register at all without knowing a second URL, and what sends them to the
+     workspace instead of the library afterwards. */
+  const [kind, setKind] = useState<'b2c_user' | 'therapist'>('b2c_user')
+  const asTherapist = isB2b || (mode === 'b2c' && signup && kind === 'therapist')
+  const role: Role = isAdmin ? 'admin' : isHr ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
   const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
   const [password, setPassword] = useState(demo ? 'demo' : '')
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
@@ -45,17 +55,22 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           stashSignupIntake({
             usage: consentUsage,
             measurement: consentMeasure,
-            companyCode: companyCode.trim() || null,
+            companyCode: normalizeCode(companyCode) || null,
           })
         }
         await auth.signUp(email.trim(), password, role, {
           name: name.trim() || undefined,
           crp: crp.trim() || undefined,
-          companyId: companyCode.trim() || undefined,
+          // uppercase: the company row IS the code, and "acme-2026-9c" is not
+          // the same primary key as the one the admin console minted
+          companyId: normalizeCode(companyCode) || undefined,
           team: team.trim() || undefined,
         })
       } else {
-        await auth.signIn(email.trim(), password)
+        /* The role goes with it for DEMO mode only, where there is no profile
+           to read it from: signing in at the clinic door is what makes a demo
+           account a clinician. Supabase ignores it and asks the profile. */
+        await auth.signIn(email.trim(), password, role)
       }
     } catch (e) {
       setError((e as Error).message)
@@ -64,7 +79,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     }
   }
 
-  const needsConsent = signup && !isB2b && !isAdmin && !isHr
+  const needsConsent = signup && !asTherapist && !isAdmin && !isHr
   /**
    * Forgotten password.
    *
@@ -112,7 +127,9 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
 
   const canSubmit =
     !!email && !!password &&
-    (!signup || !isB2b || (!!name.trim() && !!crp.trim())) &&
+    (!signup || !asTherapist || (!!name.trim() && !!crp.trim())) &&
+    // an HR account with no company has no company panel to open
+    (!signup || !isHr || looksLikeCompanyCode(companyCode)) &&
     (!needsConsent || consentUsage)
 
   return (
@@ -128,7 +145,11 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             for. */}
         <div className="auth__brand"><BrandLogo variant={isB2b || isAdmin || isHr ? 'green' : 'cream'} /></div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
-        <p className="auth__sub">{isAdmin ? t('Sign in to the admin console') : isHr ? t('Sign in to the employer dashboard') : signup ? t('Create your account') : t('Sign in to continue')}</p>
+        <p className="auth__sub">{isAdmin
+            ? t('Sign in to the admin console')
+            : isHr
+              ? signup ? t('Create the account for your company') : t('Sign in to the employer dashboard')
+              : signup ? t('Create your account') : t('Sign in to continue')}</p>
 
         <div className="auth__fields">
           <input className="auth__input" type="email" placeholder={t('Email')} autoComplete="email"
@@ -139,13 +160,36 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             value={password} onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit && !busy) void submit() }} />
 
-          {signup && isB2b && <>
+          {/* Which kind of account this will be. Two buttons rather than a
+              second URL: a clinician who lands on the app's own door can
+              register from here, and the gate takes them to the workspace. */}
+          {signup && mode === 'b2c' && (
+            <div className="auth__kind" role="group" aria-label={t('What is this account for?')}>
+              <button type="button" className={`auth__kindbtn${kind === 'b2c_user' ? ' is-on' : ''}`}
+                aria-pressed={kind === 'b2c_user'} onClick={() => setKind('b2c_user')}>
+                <b>{t('For me')}</b>
+                <small>{t('Sessions to listen to on my own')}</small>
+              </button>
+              <button type="button" className={`auth__kindbtn${kind === 'therapist' ? ' is-on' : ''}`}
+                aria-pressed={kind === 'therapist'} onClick={() => setKind('therapist')}>
+                <b>{t('I am a therapist')}</b>
+                <small>{t('I see people through Good Loop')}</small>
+              </button>
+            </div>
+          )}
+
+          {signup && asTherapist && <>
             <input className="auth__input" type="text" placeholder={t('Full name')}
               value={name} onChange={(e) => setName(e.target.value)} />
             <input className="auth__input" type="text" placeholder={t('CRP / CFP registration')}
               value={crp} onChange={(e) => setCrp(e.target.value)} />
           </>}
-          {signup && !isB2b && <>
+          {signup && isHr && (
+            <input className="auth__input" type="text" placeholder={t('Company code (required)')}
+              autoCapitalize="characters" spellCheck={false}
+              value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+          )}
+          {signup && !asTherapist && !isHr && <>
             <input className="auth__input" type="text" placeholder={t('Your name (optional)')}
               value={name} onChange={(e) => setName(e.target.value)} />
             {/* The code field is on the demo door too. It is the only way to
@@ -215,17 +259,110 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   )
 }
 
-export function AuthGate({ mode, children }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr'; children: ReactNode }) {
-  const { ready, user } = useAuth()
+/* ---- which account may stand where -------------------------------------
+
+   Four surfaces, four roles, one each. The gate used to ask only whether
+   somebody was signed in, so a patient account that opened `#admin` got the
+   admin console: every panel drawn, the catalogue and the company list on
+   screen, and only the database's own row policies deciding what it could
+   change. Being unable to WRITE is not the same as not being let in.
+
+   An account is not offered a choice of surface, either. It has exactly one,
+   and landing on another means the door was wrong, not that permission is
+   missing — so the gate sends it where it belongs instead of stopping it. */
+
+const ROLE_FOR_SURFACE: Record<GateMode, Role> = {
+  b2c: 'b2c_user',
+  b2b: 'therapist',
+  hr: 'hr_admin',
+  admin: 'admin',
+}
+
+/** Where each role's own surface lives. The patient app owns the empty hash,
+    which is what the app opens on. */
+const HOME_FOR_ROLE: Record<Role, string> = {
+  b2c_user: '',
+  therapist: '#therapist',
+  hr_admin: '#hr',
+  admin: '#admin',
+}
+
+const SURFACE_NAME: Record<Role, string> = {
+  b2c_user: 'Good Loop',
+  therapist: 'Good Loop clinic',
+  hr_admin: 'Good Loop for employers',
+  admin: 'Good Loop admin',
+}
+
+export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr'
+
+/**
+ * `allow` widens a surface beyond the one role its door implies, for the one
+ * place that genuinely serves two: the Sound Studio is authoring, used by the
+ * team and by the clinicians who compose a session in it. Everything else
+ * takes the single role its door is for.
+ */
+export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
+  const { ready, user, role, signOut } = useAuth()
   const { t } = useI18n()
+  const dark = mode === 'b2c'
+
+  /* The account has a surface and it is not this one: go there. A person who
+     followed an old link, or a bookmark from another role, should end up in
+     their own app rather than reading about why they cannot be here. */
+  const allowed = allow ?? [ROLE_FOR_SURFACE[mode]]
+  const misplaced = ready && !!user && !!role && !allowed.includes(role)
+  useEffect(() => {
+    if (misplaced && role) window.location.hash = HOME_FOR_ROLE[role]
+  }, [misplaced, role])
+
   if (!ready) {
     return (
       /* same ground as the door it precedes, or the wait is a white flash */
-      <div className={`auth auth--loading${mode === 'b2c' ? ' su-studio' : ''}`}>
+      <div className={`auth auth--loading${dark ? ' su-studio' : ''}`}>
         <div className="auth__spin" aria-label={t('Loading')} />
       </div>
     )
   }
   if (!user) return <AuthScreen mode={mode} />
+
+  if (misplaced && role) {
+    // the redirect above is already on its way; this is what is on screen for
+    // the frame it takes, and what stays if the hash change is blocked
+    return (
+      <div className={`auth${dark ? ' su-studio' : ''}`}>
+        <div className="auth__card">
+          <div className="auth__brand"><BrandLogo variant={dark ? 'cream' : 'green'} /></div>
+          <h1 className="auth__title">{t('Taking you to your app')}</h1>
+          <p className="auth__sub">
+            {t('This account belongs to {surface}.', { surface: SURFACE_NAME[role] })}
+          </p>
+          <button className="auth__btn" onClick={() => { window.location.hash = HOME_FOR_ROLE[role] }}>
+            {t('Continue')}
+          </button>
+          <button className="auth__toggle" onClick={() => void signOut()}>{t('Sign in with another account')}</button>
+        </div>
+      </div>
+    )
+  }
+
+  /* Signed in, no profile row: nothing can be inferred about this account, so
+     nothing is opened. It is a real state — a sign-up whose profile insert
+     failed — and it needs saying out loud rather than looping on a redirect. */
+  if (!role) {
+    return (
+      <div className={`auth${dark ? ' su-studio' : ''}`}>
+        <div className="auth__card">
+          <div className="auth__brand"><BrandLogo variant={dark ? 'cream' : 'green'} /></div>
+          <h1 className="auth__title">{t('This account is not set up yet')}</h1>
+          <p className="auth__sub">
+            {t('It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.')}
+          </p>
+          <button className="auth__btn" onClick={() => void signOut()}>{t('Sign out')}</button>
+        </div>
+      </div>
+    )
+  }
+
   return <>{children}</>
 }

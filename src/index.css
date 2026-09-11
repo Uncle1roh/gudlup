@@ -1147,6 +1147,20 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .auth__fields { display: flex; flex-direction: column; gap: 10px; }
 .auth__input { width: 100%; box-sizing: border-box; background: var(--mist-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 14px; font-size: 15px; color: var(--ink); font-family: inherit; }
 .auth__input:focus { outline: none; border-color: var(--aura); background: #fff; }
+/* --- who is registering ---------------------------------------------------
+   Two buttons on the public door: the people who listen, and the clinicians
+   who work in it. It decides the role the account is created with. */
+.auth__kind { display: flex; gap: 8px; }
+.auth__kindbtn {
+  flex: 1 1 0;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--mist-2); color: var(--slate); font-family: inherit;
+}
+.auth__kindbtn b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.auth__kindbtn small { font-size: 11.5px; line-height: 1.35; }
+.auth__kindbtn.is-on { border-color: var(--aura); background: #fff; }
 .auth__code { margin: -2px 2px 0; font-size: 12.5px; line-height: 1.45; color: var(--slate); }
 .auth__code.is-ok { color: var(--aura-deep); font-weight: 600; }
 .auth__error { margin-top: 14px; background: #fdecea; border: 1px solid #f5c6c0; color: #9b2c20; font-size: 13px; padding: 9px 12px; border-radius: var(--r-sm); line-height: 1.45; }
@@ -1379,7 +1393,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-pill--btn { border: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 600; }
 .adm-pill--btn:disabled { cursor: default; opacity: 0.7; }
 .adm-table--cred .adm-tr { grid-template-columns: 1.4fr 140px 130px 150px 1.6fr; }
-.adm-table--companies .adm-tr { grid-template-columns: 1.6fr 1.4fr 120px 108px 108px; }
+.adm-table--companies .adm-tr { grid-template-columns: 1.5fr 1.1fr 1.2fr 110px 100px 108px; }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
 
@@ -1442,8 +1456,33 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-cred__actions { display: flex; gap: 10px; }
 
 /* add row / selects / bars */
-.adm-addrow { display: flex; gap: 10px; margin-bottom: 16px; }
+.adm-addrow { display: flex; gap: 10px; margin-bottom: 10px; }
 .adm-addrow__seats { max-width: 110px; }
+.adm-addrow__code { max-width: 190px; font-family: var(--mono, ui-monospace, monospace); letter-spacing: 0.04em; }
+
+/* --- the company code, which is also the way in ---------------------------
+   Shown as a thing to be COPIED: HR registers with it and every employee
+   types it, so it is the one string on this screen that leaves the room. */
+.adm-code {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  background: var(--mist-2);
+  border: 1px solid var(--line);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.adm-code--btn { cursor: pointer; }
+.adm-code--btn:hover { border-color: var(--aura); }
+.adm-made {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 12px 14px;
+  border: 1px solid var(--aura); border-radius: var(--r-md); background: var(--mist-2);
+  font-size: 13.5px;
+}
+.adm-made__acts { display: flex; gap: 8px; }
 .adm-select { padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--mist-2); font-family: var(--sans); font-size: 13.5px; color: var(--ink); cursor: pointer; }
 .adm-seats { font-size: 13px; }
 .adm-bar { height: 6px; border-radius: var(--r-pill); background: var(--mist-2); margin-top: 4px; overflow: hidden; }
