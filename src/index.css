@@ -1475,6 +1475,24 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   background: var(--mist-2); border: 1px solid var(--line); font-size: 13px;
 }
 
+/* --- emptying a protocol of its imported material -------------------------
+   Set apart and asked twice, because it is the one action on this screen that
+   removes something a PO made rather than adding to it. */
+.adm-wipe {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e6c9c2;
+  border-radius: var(--r-md);
+  background: #fdf6f4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.adm-wipe__head { display: flex; flex-direction: column; gap: 4px; }
+.adm-wipe__head b { color: #8d2f1e; }
+.adm-wipe__confirm { display: flex; flex-direction: column; gap: 8px; }
+.adm-wipe__acts { display: flex; gap: 8px; }
+
 .adm-cred__docs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
 .adm-doc {
   display: inline-flex; align-items: center; gap: 6px;

@@ -13,7 +13,7 @@ import { persistenceNote, saveProtocolVerified } from './publish'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
-import { setStudioSeed, setStudioProject } from '../compose/handoff'
+import { setStudioSeed, setStudioProject, releaseStudioSeed } from '../compose/handoff'
 import { attachRenderedAudio } from './attachAudio'
 import type { Duration } from '../types/domain'
 import {
@@ -56,6 +56,22 @@ interface Props {
       the one on display, so the import simply appeared to do nothing. */
   notice?: string | null
   onDismissNotice?: () => void
+}
+
+/** What this protocol actually carries, so the confirmation names it rather
+    than asking someone to agree to "the material". */
+function describeStored(p: CatalogProtocol): string {
+  const bits: string[] = []
+  const workbooks = Object.keys(p.plainByDuration ?? {})
+  const sessions = Object.keys(p.studioByDuration ?? {})
+  if (workbooks.length) bits.push(`Excel ${workbooks.map((d) => `${d}m`).join(' + ')}`)
+  else if (p.plain) bits.push('1 Excel')
+  if (sessions.length) bits.push(`sessioni Studio ${sessions.map((d) => `${d}m`).join(' + ')}`)
+  else if (p.studio) bits.push('1 sessione Studio')
+  if (p.datasheet) bits.push('Scheda Dati')
+  if (p.spec) bits.push('documento di specifica')
+  if (p.assetMap) bits.push('mappa asset')
+  return bits.length ? `Verranno rimossi: ${bits.join(', ')}` : 'Non c\u2019\u00e8 materiale importato da rimuovere'
 }
 
 function downloadBlob(name: string, blob: Blob) {
@@ -136,6 +152,69 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.code])
+
+  /* ---- empty this protocol of everything that was authored into it -----
+
+     An Excel is imported, read once, and from then on the protocol carries
+     what it produced: the workbook per time signature, the Studio session per
+     time signature, and the asset map. That is deliberate and it is usually
+     what you want — reopening a protocol gives you back the session you left,
+     not a fresh draw of every random asset.
+
+     It is also why a re-upload can look like it did nothing. Import a corrected
+     workbook, open the Studio, and the SAVED SESSION wins over the new seed
+     (see `editInStudio`), so the screen shows the old take of a file with the
+     same name. The session is the newer artefact; the workbook underneath it
+     changed. Nothing detects that, and nothing should guess.
+
+     So: a way to say it out loud. This empties the protocol of authored
+     material — every workbook, every Studio session, the asset map — and
+     leaves everything else exactly where it was: the code, the family, the
+     titles, the tags, the cover, and any audio already published. The next
+     import then has nothing to lose to. */
+  const [wipeArmed, setWipeArmed] = useState(false)
+  const [wiping, setWiping] = useState(false)
+  /** Whether there is anything to empty. A protocol with nothing imported is
+      offered nothing: an empty destructive button is a trap, not an option. */
+  const hasAuthored = !!(
+    published && (published.plain || published.plainByDuration || published.studio ||
+      published.studioByDuration || published.datasheet || published.spec || published.assetMap)
+  )
+
+  async function wipeAuthoring() {
+    if (!published) return
+    setWiping(true)
+    setError(null)
+    try {
+      const emptied: CatalogProtocol = {
+        ...published,
+        plain: undefined,
+        plainByDuration: undefined,
+        studio: undefined,
+        studioByDuration: undefined,
+        datasheet: undefined,
+        spec: undefined,
+        assetMap: undefined,
+        updatedAt: Date.now(),
+      }
+      await saveProtocolVerified(dp, emptied)
+      await dp.logAudit({
+        actor,
+        action: 'protocol.authoring_cleared',
+        target: published.code,
+        detail: 'Excel, sessioni Studio e mappa asset rimossi \u2014 audio e scheda invariati',
+      })
+      /* The hand-off holds a copy of whatever was last sent to the Studio. Left
+         alone it would re-open the session this just deleted. */
+      releaseStudioSeed()
+      setWipeArmed(false)
+      onDone()
+    } catch (e) {
+      setError(explain(e))
+    } finally {
+      setWiping(false)
+    }
+  }
 
   /** Durations of this protocol that already stream audio. */
   const liveDurations = useMemo(() => {
@@ -626,6 +705,37 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
               </ul>
             )}
             {live && <button className="b2b-btn" onClick={onDone}>Torna al catalogo</button>}
+
+            {published && (
+              <div className="adm-wipe">
+                <div className="adm-wipe__head">
+                  <b>Svuota il materiale importato</b>
+                  <span className="b2b-sub">
+                    Rimuove da <b>{published.code}</b> tutti gli Excel (6 / 12 / 24 min), tutte le sessioni dello
+                    Studio e la mappa degli asset. Restano il codice, la famiglia, i titoli, i tag, la copertina e
+                    l’audio già pubblicato. Da usare quando un Excel corretto continua a mostrare il contenuto
+                    di quello vecchio: la sessione salvata ha la precedenza sul file appena caricato.
+                  </span>
+                </div>
+                {!wipeArmed ? (
+                  <button className="b2b-btn b2b-btn--danger" disabled={!hasAuthored} onClick={() => setWipeArmed(true)}>
+                    {hasAuthored ? 'Svuota Excel e Studio…' : 'Niente da svuotare'}
+                  </button>
+                ) : (
+                  <div className="adm-wipe__confirm">
+                    <span className="b2b-sub">
+                      {describeStored(published)} — l’operazione non è reversibile.
+                    </span>
+                    <div className="adm-wipe__acts">
+                      <button className="b2b-btn b2b-btn--danger" disabled={wiping} onClick={() => void wipeAuthoring()}>
+                        {wiping ? 'Svuoto\u2026' : 'S\u00ec, svuota'}
+                      </button>
+                      <button className="b2b-btn" disabled={wiping} onClick={() => setWipeArmed(false)}>Annulla</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
