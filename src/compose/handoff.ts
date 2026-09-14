@@ -24,7 +24,7 @@
    Nothing here holds AudioBuffers, so it serialises cleanly.
    ============================================================================ */
 
-import type { SeedTrack, StudioProject } from './types'
+import type { SeedTrack, StudioPhase, StudioProject } from './types'
 import type { Duration } from '../types/domain'
 
 const KEY = 'gl.studio.handoff'
@@ -42,12 +42,15 @@ export interface StudioSeed {
   /** Timeline length and master fader from a saved project. */
   lengthSec?: number
   masterGain?: number
+  /** The six phase windows, when there are any. */
+  phases?: StudioPhase[]
 }
 
 export interface SeedExtras {
   returnTo?: string
   lengthSec?: number
   masterGain?: number
+  phases?: StudioPhase[]
 }
 
 let pending: StudioSeed | null = null
@@ -83,6 +86,7 @@ export function setStudioProject(project: StudioProject, attach?: StudioAttachTa
     fadeOutSec: project.fadeOutSec,
     lengthSec: project.lengthSec,
     masterGain: project.masterGain,
+    phases: project.phases,
     returnTo,
   })
 }

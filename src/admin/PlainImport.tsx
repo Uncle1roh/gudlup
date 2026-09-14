@@ -297,7 +297,7 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       }
 
       const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
-      setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin' })
+      setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin', phases: seed.phases })
       setNotes(seed.notes)
       window.location.hash = '#studio'
     } catch (e) {

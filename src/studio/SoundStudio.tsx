@@ -61,7 +61,8 @@ import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
 import type { StudioProject } from '../compose/types'
 import { useDataProvider } from '../data/provider'
-import type { SeedTrack } from '../compose/types'
+import type { SeedTrack, StudioPhase } from '../compose/types'
+import { planVoiceOverlaps, VOICE_GAP, type VoicePlan } from './voiceOverlap'
 import { BrandLogo } from '../components/Brand'
 
 /* ---- layout constants ---- */
@@ -69,17 +70,6 @@ const LANE_H = 104
 const RULER_H = 30
 const HEADER_W = 254
 const MIN_CLIP = 1
-/**
- * Breath between two spoken lines on the same lane, in seconds.
- *
- * A synthesized line is as long as the voice actually took, which is rarely
- * the length the sheet planned for it: a slower speed, a longer take or a
- * different voice pushes the end of one clip past the start of the next and
- * the two are heard talking over each other. The de-overlap pass slides the
- * later line down to here, so a pushed line lands just after the one before
- * it instead of on top of it.
- */
-const VOICE_GAP = 0.15
 
 /* ---- model ---- */
 /** The per-clip level/tone shaping baked into a rendered buffer. */
@@ -206,6 +196,24 @@ function niceInterval(pxPerSec: number): number {
   return [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300].find((s) => s >= raw) ?? 300
 }
 
+/** Fold a plan onto the tracks. Separate from the planning so the rule can be
+    read, argued about and tested without a Clip in sight (voiceOverlap.ts). */
+function applyVoicePlan(tracks: Track[], plan: VoicePlan): Track[] {
+  if (!plan.panned && !plan.moved && !plan.longer) return tracks
+  return tracks.map((t) => ({
+    ...t,
+    clips: t.clips.map((c) => {
+      const start = plan.starts[c.id]
+      const pan = plan.pans[c.id]
+      const dur = plan.stretched[c.id]
+      if (start !== undefined) return { ...c, startSec: start }
+      if (pan !== undefined) return { ...c, params: { ...(c.params as VoiceParams), pan } as ClipParams }
+      if (dur !== undefined) return { ...c, durationSec: dur }
+      return c
+    }),
+  }))
+}
+
 function makeClip(type: TrackType, startSec: number, durationSec: number): Clip {
   return { id: uid(), startSec, durationSec, params: defaultParams(type), buffer: null, peaks: null }
 }
@@ -278,6 +286,7 @@ function StudioDesktop() {
       tracks: h.tracks.map(seedTrackToTrack),
       name: h.name,
       attach: h.attach ?? null,
+      phases: h.phases ?? [],
       lengthSec: h.lengthSec ?? Math.ceil(end),
       masterGain: h.masterGain,
       fadeInSec: h.fadeInSec ?? 0,
@@ -290,6 +299,10 @@ function StudioDesktop() {
   const [masterGain, setMasterGain] = useState(handoff?.masterGain ?? 0.82)
   const [lengthSec, setLengthSec] = useState(handoff?.lengthSec ?? 120)
   const [pxPerSec, setPxPerSec] = useState(() => (handoff ? Math.max(0.6, Math.min(7, 1100 / (handoff.lengthSec || 120))) : 7))
+  /* The six phase windows, when this session came from a PLAIN import. The
+     Studio uses them for one thing only: telling the closing apart from the
+     middle of a session when two voices overlap. */
+  const [phases] = useState<StudioPhase[]>(() => handoff?.phases ?? [])
   const attachTarget: StudioAttachTarget | null = handoff?.attach ?? null
   const returnTo: string | null = handoff?.returnTo ?? null
   const sessionFades = { inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 }
@@ -308,6 +321,7 @@ function StudioDesktop() {
       masterGain,
       fadeInSec: sessionFades.inSec,
       fadeOutSec: sessionFades.outSec,
+      phases: phases.length ? phases : undefined,
       savedAt: Date.now(),
       tracks: tracks.map((t) => ({
         type: t.type,
@@ -824,7 +838,7 @@ function StudioDesktop() {
       /* The clip is now as long as the voice really is, which may be longer
          than the window the sheet gave it — queued AFTER the buffer update, so
          the pass sees the new duration. */
-      separateVoiceClips(trackId)
+      resolveVoiceOverlaps()
     } catch (e) {
       setTtsError((e as Error).message)
     } finally {
@@ -930,9 +944,9 @@ function StudioDesktop() {
       }
     }
     setSynthAll(null)
-    // every lane at once: each take is now its real length, so lines that grew
-    // past their window are slid clear of the one before them
-    separateVoiceClips()
+    // every lane at once: each take is now its real length, so any line that
+    // grew into the next one is pulled apart — in the field, or in time
+    resolveVoiceOverlaps()
     if (!failed) setTtsError(null)
   }, [setClipBuffer])
 
@@ -1196,50 +1210,50 @@ function StudioDesktop() {
     setSelected((s) => (s?.clipId === clipId ? null : s))
   }
   /**
-   * Stop synthesized voices from talking over each other.
+   * Two voices at once, and what to do about it.
    *
-   * The Excel plans a window per line; the TTS delivers whatever the sentence
-   * actually takes. Once a take runs long — a slower `speed`, a longer voice,
-   * an edited line — its clip's real duration reaches into the next clip's
-   * window and the mix plays both at once. This walks each voice lane in time
-   * order and slides every line that starts at or before the previous one ends
-   * down to `VOICE_GAP` after it, cascading. Nothing is re-rendered: a baked
-   * voice buffer does not depend on where the clip sits.
+   * Sliding the later line down the timeline — which is what this used to do —
+   * is the wrong answer almost everywhere. A protocol's voices are placed
+   * against music, against a phase map and against each other; moving one
+   * moves it out of the bed it was written for. The POs' answer is two rules,
+   * and which applies depends on WHERE the overlap falls and on what the two
+   * voices already are. See `planVoiceOverlaps`.
    *
-   * Frozen pieces (a cut/glued clip) that merely BUTT-JOIN are left alone —
-   * that adjacency is one utterance split in two, not a scheduling conflict,
-   * and prising it apart would open a hole inside a word.
-   *
-   * `trackId` limits the pass to one lane; omitted, every voice lane is swept.
+   * Run after a synthesis, because that is when a clip stops being as long as
+   * the sheet planned and becomes as long as the voice actually took.
    */
-  function separateVoiceClips(trackId?: string) {
-    const EPS = 1e-3
-    let moved = 0
-    let overflow = false
-    setTracks((prev) => prev.map((t) => {
-      if (t.type !== 'voice' || (trackId && t.id !== trackId)) return t
-      const order = [...t.clips].sort((a, b) => a.startSec - b.startSec)
-      const starts = new Map<string, number>()
-      let last: { end: number; frozen?: boolean } | null = null
-      for (const c of order) {
-        let start = c.startSec
-        if (last && last.end >= start - EPS) {
-          const butt = c.frozen && last.frozen && Math.abs(last.end - start) <= EPS
-          if (!butt) {
-            start = last.end + VOICE_GAP
-            starts.set(c.id, start)
-            moved++
+  function resolveVoiceOverlaps() {
+    const closing = phases.find((ph) => ph.fase === 6) ?? null
+    /* The plan is computed inside the updater so it sees the duration the
+       synthesis just wrote, and read back out here for the things that are not
+       track state: the session length, the re-render, the note. The updater
+       stays pure — StrictMode calls it twice. */
+    let plan: VoicePlan | null = null
+    setTracks((prev) => {
+      plan = planVoiceOverlaps(prev, closing)
+      return applyVoicePlan(prev, plan)
+    })
+
+    window.setTimeout(() => {
+      const p = plan
+      if (!p || (!p.panned && !p.moved)) return
+      /* The closing may now run past the end of the session. It is allowed to:
+         a protocol that ends a few seconds past 24 minutes is the accepted
+         price of not stacking two voices on top of each other. */
+      if (p.closingEnd > lengthSecRef.current) setLengthSec(Math.ceil(p.closingEnd))
+      for (const t of tracksRef.current) {
+        for (const c of t.clips) {
+          if (p.starts[c.id] !== undefined || p.pans[c.id] !== undefined || p.stretched[c.id] !== undefined) {
+            scheduleRender(t.id, c.id)
           }
         }
-        last = { end: start + c.durationSec, frozen: c.frozen }
       }
-      if (!starts.size) return t
-      if (last && last.end > lengthSecRef.current + EPS) overflow = true
-      return { ...t, clips: t.clips.map((c) => (starts.has(c.id) ? { ...c, startSec: starts.get(c.id) as number } : c)) }
-    }))
-    if (moved) {
-      setEditMsg(`${moved} clip vocale${moved === 1 ? '' : 'i'} spostata${moved === 1 ? '' : 'e'}: la voce sintetizzata era più lunga della finestra e si sovrapponeva alla successiva.${overflow ? ' ⚠ L’ultima ora supera la durata della sessione — allunga la sessione o accorcia una frase.' : ''}`)
-    }
+      const bits: string[] = []
+      if (p.panned) bits.push(`${p.panned} nel campo stereo (1ª a destra, 2ª a sinistra)`)
+      if (p.moved) bits.push(`${p.moved} nella fase 6 distanziata${p.moved === 1 ? '' : 'e'} di ${VOICE_GAP}s, al centro`)
+      if (p.longer) bits.push('musica della fase 6 prolungata fino all\u2019ultima voce')
+      setEditMsg(`Voci sovrapposte risolte: ${bits.join(' \u00b7 ')}.`)
+    }, 0)
   }
 
   function patchTrack(trackId: string, patch: Partial<Track>) {

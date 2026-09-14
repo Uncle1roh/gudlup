@@ -59,12 +59,29 @@ export interface SeedClip {
 /** A Studio session saved into a catalog protocol: everything needed to reopen
     the multitrack exactly as it was left. Audio buffers are NOT stored — clips
     re-render from their parameters on load, and voice clips re-synthesize. */
+/**
+ * One of the six phases, as the PLAIN timeline drew it.
+ *
+ * The Studio is a multitrack: it knows clips and seconds, and nothing about
+ * therapeutic structure. Two rules need that structure anyway — the sixth
+ * phase is a closing, and what may be done about an overlap there is not what
+ * may be done in the middle of a session — so the phase windows travel with
+ * the session rather than being guessed back out of the clips.
+ */
+export interface StudioPhase {
+  fase: number
+  startSec: number
+  endSec: number
+}
+
 export interface StudioProject {
   name: string
   lengthSec: number
   masterGain: number
   fadeInSec?: number
   fadeOutSec?: number
+  /** The six phase windows, when the session came from a PLAIN import. */
+  phases?: StudioPhase[]
   tracks: SeedTrack[]
   savedAt: number
 }

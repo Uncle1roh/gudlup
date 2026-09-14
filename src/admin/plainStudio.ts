@@ -35,7 +35,7 @@
    Every deviation is recorded in `notes`.
    ============================================================================ */
 
-import type { SeedClip, SeedTrack } from '../compose/types'
+import type { SeedClip, SeedTrack, StudioPhase } from '../compose/types'
 import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type SampleParams, type SampleSlot, type VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { applyFxSpecs, describeFx, fxKey } from './plainFx'
@@ -186,7 +186,7 @@ export function plainToStudioTracks(
   timeline: PlainTimeline,
   version: PlainVersion,
   opts: PlainSeedOptions = {},
-): { tracks: SeedTrack[]; name: string; totalSec: number; notes: string[] } {
+): { tracks: SeedTrack[]; name: string; totalSec: number; phases: StudioPhase[]; notes: string[] } {
   const notes: string[] = []
   const totalSec = version.durationS
   const affById = new Map(timeline.affirmations.map((a) => [a.id, a]))
@@ -640,5 +640,14 @@ export function plainToStudioTracks(
   }
 
   const code = timeline.code ?? 'PLAIN'
-  return { tracks: lanes.map((l) => l.track), name: `${code} · ${version.sheet}`, totalSec, notes }
+  return {
+    tracks: lanes.map((l) => l.track),
+    name: `${code} · ${version.sheet}`,
+    totalSec,
+    /* The phase map goes with the tracks: the Studio cannot tell a closing from
+       the middle of a session without it, and one of its overlap rules applies
+       only in the sixth. */
+    phases: version.phases.map((p) => ({ fase: p.fase, startSec: p.startS, endSec: p.endS })),
+    notes,
+  }
 }
