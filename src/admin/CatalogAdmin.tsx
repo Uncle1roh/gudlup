@@ -303,6 +303,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   if (opened) {
     return (
       <PlainImport
+        /* A new import remounts this screen. Everything it holds locally — the
+           status line, the last error, the notes from the previous seed, which
+           duration was picked — described the workbook that was there before,
+           and a screen still showing the refusal of a file you have just
+           replaced is how a fixed protocol keeps looking broken. */
+        key={`${opened.code}:${opened.updatedAt}`}
         timeline={openedPlain ?? emptyTimeline(opened)}
         initialDuration={openAt ?? undefined}
         notice={importError}

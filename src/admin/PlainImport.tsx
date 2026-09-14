@@ -86,7 +86,7 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   const [ttsTick, setTtsTick] = useState(0)
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
 
-  const errors = t.issues.filter((i) => i.level === 'error')
+  const allErrors = t.issues.filter((i) => i.level === 'error')
   const nonErrors = t.issues.filter((i) => i.level !== 'error')
 
   /* one selected version — the TIME SIGNATURE being worked on. Chips appear
@@ -103,6 +103,20 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   )
   const version = t.versions.find((v) => catalogDuration(v.durationMin) === picked)
   const versionDuration = version ? catalogDuration(version.durationMin) : picked
+
+  /* WHOSE errors these are.
+   *
+   * A protocol's three time signatures are three separate workbooks, and the
+   * screen shows them merged — so a broken 12-minute sheet used to disable
+   * the Studio, the render and Publish for 6 and 24 as well. One sloppy file
+   * took the whole protocol off the air, and importing a good one for another
+   * duration did not bring it back: the bad sheet was still stored, still
+   * contributing its errors to the merged list.
+   *
+   * An error belongs to the sheet it names. One that names no sheet is about
+   * the workbook itself and applies wherever you stand. */
+  const errors = allErrors.filter((i) => !i.sheet || i.sheet === version?.sheet)
+  const errorsElsewhere = allErrors.filter((i) => i.sheet && i.sheet !== version?.sheet)
 
   /* ---- asset pools (draw happens at seed/render — gate until ready) ---- */
   const [pools, setPools] = useState<AssetPools | null>(null)
@@ -667,9 +681,18 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       )}
       {status && <div className="adm-plain__status">{status}</div>}
       {error && <div className="adm-plain__status adm-plain__status--err">{error}</div>}
+      {errorsElsewhere.length > 0 && (
+        <div className="adm-plain__status">
+          Un’altra durata di questo protocollo ha {errorsElsewhere.length} error{errorsElsewhere.length === 1 ? 'e' : 'i'}
+          {' '}({[...new Set(errorsElsewhere.map((i) => i.sheet))].join(', ')}) — non bloccano questa versione.
+          Selezionane la durata per correggerla.
+        </div>
+      )}
+
       {errors.length > 0 && (
         <div className="adm-plain__status adm-plain__status--err">
-          Il file ha {errors.length} error{errors.length === 1 ? 'e' : 'i'} — correggi l’Excel e importa di nuovo.
+          La versione da {picked} minuti ha {errors.length} error{errors.length === 1 ? 'e' : 'i'} — correggi
+          l’Excel e importa di nuovo. Le altre durate non sono toccate.
           <ul className="adm-spec__issues">
             {errors.map((i, k) => <li key={k}>{i.sheet ? `[${i.sheet}] ` : ''}{i.clipId ? `${i.clipId}: ` : ''}{i.message}</li>)}
           </ul>
