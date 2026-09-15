@@ -283,6 +283,51 @@ interface ReadmeMeta {
   phases: PlainPhase[]
 }
 
+/**
+ * A phase row, in either of the two ways the POs write one.
+ *
+ * The pattern used to be `Fase 1 — 0:00 - 1:45` and nothing else. The Deep
+ * workbook writes `F1 - 0:00 - 3:00`, which is the same statement in fewer
+ * characters — and it silently did not match, so the whole map was thrown away
+ * and the phases were derived from the `fase` column instead. Derived
+ * boundaries are mush where clips span phases: that file came out with phases
+ * 2, 3 and 4 all ending at 20:00.
+ *
+ * So: `F` or `Fase`, any of the three dashes on either side, and the two times
+ * in m:ss. What it still refuses is anything without two times — a heading
+ * like "F4 — Stacking Triplo" is prose, not a window.
+ */
+const PHASE_ROW = /^F(?:ase)?\s*([1-9])\s*[\u2014\u2013-]\s*(\d+:\d{2})\s*[\u2014\u2013-]\s*(\d+:\d{2})/i
+
+/** `Metodologia` in column A with the value in B, or `Metodologia: value` in
+    one cell. Both are in the wild; neither is worth a support round-trip. */
+function labelled(a: string, b: string, label: string): string | undefined {
+  const rx = new RegExp(`^${label}\\s*:?\\s*(.*)$`, 'i')
+  const m = a.match(rx)
+  if (!m) return undefined
+  const inline = m[1].trim()
+  return inline || b.trim() || undefined
+}
+
+/**
+ * The protocol's name, out of a header line that carries more than the name.
+ *
+ * `GL-ANX 1.1 — CALMA E SICUREZZA INTERIORE — DEEP 24 MIN — README` is one
+ * cell in a real workbook, and taking the whole line made the title that whole
+ * line. The parts are dash-separated: drop the code, the duration, the word
+ * README and a version, and what is left is what the protocol is called.
+ */
+function titleFromHeader(line: string): string {
+  const parts = line.split(/\s*[\u2014\u2013]\s*|\s+-\s+/).map((x) => x.trim()).filter(Boolean)
+  const kept = parts.filter((x) => (
+    !/^GL-[A-Z]+\s*\d+(\.\d+)*$/i.test(x) &&
+    !/^readme$|^leggimi$/i.test(x) &&
+    !/^v[\d.]+$/i.test(x) &&
+    !/^(quick|standard|deep)?\s*\d+\s*min/i.test(x)
+  ))
+  return (kept[0] ?? parts[0] ?? line).trim()
+}
+
 function parseReadme(ws: WorkSheet | undefined, X: XlsxModule): ReadmeMeta {
   const meta: ReadmeMeta = { code: null, title: null, phases: [] }
   if (!ws || !ws['!ref']) return meta
@@ -294,14 +339,15 @@ function parseReadme(ws: WorkSheet | undefined, X: XlsxModule): ReadmeMeta {
     // "GOOD LOOP — GL-ANX 1.1"
     const code = a.match(/\b(GL-[A-Z]+\s*\d+(?:\.\d+)*)\b/)
     if (code && !meta.code) meta.code = code[1].replace(/\s+/g, ' ')
-    if (!meta.title && r <= 4 && a && !/^good loop/i.test(a) && !/^target|^metodologia|^sorgente|^schema/i.test(a)) {
-      // "Calma e Sicurezza Interiore — v2.0"
-      meta.title = a.replace(/\s*[—-]\s*v[\d.]+\s*$/i, '').trim()
+    if (!meta.title && r <= 4 && a && !/^good loop/i.test(a) && !/^target|^metodologia|^sorgente|^durata|^schema/i.test(a)) {
+      // "Calma e Sicurezza Interiore — v2.0", or a header line carrying the
+      // code and the duration alongside the name
+      meta.title = titleFromHeader(a.replace(/\s*[—-]\s*v[\d.]+\s*$/i, ''))
     }
-    if (/^metodologia$/i.test(a) && b) meta.methodology = b
-    if (/^sorgente$/i.test(a) && b) meta.source = b
-    // "Fase 1 — 0:00 - 1:45" | "Intro + Validazione"
-    const ph = a.match(/^Fase\s+(\d)\s*[—-]\s*(\d+:\d{2})\s*-\s*(\d+:\d{2})/i)
+    meta.methodology = meta.methodology ?? labelled(a, b, 'metodologia')
+    meta.source = meta.source ?? labelled(a, b, 'sorgente')
+    // "Fase 1 — 0:00 - 1:45" or "F1 - 0:00 - 3:00" | label in column B
+    const ph = a.match(PHASE_ROW)
     if (ph) {
       const startS = mmssToSec(ph[2])
       const endS = mmssToSec(ph[3])

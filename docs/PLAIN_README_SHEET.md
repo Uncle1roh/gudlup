@@ -45,25 +45,42 @@ are actually importing.
 
 **The title** — the first non-empty cell in column A **within the first five
 rows** that is not the `GOOD LOOP` line and does not start with `Target`,
-`Metodologia`, `Sorgente` or `Schema`. A trailing version (`— v2.0`) is
-stripped.
-
-**`Metodologia` / `Sorgente`** — the word alone in column A, the value in
-column B. Both optional, both carried as metadata.
-
-**The phase map** — column A shaped exactly:
+`Durata`, `Metodologia`, `Sorgente` or `Schema`. The line is then split on its
+dashes and the parts that are not the protocol's name are dropped: the code, a
+version (`v2.0`), a duration (`DEEP 24 MIN`), the word `README`. So a header
+line like
 
 ```
-Fase <n> — <m:ss> - <m:ss>
+GL-ANX 1.1 — CALMA E SICUREZZA INTERIORE — DEEP 24 MIN — README
 ```
 
-- `<n>` is one digit, 1–6.
-- The dash after `Fase <n>` may be an em dash `—` or a hyphen `-`.
-- The dash between the two times must be a **plain hyphen with spaces**: `0:00 - 1:45`.
+gives the title `CALMA E SICUREZZA INTERIORE`. It is used only when the code is
+new to the catalog — importing into a protocol that already exists keeps the
+title it has.
+
+**`Metodologia` / `Sorgente`** — either the word alone in column A with the
+value in column B, or `Metodologia: <value>` in one cell. Both optional, both
+carried as metadata.
+
+**The phase map** — column A, in either of the two forms the workbooks use:
+
+```
+Fase 1 — 0:00 - 1:45          (Standard 12 min)
+F1 - 0:00 - 3:00              (Deep 24 min)
+```
+
+- `Fase` or just `F`, then one digit 1–9.
+- Either dash may be `—`, `–` or `-`, on both sides.
 - Times are `m:ss` or `mm:ss` — **minutes and seconds only**. `21:00` is
   twenty-one minutes. `1:02:03` is not read and the row is skipped in silence.
 - Column B is the phase's label, shown in the importer's timeline. Optional; it
   defaults to `Fase <n>`.
+
+**A row with no times is not a map.** `F1 Intro + Validazione` — which is what
+the Quick 6-minute workbook writes — is a heading, and the importer treats it
+as prose: the phases then come from the `fase` column instead. That fallback
+runs, but it is not what you wrote: where clips span phases (`fase` = `1-2`)
+the derived windows overlap each other. **Write the times.**
 
 ## When the map is used, and when it is not
 
