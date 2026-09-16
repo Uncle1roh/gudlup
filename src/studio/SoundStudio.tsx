@@ -92,6 +92,8 @@ interface Clip {
       audio only while this still matches, and the Inspector asks for a
       re-synthesis once it doesn't. */
   ttsText?: string
+  /** This line's window inside a stored block render (see SeedClip.ttsSpan). */
+  ttsSpan?: { startSec: number; endSec: number }
   /** A cut/glued piece: its audio is frozen — parameter edits don't
       re-render it (glue pieces back together to re-edit parameters). */
   frozen?: boolean
@@ -233,7 +235,7 @@ function seedTrackToTrack(t: SeedTrack): Track {
       buffer: null, peaks: null, text: c.text,
       gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec,
       calibrateDb: c.calibrateDb, eq: c.eq,
-      ttsPath: c.ttsPath, ttsText: c.ttsText,
+      ttsPath: c.ttsPath, ttsText: c.ttsText, ttsSpan: c.ttsSpan,
     })),
   }
 }
@@ -345,6 +347,7 @@ function StudioDesktop() {
              must come back unrendered, not silently spoken as the old one. */
           ttsPath: c.ttsText && c.ttsText === (c.text ?? '').trim() ? c.ttsPath : undefined,
           ttsText: c.ttsPath ? c.ttsText : undefined,
+          ttsSpan: c.ttsPath && c.ttsText === (c.text ?? '').trim() ? c.ttsSpan : undefined,
         })),
       })),
     }
@@ -576,13 +579,28 @@ function StudioDesktop() {
     if (!jobs.length) return
     let alive = true
     void (async () => {
+      /* One download and one decode per FILE, not per line: a loop lane is
+         twenty clips cut out of the same block render, and fetching it twenty
+         times would make reopening a protocol slower than synthesizing it. */
+      const decodedByPath = new Map<string, Promise<AudioBuffer | null>>()
+      const load = (path: string) => {
+        let pending = decodedByPath.get(path)
+        if (!pending) {
+          pending = (async () => {
+            const player = playerRef.current
+            if (!player) return null
+            const bytes = await ttsFetch(path)
+            return bytes ? player.decode(bytes) : null
+          })().catch(() => null)
+          decodedByPath.set(path, pending)
+        }
+        return pending
+      }
       for (const { trackId, clip } of jobs) {
         try {
-          const player = playerRef.current
-          if (!player) return
-          const bytes = await ttsFetch(clip.ttsPath as string)
-          if (!alive || !bytes) continue
-          const decoded = await player.decode(bytes)
+          const whole = await load(clip.ttsPath as string)
+          if (!alive || !whole) continue
+          const decoded = clip.ttsSpan ? sliceBuffer(whole, clip.ttsSpan.startSec, clip.ttsSpan.endSec) : whole
           if (!alive) continue
           const vp = clip.params as VoiceParams
           const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - clip.startSec)
@@ -725,6 +743,11 @@ function StudioDesktop() {
         ...c,
         params: { ...(c.params as VoiceParams), voiceId: voiceId || undefined },
         ttsSource: null, // a different voice = a new TTS render — ♪ or "Tutte le voci"
+        /* …and the stored render is the OLD voice. Now that every render is
+           kept, leaving its path would bring that voice back on the next open. */
+        ttsPath: undefined,
+        ttsText: undefined,
+        ttsSpan: undefined,
       })),
     })))
   }, [])
@@ -834,7 +857,8 @@ function StudioDesktop() {
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       if (renderTokens.current.get(clipId) !== token) return
-      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, durationSec: buf.duration })
+      // a whole-file render: a span left over from a block would slice it
+      setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, ttsSpan: undefined, durationSec: buf.duration })
       /* The clip is now as long as the voice really is, which may be longer
          than the window the sheet gave it — queued AFTER the buffer update, so
          the pass sees the new duration. */
@@ -868,23 +892,42 @@ function StudioDesktop() {
     if (!jobs.length) { setTtsError('Nessuna clip vocale con testo da sintetizzare.'); return }
     setTtsError(null)
     const lang = ttsLanguage()
-    const cache = new Map<string, AudioBuffer>()
+    const cache = new Map<string, { decoded: AudioBuffer; path: string | null }>()
     /* One joined render serves every clip in its block, and repeats of the same
        block (a LOOP lane cycles the same four words all phase) reuse it — so the
        whole ostinato costs ONE request and every cycle is identical. */
-    const blockCache = new Map<string, { decoded: AudioBuffer; spans: TtsSpan[] }>()
+    const blockCache = new Map<string, { decoded: AudioBuffer; spans: TtsSpan[]; path: string | null }>()
     const groups = groupVoiceJobs(jobs, provider.canRenderJoined === true && typeof provider.renderJoined === 'function')
     const total = jobs.length
     let done = 0
     let failed = 0
 
-    /** Bake one job from already-decoded audio and put it in its clip. */
-    const place = async (j: VoiceJob, source: AudioBuffer, token: number): Promise<boolean> => {
+    /**
+     * Bake one job from already-decoded audio and put it in its clip — with
+     * WHERE the audio lives, so the next open downloads it instead of paying
+     * for it again.
+     *
+     * This path never recorded one. The single-clip ♪ stored every render in
+     * Storage and kept the path on the clip; "Tutte le voci" — the button a
+     * production protocol is actually voiced with — kept the audio in memory
+     * only. Save, close, reopen, and every line it had made was unrendered, so
+     * the whole protocol was bought a second time.
+     */
+    const place = async (
+      j: VoiceJob, source: AudioBuffer, token: number,
+      stored: { path: string | null; span?: { startSec: number; endSec: number } },
+    ): Promise<boolean> => {
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
       let buf = await bakeVoiceBuffer(source, j.pan, maxDur, j.speed)
       if (j.shape) buf = shapeClipBuffer(buf, j.shape)
       if (renderTokens.current.get(j.clipId) !== token) return false
-      setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: source, ttsText: j.text, durationSec: buf.duration })
+      setClipBuffer(j.trackId, j.clipId, buf, {
+        ttsSource: source,
+        ttsText: j.text,
+        ttsPath: stored.path ?? undefined,
+        ttsSpan: stored.path ? stored.span : undefined,
+        durationSec: buf.duration,
+      })
       return true
     }
 
@@ -910,14 +953,22 @@ function StudioDesktop() {
           let block = blockCache.get(key)
           if (!block) {
             const r = await provider.renderJoined!(texts, { lang, voiceId: group[0].voiceId })
-            block = { decoded: await player.decode(r.bytes), spans: r.spans }
+            /* The block is kept ONCE. Content-addressed like every other
+               render, under a key that says it is a joined utterance, so the
+               same ostinato in another protocol is the same object. */
+            const path = await ttsStore(
+              { text: texts.join('\n'), voiceId: group[0].voiceId ?? '', lang, context: 'joined-block' },
+              r.bytes,
+            )
+            block = { decoded: await player.decode(r.bytes), spans: r.spans, path }
             blockCache.set(key, block)
           }
           for (let i = 0; i < group.length; i++) {
             const j = group[i]
             const span = block.spans[i]
             const piece = sliceBuffer(block.decoded, span.startSec, span.endSec)
-            if (await place(j, piece, tokens.get(j.clipId)!)) done++
+            const stored = { path: block.path, span: { startSec: span.startSec, endSec: span.endSec } }
+            if (await place(j, piece, tokens.get(j.clipId)!, stored)) done++
           }
         } else {
           const j = group[0]
@@ -928,13 +979,27 @@ function StudioDesktop() {
              Keying on text alone is what stamped ONE bad take onto every repeat
              of a loop block. */
           const key = `${j.voiceId ?? ''}|${lang}|${j.text}|${j.previousText ?? ''}|${j.nextText ?? ''}`
-          let decoded = cache.get(key)
-          if (!decoded) {
-            const bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
-            decoded = await player.decode(bytes)
-            cache.set(key, decoded)
+          let hit = cache.get(key)
+          if (!hit) {
+            /* The SAME key the single-clip ♪ uses, so the two buttons share
+               Storage: a line voiced by either is found by the other, and a
+               line already paid for is downloaded rather than rendered. */
+            const tkey: TtsKey = {
+              text: j.text,
+              voiceId: j.voiceId ?? '',
+              lang,
+              context: `${j.previousText ?? ''}|${j.nextText ?? ''}`,
+            }
+            let bytes = await ttsLookup(tkey)
+            let path: string | null = bytes ? await ttsPathFor(tkey) : null
+            if (!bytes) {
+              bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
+              path = await ttsStore(tkey, bytes)
+            }
+            hit = { decoded: await player.decode(bytes), path }
+            cache.set(key, hit)
           }
-          if (await place(j, decoded, tokens.get(j.clipId)!)) done++
+          if (await place(j, hit.decoded, tokens.get(j.clipId)!, { path: hit.path })) done++
         }
       } catch (e) {
         failed += group.length
@@ -1275,9 +1340,28 @@ function StudioDesktop() {
       setEditMsg('Tutte le clip di questa traccia hanno l’audio congelato (pezzi tagliati) — i parametri non si applicano.')
       return
     }
+    /* A lane-wide voice change is a new render for every line on the lane, so
+       the kept one has to go with it — otherwise a saved session reopens in
+       the voice that was just replaced. Only a CHANGE counts: re-picking the
+       voice a clip already has keeps its render. */
+    const changesVoice = track.type === 'voice' && 'voiceId' in patch
+    if (changesVoice) {
+      for (const c of targets) {
+        if ((c.params as VoiceParams).voiceId !== (patch as Partial<VoiceParams>).voiceId) {
+          renderTokens.current.set(c.id, (renderTokens.current.get(c.id) ?? 0) + 1)
+        }
+      }
+    }
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
       ...t,
-      clips: t.clips.map((c) => (c.frozen ? c : { ...c, params: { ...c.params, ...patch } as ClipParams })),
+      clips: t.clips.map((c) => {
+        if (c.frozen) return c
+        const next = { ...c, params: { ...c.params, ...patch } as ClipParams }
+        if (changesVoice && (c.params as VoiceParams).voiceId !== (patch as Partial<VoiceParams>).voiceId) {
+          return { ...next, ttsSource: null, ttsPath: undefined, ttsText: undefined, ttsSpan: undefined }
+        }
+        return next
+      }),
     })))
     for (const c of targets) scheduleRender(trackId, c.id)
     const frozen = track.clips.length - targets.length

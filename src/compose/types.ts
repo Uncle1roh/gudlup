@@ -54,6 +54,16 @@ export interface SeedClip {
   /** The text `ttsPath` was spoken from, so an edited line is not passed off
       as still rendered. */
   ttsText?: string
+  /**
+   * Where in the stored file this line is, when the file holds more than it.
+   *
+   * "Tutte le voci" speaks a block of consecutive lines as ONE utterance and
+   * cuts it apart on the timings the provider returns — that is what keeps a
+   * short loop word in its own language. The block is stored once; each line
+   * keeps the block's path and its own window inside it. Absent = the file is
+   * exactly this line.
+   */
+  ttsSpan?: { startSec: number; endSec: number }
 }
 
 /** A Studio session saved into a catalog protocol: everything needed to reopen
