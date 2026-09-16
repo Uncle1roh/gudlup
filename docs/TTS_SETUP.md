@@ -10,29 +10,20 @@ in the inspector, type the affirmation, then:
 With no key set, Preview still works but Synthesize is disabled — the panel says
 so. Pick **one** engine.
 
-## ElevenLabs (preferred — most natural pt-BR)
+## ElevenLabs (preferred)
 
-1. Create a key at elevenlabs.io (Profile → API key).
-2. Pick a voice and copy its **Voice ID** (Voices → the voice → ID).
-3. In `.env.local`:
-   ```
-   VITE_ELEVENLABS_API_KEY=your-key
-   VITE_ELEVENLABS_VOICE_ID=the-voice-id
-   ```
-   The multilingual model auto-detects pt-BR from the text.
+The key is **typed in the app, never set in the environment**: Admin →
+Dettagli → motore vocale. It is saved in this browser and, for an admin, in the
+shared `app_settings` row, so other machines pick it up.
 
-## Deploying the keys to Vercel
+There used to be a build-time key (`VITE_ELEVENLABS_API_KEY`). It was used
+whenever a browser had no key saved — a fresh or incognito tab listed that
+account's voices and could spend its credits instead of the key the operator
+typed. It is no longer read. If it is still set in Vercel → Settings →
+Environment Variables, delete it there too (and `VITE_ELEVENLABS_VOICE_ID`,
+`VITE_ELEVENLABS_VOICE_ID_M`).
 
-Vite bakes `VITE_*` variables in at **build time**, so on Vercel they are set as
-project environment variables (not pasted into the code):
-
-1. Vercel dashboard -> your project -> **Settings -> Environment Variables**.
-2. Add `VITE_ELEVENLABS_API_KEY` and `VITE_ELEVENLABS_VOICE_ID`
-   (and `VITE_DEFAULT_LOCALE=it` for the Italian PO deployment).
-3. Apply to the environments you deploy (Production / Preview).
-4. **Redeploy** — existing builds don't pick up new variables.
-
-Reminder: any `VITE_*` value ships inside the browser bundle. That's acceptable
+Reminder: a key used in the browser is visible to the browser. That's acceptable
 for a closed PO test; before a public release the ElevenLabs call moves behind a
 server proxy (e.g. a Supabase Edge Function) so the key never leaves the server.
 

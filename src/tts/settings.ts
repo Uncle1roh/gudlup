@@ -11,8 +11,7 @@
      2. In-app settings (this module, persisted in localStorage) — the local
         copy, which is also the cache of (1) and what the synchronous provider
         actually reads at call time.
-     3. Build-time env (`VITE_ELEVENLABS_API_KEY` + `VITE_ELEVENLABS_VOICE_ID`)
-        — the .env.local / Vercel-env route.
+   There is no build-time key: only a key typed in the app is ever used.
 
    Either way the key lives client-side, which is fine for the closed PO test;
    production moves the call behind a server proxy (Supabase Edge Function).
@@ -79,11 +78,9 @@ export function clearTtsSettings(): void {
 }
 
 /** Where the active ElevenLabs credentials come from (for the settings UI). */
-export function elevenLabsSource(): 'shared' | 'settings' | 'env' | 'none' {
+export function elevenLabsSource(): 'shared' | 'settings' | 'none' {
   const local = getTtsSettings()
   if (local) return local.shared ? 'shared' : 'settings'
-  const env = import.meta.env
-  if (env.VITE_ELEVENLABS_API_KEY && env.VITE_ELEVENLABS_VOICE_ID) return 'env'
   return 'none'
 }
 

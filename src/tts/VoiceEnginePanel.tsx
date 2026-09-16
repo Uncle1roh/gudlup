@@ -136,7 +136,6 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const sourceNote = source === 'shared'
     ? `chiave condivisa${sharedAt ? ` — aggiornata ${new Date(sharedAt).toLocaleString('it-IT')}` : ' — salvata nel database'}`
     : source === 'settings' ? 'chiave salvata solo in questo browser'
-    : source === 'env' ? 'chiave dall’ambiente di build'
     : 'nessuna chiave ElevenLabs — voce di ripiego'
   /* Name the voice we are actually going to use. Printing "Valeria" for an id
      the account cannot see would be a comfortable lie about what will render. */

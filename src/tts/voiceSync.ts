@@ -25,7 +25,7 @@ const ENDPOINT = 'https://api.elevenlabs.io/v1/voices'
 /** Refresh in the background when the cache is older than this. */
 const STALE_MS = 10 * 60_000
 
-interface Cache { at: number; voices: CatalogVoice[] }
+interface Cache { at: number; voices: CatalogVoice[]; key?: string }
 
 export interface SyncOutcome {
   voices: CatalogVoice[]
@@ -34,19 +34,27 @@ export interface SyncOutcome {
   error?: string
 }
 
-/** The key actually in force: in-app settings beat the build-time env. */
+/** The key actually in force: the one typed in the app, and nothing else. */
 export function activeApiKey(): string | undefined {
-  const saved = getTtsSettings()?.apiKey?.trim()
-  if (saved) return saved
-  const env = (import.meta.env.VITE_ELEVENLABS_API_KEY as string | undefined)?.trim()
-  return env || undefined
+  return getTtsSettings()?.apiKey?.trim() || undefined
 }
 
-function readCache(): Cache | null {
+/**
+ * Which key a cached list was read with — the last characters only, enough to
+ * tell two keys apart. A list is an ACCOUNT's voices: shown under another key
+ * it is simply the wrong list, which is what a fresh tab used to paint.
+ */
+function keyTag(key: string | undefined): string {
+  return key ? key.slice(-8) : ''
+}
+
+/** The cached list, only when it was read with `key`. */
+function readCache(key: string | undefined = activeApiKey()): Cache | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const c = JSON.parse(raw) as Cache
+    if (!key || c?.key !== keyTag(key)) return null
     return Array.isArray(c?.voices) && c.voices.length ? c : null
   } catch {
     return null
@@ -133,7 +141,7 @@ export function hydrateVoicesFromCache(): boolean {
  */
 export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}): Promise<SyncOutcome> {
   const key = opts.apiKey?.trim() || activeApiKey()
-  const cached = readCache()
+  const cached = readCache(key)
 
   if (!key) {
     if (cached) registerVoices(cached.voices, cached.at)
@@ -153,9 +161,15 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
     const body = (await res.json()) as { voices?: ApiVoice[] }
     const voices = selectCatalogVoices(body.voices ?? [])
     if (!voices.length) throw new Error('L’account non espone alcuna voce.')
+    /* The key may have changed while this was on the wire — typed in the
+       panel after a startup refresh had already left. The older answer must
+       not land on top of the newer one. */
+    if (!opts.apiKey && activeApiKey() !== key) {
+      return { voices: [], at: 0, source: 'none', error: 'La chiave è cambiata durante l’aggiornamento.' }
+    }
     const at = Date.now()
     registerVoices(voices, at)
-    writeCache({ at, voices })
+    writeCache({ at, voices, key: keyTag(key) })
     return { voices, at, source: 'api' }
   } catch (e) {
     if (cached) registerVoices(cached.voices, cached.at)

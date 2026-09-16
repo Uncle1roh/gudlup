@@ -1,8 +1,11 @@
 /* Picks the active TTS provider, highest-quality first:
-     1. ElevenLabs — in-app settings (Voice engine panel, localStorage)
-     2. ElevenLabs — env (VITE_ELEVENLABS_API_KEY + VITE_ELEVENLABS_VOICE_ID)
-     3. Azure      — env (VITE_AZURE_TTS_KEY + REGION + VOICE)
-     4. Browser    — no keys (preview only, can't render into files)
+     1. ElevenLabs — the key typed in the app (Voice engine panel / shared row)
+     2. Azure      — env (VITE_AZURE_TTS_KEY + REGION + VOICE)
+     3. Browser    — no keys (preview only, can't render into files)
+   There is deliberately NO build-time ElevenLabs key. One used to be read from
+   VITE_ELEVENLABS_API_KEY whenever this browser had none saved — so a fresh
+   (e.g. incognito) tab listed voices and could spend credits on whatever
+   account the build was made with, not the key the operator typed.
    Resolved at CALL time, so saving keys in the panel takes effect immediately.
    Nothing is created until called, and no network happens until the user hits
    Preview or Synthesize. See docs/TTS_SETUP.md. */
@@ -27,9 +30,6 @@ export function getTtsProvider(): TtsProvider {
     return createElevenLabsTts(saved.apiKey, pid, sid)
   }
 
-  const elKey = env.VITE_ELEVENLABS_API_KEY
-  const elVoice = env.VITE_ELEVENLABS_VOICE_ID
-  if (elKey) return createElevenLabsTts(elKey, elVoice || defaultPrimary().id, (env.VITE_ELEVENLABS_VOICE_ID_M as string | undefined) || defaultSecondary().id)
 
   const azKey = env.VITE_AZURE_TTS_KEY
   const azRegion = env.VITE_AZURE_TTS_REGION
