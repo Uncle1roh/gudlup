@@ -2435,3 +2435,7 @@ td, th { overflow-wrap: anywhere; }
 }
 .el-notice__item strong { font-size: 14px; color: #ffd98a; }
 @keyframes el-notice { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.adm-wipe__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-top: 10px; border-top: 1px solid rgba(141, 47, 30, 0.15); }
+.adm-wipe__row > div:first-child { display: flex; flex-direction: column; gap: 2px; flex: 1 1 320px; }
+.adm-wipe__acts { flex-wrap: wrap; align-items: center; }
+.adm-wipe button:disabled { opacity: 0.45; cursor: not-allowed; }

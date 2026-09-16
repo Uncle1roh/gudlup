@@ -11,7 +11,7 @@ import { audienceOf, durationState, mergedPlain, plainDurations, studioFor, type
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
 import { ProtocolCardEditor, applyCardDraft, cardDraftError, type ProtocolCardDraft } from './ProtocolCard'
 import { entryForPublish, familyFromCode } from './publishPlain'
-import { saveProtocolVerified } from './publish'
+import { deleteProtocolVerified, saveProtocolVerified } from './publish'
 import { takeReturnToProtocol } from './workscreenReturn'
 import { LIBRARY_CATEGORIES } from '../data/library'
 import { DURATION_TAG_IDS, durationTagLabel, filterByTags, tagLabel, tagsInUse, tagsOf } from '../data/tags'
@@ -189,8 +189,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
             `Importa il file Excel corretto (quello con il codice ${opened.code} nel foglio README).`,
           )
         }
+        /* The timeline is stamped with the protocol it was imported INTO. A
+           README with no readable code was accepted (nothing to contradict),
+           and the stored timeline then carried no code: the workscreen could
+           not find its own protocol, printed its internal label "catalog ·
+           GL-…" as the name, and hid everything that needs the protocol —
+           the Scheda, the publish state and the way to remove the Excel. */
         const proto = entryForPublish({
-          timeline: res.timeline,
+          timeline: { ...res.timeline, code: opened.code },
           existing: opened,
           selected: importFor ?? openAt ?? undefined,
           keepDraft: true,
@@ -253,12 +259,17 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   }
 
   async function remove(p: CatalogProtocol) {
-    const ok = window.confirm(`Eliminare ${p.code} — "${p.title}" dal catalogo?\n\nIl protocollo viene rimosso per tutte le aziende. I file audio già renderizzati restano nello storage.`)
+    const ok = window.confirm(`Eliminare ${p.code} — "${p.title}" dal catalogo?\n\nIl protocollo viene rimosso per tutte le aziende, con tutti i suoi Excel e le sessioni dello Studio. I file audio già renderizzati restano nello storage.`)
     if (!ok) return
     setBusyCode(p.code)
+    setImportError(null)
     try {
-      await dp.deleteProtocol(p.code)
+      await deleteProtocolVerified(dp, p.code)
       await dp.logAudit({ actor, action: 'protocol.deleted', target: p.code }).catch(() => { /* non-blocking */ })
+    } catch (e) {
+      /* It used to be `finally` only: a refused delete left the row in place
+         and said nothing, which reads as "there is no way to delete it". */
+      setImportError(`Eliminazione di ${p.code} non riuscita: ${(e as Error).message}`)
     } finally {
       setBusyCode(null)
       refetch()
@@ -309,6 +320,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
            and a screen still showing the refusal of a file you have just
            replaced is how a fixed protocol keeps looking broken. */
         key={`${opened.code}:${opened.updatedAt}`}
+        protocolCode={opened.code}
         timeline={openedPlain ?? emptyTimeline(opened)}
         initialDuration={openAt ?? undefined}
         notice={importError}
@@ -317,6 +329,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         actor={actor}
         onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
         onDone={() => { setOpened(null); setOpenAt(null); refetch() }}
+        onChanged={(next) => { setOpened(next); refetch() }}
+        onDeleted={() => { setOpened(null); setOpenAt(null); refetch() }}
         onImportExcel={(d) => { setImportFor(d); fileRef.current?.click() }}
         fileInput={<input ref={fileRef} type="file" accept=".xlsx" hidden onChange={(e) => void onImportFile(e.target.files?.[0])} />}
       />

@@ -902,8 +902,14 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
     },
     async deleteProtocol(code: string): Promise<void> {
-      const { error } = await sb.from('protocols').delete().eq('code', code)
+      /* `.select()` makes the database say WHICH rows it deleted. Without it a
+         delete that row-level security filtered down to nothing comes back
+         with no error at all — and the protocol is still there. */
+      const { data, error } = await sb.from('protocols').delete().eq('code', code).select('code')
       if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error(`Il database non ha eliminato ${code}: nessuna riga rimossa (serve un account amministratore, oppure il protocollo non esiste più).`)
+      }
     },
 
     // --- Credentialing queue (therapists joined to their profile) ---

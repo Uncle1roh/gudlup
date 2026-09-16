@@ -9,7 +9,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDataProvider } from '../data/provider'
-import { persistenceNote, saveProtocolVerified } from './publish'
+import { deleteProtocolVerified, persistenceNote, saveProtocolVerified } from './publish'
+import { clearAuthoredMaterial, hasAuthoredMaterial, hasDurationMaterial, removeDurationMaterial } from './protocolRemoval'
 import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
@@ -36,6 +37,10 @@ import { plainWavFileName, renderPlainWav } from './renderPlain'
 import { secToMmss, type PlainTimeline } from './plainTimeline'
 
 interface Props {
+  /** The protocol this screen belongs to. Its identity comes from HERE, never
+      from the workbook: a README without a readable code left the screen
+      unable to find its own protocol. */
+  protocolCode: string
   timeline: PlainTimeline
   /** Time signature to land on (a duration pill was clicked in the catalog).
       Falls back to the timeline's first version. */
@@ -44,6 +49,10 @@ interface Props {
   actor: string
   onCancel: () => void
   onDone: () => void
+  /** The protocol was rewritten here (material removed) — the new stored row. */
+  onChanged?: (next: CatalogProtocol) => void
+  /** The protocol was deleted from the catalog. */
+  onDeleted?: () => void
   /** Opens the catalog's Import Excel file dialog for the SELECTED duration.
       The screen knows which time signature is being worked on; the file does
       not, and asking the spreadsheet was what produced the conflict. */
@@ -81,7 +90,15 @@ function downloadBlob(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export function PlainImport({ timeline: t, initialDuration, fileName, actor, onCancel, onDone, onImportExcel, fileInput, notice, onDismissNotice }: Props) {
+export function PlainImport({ protocolCode, timeline: workbook, initialDuration, fileName, actor, onCancel, onDone, onChanged, onDeleted, onImportExcel, fileInput, notice, onDismissNotice }: Props) {
+  /* The timeline as this screen uses it: the workbook's content, the
+     PROTOCOL's code. Everything below — the Studio hand-off, attaching the
+     timeline, Publish, the WAV name — keyed on the workbook's own code, and a
+     README without one broke every one of them at once. */
+  const t = useMemo<PlainTimeline>(
+    () => (protocolCode ? { ...workbook, code: protocolCode } : workbook),
+    [workbook, protocolCode],
+  )
   const dp = useDataProvider()
   const [ttsTick, setTtsTick] = useState(0)
   const tts = useMemo(() => getTtsProvider(), [ttsTick])
@@ -155,17 +172,20 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
      attached, not that some other duration's is. */
   const [published, setPublished] = useState<CatalogProtocol | null>(null)
   useEffect(() => {
-    if (!t.code) return
+    /* By the protocol's code, not the workbook's. The workbook's code was
+       null whenever its README had none, and then this never matched: no
+       Scheda, no publish state, and no way to remove the Excel. */
+    if (!protocolCode) return
     let alive = true
     void dp.listProtocols()
       .then((ps) => {
-        const existing = ps.find((p) => p.code === t.code)
+        const existing = ps.find((p) => p.code === protocolCode)
         if (alive && existing) setPublished(existing)
       })
       .catch(() => undefined)
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t.code])
+  }, [protocolCode])
 
   /* ---- empty this protocol of everything that was authored into it -----
 
@@ -190,28 +210,14 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
   const [wiping, setWiping] = useState(false)
   /** Whether there is anything to empty. A protocol with nothing imported is
       offered nothing: an empty destructive button is a trap, not an option. */
-  const hasAuthored = !!(
-    published && (published.plain || published.plainByDuration || published.studio ||
-      published.studioByDuration || published.datasheet || published.spec || published.assetMap)
-  )
+  const hasAuthored = hasAuthoredMaterial(published)
 
   async function wipeAuthoring() {
     if (!published) return
     setWiping(true)
     setError(null)
     try {
-      const emptied: CatalogProtocol = {
-        ...published,
-        plain: undefined,
-        plainByDuration: undefined,
-        studio: undefined,
-        studioByDuration: undefined,
-        datasheet: undefined,
-        spec: undefined,
-        assetMap: undefined,
-        updatedAt: Date.now(),
-      }
-      await saveProtocolVerified(dp, emptied)
+      const stored = await saveProtocolVerified(dp, clearAuthoredMaterial(published))
       await dp.logAudit({
         actor,
         action: 'protocol.authoring_cleared',
@@ -222,11 +228,62 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
          alone it would re-open the session this just deleted. */
       releaseStudioSeed()
       setWipeArmed(false)
-      onDone()
+      if (onChanged) onChanged(stored)
+      else onDone()
     } catch (e) {
       setError(explain(e))
     } finally {
       setWiping(false)
+    }
+  }
+
+  /* ---- remove ONE time signature's Excel (and its Studio session) ----
+     The only removal used to be all-or-nothing, and it lived inside the
+     collapsed Dettagli, shown only when the screen had found its protocol. A
+     wrong 12-minute file could not be taken out without also taking out the
+     6- and 24-minute ones. */
+  const [removeArmed, setRemoveArmed] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  async function removeSelectedExcel() {
+    if (!published || versionDuration == null) return
+    setRemoving(true)
+    setError(null)
+    try {
+      const stored = await saveProtocolVerified(dp, removeDurationMaterial(published, versionDuration))
+      await dp.logAudit({
+        actor,
+        action: 'protocol.duration_material_removed',
+        target: published.code,
+        detail: `${versionDuration} min: Excel e sessione Studio rimossi \u2014 audio e scheda invariati`,
+      }).catch(() => undefined)
+      releaseStudioSeed()
+      setRemoveArmed(false)
+      if (onChanged) onChanged(stored)
+      else onDone()
+    } catch (e) {
+      setError(explain(e))
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  /* ---- delete the protocol, from the protocol's own screen ---- */
+  const [deleteArmed, setDeleteArmed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  async function deleteThisProtocol() {
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteProtocolVerified(dp, protocolCode)
+      await dp.logAudit({ actor, action: 'protocol.deleted', target: protocolCode }).catch(() => undefined)
+      releaseStudioSeed()
+      setDeleteArmed(false)
+      if (onDeleted) onDeleted()
+      else onDone()
+    } catch (e) {
+      setError(explain(e))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -415,7 +472,10 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
        assertions rather than argued about — including the one that matters
        here: every duration written can be read back with `plainFor`, which is
        what the Studio reopens through. */
-    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration })
+    /* `intoExisting` whenever the protocol exists: the protocol keeps ITS
+       clinical title. Without it Publish renamed the protocol after whatever
+       the README's first line said. */
+    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, intoExisting: !!existing })
     const durations = plainDurations(proto)
     // verified: a write rejected by RLS used to leave a protocol that looked
     // published until the next screen change
@@ -574,8 +634,8 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
       <header className="adm-plain__head">
         <button className="b2b-btn b2b-btn--ghost" onClick={onCancel}>←</button>
         <div className="adm-plain__id">
-          <span className="adm-plain__code">{t.code ?? fileName}</span>
-          {t.title && <span className="adm-plain__title">{t.title}</span>}
+          <span className="adm-plain__code">{protocolCode || t.code || fileName}</span>
+          {(published?.title ?? t.title) && <span className="adm-plain__title">{published?.title ?? t.title}</span>}
           {published?.publicTitle && <span className="adm-plain__title">· «{published.publicTitle}»</span>}
           <span className="adm-plain__meta">
             {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clip` : ''}
@@ -729,39 +789,103 @@ export function PlainImport({ timeline: t, initialDuration, fileName, actor, onC
             )}
             {live && <button className="b2b-btn" onClick={onDone}>Torna al catalogo</button>}
 
-            {published && (
-              <div className="adm-wipe">
-                <div className="adm-wipe__head">
-                  <b>Svuota il materiale importato</b>
-                  <span className="b2b-sub">
-                    Rimuove da <b>{published.code}</b> tutti gli Excel (6 / 12 / 24 min), tutte le sessioni dello
-                    Studio e la mappa degli asset. Restano il codice, la famiglia, i titoli, i tag, la copertina e
-                    l’audio già pubblicato. Da usare quando un Excel corretto continua a mostrare il contenuto
-                    di quello vecchio: la sessione salvata ha la precedenza sul file appena caricato.
-                  </span>
-                </div>
-                {!wipeArmed ? (
-                  <button className="b2b-btn b2b-btn--danger" disabled={!hasAuthored} onClick={() => setWipeArmed(true)}>
-                    {hasAuthored ? 'Svuota Excel e Studio…' : 'Niente da svuotare'}
-                  </button>
-                ) : (
-                  <div className="adm-wipe__confirm">
-                    <span className="b2b-sub">
-                      {describeStored(published)} — l’operazione non è reversibile.
-                    </span>
-                    <div className="adm-wipe__acts">
-                      <button className="b2b-btn b2b-btn--danger" disabled={wiping} onClick={() => void wipeAuthoring()}>
-                        {wiping ? 'Svuoto\u2026' : 'S\u00ec, svuota'}
-                      </button>
-                      <button className="b2b-btn" disabled={wiping} onClick={() => setWipeArmed(false)}>Annulla</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Removing material. Out of Dettagli on purpose: it was collapsed by
+          default and rendered only once the screen had found its protocol, so
+          in practice there was no way to remove anything. Every action states
+          what it removes and what it keeps, and asks once before it acts. */}
+      {protocolCode && <div className="adm-wipe">
+        <div className="adm-wipe__head">
+          <b>Rimuovere materiale</b>
+          <span className="b2b-sub">
+            Ogni azione chiede conferma. L’audio già pubblicato resta in linea finché non lo sostituisci o elimini il protocollo.
+          </span>
+        </div>
+
+        {!published ? (
+          <span className="b2b-sub">Caricamento del protocollo dal catalogo…</span>
+        ) : (
+          <>
+            <div className="adm-wipe__row">
+              <div>
+                <b>Elimina l’Excel da {versionDuration ?? picked} min</b>
+                <span className="b2b-sub">
+                  Rimuove solo il foglio e la sessione dello Studio di questa durata. Le altre durate, il codice, i titoli e l’audio restano.
+                </span>
+              </div>
+              {!removeArmed ? (
+                <button
+                  className="b2b-btn b2b-btn--danger"
+                  disabled={versionDuration == null || !hasDurationMaterial(published, versionDuration)}
+                  onClick={() => { setRemoveArmed(true); setWipeArmed(false); setDeleteArmed(false) }}
+                >
+                  {versionDuration != null && hasDurationMaterial(published, versionDuration) ? `Elimina Excel ${versionDuration} min…` : 'Nessun Excel per questa durata'}
+                </button>
+              ) : (
+                <div className="adm-wipe__acts">
+                  <button className="b2b-btn b2b-btn--danger" disabled={removing} onClick={() => void removeSelectedExcel()}>
+                    {removing ? 'Elimino\u2026' : `S\u00ec, elimina ${versionDuration} min`}
+                  </button>
+                  <button className="b2b-btn" disabled={removing} onClick={() => setRemoveArmed(false)}>Annulla</button>
+                </div>
+              )}
+            </div>
+
+            <div className="adm-wipe__row">
+              <div>
+                <b>Svuota tutti gli Excel e lo Studio</b>
+                <span className="b2b-sub">
+                  Rimuove gli Excel di 6, 12 e 24 min, tutte le sessioni dello Studio e la mappa degli asset. Restano il codice, i titoli, i tag, la copertina e l’audio.
+                </span>
+              </div>
+              {!wipeArmed ? (
+                <button
+                  className="b2b-btn b2b-btn--danger"
+                  disabled={!hasAuthored}
+                  onClick={() => { setWipeArmed(true); setRemoveArmed(false); setDeleteArmed(false) }}
+                >
+                  {hasAuthored ? 'Svuota tutto…' : 'Niente da svuotare'}
+                </button>
+              ) : (
+                <div className="adm-wipe__acts">
+                  <span className="b2b-sub">{describeStored(published)} — non reversibile.</span>
+                  <button className="b2b-btn b2b-btn--danger" disabled={wiping} onClick={() => void wipeAuthoring()}>
+                    {wiping ? 'Svuoto\u2026' : 'S\u00ec, svuota'}
+                  </button>
+                  <button className="b2b-btn" disabled={wiping} onClick={() => setWipeArmed(false)}>Annulla</button>
+                </div>
+              )}
+            </div>
+
+            <div className="adm-wipe__row">
+              <div>
+                <b>Elimina il protocollo {protocolCode}</b>
+                <span className="b2b-sub">
+                  Rimuove il protocollo dal catalogo per tutte le aziende, con tutti i suoi Excel e le sessioni dello Studio. Non reversibile.
+                </span>
+              </div>
+              {!deleteArmed ? (
+                <button
+                  className="b2b-btn b2b-btn--danger"
+                  onClick={() => { setDeleteArmed(true); setRemoveArmed(false); setWipeArmed(false) }}
+                >
+                  Elimina protocollo…
+                </button>
+              ) : (
+                <div className="adm-wipe__acts">
+                  <button className="b2b-btn b2b-btn--danger" disabled={deleting} onClick={() => void deleteThisProtocol()}>
+                    {deleting ? 'Elimino\u2026' : `S\u00ec, elimina ${protocolCode}`}
+                  </button>
+                  <button className="b2b-btn" disabled={deleting} onClick={() => setDeleteArmed(false)}>Annulla</button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>}
     </div>
   )
 }

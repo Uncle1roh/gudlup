@@ -36,6 +36,31 @@ export function explainSaveFailure(msg: string): string {
 }
 
 /**
+ * Delete a protocol and CONFIRM it is gone.
+ *
+ * The catalog's ✕ used to issue the delete and refresh the list whatever
+ * happened. A delete that failed looked exactly like a delete that was never
+ * pressed: the row simply stayed. This throws with the reason instead, and
+ * re-reads the catalog so "deleted" is something that was checked.
+ */
+export async function deleteProtocolVerified(dp: DataProvider, code: string): Promise<void> {
+  try {
+    await dp.deleteProtocol(code)
+  } catch (e) {
+    throw new Error(explainSaveFailure((e as Error).message))
+  }
+  let still: CatalogProtocol | undefined
+  try {
+    still = (await dp.listProtocols()).find((p) => p.code === code)
+  } catch (e) {
+    throw new Error(`Eliminato, ma la rilettura del catalogo è fallita: ${(e as Error).message}`)
+  }
+  if (still) {
+    throw new Error(`${code} risulta ancora nel catalogo dopo l’eliminazione. ${explainSaveFailure('row-level security')}`)
+  }
+}
+
+/**
  * Write a protocol to the catalog and CONFIRM it is readable back.
  * Returns the stored protocol. Throws with an explanation when the write did
  * not persist, so the UI can never show a phantom "published".

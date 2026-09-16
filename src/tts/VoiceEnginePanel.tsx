@@ -314,7 +314,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
           : shared === 'forbidden'
             ? 'La chiave resta solo in questo browser: questo account non può scrivere nelle impostazioni condivise (serve ruolo admin).'
             : 'La chiave viene salvata nel database (visibile ai soli admin) e riappare da sola su ogni computer e su ogni deploy. Una copia locale resta in questo browser per lavorare offline.'}
-        {' '}Le chiavi impostate nell’ambiente di build restano come ripiego.
+        {' '}Viene usata solo la chiave inserita qui: non esiste una chiave di ripiego.
       </p>
     </div>
   )

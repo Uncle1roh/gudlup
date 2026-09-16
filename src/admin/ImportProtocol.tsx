@@ -165,6 +165,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
   if (plain && fileName) {
     return (
       <PlainImport
+        protocolCode={plain.code ?? ''}
         timeline={plain}
         fileName={fileName}
         actor={actor}
