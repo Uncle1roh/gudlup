@@ -87,9 +87,11 @@
 
   --su-fg:       #ecf2ef;
   --su-fg-2:     #c6d3cd;
-  --su-muted:    #8da29a;
-  --su-faint:    #5f7269;
-  --su-meta:     #a7b8b0;
+  /* secondary text, all at WCAG AA (4.5:1) or better on every dark ground:
+     muted 7.0:1, faint 5.1:1 — faint used to be 3.2:1 and read as absent */
+  --su-muted:    #9aada5;
+  --su-faint:    #809389;
+  --su-meta:     #b2c2bb;
 
   --su-accent:   #1fbf94;
   --su-accent-2: #a7e8d0;
@@ -186,9 +188,9 @@ body:has(.su-studio) { background: var(--su-void); }
   gap: 6px;
 }
 .su-studio .home__head .small.muted {
-  font-size: 10.5px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-faint);
 }
@@ -196,7 +198,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .home__head h1 {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.06;
   letter-spacing: -0.02em;
   color: var(--su-fg);
@@ -275,22 +277,22 @@ body:has(.su-studio) { background: var(--su-void); }
   background: rgba(7, 13, 12, 0.55);
   backdrop-filter: blur(8px);
   border: 1px solid var(--su-hair-2);
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--su-accent-2);
 }
 .su-studio .home__week {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(236, 242, 239, 0.62);
+  color: rgba(236, 242, 239, 0.78);
 }
 
 /* everything from the title down is the bottom stack of the canvas hero */
 .su-studio .home__pwname {
-  font-size: 27px;
+  font-size: 32px;
   line-height: 1.1;
   letter-spacing: -0.015em;
   max-width: 240px;
@@ -312,13 +314,13 @@ body:has(.su-studio) { background: var(--su-void); }
   gap: 3px;
 }
 .su-studio .home__today .small.muted {
-  font-size: 12.5px;
+  font-size: 16px;
   letter-spacing: 0.01em;
   text-transform: none;
   color: var(--su-meta);
 }
-.su-studio .home__today strong { font-size: 13.5px; font-weight: 600; color: var(--su-fg); }
-.su-studio .home__todaydone { color: var(--su-accent-2); font-size: 13.5px; }
+.su-studio .home__today strong { font-size: 16px; font-weight: 600; color: var(--su-fg); }
+.su-studio .home__todaydone { color: var(--su-accent-2); font-size: 16px; }
 .su-studio .home__pathway .small.muted { color: var(--su-meta); }
 
 .su-studio .home__week-progress { margin-top: 12px; }
@@ -335,7 +337,7 @@ body:has(.su-studio) { background: var(--su-void); }
   box-shadow: 0 12px 30px -10px var(--su-glow);
 }
 .su-studio .home__pathway .btn--primary:hover { background: var(--su-cream-2); }
-.su-studio .home__pathway .btn--quiet { color: rgba(236, 242, 239, 0.7); }
+.su-studio .home__pathway .btn--quiet { color: rgba(236, 242, 239, 0.78); }
 
 /* --------------------------------------------------------- section heads */
 
@@ -344,12 +346,12 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio h4 {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 17px;
+  font-size: 24px;
   color: var(--su-fg);
 }
 .su-studio .home__quick { margin-top: 26px; }
 .su-studio .home__quick .small.muted,
-.su-studio .cat-rail__head .small { color: var(--su-faint); font-size: 12px; }
+.su-studio .cat-rail__head .small { color: var(--su-faint); font-size: 16px; }
 
 /* ------------------------------------------------------------ the cards --
 
@@ -376,9 +378,9 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .mood-card:hover,
 .su-studio .teaser:hover,
 .su-studio .sess-card:hover { border-color: var(--su-hair-2); }
-.su-studio .mood-card__label { font-size: 13.5px; font-weight: 500; color: var(--su-fg); }
-.su-studio .teaser strong { font-size: 13.5px; font-weight: 500; color: var(--su-fg); }
-.su-studio .teaser .small.muted { font-size: 11.5px; color: var(--su-faint); }
+.su-studio .mood-card__label { font-size: 16px; font-weight: 500; color: var(--su-fg); }
+.su-studio .teaser strong { font-size: 16px; font-weight: 500; color: var(--su-fg); }
+.su-studio .teaser .small.muted { font-size: 16px; color: var(--su-faint); }
 
 /* the therapist note: a 3px emerald rule, not a coloured panel */
 .su-studio .rx-card,
@@ -460,7 +462,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .player__time,
 .su-studio .player .display {
   font-family: var(--display);
-  font-size: 46px;
+  font-size: 48px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -468,7 +470,7 @@ body:has(.su-studio) { background: var(--su-void); }
   font-variant-numeric: tabular-nums;
 }
 .su-studio .hud__sub {
-  font-size: 12.5px;
+  font-size: 16px;
   color: var(--su-muted);
   text-align: center;
 }
@@ -486,13 +488,13 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .post__support:hover { color: var(--su-fg-2); }
 .su-studio .player__sub,
-.su-studio .player .small { font-size: 12px; color: var(--su-muted); }
+.su-studio .player .small { font-size: 16px; color: var(--su-muted); }
 
 .su-studio .player__phase,
 .su-studio .hud__phase {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-accent-2);
 }
@@ -536,7 +538,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .cat-rail h2 {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 17px;
+  font-size: 24px;
   color: var(--su-fg);
 }
 .su-studio .cat-rail__arrows button {
@@ -565,19 +567,19 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .cat-card__title {
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.3;
   color: var(--su-fg);
 }
-.su-studio .cat-card__blurb { font-size: 11.5px; color: var(--su-faint); }
+.su-studio .cat-card__blurb { font-size: 16px; color: var(--su-faint); }
 .su-studio .cat-card__lengths span {
   background: rgba(7, 13, 12, 0.55);
   backdrop-filter: blur(6px);
   border: 1px solid var(--su-hair-2);
   color: #fff;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 600;
 }
 .su-studio .cat-card__soon {
@@ -585,7 +587,7 @@ body:has(.su-studio) { background: var(--su-void); }
   backdrop-filter: blur(6px);
   color: var(--su-cream);
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -609,21 +611,21 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .cat-hero__body { position: relative; z-index: 1; }
 .su-studio .cat-hero__eyebrow {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-accent-2);
 }
 .su-studio .cat-hero__title {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 27px;
+  font-size: 32px;
   line-height: 1.1;
   letter-spacing: -0.015em;
   color: #f4f8f6;
 }
-.su-studio .cat-hero__blurb { font-size: 12.5px; color: var(--su-meta); }
+.su-studio .cat-hero__blurb { font-size: 16px; color: var(--su-meta); }
 .su-studio .cat-hero .btn--light {
   background: var(--su-cream);
   color: var(--su-on-accent);
@@ -659,7 +661,7 @@ body:has(.su-studio) { background: var(--su-void); }
   border: 1px solid var(--su-hair);
   color: var(--su-muted);
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
 }
 .su-studio .chip[aria-pressed='true'],
@@ -672,7 +674,7 @@ body:has(.su-studio) { background: var(--su-void); }
   box-shadow: none;
 }
 .su-studio .chip__hint { color: var(--su-faint); }
-.su-studio .chip[aria-pressed='true'] .chip__hint { color: rgba(7, 13, 12, 0.66); }
+.su-studio .chip[aria-pressed='true'] .chip__hint { color: var(--su-on-accent); opacity: 0.8; }
 .su-studio .segmented { background: transparent; border: 0; padding: 0; gap: 7px; }
 
 /* ========================================================= 04 · PERCORSO ==
@@ -695,7 +697,7 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .metric span,
 .su-studio .statgrid span,
-.su-studio .msr-bars span { color: var(--su-faint); font-size: 11.5px; }
+.su-studio .msr-bars span { color: var(--su-faint); font-size: 16px; }
 .su-studio .goal-dot { background: var(--su-accent); }
 .su-studio .scorelist li { border-color: var(--su-hair); }
 
@@ -724,16 +726,16 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .tabbar__btn { color: var(--su-faint); gap: 5px; }
 .su-studio .tabbar__btn.is-on { color: var(--su-cream); }
 .su-studio .tabbar__icon { line-height: 1; }
-.su-studio .tabbar__label { font-size: 10px; font-weight: 600; letter-spacing: 0.03em; }
+.su-studio .tabbar__label { font-size: 16px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
 
-.su-studio .su-back { color: var(--su-muted); font-size: 13px; }
+.su-studio .su-back { color: var(--su-muted); font-size: 16px; }
 .su-studio .su-back:hover { color: var(--su-fg); }
-.su-studio .su-h1 { font-size: 30px; letter-spacing: -0.02em; color: var(--su-fg); }
-.su-studio .lead { color: var(--su-muted); font-size: 13.5px; }
+.su-studio .su-h1 { font-size: 32px; letter-spacing: -0.02em; color: var(--su-fg); }
+.su-studio .lead { color: var(--su-muted); font-size: 16px; }
 .su-studio .small.muted,
 .su-studio .muted { color: var(--su-faint); }
 .su-studio .eyebrow {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.16em;
   color: var(--su-accent-2);
@@ -743,14 +745,14 @@ body:has(.su-studio) { background: var(--su-void); }
   background: var(--su-well);
   border: 1px solid var(--su-hair-2);
   color: var(--su-accent-2);
-  font-size: 12px;
+  font-size: 16px;
 }
 .su-studio .badge {
   background: var(--su-well);
   border: 1px solid var(--su-hair);
   color: var(--su-muted);
   border-radius: 7px;
-  font-size: 10px;
+  font-size: 16px;
   letter-spacing: 0.14em;
 }
 .su-studio .badge--on {
@@ -794,9 +796,9 @@ body:has(.su-studio) { background: var(--su-void); }
   color: var(--su-fg);
 }
 .su-studio .sheet__label {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-faint);
 }
@@ -835,11 +837,11 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio.auth .auth__title {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 30px;
+  font-size: 32px;
   letter-spacing: -0.02em;
   color: var(--su-fg);
 }
-.su-studio.auth .auth__sub { color: var(--su-muted); font-size: 13.5px; }
+.su-studio.auth .auth__sub { color: var(--su-muted); font-size: 16px; }
 .su-studio.auth .auth__input {
   background: var(--su-well);
   border: 1px solid var(--su-hair);
@@ -1067,16 +1069,16 @@ body:has(.su-studio) { background: var(--su-void); }
   gap: 6px;
 }
 .su-studio .su-hello__date {
-  font-size: 10.5px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-faint);
 }
 .su-studio .su-hello__line {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.06;
   letter-spacing: -0.02em;
   color: var(--su-fg);
@@ -1146,13 +1148,13 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .msr-bar { gap: 12px; grid-template-columns: 92px minmax(0, 1fr) 46px; }
 .su-studio .msr-bar__track { height: 3px; border-radius: 2px; background: var(--su-fill); }
 .su-studio .msr-bar__track > span { background: var(--su-accent); }
-.su-studio .msr-bar__label { font-size: 12.5px; font-weight: 500; color: var(--su-fg-2); }
-.su-studio .msr-bar__val { font-size: 12.5px; font-weight: 600; color: var(--su-fg); font-variant-numeric: tabular-nums; }
+.su-studio .msr-bar__label { font-size: 16px; font-weight: 500; color: var(--su-fg-2); }
+.su-studio .msr-bar__val { font-size: 16px; font-weight: 600; color: var(--su-fg); font-variant-numeric: tabular-nums; }
 
 .su-studio .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--su-gap-sm); }
 .su-studio .metric { display: flex; flex-direction: column; gap: 3px; }
-.su-studio .metric__label { font-size: 11.5px; color: var(--su-faint); }
-.su-studio .metric__value { font-family: var(--display); font-weight: 500; font-size: 21px; color: var(--su-fg); font-variant-numeric: tabular-nums; }
+.su-studio .metric__label { font-size: 16px; color: var(--su-faint); }
+.su-studio .metric__value { font-family: var(--display); font-weight: 500; font-size: 24px; color: var(--su-fg); font-variant-numeric: tabular-nums; }
 .su-studio .chron__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .su-studio .weeks { margin: 0; border-top: 1px solid var(--su-hair); padding-top: var(--su-gap-sm); }
 .su-studio .segmented { margin: 0; }
@@ -1161,7 +1163,7 @@ body:has(.su-studio) { background: var(--su-void); }
   background: none;
   border: 0;
   padding: 8px 0 0;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--su-muted);
   cursor: pointer;
 }
@@ -1173,7 +1175,7 @@ body:has(.su-studio) { background: var(--su-void); }
   background: rgba(31, 191, 148, 0.12);
   border: 1px solid rgba(31, 191, 148, 0.34);
   color: var(--su-accent-2);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 /* ================================================ the merged library =====
@@ -1199,7 +1201,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .pw-continue__name {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 19px;
+  font-size: 24px;
   color: var(--su-fg);
 }
 .su-studio .pw-continue__bar {
@@ -1218,9 +1220,9 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .pw-continue__go {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-cream);
 }
@@ -1255,25 +1257,30 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .pw-big__name {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 17px;
+  font-size: 24px;
   line-height: 1.2;
   color: var(--su-fg);
   text-wrap: balance;
 }
 .su-studio .pw-big__meta {
-  font-size: 11.5px;
+  font-size: 16px;
   color: var(--su-faint);
   letter-spacing: 0.01em;
 }
 
 /* --- a length is the start ------------------------------------------------ */
-.su-studio .chip-row--start { gap: 10px; }
+.su-studio .chip-row--start { gap: 8px; flex-wrap: wrap; }
+/* At 24px a three-across row of fixed thirds broke "Standard" in the middle
+   of the word on a 360px phone. Each length is as wide as its name, and the
+   row wraps when the names do not fit. */
+.su-studio .chip-row--start .chip--start { flex: 1 1 auto; min-width: 0; }
+.su-studio .chip--start .chip__label { white-space: nowrap; }
 .su-studio .chip--start {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 13px 16px;
-  border-radius: 13px;
+  padding: 16px;
+  border-radius: 16px;
   /* It STARTS something, so it carries the weight of an action rather than
      the weight of a filter. Cream is reserved for one action per screen and
      this row is that action — all of it. */
@@ -1282,7 +1289,9 @@ body:has(.su-studio) { background: var(--su-void); }
   color: var(--su-on-accent);
 }
 .su-studio .chip--start .chip__label { font-weight: 700; color: var(--su-on-accent); }
-.su-studio .chip--start .chip__hint { color: rgba(7, 13, 12, 0.66); font-weight: 600; }
+.su-studio .chip--start .chip__hint { color: var(--su-on-accent); opacity: 0.8; font-weight: 600; }
+/* the demo hint read the deep emerald — mixed for paper — on the night well */
+.su-studio .auth__demo { color: var(--su-accent-2); }
 .su-studio .chip--start:hover { background: var(--su-cream-2); border-color: var(--su-cream-2); }
 
 /* --- consents on the registration form ----------------------------------- */
@@ -1296,7 +1305,7 @@ body:has(.su-studio) { background: var(--su-void); }
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--su-fg-2);
   cursor: pointer;
 }
@@ -1304,12 +1313,12 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio.auth .auth__consent b { display: block; font-weight: 600; color: var(--su-fg); }
 .su-studio.auth .auth__consent em {
   font-style: normal;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--su-accent-2);
 }
-.su-studio.auth .auth__consent small { display: block; color: var(--su-faint); font-size: 12px; margin-top: 2px; }
+.su-studio.auth .auth__consent small { display: block; color: var(--su-faint); font-size: 16px; margin-top: 2px; }
 
 /* The category list exists in the markup at every width; below the desktop
    breakpoint the chip rows are the interface and this is hidden. */
@@ -1338,7 +1347,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .mood-chip:hover { border-color: var(--su-hair-2); }
 .su-studio .mood-chip__icon { color: var(--su-accent-2); line-height: 0; }
 .su-studio .mood-chip__label {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.25;
   color: var(--su-fg);
@@ -1349,7 +1358,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .cat-rail__help {
   width: auto;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--su-accent-2);
 }
@@ -1363,7 +1372,7 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .finder .ob-qcount {
   font-family: var(--mono, ui-monospace), ui-monospace, monospace;
-  font-size: 11.5px;
+  font-size: 16px;
   color: var(--su-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -1377,9 +1386,9 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .finder .field-label,
 .su-studio .finder legend {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--su-faint);
   padding: 0;
@@ -1429,23 +1438,23 @@ body:has(.su-studio) { overflow: hidden; }
    under it — so the two read as one grey paragraph and the NAME, which is the
    only thing being chosen between, was the quietest thing on the card. */
 .su-studio .cat-card__title {
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.22;
   letter-spacing: -0.01em;
   color: var(--su-fg);
 }
-.su-studio .cat-card__blurb { font-size: 11.5px; color: var(--su-faint); }
+.su-studio .cat-card__blurb { font-size: 16px; color: var(--su-faint); }
 .su-studio .cat__railtitle {
   font-family: var(--display);
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--su-fg);
 }
-.su-studio .cat-hero__title { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
-.su-studio .pw-big__name { font-size: 18px; font-weight: 600; }
-.su-studio .mood-chip__label { font-size: 13.5px; font-weight: 600; }
+.su-studio .cat-hero__title { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.su-studio .pw-big__name { font-size: 24px; font-weight: 600; }
+.su-studio .mood-chip__label { font-size: 16px; font-weight: 600; }
 .su-studio .su-h1 { font-weight: 600; }
 
 /* --- help me choose, as a floating button --------------------------------
@@ -1470,7 +1479,7 @@ body:has(.su-studio) { overflow: hidden; }
   box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(7, 13, 12, 0.1) inset;
 }
 .su-studio .cat-rail__help:hover { background: var(--su-cream-2); color: var(--su-on-accent); }
-.su-studio .cat-rail__help span { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1; }
+.su-studio .cat-rail__help span { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1; }
 
 /* --- search -------------------------------------------------------------
 
@@ -1502,7 +1511,7 @@ body:has(.su-studio) { overflow: hidden; }
   outline: none;
   color: var(--su-fg);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
 }
 .su-studio .su-search input::placeholder { color: var(--su-faint); }
 /* the browser's own clear affordance, in the page's colours */
@@ -1618,7 +1627,7 @@ body:has(.su-studio) { overflow: hidden; }
     text-align: left;
     padding: 9px 11px;
     border-radius: 9px;
-    font-size: 13.5px;
+    font-size: 16px;
     font-weight: 500;
     color: var(--su-muted);
     background: transparent;
@@ -1647,7 +1656,7 @@ body:has(.su-studio) { overflow: hidden; }
     gap: 4px;
     height: auto;
     padding: 14px 32px;
-    background: rgba(10, 18, 17, 0.86);
+    background: color-mix(in srgb, var(--su-ground) 86%, transparent);
     backdrop-filter: blur(14px);
     border-top: 0;
     border-bottom: 1px solid var(--su-hair);
@@ -1677,7 +1686,7 @@ body:has(.su-studio) { overflow: hidden; }
     gap: 9px;
     padding: 9px 14px;
     border-radius: 10px;
-    font-size: 13.5px;
+    font-size: 16px;
     font-weight: 500;
     color: var(--su-muted);
   }
@@ -1687,13 +1696,13 @@ body:has(.su-studio) { overflow: hidden; }
     color: var(--su-cream);
     font-weight: 600;
   }
-  .su-studio .tabbar__icon { font-size: 20px; }
-  .su-studio .tabbar__label { font-size: 13.5px; font-weight: inherit; letter-spacing: 0; }
+  .su-studio .tabbar__icon { font-size: 24px; }
+  .su-studio .tabbar__label { font-size: 16px; font-weight: inherit; letter-spacing: 0; }
 
   /* ---- the content, given the room it now has ---- */
   .su-studio .su-greet,
   .su-studio .su-hello__line,
-  .su-studio .home__head h1 { font-size: 36px; }
+  .su-studio .home__head h1 { font-size: 40px; }
 
   /* the hero stops being a full-width block and takes two thirds, with the
      quick-session grid beside it rather than under it */
@@ -1787,9 +1796,10 @@ html[data-su-theme='light'] .su-studio {
 
   --su-fg:       #11241e;
   --su-fg-2:     #2a413a;
-  --su-muted:    #5d746b;
-  --su-faint:    #8b9d94;
-  --su-meta:     #4e665e;
+  /* AA on paper, white and the well: muted 5.7:1, faint 4.6:1 (was 2.5:1) */
+  --su-muted:    #4a6158;
+  --su-faint:    #5a6f67;
+  --su-meta:     #3f564e;
 
   --su-accent:   #007a5e;   /* the brand emerald, on the paper it was mixed for */
   --su-accent-2: #0f6b52;   /* deeper, where the night palette went lighter */
@@ -1842,6 +1852,14 @@ html[data-su-theme='light'] .su-studio .teaser { border-color: var(--su-hair); }
 /* A cover is artwork with white type set on it, so it keeps its own night. */
 html[data-su-theme='light'] .su-studio .cat-card__cover,
 html[data-su-theme='light'] .su-studio .cat-hero { color: #f4f8f6; }
+/* …and so do the words on it that read a token: the daylight accent and meta
+   are dark greens mixed for paper, and on the picture they disappeared. The
+   buttons keep the daylight action colour — they are filled, not type. */
+html[data-su-theme='light'] .su-studio .cat-hero {
+  --su-accent-2: #a7e8d0;
+  --su-meta:     #d3ddd8;
+}
+html[data-su-theme='light'] .su-studio .cat-card__soon { color: #f2eec4; }
 
 /* ---- the screens that are night whatever the setting -------------------
 
@@ -1861,9 +1879,11 @@ html[data-su-theme='light'] .su-studio.su-dark {
 
   --su-fg:       #ecf2ef;
   --su-fg-2:     #c6d3cd;
-  --su-muted:    #8da29a;
-  --su-faint:    #5f7269;
-  --su-meta:     #a7b8b0;
+  /* secondary text, all at WCAG AA (4.5:1) or better on every dark ground:
+     muted 7.0:1, faint 5.1:1 — faint used to be 3.2:1 and read as absent */
+  --su-muted:    #9aada5;
+  --su-faint:    #809389;
+  --su-meta:     #b2c2bb;
 
   --su-accent:   #1fbf94;
   --su-accent-2: #a7e8d0;
