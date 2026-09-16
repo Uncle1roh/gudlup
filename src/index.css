@@ -2418,3 +2418,20 @@ td, th { overflow-wrap: anywhere; }
 
 .adm-reflist { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .adm-reflist li { font-size: 13px; color: var(--slate); overflow-wrap: anywhere; }
+
+/* ---- a paid request just went to ElevenLabs (components/ElevenLabsNotice) ---- */
+.el-notice {
+  position: fixed; right: 16px; bottom: 16px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.el-notice__item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 14px; border-radius: 10px;
+  background: #3b2a06; border: 1px solid #b7862a; color: #fff4dc;
+  font-family: var(--sans, system-ui, sans-serif); font-size: 13px; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: el-notice 200ms ease both;
+}
+.el-notice__item strong { font-size: 14px; color: #ffd98a; }
+@keyframes el-notice { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

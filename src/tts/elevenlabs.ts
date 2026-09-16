@@ -26,6 +26,7 @@
 
 import type { TtsJoinedRender, TtsOptions, TtsProvider, TtsSpan } from './types'
 import { ttsLanguage } from './settings'
+import { announceElevenLabsRequest } from './requestNotice'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
 
@@ -267,6 +268,7 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     if (c.stitching && prev) body.previous_text = prev
     if (c.stitching && next) body.next_text = next
 
+    announceElevenLabsRequest(shaped.length)
     const res = await fetch(`${ENDPOINT}/${voice}`, {
       method: 'POST',
       headers: {
@@ -314,6 +316,7 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     if (c.stitching && prev) body.previous_text = prev
     if (c.stitching && next) body.next_text = next
 
+    announceElevenLabsRequest(combined.length, shaped.length)
     const res = await fetch(`${ENDPOINT}/${voice}/with-timestamps`, {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },

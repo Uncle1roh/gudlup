@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { ElevenLabsNotice } from './components/ElevenLabsNotice'
 import './index.css'
 import './selfuse.css'
 // the dark "Studio" restyle of the Self Use surface — must follow selfuse.css
@@ -25,5 +26,6 @@ window.addEventListener('vite:preloadError', (event) => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <ElevenLabsNotice />
   </StrictMode>,
 )
