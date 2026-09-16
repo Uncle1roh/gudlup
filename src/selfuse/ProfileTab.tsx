@@ -23,6 +23,7 @@ import { DURATIONS, INTAKE_TIMES, durationLabel } from '../data/selfuse'
 import type { SelfUseState } from '../data/selfUseStore'
 import type { Duration } from '../types/domain'
 import type { Convention } from '../data/convention'
+import { useBackLayer } from './backStack'
 
 interface ProfileProps {
   name: string
@@ -41,6 +42,9 @@ type Page = 'menu' | 'account' | 'notifications' | 'prefs' | 'privacy' | 'tutori
 export function ProfileTab(props: ProfileProps) {
   const { t } = useI18n()
   const [page, setPage] = useState<Page>('menu')
+  /* Deleting the account is reached from Privacy, so that is where its back
+     goes; every other page goes back to the menu. */
+  useBackLayer(page !== 'menu', () => setPage(page === 'delete' ? 'privacy' : 'menu'))
 
   if (page !== 'menu') {
     const back = () => setPage('menu')

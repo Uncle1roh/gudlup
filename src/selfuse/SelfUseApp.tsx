@@ -40,6 +40,7 @@ import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from './theme'
+import { useBackLayer } from './backStack'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -97,6 +98,21 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
   const [safety2, setSafety2] = useState(false)
+
+  /* The browser's back, one layer at a time (see backStack.ts). Registered in
+     the order they can open, so the most recent is the one a press reaches.
+
+     A tab other than Home goes back to Home, the way a phone's tab bar does:
+     tabs are siblings, not a stack, so Profile → Progress → back is Home, not
+     Profile. A sheet on top of a tab closes. A videocall is the exception — it
+     has its own Leave, and a stray back gesture must not hang up on a
+     therapist, so while a call is up the back is caught and does nothing. */
+  useBackLayer(tab !== 'home', () => setTab('home'))
+  useBackLayer(overlay.kind !== 'none', () => {
+    if (overlay.kind === 'call') return
+    setOverlay({ kind: 'none' })
+  })
+  useBackLayer(safety2, () => setSafety2(false))
 
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
   const eap = convention?.eap ?? null

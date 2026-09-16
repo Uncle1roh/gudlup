@@ -841,11 +841,118 @@
 
 /* -------------------------------------------------------------- detail --- */
 
-.sess-detail__cover {
-  display: grid; place-items: center;
-  width: 100%; height: 150px; margin: 0 0 14px;
-  border-radius: var(--r-md); font-size: 62px;
+/* The protocol screen is its cover, full height, with the words and the
+   lengths set on it. The type is WHITE whatever the theme: it sits on a
+   photograph, not on the app's ground, the same way a cover card's does. */
+.sess-full {
+  position: relative;
+  isolation: isolate;
+  flex: 1 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: max(16px, env(safe-area-inset-top)) var(--su-inset, 20px) 26px;
+  background-size: cover;
+  background-position: center;
+  color: #f4f8f6;
 }
+/* Dark where there is type — a band under the back button, and the lower
+   half under the words — and the image itself in between. */
+.sess-full__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 10, 9, 0.55) 0%,
+    rgba(4, 10, 9, 0) 22%,
+    rgba(4, 10, 9, 0.1) 42%,
+    rgba(4, 10, 9, 0.72) 68%,
+    rgba(4, 10, 9, 0.9) 100%
+  );
+}
+.sess-full__top { display: flex; }
+.sess-full__back {
+  padding: 8px 14px 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(4, 10, 9, 0.38);
+  backdrop-filter: blur(8px);
+  color: #f4f8f6;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sess-full__back:hover { background: rgba(4, 10, 9, 0.55); }
+
+.sess-full__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 620px;
+}
+.sess-full__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244, 248, 246, 0.78);
+}
+.sess-full__title {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+.sess-full__about {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(244, 248, 246, 0.9);
+}
+.sess-full__expect {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sess-full__expect li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: rgba(244, 248, 246, 0.86);
+}
+.sess-full__expect li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+.sess-full__note { margin: 0; font-size: 12.5px; color: rgba(244, 248, 246, 0.7); }
+.sess-full__label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(244, 248, 246, 0.8);
+}
+.sess-full__lengths { margin: 0; flex-wrap: wrap; }
 
 @media (prefers-reduced-motion: reduce) {
   .cat-rail__track { scroll-behavior: auto; }

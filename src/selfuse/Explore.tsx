@@ -28,6 +28,7 @@ import {
   type ResolvedSession,
 } from '../data/liveCatalog'
 import { currentWeek, type PathwayState, type Launch } from '../data/selfUseStore'
+import { useBackLayer } from './backStack'
 
 interface ExploreProps {
   /** First name, when the account gives one. Null says hello without it. */
@@ -52,6 +53,8 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
   const { t } = useI18n()
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'list' })
+  /* Every view here has the same ‹ Back: it returns to the library. */
+  useBackLayer(view.kind !== 'list', () => setView({ kind: 'list' }))
 
   /* The catalog's hero leads with what the person is already doing, so the
      library opens on something relevant rather than on whatever sorts first. */
@@ -447,45 +450,59 @@ function SessionDetail({
 
   const cover = coverFor(session.slug, session.theme, session.coverUrl)
 
+  /* The picture IS the screen.
+     It used to be a 150px strip above a page of text, which spent the one
+     image a session has on the least of its space and made the screen read
+     like a form. Now the cover fills the view and everything a person needs
+     to decide sits on it: back at the top, the name, what it is, what to
+     expect, and the lengths that start it at the foot — where a thumb is.
+
+     A scrim darkens the picture only where there is type on it, so a pale
+     photograph still carries white text, and the middle stays the image. It
+     grows rather than clips: on a short phone the words push the screen
+     longer and the picture scrolls with them. */
   return (
-    <div className="su-page sess-detail">
-      <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
-      <div className="sess-detail__cover" style={coverStyle(cover)} />
-      <h1 className="display su-h1">{t(session.name)}</h1>
-      <p className="lead">{t(session.about)}</p>
-      {!session.audioReady && (
-        <p className="small muted">
-          {t('No recorded voice is published for this session yet — it plays an ambient bed.')}
-        </p>
-      )}
-      {/* The length IS the start. Choosing one and then pressing a second
-          button to confirm it added a step to the only decision left on this
-          screen — and the person had already decided by tapping. */}
-      <div className="sheet__label">{t('Choose a length to begin')}</div>
-      <div className="chip-row chip-row--start">
-        {session.durations.map((d) => (
-          <button
-            key={d}
-            className="chip chip--start"
-            onClick={() => onStart({ slug: session.slug, duration: d })}
-          >
-            <span className="chip__label">{t(durationLabel(d))}</span>
-            <span className="chip__hint">{t('{n} min', { n: d })}</span>
-          </button>
-        ))}
+    <div className="sess-full" style={coverStyle(cover)}>
+      <div className="sess-full__scrim" aria-hidden="true" />
+
+      <div className="sess-full__top">
+        <button className="sess-full__back" onClick={onBack}>‹ {t('Back')}</button>
       </div>
 
-      {pathway && <p className="small muted">{t('Part of pathway:')} {t(pathway.name)}</p>}
+      <div className="sess-full__body">
+        {pathway && <p className="sess-full__eyebrow">{t('Part of pathway:')} {t(pathway.name)}</p>}
+        <h1 className="display sess-full__title">{t(session.name)}</h1>
+        <p className="sess-full__about">{t(session.about)}</p>
 
-      {session.expect.length > 0 && (
-        <>
-          <h3 className="home__sect">{t('What to expect')}</h3>
-          <ul className="expect">
+        {session.expect.length > 0 && (
+          <ul className="sess-full__expect" aria-label={t('What to expect')}>
             {session.expect.map((e) => <li key={e}>{t(e)}</li>)}
           </ul>
-        </>
-      )}
+        )}
 
+        {!session.audioReady && (
+          <p className="sess-full__note">
+            {t('No recorded voice is published for this session yet — it plays an ambient bed.')}
+          </p>
+        )}
+
+        {/* The length IS the start. Choosing one and then pressing a second
+            button to confirm it added a step to the only decision left on this
+            screen — and the person had already decided by tapping. */}
+        <div className="sess-full__label">{t('Choose a length to begin')}</div>
+        <div className="chip-row chip-row--start sess-full__lengths">
+          {session.durations.map((d) => (
+            <button
+              key={d}
+              className="chip chip--start"
+              onClick={() => onStart({ slug: session.slug, duration: d })}
+            >
+              <span className="chip__label">{t(durationLabel(d))}</span>
+              <span className="chip__hint">{t('{n} min', { n: d })}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

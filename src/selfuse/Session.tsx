@@ -29,6 +29,7 @@ import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
 import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
 import { Icon } from './icons'
+import { useBackLayer } from './backStack'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -115,6 +116,13 @@ const SESSION_FRAME = 'app-frame su-studio su-dark'
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
   const [stage, setStage] = useState<Stage>('pre')
+  /* Before the audio starts, back is the screen's own back: leave the session.
+     While it plays, the player catches it (below). Afterwards there is nothing
+     to go back TO — the session happened — so the press is caught and the
+     screen stays where the person can still answer how it went. */
+  useBackLayer(true, () => {
+    if (stage === 'pre' || stage === 'stereo') onCancel()
+  })
   const startedAt = useRef(Date.now())
   const completed = useRef(true)
   const vasPre = useRef<number | null>(null)
@@ -348,11 +356,22 @@ function ImmersiveSession({
   const [audioFailed, setAudioFailed] = useState<string | null>(null)
 
   const [started, setStarted] = useState(false)
+  const startedRef = useRef(false)
+  startedRef.current = started
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [volume, setVolume] = useState(0.55)
   const [controls, setControls] = useState(true)
   const [confirmExit, setConfirmExit] = useState(false)
+  /* The ✕ asks before it ends a session, so the back gesture asks too — and a
+     second back, on that question, is "keep listening", the way back dismisses
+     any dialog. A swipe must never end a session outright. */
+  useBackLayer(true, () => {
+    /* Nothing has started yet (the "Begin" screen, or a session that cannot
+       play): there is nothing to interrupt, so back is that screen's Back. */
+    if (!startedRef.current) { onEnd(false); return }
+    setConfirmExit((open) => !open)
+  })
 
   const playerRef = useRef<SessionPlayer | null>(null)
   const tickRef = useRef<number | null>(null)

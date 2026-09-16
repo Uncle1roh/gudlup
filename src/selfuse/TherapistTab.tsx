@@ -54,6 +54,7 @@ import {
 import { INSTRUMENTS } from '../data/assessments'
 import { threadFor, unreadFor, MAX_LENGTH } from '../data/messageStore'
 import { useThreads } from '../data/threads'
+import { useBackLayer } from './backStack'
 
 interface TherapistTabProps {
   hasConvention: boolean
@@ -80,6 +81,14 @@ export function TherapistTab(props: TherapistTabProps) {
   const dp = useDataProvider()
   const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'root' })
+  /* The same answers the on-screen ‹ Back gives on each view: a profile goes
+     back to the list it was opened from, an onboarding step to the step before
+     it, the first step to the code that started it. */
+  useBackLayer(view.kind !== 'root', () => {
+    if (view.kind === 'profile') setView({ kind: 'list' })
+    else if (view.kind === 'onb') setView(view.step === 1 ? { kind: 'code' } : { kind: 'onb', step: (view.step - 1) as 1 | 2, therapist: view.therapist })
+    else setView({ kind: 'root' })
+  })
   const { therapy, update } = props
   const [plan, setPlan] = useState<Plan | null>(null)
   useEffect(() => {
