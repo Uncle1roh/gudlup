@@ -1062,6 +1062,14 @@ export const PT: Record<string, string> = {
   'Normal': 'Normal',
   'Overwhelmed by tasks': 'Soterrado de tarefas',
   'Press play and listen': 'Aperte play e escute',
+  'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
+    'O Good Loop é uma biblioteca de sessões curtas de áudio guiado para o seu bem-estar. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Seis, doze ou vinte e quatro minutos, o que couber no seu dia.',
+  'Your therapist, inside the app': 'Seu terapeuta, dentro do app',
+  'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'Se você faz acompanhamento com um terapeuta, é aqui que vocês se encontram: as sessões que ele indica aparecem em Terapeuta, e as videochamadas de vocês acontecem ali também. O Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
+  'The science behind the listening': 'A ciência por trás da escuta',
+  'Phases, frequencies and voice are built on research in psychology and the neuroscience of sound, and tuned session by session by Giampiero. Nothing you hear is there by accident.':
+    'Fases, frequências e voz são construídas sobre pesquisa em psicologia e neurociência do som, e ajustadas sessão por sessão por Giampiero. Nada do que você ouve está ali por acaso.',
   'Recovering my energy': 'Recuperar minha energia',
   'Six, twelve or twenty-four minutes': 'Seis, doze ou vinte e quatro minutos',
   'So-so': 'Mais ou menos',

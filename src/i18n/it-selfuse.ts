@@ -511,14 +511,14 @@ export const IT_SELF_USE: Record<string, string> = {
   'Start listening': 'Inizia ad ascoltare',
   'Step {n} of {total}': 'Passo {n} di {total}',
   'Press play and listen': 'Premi play e ascolta',
-  'Good Loop is a library of short guided audio sessions. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Nothing to read, nothing to answer.':
-    'Good Loop è una libreria di brevi sessioni audio guidate. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Niente da leggere, niente a cui rispondere.',
-  'Six, twelve or twenty-four minutes': 'Sei, dodici o ventiquattro minuti',
-  'Every session is built in phases: it settles you, it does its work, and it brings you back. Pick the length that fits the day you are having — the short one is a whole session, not a taste of one.':
-    'Ogni sessione è costruita in fasi: ti fa posare, lavora e ti riporta indietro. Scegli la durata che sta nella giornata che hai — quella breve è una sessione intera, non un assaggio.',
-  'A little, often': 'Poco, spesso',
-  'A few minutes on most days does more than one long session now and then. You can note how you feel before and after and watch it move. Good Loop supports your wellbeing — it is not medical or psychological care and does not replace it.':
-    'Pochi minuti quasi ogni giorno fanno più di una sessione lunga ogni tanto. Puoi annotare come stai prima e dopo e vedere come cambia. Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce.',
+  'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
+    'Good Loop è una libreria di brevi sessioni audio guidate per il tuo benessere. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Sei, dodici o ventiquattro minuti, quanto sta nella giornata che hai.',
+  'Your therapist, inside the app': 'Il tuo terapeuta, dentro l’app',
+  'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'Se stai lavorando con un terapeuta, qui vi incontrate: le sessioni che ti assegna compaiono in Terapeuta, e lì avvengono anche le vostre videochiamate. Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
+  'The science behind the listening': 'La scienza dietro l’ascolto',
+  'Phases, frequencies and voice are built on research in psychology and the neuroscience of sound, and tuned session by session by Giampiero. Nothing you hear is there by accident.':
+    'Fasi, frequenze e voce sono costruite su ricerca in psicologia e neuroscienze del suono, e messe a punto sessione per sessione da Giampiero. Niente di ciò che senti è lì per caso.',
 
   /* ---- profile ---- */
   'Account Settings': 'Impostazioni dell’account',

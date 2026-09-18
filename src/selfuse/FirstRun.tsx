@@ -18,12 +18,12 @@
      tool; the third card says in plain language that it does not replace
      medical or psychological care, because the first run is the honest place
      to say so.
-   · The pictures are drawn here, in SVG, on the palette's own tokens. No
-     files to ship, nothing to load, nothing to go missing behind a slow
-     network on the one screen a person sees before anything else.
+   · The pictures are illustrations shipped in `public/tutorial`, one per
+     card. They are `alt=""` and `aria-hidden`: the words carry the meaning,
+     so a picture that has not loaded costs a person nothing.
    ============================================================================ */
 
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from './theme'
@@ -31,92 +31,52 @@ import { useSuTheme } from './theme'
 interface Step {
   title: string
   body: string
-  art: ReactNode
+  /** Key into ART below. */
+  art: 'listen' | 'therapist' | 'method'
 }
 
 /* ------------------------------------------------------------- the art ----
 
-   Three pictures on the same 160 grid, in the same two colours the rest of
-   the surface uses: emerald carries the subject, cream marks the one thing
-   the eye should land on. Decorative — every one is `aria-hidden`, and the
-   text beside it says everything they say. */
+   One illustration per card, from `public/tutorial`. They replace three
+   drawn-in-SVG diagrams: the diagrams said what a session IS, and these say
+   what the app is FOR — someone listening, a consultation, the work behind
+   the protocols. Decorative: every one is `aria-hidden` and the words beside
+   it carry the meaning. */
 
-/** Sound arriving at a pair of headphones: what a session physically is. */
-function ArtListen() {
-  return (
-    <svg className="fr-art" viewBox="0 0 160 160" fill="none" aria-hidden="true">
-      <circle className="fr-art__wash" cx="80" cy="84" r="54" />
-      <circle className="fr-art__ring" cx="80" cy="84" r="42" />
-      <circle className="fr-art__ring fr-art__ring--soft" cx="80" cy="84" r="52" />
-      <circle className="fr-art__core" cx="80" cy="84" r="17" />
-      <path className="fr-art__stroke" d="M40 84v-6a40 40 0 0 1 80 0v6" />
-      <rect className="fr-art__solid" x="30" y="80" width="18" height="34" rx="9" />
-      <rect className="fr-art__solid" x="112" y="80" width="18" height="34" rx="9" />
-    </svg>
-  )
-}
-
-/** Three lengths of the same session, as three rings filled a quarter, a half
-    and the whole way round. No numerals to translate. */
-function ArtLengths() {
-  return (
-    <svg className="fr-art" viewBox="0 0 160 160" fill="none" aria-hidden="true">
-      <circle className="fr-art__wash" cx="80" cy="80" r="56" />
-      <g transform="rotate(-90 80 80)">
-        <circle className="fr-art__track" cx="80" cy="80" r="26" />
-        <circle className="fr-art__track" cx="80" cy="80" r="40" />
-        <circle className="fr-art__track" cx="80" cy="80" r="54" />
-        <circle className="fr-art__arc" cx="80" cy="80" r="26" pathLength={100} strokeDasharray="25 100" />
-        <circle className="fr-art__arc" cx="80" cy="80" r="40" pathLength={100} strokeDasharray="50 100" />
-        <circle className="fr-art__arc fr-art__arc--full" cx="80" cy="80" r="54" pathLength={100} strokeDasharray="96 100" />
-      </g>
-      <circle className="fr-art__core" cx="80" cy="80" r="9" />
-    </svg>
-  )
-}
-
-/** A little, often: short days stacking up, and the line they make. */
-function ArtOften() {
-  return (
-    <svg className="fr-art" viewBox="0 0 160 160" fill="none" aria-hidden="true">
-      <circle className="fr-art__wash" cx="80" cy="80" r="54" />
-      <path className="fr-art__line" d="M28 96c14-2 20-10 30-14s16 4 26-6 16-18 26-24" />
-      <g className="fr-art__bars">
-        <rect x="24" y="104" width="13" height="24" rx="6.5" />
-        <rect x="46" y="96" width="13" height="32" rx="6.5" />
-        <rect x="68" y="100" width="13" height="28" rx="6.5" />
-        <rect x="90" y="84" width="13" height="44" rx="6.5" />
-        <rect x="112" y="72" width="13" height="56" rx="6.5" />
-      </g>
-      <rect className="fr-art__key" x="134" y="56" width="13" height="72" rx="6.5" />
-    </svg>
-  )
+const ART: Record<string, { src: string; wide?: boolean }> = {
+  listen:    { src: '/tutorial/t1.svg' },
+  therapist: { src: '/tutorial/t2.svg', wide: true },
+  method:    { src: '/tutorial/t3.svg' },
 }
 
 /* ------------------------------------------------------------ the words ---
 
-   English is the key, Italian is in `it-selfuse.ts`. Kept to a title and one
-   short paragraph each: a first run that needs scrolling is a first run
-   people skip. */
+   English is the key, Italian is in `it-selfuse.ts`, Portuguese in `pt.ts`.
+   A title and one short paragraph each: a first run that needs scrolling is a
+   first run people skip.
+
+   Card 2 carries the line that Good Loop is not care and does not replace it.
+   It belongs beside the mention of a therapist — that is where a person is
+   deciding what this app is to them. */
 
 const STEPS: Step[] = [
   {
     title: 'Press play and listen',
     body:
-      'Good Loop is a library of short guided audio sessions. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Nothing to read, nothing to answer.',
-    art: <ArtListen />,
+      'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.',
+    art: 'listen',
   },
   {
-    title: 'Six, twelve or twenty-four minutes',
+    title: 'Your therapist, inside the app',
     body:
-      'Every session is built in phases: it settles you, it does its work, and it brings you back. Pick the length that fits the day you are having — the short one is a whole session, not a taste of one.',
-    art: <ArtLengths />,
+      'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.',
+    art: 'therapist',
   },
   {
-    title: 'A little, often',
+    title: 'The science behind the listening',
     body:
-      'A few minutes on most days does more than one long session now and then. You can note how you feel before and after and watch it move. Good Loop supports your wellbeing — it is not medical or psychological care and does not replace it.',
-    art: <ArtOften />,
+      'Phases, frequencies and voice are built on research in psychology and the neuroscience of sound, and tuned session by session by Giampiero. Nothing you hear is there by accident.',
+    art: 'method',
   },
 ]
 
@@ -138,7 +98,9 @@ export function FirstRun({ onDone }: { onDone: () => void }) {
         </div>
 
         {/* keyed on the step so the card fades in again on each move */}
-        <figure className="fr__art" key={`art-${i}`}>{step.art}</figure>
+        <figure className={`fr__art${ART[step.art].wide ? ' fr__art--wide' : ''}`} key={`art-${i}`}>
+          <img className="fr-art" src={ART[step.art].src} alt="" aria-hidden="true" />
+        </figure>
 
         <div className="fr__words" key={`words-${i}`}>
           <h1 className="display fr__title">{t(step.title)}</h1>
