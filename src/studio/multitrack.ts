@@ -408,6 +408,25 @@ function equalPowerCurves(): { up: Float32Array<ArrayBuffer>; down: Float32Array
  * in the import notes, so it gets fixed by adding a song rather than by
  * silence appearing in a session.
  */
+/**
+ * How much of a sample clip's window the drawn material can actually fill.
+ *
+ * A texture loops, so it fills whatever it is given. A PLAYLIST cycles, so it
+ * fills too. But ONE song that must not loop covers its own length and no more
+ * — deliberately: repeating a single song under a long window is the bug this
+ * rule exists to prevent (see `buildSampleLayer`).
+ *
+ * The clip is then rendered to THIS length rather than to the window, which is
+ * what puts the Excel's `fade_out_s` on the last seconds of music instead of on
+ * the silence after it. A 24-minute window over a 6-minute song used to fade
+ * out silence, so the music simply stopped.
+ */
+export function sampleCoveredSec(sources: { duration: number }[], windowSec: number, loop: boolean): number {
+  if (!sources.length) return windowSec
+  if (loop || sources.length > 1) return windowSec
+  return Math.min(windowSec, sources[0].duration)
+}
+
 function buildSampleLayer(
   ctx: OfflineAudioContext,
   sources: AudioBuffer[],
@@ -457,8 +476,8 @@ function buildSampleLayer(
 
 /** Render one clip to a stereo buffer (with short edge fades to avoid clicks). */
 export async function renderClipBuffer(type: TrackType, params: ClipParams, durationSec: number): Promise<AudioBuffer> {
-  const dur = Math.max(0.1, durationSec)
-  const frames = Math.max(1, Math.ceil(SAMPLE_RATE * dur))
+  let dur = Math.max(0.1, durationSec)
+  let frames = Math.max(1, Math.ceil(SAMPLE_RATE * dur))
   // real-file clip: fetch/decode EVERY playlist entry before opening the graph
   let sampleSources: AudioBuffer[] = []
   let sampleLoop = true
@@ -468,6 +487,11 @@ export async function renderClipBuffer(type: TrackType, params: ClipParams, dura
     if (!slots.length) return new OfflineAudioContext(2, frames, SAMPLE_RATE).startRendering() // silent clip
     sampleLoop = sampleLoops(p)
     sampleSources = await Promise.all(slots.map((s) => fetchSampleBuffer(s.url)))
+    /* The buffer is as long as the material, never longer. Everything after
+       this point — the clip envelope here, and the clip's own fade_in/fade_out
+       baked by `shapeClipBuffer` — then lands on audio that exists. */
+    dur = Math.max(0.1, sampleCoveredSec(sampleSources, dur, sampleLoop))
+    frames = Math.max(1, Math.ceil(SAMPLE_RATE * dur))
   }
   // the bilateral pulse is a PO file too — same rule, decode it up front
   let bilateralHit: AudioBuffer | null = null

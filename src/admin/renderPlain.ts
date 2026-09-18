@@ -188,6 +188,10 @@ export async function renderPlainWav(
           let buf = await renderClipBuffer(t.type, c.params, dur)
           buf = shapeClipBuffer(buf, c)
           buffer = buf
+          /* A music window longer than the song it drew renders shorter than
+             the window (see `sampleCoveredSec`). Schedule what exists, so the
+             mix agrees with the clip instead of holding silence open. */
+          dur = Math.min(dur, buf.duration)
         }
         if (buffer && harmonizer) {
           buffer = await harmonizeBuffer(buffer, harmonizer.params)

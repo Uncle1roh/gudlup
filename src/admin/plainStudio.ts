@@ -329,7 +329,14 @@ export function plainToStudioTracks(
             label = `${drawn.assets.map((a) => a.name).join(' → ')} · F${c.faseFrom} pool`
             notes.push(`${c.clipId} (${c.traccia}): ${drawn.assets.length === 1 ? 'drew' : 'playlist'} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.`)
             if (drawn.short) {
-              notes.push(`${c.clipId} (${c.traccia}): ATTENZIONE — i brani disponibili coprono solo ~${Math.round(drawn.estimatedSec)}s dei ${Math.round(clipDur)}s della clip; la sequenza si ripeterà. Aggiungi brani al pool F${c.faseFrom} o accorcia la finestra.`)
+              /* What actually happens depends on how many songs were drawn: a
+                 playlist cycles, a single song does not (it would loop audibly).
+                 The note used to promise a repeat in both cases, which is why a
+                 24-minute window over one song read as "the fade-out is gone" —
+                 the music ended, with its fade, long before the window did. */
+              notes.push(drawn.assets.length === 1
+                ? `${c.clipId} (${c.traccia}): ATTENZIONE — "${drawn.assets[0].name}" dura ~${Math.round(drawn.estimatedSec)}s ma la finestra è di ${Math.round(clipDur)}s: il brano finisce (con la sua dissolvenza) e il resto della finestra resta in silenzio. Aggiungi brani al pool F${c.faseFrom} — con due o più la sequenza si concatena — oppure accorcia la finestra.`
+                : `${c.clipId} (${c.traccia}): ATTENZIONE — i brani disponibili coprono solo ~${Math.round(drawn.estimatedSec)}s dei ${Math.round(clipDur)}s della clip; la sequenza si ripeterà. Aggiungi brani al pool F${c.faseFrom} o accorcia la finestra.`)
             }
           } else {
             label = `F${c.faseFrom ?? '?'} — nessun brano nel pool`
