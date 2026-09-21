@@ -166,7 +166,6 @@ function NotificationSettings({ state, update, hasTherapist }: ProfileProps) {
       {hasTherapist && (
         <>
           <Toggle label={t('Therapist session reminders')} on={n.therapistSessions} onToggle={() => set({ therapistSessions: !n.therapistSessions })} />
-          <Toggle label={t('Therapist messages')} on={n.therapistMessages} onToggle={() => set({ therapistMessages: !n.therapistMessages })} />
           <Toggle label={t('Prescription reminders')} on={n.prescriptions} onToggle={() => set({ prescriptions: !n.prescriptions })} />
         </>
       )}

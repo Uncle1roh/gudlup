@@ -800,7 +800,6 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .flag { font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
 .flag--due { background: #fdf0dd; color: #a96518; }
 .flag--warn { background: #fbeaea; color: #b23b3b; }
-.flag--msg { background: #e6f0fb; color: #2465AB; }
 .roster__chev { font-size: 22px; color: var(--slate); text-align: right; }
 .trend { font-weight: 800; font-size: 16px; }
 .trend-up { color: #1f9d6b; } .trend-down { color: #b23b3b; } .trend-flat { color: var(--slate); }
@@ -834,7 +833,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .score__fill { width: 100%; background: var(--aura); border-radius: 5px; }
 .score__t { font-size: 10px; color: var(--slate); } .score__v { font-size: 11px; font-weight: 700; }
 
-.goals, .chron, .instruments, .msgs { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.goals, .chron, .instruments { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .goal { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
 .goal__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .goal__dot--achieved { background: #1f9d6b; } .goal__dot--in-progress { background: #E89D64; } .goal__dot--review { background: var(--slate); }
@@ -844,8 +843,6 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .chron__item strong { display: block; font-size: 14px; } .chron__item .b2b-sub { display: block; }
 .chron__delta { font-weight: 800; color: var(--aura-deep); }
 .notes { font-size: 13.5px; line-height: 1.5; background: var(--mist); border-radius: 10px; padding: 12px; }
-.msg { display: grid; grid-template-columns: max-content 1fr max-content; gap: 8px; font-size: 13px; align-items: baseline; }
-.msg__who { font-weight: 700; } .msg--therapist .msg__who { color: var(--aura-deep); }
 
 /* wizard */
 .wizard-grid, .debrief-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start; }

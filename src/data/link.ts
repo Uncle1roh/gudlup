@@ -3,7 +3,7 @@
 
    One `patients` row is the link. `therapist_id` names the clinician,
    `b2c_profile_id` names the person, and every shared thing keys off its id:
-   the chat thread, the prescribed pathway, the clinical record, the session
+   the prescribed pathway, the clinical record, the session
    history a therapist may read.
 
    Before this existed, both sides kept their own copy of the relationship in
@@ -14,7 +14,7 @@
    two tabs of the same browser.
 
    The code is a handoff, not a secret: it is said out loud in a first
-   appointment or typed into a chat. So it is short, unambiguous to read aloud,
+   appointment. So it is short, unambiguous to read aloud,
    and it does nothing on its own — redeeming it requires being signed in, and
    `redeem_therapist_code` (supabase/6-two-sided-care.sql) is the only door.
    ============================================================================ */

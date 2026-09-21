@@ -305,7 +305,7 @@ Clinical judgement remains entirely yours. Good Loop protocols are an adjunct to
 You may not run a Good Loop protocol without an active therapy-data consent from the patient. The pre-launch checklist verifies that consent and will refuse to start treatment without it.
 
 4. Confidentiality
-Clinical notes, session reports, assessment results and messages are end-to-end encrypted and are not visible to Good Loop administrators or to any corporate client. A corporate client receives only aggregate, k-anonymised programme statistics and a single anonymous count of employees using professional support.
+Clinical notes, session reports, assessment results are end-to-end encrypted and are not visible to Good Loop administrators or to any corporate client. A corporate client receives only aggregate, k-anonymised programme statistics and a single anonymous count of employees using professional support.
 
 5. Records and signature
 Session reports carry your digital signature — your full name, your professional licence number, and a timestamp. Re-opening and re-signing a report creates a new version; previous versions are preserved in an audit trail and are never deleted.

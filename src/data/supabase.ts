@@ -19,11 +19,10 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
-import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, Message, RapidNote } from '../b2b/data'
+import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode } from './link'
-import { MAX_LENGTH as MESSAGE_MAX_LENGTH } from './messageStore'
 import { normalizeTags } from './tags'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
@@ -54,9 +53,6 @@ function mapScore(r: any): Score {
     t2: r.t2 == null ? undefined : Number(r.t2),
   }
 }
-function mapMessage(r: any): Message {
-  return { from: r.sender, text: r.body, at: toMs(r.at) }
-}
 function mapRapidNote(r: any): RapidNote {
   return { phase: r.phase, at: r.at_seconds, text: r.text }
 }
@@ -84,7 +80,6 @@ function vasTrendFrom(sessions: B2bSession[]): 'up' | 'down' | 'stable' {
 }
 function mapPatient(r: any): Patient {
   const b2b = ((r.sessions ?? []) as any[]).filter((s) => s.kind === 'b2b').map(mapB2bSession)
-  const messages = (r.messages ?? []).map(mapMessage)
   return {
     id: r.id,
     name: r.name,
@@ -100,7 +95,6 @@ function mapPatient(r: any): Patient {
     // filled by mergeB2cSessions() — the bridge is consent-gated in RLS, so a
     // patient without the 'sharing' consent simply yields no rows
     b2cSessions: [],
-    messages,
     clinicalNotes: r.clinical_notes ?? '',
     notes: ((r.patient_notes ?? []) as any[])
       .map((n) => ({ id: n.id as string, at: toMs(n.at), editedAt: n.edited_at ? toMs(n.edited_at) : undefined, text: n.text as string }))
@@ -110,7 +104,6 @@ function mapPatient(r: any): Patient {
     nextSessionAt: r.next_session_at ? toMs(r.next_session_at) : undefined,
     vasTrend: vasTrendFrom(b2b),
     assessmentDue: undefined,
-    unread: messages.filter((m: Message) => m.from === 'patient').length,
     consents: consentsFrom(r.patient_consents ?? []),
   }
 }
@@ -127,34 +120,10 @@ function mapSessionRequest(r: any): SessionRequest {
   }
 }
 
-const PATIENT_SELECT = '*, goals(*), scores(*), messages(*), patient_consents(*), patient_notes(*), sessions(*, rapid_notes(*))'
+const PATIENT_SELECT = '*, goals(*), scores(*), patient_consents(*), patient_notes(*), sessions(*, rapid_notes(*))'
 
 /* ---- admin / catalog mappers ---- */
 const CRED_STATUSES: CredentialStatus[] = ['pending', 'approved', 'rejected', 'more_info']
-interface MessageRow {
-  id: string
-  patient_id: string
-  sender: 'patient' | 'therapist'
-  body: string
-  at: string
-  read_by_patient: boolean
-  read_by_therapist: boolean
-}
-
-/** The full thread row. `mapMessage` above is the legacy embed used by the
-    patient-record read, which carries only what that card shows. */
-function mapThreadMessage(r: MessageRow) {
-  return {
-    id: r.id,
-    patientId: r.patient_id,
-    from: r.sender,
-    text: r.body,
-    at: toMs(r.at),
-    readByPatient: r.read_by_patient,
-    readByTherapist: r.read_by_therapist,
-  }
-}
-
 function mapCatalog(r: any): CatalogProtocol {
   const tenants: TenantScope = r.tenants === 'all' || r.tenants == null ? 'all' : (r.tenants as string[])
   return {
@@ -814,59 +783,6 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
 
        One table, both sides. `patientId` is the therapist's way of naming a
        thread; the patient's own app omits it and their link supplies it. */
-
-    async listThreads() {
-      /* No patient filter: `messages_via_patient` gives a therapist their own
-         patients' rows and `messages_patient_reads` gives a person their own,
-         so the same query answers both without either being told which one
-         they are. */
-      const { data, error } = await sb.from('messages')
-        .select('id, patient_id, sender, body, at, read_by_patient, read_by_therapist')
-        .order('at', { ascending: true })
-      if (error) return []
-      return (data ?? []).map(mapThreadMessage)
-    },
-
-    async listMessages(patientId?: string) {
-      const pid = patientId ?? (await this.getMyTherapistLink())?.patientId
-      if (!pid) return []
-      const { data, error } = await sb.from('messages')
-        .select('id, patient_id, sender, body, at, read_by_patient, read_by_therapist')
-        .eq('patient_id', pid)
-        .order('at', { ascending: true })
-      if (error) return []
-      return (data ?? []).map(mapThreadMessage)
-    },
-
-    async sendMessage(text: string, patientId?: string) {
-      const body = text.trim().slice(0, MESSAGE_MAX_LENGTH)
-      if (!body) return
-      const mine = patientId ? null : await this.getMyTherapistLink()
-      const pid = patientId ?? mine?.patientId
-      if (!pid) throw new Error('No therapist is connected to this account.')
-      const from: 'patient' | 'therapist' = patientId ? 'therapist' : 'patient'
-      const { error } = await sb.from('messages').insert({
-        patient_id: pid,
-        sender: from,
-        body,
-        // the sender has, by definition, read what they just wrote
-        read_by_patient: from === 'patient',
-        read_by_therapist: from === 'therapist',
-      })
-      if (error) throw error
-    },
-
-    async markMessagesRead(patientId?: string) {
-      const pid = patientId ?? (await this.getMyTherapistLink())?.patientId
-      if (!pid) return
-      const side = patientId ? 'read_by_therapist' : 'read_by_patient'
-      const other = patientId ? 'patient' : 'therapist'
-      await sb.from('messages')
-        .update({ [side]: true })
-        .eq('patient_id', pid)
-        .eq('sender', other)
-        .eq(side, false)
-    },
 
     // --- Protocol catalog ---
     async listProtocols(): Promise<CatalogProtocol[]> {

@@ -182,6 +182,12 @@ create index if not exists plan_items_patient_idx on plan_items (patient_id, pos
 -- the therapist's framing of the whole pathway
 alter table patients add column if not exists plan_title text;
 
+-- RETIRED (app no longer reads or writes it). Chat between a patient and a
+-- therapist was removed from every screen; the product decision is that the
+-- only conversation is the one inside a live video session. The table, its
+-- policies and its rows are LEFT IN PLACE on purpose: what people wrote to
+-- each other is theirs, and deleting a clinical-adjacent history is not a
+-- refactor. Drop it deliberately, with a retention decision behind it.
 create table if not exists messages (
   id          uuid primary key default gen_random_uuid(),
   patient_id  uuid not null references patients(id) on delete cascade,

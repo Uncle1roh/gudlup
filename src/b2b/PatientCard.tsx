@@ -83,7 +83,6 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
           {sinceLast.length
             ? `${sinceLast.length} session${sinceLast.length > 1 ? 'i' : 'e'} in autonomia dall’ultimo appuntamento · VAS fra le sedute ${interVas! >= 0 ? '+' : ''}${interVas!.toFixed(1)}`
             : 'Nessuna sessione in autonomia dall’ultimo appuntamento'}
-          {p.unread > 0 && ` · ${p.unread} messaggio non letto`}
         </span>
       </div>
 
@@ -167,20 +166,6 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
         {/* clinical diary (therapist-only) — searchable, editable, per-entry */}
         <PatientNotes patientId={p.id} notes={p.notes} onChanged={onRefetch} />
 
-        {p.messages.length > 0 && (
-          <section className="b2b-card">
-            <h2 className="b2b-card__title">Messaggi</h2>
-            <ul className="msgs">
-              {p.messages.map((m, i) => (
-                <li key={i} className={`msg msg--${m.from}`}>
-                  <span className="msg__who">{m.from === 'patient' ? p.name.split(' ')[0] : 'Tu'}</span>
-                  <span>{m.text}</span>
-                  <span className="b2b-sub">{relWhen(m.at)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
     </div>
   )

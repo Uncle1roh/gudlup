@@ -124,20 +124,12 @@ export interface BridgedSession {
   completed: boolean
 }
 
-export interface WorkspaceMessage {
-  id: string
-  from: 'patient' | 'therapist'
-  text: string
-  at: number
-  read: boolean
-}
-
 export interface WorkspacePatient {
   id: string
   /**
    * The `patients` row id on the server, when this person is a real one.
    *
-   * The workspace roster is local; the chat, the plan and the clinical record
+   * The workspace roster is local; the plan and the clinical record
    * live in the database keyed by THIS id. Without it the therapist's replies
    * went into a thread named after a local demo id that no patient's app has
    * ever heard of.
@@ -159,7 +151,6 @@ export interface WorkspacePatient {
   /** Present only when the patient consented to the Self Use bridge. */
   bridged: boolean
   bridgedSessions: BridgedSession[]
-  messages: WorkspaceMessage[]
   consentTherapy: boolean
 }
 
@@ -180,17 +171,10 @@ export interface BookingRequest {
   slotAt: number
 }
 
-export interface MessageTemplate {
-  id: string
-  text: string
-  builtIn: boolean
-}
-
 export interface WorkspaceSettings {
   sessionMinutes: 45 | 50 | 60
   bufferMinutes: 0 | 10 | 15 | 30
   availability: AvailabilityDay[]
-  templates: MessageTemplate[]
   notifications: Record<string, boolean>
   twoFactor: boolean
   calendarSync: { google: boolean; outlook: boolean }
@@ -212,20 +196,12 @@ export const CODE_TTL_MS = 72 * HOUR
 const NOTIFICATIONS: { key: string; label: string }[] = [
   { key: 'booking', label: 'New booking request' },
   { key: 'reminder', label: 'Session reminder (1h before)' },
-  { key: 'message', label: 'Patient message received' },
   { key: 'assessment', label: 'Assessment results received' },
-  { key: 'sla', label: 'SLA warning (>24h unanswered)' },
   { key: 'adherence', label: 'Prescription adherence alert' },
   { key: 'inactivity', label: 'Patient inactivity alert (>7 days)' },
 ]
 
 export const NOTIFICATION_ROWS = NOTIFICATIONS
-
-const DEFAULT_TEMPLATES: MessageTemplate[] = [
-  { id: 'tpl1', text: "I've received your message and will respond within 48 hours.", builtIn: true },
-  { id: 'tpl2', text: "Thank you for sharing. We'll discuss this in our next session.", builtIn: true },
-  { id: 'tpl3', text: 'Remember to complete your prescribed sessions this week.', builtIn: true },
-]
 
 function weekdayTemplate(): AvailabilityDay[] {
   return [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
@@ -258,7 +234,6 @@ export function emptyWorkspace(): WorkspaceState {
       sessionMinutes: 50,
       bufferMinutes: 10,
       availability: weekdayTemplate(),
-      templates: DEFAULT_TEMPLATES,
       notifications: Object.fromEntries(NOTIFICATIONS.map((n) => [n.key, true])),
       twoFactor: false,
       calendarSync: { google: false, outlook: false },
@@ -308,7 +283,6 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     prescriptions: [],
     bridged: false,
     bridgedSessions: [],
-    messages: [],
     consentTherapy: true,
     ...opts,
   })
@@ -355,11 +329,6 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
       { at: now - 4 * DAY, protocolCode: 'GL-ANX 1.1', minutes: 6, completed: true },
       { at: now - 6 * DAY, protocolCode: 'GL-STRESS 4.1', minutes: 12, completed: true },
     ],
-    messages: [
-      { id: 'm1', from: 'patient', text: 'Hi Dr. Ribeiro — I tried the breathing exercise before my meeting today and it actually helped.', at: now - 5 * HOUR, read: true },
-      { id: 'm2', from: 'therapist', text: "That's wonderful to hear, Maria. Let's build on it in our session this afternoon.", at: now - 4 * HOUR, read: true },
-      { id: 'm3', from: 'patient', text: 'Thank you, that really helped this week 🙏', at: now - 2 * HOUR, read: false },
-    ],
   })
 
   const joao = mk('p-joao', 'João Carvalho', {
@@ -369,7 +338,6 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
       { id: 's-j1', at: now - 7 * DAY, kind: 'gl-video', protocolCode: 'GL-ANX 1.1', version: 6, minutes: 46, phasesCompleted: 6, vasPre: 5, vasPost: 4, note: 'Steady progress; homework adherence good.', noteNumber: 4, signatureVersion: 0 },
     ],
     prescriptions: [],
-    messages: [{ id: 'mj1', from: 'patient', text: "Could we move next week's session?", at: now - 26 * HOUR, read: false }],
   })
 
   const lucia = mk('p-lucia', 'Lúcia Pereira', {
@@ -378,7 +346,6 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     prescriptions: [
       { id: 'rx-l1', patientId: 'p-lucia', protocolCode: 'GL-ANX 1.1', version: 6, perWeek: 3, fromAt: now - 6 * DAY, toAt: now + DAY, done: 2 },
     ],
-    messages: [{ id: 'ml1', from: 'patient', text: "I've been feeling much better lately", at: now - 3 * DAY, read: false }],
   })
 
   const rafael = mk('p-rafael', 'Rafael Fonseca', {
@@ -571,7 +538,6 @@ export function mergeServerPatients(state: WorkspaceState, server: ServerPatient
            data bridge is a separate consent they have not given. */
         bridged: false,
         bridgedSessions: [],
-        messages: [],
         consentTherapy: true,
       }
     })
@@ -621,28 +587,12 @@ export function slotsFromAvailability(
   return out
 }
 
-export function unreadCount(state: WorkspaceState): number {
-  return state.patients.reduce((n, p) => n + p.messages.filter((m) => m.from === 'patient' && !m.read).length, 0)
-}
-
 export function lowAdherencePatients(state: WorkspaceState): number {
   return state.patients.filter((p) => p.prescriptions.some((rx) => adherenceBand(adherencePct(rx)) === 'red')).length
 }
 
 export function nextSessionNumber(p: WorkspacePatient): number {
   return Math.max(0, ...p.sessions.map((s) => s.noteNumber)) + 1
-}
-
-/** SLA on an unanswered patient message: amber past 24h, red past 48h. */
-export function slaBand(p: WorkspacePatient, now = Date.now()): 'none' | 'amber' | 'red' {
-  const lastPatient = [...p.messages].reverse().find((m) => m.from === 'patient')
-  if (!lastPatient) return 'none'
-  const lastTherapist = [...p.messages].reverse().find((m) => m.from === 'therapist')
-  if (lastTherapist && lastTherapist.at > lastPatient.at) return 'none'
-  const age = now - lastPatient.at
-  if (age > 48 * HOUR) return 'red'
-  if (age > 24 * HOUR) return 'amber'
-  return 'none'
 }
 
 /** Assessment timing: T0 baseline, then end of months 1, 2 and 3. */

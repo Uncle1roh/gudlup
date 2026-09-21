@@ -48,11 +48,6 @@ export interface B2cSession {
   vasPost: number
 }
 
-export interface Message {
-  from: 'patient' | 'therapist'
-  text: string
-  at: number
-}
 
 /** One dated entry in a patient's clinical diary. Therapist-only; searchable,
     editable and removable from the patient card. */
@@ -78,7 +73,6 @@ export interface Patient {
   scores: Score[]
   b2bSessions: B2bSession[]
   b2cSessions: B2cSession[]
-  messages: Message[]
   /** Legacy single-field summary — kept for older records; the diary below is
       what the console reads and writes. */
   clinicalNotes: string
@@ -91,7 +85,6 @@ export interface Patient {
   vasTrend: 'up' | 'down' | 'stable'
   assessmentDue?: string
   b2cInactiveDays?: number
-  unread: number
   consents: { therapy: boolean; sharing: boolean; aggregates: boolean }
 }
 
@@ -148,10 +141,6 @@ export const DEMO_PATIENTS: Patient[] = [
       { date: now - 3 * DAY, protocolCode: 'GL-ANX 1.1', duration: 12, vasPre: 4, vasPost: 7 },
       { date: now - 1 * DAY, protocolCode: 'GL-ANX 1.1', duration: 12, vasPre: 5, vasPost: 7 },
     ],
-    messages: [
-      { from: 'patient', text: 'The evening sessions are really helping me fall asleep faster.', at: now - 2 * DAY },
-      { from: 'therapist', text: "That's great to hear, Mariana. Keep them up this week.", at: now - 2 * DAY + HOUR },
-    ],
     clinicalNotes: 'Responding well. Consider stepping to maintenance cadence after T2.',
     notes: [
       { id: 'n1', at: now - 21 * DAY, text: 'Intake. Work-related rumination peaking at night; sleep onset ~90 min. Agreed to start GL-ANX.' },
@@ -164,7 +153,6 @@ export const DEMO_PATIENTS: Patient[] = [
     nextSessionAt: now + 2 * HOUR,
     vasTrend: 'up',
     b2cInactiveDays: 1,
-    unread: 0,
     consents: { therapy: true, sharing: true, aggregates: true },
   },
   {
@@ -185,7 +173,6 @@ export const DEMO_PATIENTS: Patient[] = [
       { id: 'b3', date: now - 10 * DAY, protocolCode: 'GL-STRESS 4.1', duration: 24, vasPre: 2, vasPost: 5, notes: [] },
     ],
     b2cSessions: [{ date: now - 9 * DAY, protocolCode: 'GL-STRESS 4.1', duration: 6, vasPre: 3, vasPost: 4 }],
-    messages: [{ from: 'patient', text: 'Had a rough week, did not manage many sessions.', at: now - 26 * HOUR }],
     clinicalNotes: 'Adherence dropping. Address barriers at next session.',
     notes: [
       { id: 'n5', at: now - 30 * DAY, text: 'Intake. Occupational burnout, 60h weeks. Hypertension monitored by GP.' },
@@ -197,7 +184,6 @@ export const DEMO_PATIENTS: Patient[] = [
     vasTrend: 'stable',
     assessmentDue: 'DASS-21 (T2)',
     b2cInactiveDays: 9,
-    unread: 1,
     consents: { therapy: true, sharing: true, aggregates: false },
   },
   {
@@ -213,7 +199,6 @@ export const DEMO_PATIENTS: Patient[] = [
     scores: [{ label: 'DASS-21 Stress', max: 42, lowerIsBetter: true, t0: 24 }],
     b2bSessions: [],
     b2cSessions: [],
-    messages: [],
     clinicalNotes: 'New patient. Baseline (T0) completed; first session today.',
     notes: [
       { id: 'n7', at: now - 3 * DAY, text: 'New patient. Baseline (T0) completed; first session today.' },
@@ -222,7 +207,6 @@ export const DEMO_PATIENTS: Patient[] = [
     nextSessionAt: now + 30 * 60_000,
     vasTrend: 'stable',
     assessmentDue: 'Baseline done',
-    unread: 0,
     consents: { therapy: true, sharing: true, aggregates: true },
   },
   {
@@ -238,7 +222,6 @@ export const DEMO_PATIENTS: Patient[] = [
     scores: [{ label: 'BRS (resilience)', max: 5, lowerIsBetter: false, t0: 3.0, t1: 3.6, t2: 3.9 }],
     b2bSessions: [{ id: 'b4', date: now - 21 * DAY, protocolCode: 'GL-DEP 2.4', duration: 24, vasPre: 4, vasPost: 6, notes: [] }],
     b2cSessions: [{ date: now - 12 * DAY, protocolCode: 'GL-DEP 2.4', duration: 12, vasPre: 5, vasPost: 6 }],
-    messages: [],
     clinicalNotes: 'Stable maintenance. Monthly cadence appropriate.',
     notes: [
       { id: 'n8', at: now - 21 * DAY, text: 'Stable maintenance. Monthly cadence appropriate.' },
@@ -248,7 +231,6 @@ export const DEMO_PATIENTS: Patient[] = [
     nextSessionAt: now + 6 * DAY,
     vasTrend: 'up',
     b2cInactiveDays: 12,
-    unread: 0,
     consents: { therapy: true, sharing: false, aggregates: true },
   },
 ]

@@ -761,7 +761,6 @@ export const PT: Record<string, string> = {
   'Monthly wellbeing reminder': 'Lembrete do bem-estar mensal',
   'Motivational nudges': 'Pequenos incentivos',
   'Therapist session reminders': 'Lembretes das sessões com o terapeuta',
-  'Therapist messages': 'Mensagens do terapeuta',
   'Prescription reminders': 'Lembretes das sessões indicadas',
   'Each setting is independent. Reminders never contain health information.':
     'Cada opção é independente. Os lembretes nunca contêm informações de saúde.',
@@ -941,13 +940,6 @@ export const PT: Record<string, string> = {
   'Step 3 of 3': 'Passo 3 de 3',
   'Connected with {name}.': 'Conectado com {name}.',
   'First session: To be scheduled': 'Primeira sessão: a agendar',
-  'Messages': 'Mensagens',
-  'Your therapist reads these between sessions. For anything urgent, use the emergency numbers in your profile.':
-    'Seu terapeuta lê estas mensagens entre as sessões. Para qualquer urgência, use os números de emergência no seu perfil.',
-  'No messages yet. Write to {name} whenever something is worth saying between sessions.':
-    'Nenhuma mensagem ainda. Escreva para {name} sempre que algo valer a pena entre uma sessão e outra.',
-  'Write a message…': 'Escreva uma mensagem…',
-  '{n} characters left': 'Faltam {n} caracteres',
   'Your session with': 'Sua sessão com',
   'starts at {time}': 'começa às {time}',
   'Mic': 'Microfone',

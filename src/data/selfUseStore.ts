@@ -97,7 +97,6 @@ export interface NotificationPrefs {
   glCheckDay: number // 0=Sun … 6=Sat
   who5: boolean
   nudges: boolean
-  therapistMessages: boolean
   prescriptions: boolean
 }
 
@@ -196,7 +195,6 @@ export function emptyState(): SelfUseState {
       glCheckDay: 1,
       who5: true,
       nudges: true,
-      therapistMessages: true,
       prescriptions: true,
     },
     prefs: { defaultDuration: 6, preferredTime: 'morning', audioQuality: 'standard' },

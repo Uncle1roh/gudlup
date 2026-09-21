@@ -3,7 +3,6 @@ import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
 import type { Plan, PlanItem } from './plan'
-import type { ChatMessage } from './messageStore'
 import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
 import type { CredentialDoc } from '../b2b/credentials'
@@ -75,7 +74,7 @@ export interface DataProvider {
   /* --- The therapist ↔ patient link, and everything keyed to it -----------
 
      One `patients` row IS the link: `therapist_id` on one side,
-     `b2c_profile_id` on the other. The chat, the prescribed pathway and the
+     `b2c_profile_id` on the other. The prescribed pathway and the
      clinical record all hang off it. Before these methods each side kept its
      own copy in its own browser and neither ever reached the other. */
 
@@ -98,22 +97,6 @@ export interface DataProvider {
   createTherapistCode(label?: string): Promise<TherapistCode>
   /** Retire a code without deleting the patients who used it. */
   deactivateTherapistCode(code: string): Promise<void>
-
-  /**
-   * Every message this account may see — their own thread for a patient, all
-   * of their patients' threads for a therapist.
-   *
-   * One call rather than one per patient: the therapist's roster screen needs
-   * an unread count for every row, and row-level security already scopes the
-   * result to their own patients, so the narrowing is the database's job
-   * rather than a loop of queries.
-   */
-  listThreads(): Promise<ChatMessage[]>
-  /** The thread for one patient. Omit `patientId` on the patient's own app. */
-  listMessages(patientId?: string): Promise<ChatMessage[]>
-  sendMessage(text: string, patientId?: string): Promise<void>
-  /** Mark everything the OTHER side wrote as seen by this side. */
-  markMessagesRead(patientId?: string): Promise<void>
 
   // --- Protocol catalog (shared, admin-managed) ---
   /** Every protocol in the catalog (enabled + disabled). */

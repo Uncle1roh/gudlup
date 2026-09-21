@@ -46,7 +46,6 @@
 :where(.su-studio) .flag { font-size: 16px; }
 :where(.su-studio) .trend { font-size: 16px; }
 :where(.su-studio) .notes { font-size: 16px; }
-:where(.su-studio) .msg { font-size: 16px; }
 :where(.su-studio) .check { font-size: 16px; }
 :where(.su-studio) .phase { font-size: 16px; }
 :where(.su-studio) .upload { font-size: 16px; }
@@ -558,15 +557,6 @@
 .goal-dot--in-progress { background: var(--aura); }
 .goal-dot--achieved { background: var(--ink); }
 
-.msgs { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
-.msg { max-width: 82%; padding: 11px 14px; border-radius: var(--r-md); font-size: 16px; }
-.msg p { line-height: 1.4; }
-.msg--therapist { align-self: flex-start; background: #fff; border: 1px solid var(--line); }
-.msg--patient { align-self: flex-end; background: var(--aura-deep); color: #fff; }
-.msg--patient .muted { color: rgba(255,255,255,0.78); }
-.msgs__compose { display: flex; gap: 8px; align-items: center; }
-.msgs__compose .ob-input { flex: 1; }
-.msgs__compose .btn { width: auto; padding: 12px 18px; }
 
 /* ------------------------------------------------------------ videocall -- */
 
@@ -730,7 +720,6 @@
 .rx-card__top,
 .chron__row > span,
 .goals li,
-.msgs__compose,
 .scorelist li,
 .consent-row__main,
 .sess-card,
@@ -771,8 +760,6 @@
 .scale5__btn { min-width: 0; }
 
 /* A pasted URL must not widen the message thread. */
-.msg { overflow-wrap: anywhere; }
-.msgs__compose .ob-input { min-width: 0; }
 
 .filter-row, .teaser-row { -webkit-overflow-scrolling: touch; }
 
@@ -1119,17 +1106,6 @@
    bottom of the page: the one control you need to answer with was the first
    thing to leave the screen. The thread scrolls inside itself instead, opens on
    its newest message, and the compose row stays where it was. */
-.msgs {
-  max-height: min(46vh, 420px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 2px;
-  scrollbar-width: thin;
-}
-.msg__at { display: block; margin-top: 4px; font-size: 16px; }
-.msgs__empty { margin: 10px 0; }
-.msgs__count { margin-top: 6px; text-align: right; }
-.msgs__compose { position: sticky; bottom: 0; padding: 8px 0 2px; background: var(--mist); }
 
 /* --- the first run -------------------------------------------------------
 

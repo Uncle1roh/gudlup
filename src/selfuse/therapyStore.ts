@@ -4,7 +4,7 @@
    What this holds is the PATIENT's view of the link: which therapist they are
    connected to, the booking request they are waiting on, the three-step
    patient onboarding they completed, the prescriptions their therapist wrote,
-   the session chronology, goals and messages.
+   the session chronology and goals.
 
    Three rules the shape of this file enforces:
 
@@ -70,13 +70,6 @@ export interface TherapyGoal {
   status: 'in-progress' | 'achieved'
 }
 
-export interface TherapyMessage {
-  id: string
-  from: 'patient' | 'therapist'
-  text: string
-  at: number
-}
-
 /**
  * A clinical scale as the patient's Progress tab shows it.
  *
@@ -137,7 +130,6 @@ export interface TherapyLink {
   prescriptions: Prescription[]
   sessions: TherapySession[]
   goals: TherapyGoal[]
-  messages: TherapyMessage[]
   vas: VasPoint[]
   scores: ClinicalScore[]
   weeksInTherapy: number
@@ -345,8 +337,8 @@ export function canJoin(nextSessionAt: number | null, now = Date.now()): boolean
  * scores nobody measured and a message their clinician never sent.
  *
  * So the arrays start empty and are filled from where the data actually lives:
- * prescriptions from the plan (`getMyPlan`), the conversation from the
- * messages table (`useThreads`), the next appointment from `appointments`.
+ * prescriptions from the plan (`getMyPlan`), the next appointment from
+ * `appointments`.
  * What has no server source yet stays empty rather than being imagined.
  */
 export function linkFromServer(therapist: TherapistProfile, since: number): TherapyLink {
@@ -358,7 +350,6 @@ export function linkFromServer(therapist: TherapistProfile, since: number): Ther
     prescriptions: [],
     sessions: [],
     goals: [],
-    messages: [],
     vas: [],
     scores: [],
     weeksInTherapy: Math.max(1, Math.floor((Date.now() - since) / (7 * DAY))),
@@ -383,9 +374,6 @@ export function seedLink(therapist: TherapistProfile, now = Date.now()): Therapy
     goals: [
       { id: 'g1', text: 'Reduce anticipatory anxiety before meetings', status: 'in-progress' },
       { id: 'g2', text: 'Re-establish an evening wind-down routine', status: 'achieved' },
-    ],
-    messages: [
-      { id: 'm1', from: 'therapist', text: "Let's build on the breathing work in our next session.", at: now - 2 * DAY },
     ],
     /* 1–5, in the confirmed direction: pre low, post higher. */
     vas: [

@@ -1044,7 +1044,6 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .chron__row { padding-top: 12px; padding-bottom: 12px; }
 .su-studio .goals { gap: 12px; }
 .su-studio .statgrid { gap: 14px; margin-top: 0; }
-.su-studio .msgs { gap: 14px; margin: 4px 0; }
 .su-studio .slotday { margin-bottom: 18px; }
 .su-studio .slotday__row { gap: 10px; margin-top: 10px; }
 .su-studio .slot { padding: 10px 14px; }

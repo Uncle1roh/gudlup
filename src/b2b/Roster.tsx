@@ -22,7 +22,6 @@ function urgencyScore(p: Patient): number {
   if (p.nextSessionAt && p.nextSessionAt - Date.now() < 4 * 3_600_000) s += 3
   if (p.assessmentDue && p.assessmentDue.includes('T')) s += 2
   if ((p.b2cInactiveDays ?? 0) > 7) s += 2
-  if (p.unread > 0) s += 1
   if (p.vasTrend === 'down') s += 2
   return s
 }
@@ -178,7 +177,6 @@ export function Roster({ onOpenPatient }: RosterProps) {
               <span className="roster__flags">
                 {p.assessmentDue?.includes('T') && <span className="flag flag--due" title="Valutazione in scadenza">⏱ {p.assessmentDue}</span>}
                 {(p.b2cInactiveDays ?? 0) > 7 && <span className="flag flag--warn" title="Inattivo in autonomia">💤 {p.b2cInactiveDays}g</span>}
-                {p.unread > 0 && <span className="flag flag--msg" title="Messaggi non letti">✉ {p.unread}</span>}
               </span>
               <span className="roster__chev">›</span>
             </button>

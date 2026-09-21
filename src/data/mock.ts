@@ -5,7 +5,6 @@ import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient, type Therapist } from '../
 import { seedCatalog, type CatalogProtocol } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode, type TherapistLink, type TherapistCode } from './link'
-import { MAX_LENGTH as MESSAGE_MAX_LENGTH, type ChatMessage } from './messageStore'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from '../admin/types'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
@@ -77,20 +76,11 @@ const link: TherapistLink = {
 let therapistCodes: TherapistCode[] = [
   { code: 'GL-DEMO-CODE', label: 'Demo', active: true, createdAt: Date.now() - 86_400_000 },
 ]
-let thread: ChatMessage[] = [
-  {
-    id: 'm1', patientId: LINKED_PATIENT_ID, from: 'therapist',
-    text: 'Ciao! Ho aggiornato il percorso per questa settimana.',
-    at: Date.now() - 2 * 86_400_000, readByPatient: true, readByTherapist: true,
-  },
-]
-
 let sessions: SessionRecord[] = [...SEED_HISTORY]
 const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
   ...p,
   b2bSessions: [...p.b2bSessions],
   b2cSessions: [...p.b2cSessions],
-  messages: [...p.messages],
   notes: p.notes.map((n) => ({ ...n })),
   goals: p.goals.map((g) => ({ ...g })),
   scores: p.scores.map((s) => ({ ...s })),
@@ -372,9 +362,7 @@ export function createMockProvider(): DataProvider {
       patients.push({
         id, name: req.requesterName, age: 0, sex: 'F', reason: req.note ?? '',
         conditions: [], medications: [], contraindications: [],
-        goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
-        clinicalNotes: '', notes: [], vasTrend: 'stable', unread: 0,
-        consents: { therapy: true, sharing: false, aggregates: false },
+        goals: [], scores: [], b2bSessions: [], b2cSessions: [],        clinicalNotes: '', notes: [], vasTrend: 'stable',        consents: { therapy: true, sharing: false, aggregates: false },
       })
       req.status = 'claimed'
       await wait()
@@ -385,9 +373,7 @@ export function createMockProvider(): DataProvider {
       patients.push({
         id, name, age: 0, sex: 'F', reason: '',
         conditions: [], medications: [], contraindications: [],
-        goals: [], scores: [], b2bSessions: [], b2cSessions: [], messages: [],
-        clinicalNotes: '', notes: [], vasTrend: 'stable', unread: 0,
-        consents: { therapy: true, sharing: false, aggregates: false },
+        goals: [], scores: [], b2bSessions: [], b2cSessions: [],        clinicalNotes: '', notes: [], vasTrend: 'stable',        consents: { therapy: true, sharing: false, aggregates: false },
       })
       await wait()
       return id
@@ -444,32 +430,6 @@ export function createMockProvider(): DataProvider {
     deactivateTherapistCode: async (code: string) => {
       await wait()
       therapistCodes = therapistCodes.map((c) => (c.code === code ? { ...c, active: false } : c))
-    },
-
-    // --- the thread ---
-    listThreads: () => delay(thread.map((m) => ({ ...m }))),
-    listMessages: (patientId?: string) =>
-      delay(thread.filter((m) => m.patientId === (patientId ?? link.patientId)).map((m) => ({ ...m }))),
-    sendMessage: async (text: string, patientId?: string) => {
-      await wait()
-      const body = text.trim().slice(0, MESSAGE_MAX_LENGTH)
-      if (!body) return
-      const from: 'patient' | 'therapist' = patientId ? 'therapist' : 'patient'
-      thread = [...thread, {
-        id: `m-${Date.now()}`,
-        patientId: patientId ?? link.patientId,
-        from,
-        text: body,
-        at: Date.now(),
-        readByPatient: from === 'patient',
-        readByTherapist: from === 'therapist',
-      }]
-    },
-    markMessagesRead: async (patientId?: string) => {
-      await wait()
-      const pid = patientId ?? link.patientId
-      const side = patientId ? 'readByTherapist' : 'readByPatient'
-      thread = thread.map((m) => (m.patientId === pid ? { ...m, [side]: true } : m))
     },
 
     // --- Protocol catalog ---

@@ -431,10 +431,6 @@ export const IT_SELF_USE: Record<string, string> = {
   '{n}× {name} this week': '{n}× {name} questa settimana',
   '{done} of {total} done': '{done} di {total} fatte',
   'Session history': 'Cronologia delle sedute',
-  'Messages': 'Messaggi',
-  'End-to-end encrypted': 'Cifratura end-to-end',
-  'No messages yet.': 'Ancora nessun messaggio.',
-  'Write a message…': 'Scrivi un messaggio…',
   'Send': 'Invia',
 
   /* ---- videocall (patient side) ---- */
@@ -584,7 +580,6 @@ export const IT_SELF_USE: Record<string, string> = {
   'Monthly wellbeing reminder': 'Promemoria del benessere mensile',
   'Motivational nudges': 'Piccoli incoraggiamenti',
   'Therapist session reminders': 'Promemoria delle sedute',
-  'Therapist messages': 'Messaggi del terapeuta',
   'Prescription reminders': 'Promemoria delle sessioni assegnate',
   'Each setting is independent. Reminders never contain health information.':
     'Ogni impostazione è indipendente. I promemoria non contengono mai informazioni sulla salute.',
@@ -635,11 +630,6 @@ export const IT_SELF_USE: Record<string, string> = {
   'Sent': 'Inviato',
   '{name} asked you to fill this in. Take it when you have a quiet few minutes.':
     '{name} ti ha chiesto di compilarlo. Fallo quando hai qualche minuto di tranquillità.',
-  'Your therapist reads these between sessions. For anything urgent, use the emergency numbers in your profile.':
-    'Il tuo terapeuta legge i messaggi tra una seduta e l’altra. Per le urgenze usa i numeri di emergenza che trovi nel profilo.',
-  'No messages yet. Write to {name} whenever something is worth saying between sessions.':
-    'Ancora nessun messaggio. Scrivi a {name} quando c’è qualcosa da dire tra una seduta e l’altra.',
-  '{n} characters left': '{n} caratteri rimasti',
 
   /* --- Assessment runner ------------------------------------------------- */
   'Close': 'Chiudi',

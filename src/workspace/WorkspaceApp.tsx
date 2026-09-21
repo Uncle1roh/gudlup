@@ -2,14 +2,14 @@
    Therapist Workspace — shell (TH-SHELL)
 
    Fixed 220px sidebar plus a top bar. Three sidebar groups, and the grouping
-   is by CADENCE rather than by feature: Daily (patients, calendar, messages),
+   is by CADENCE rather than by feature: Daily (patients, calendar),
    Weekly (prescriptions, reports), Utility (performance, sandbox, settings).
    A therapist opens the first group every working day and the last one rarely,
    so ordering by frequency is what keeps the daily path short.
 
    Badges follow the same logic: a red dot where something is waiting on a
    decision (booking requests, a patient whose adherence has fallen into the
-   red), a number where something is countable (unread messages).
+   red), a number where something is countable.
 
    Below 1024px the workspace tells the user to switch to a desktop. That is a
    deliberate refusal rather than a missing responsive pass: this surface holds
@@ -21,7 +21,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useI18n, fmtDate } from '../i18n'
-import { useMessages, unreadFor } from '../data/messageStore'
 import { useDataProvider } from '../data/provider'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients } from './data'
@@ -32,18 +31,16 @@ import { Roster, PatientCard, initials } from './Patients'
 import { Calendar, AvailabilityModal } from './Calendar'
 import { LiveSession, type SessionResult } from './LiveSession'
 import { SessionReport } from './Report'
-import { Messages, Prescriptions, ReportsArchive, Performance, WorkspaceSettings } from './Tools'
+import { Prescriptions, ReportsArchive, Performance, WorkspaceSettings } from './Tools'
 import {
   demoWorkspace,
   lowAdherencePatients,
-  unreadCount,
-  threadIdFor,
   useWorkspace,
   type SessionRow,
   type WorkspacePatient,
 } from './data'
 
-type Nav = 'patients' | 'calendar' | 'messages' | 'prescriptions' | 'reports' | 'performance' | 'sandbox' | 'settings'
+type Nav = 'patients' | 'calendar' | 'prescriptions' | 'reports' | 'performance' | 'sandbox' | 'settings'
 
 const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[] }[] = [
   {
@@ -51,7 +48,6 @@ const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[]
     items: [
       { id: 'patients', icon: '👥', label: 'Patients' },
       { id: 'calendar', icon: '📅', label: 'Calendar' },
-      { id: 'messages', icon: '✉️', label: 'Messages' },
     ],
   },
   {
@@ -87,7 +83,7 @@ function virtualPatient(): WorkspacePatient {
   return {
     id: 'sandbox', name: 'Virtual Patient', memberSince: now, status: 'active', linkedAt: now,
     sessions: [], assessments: [], notes: [], goals: [], prescriptions: [],
-    bridged: false, bridgedSessions: [], messages: [], consentTherapy: true,
+    bridged: false, bridgedSessions: [], consentTherapy: true,
   }
 }
 
@@ -189,14 +185,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppPr
   const [view, setView] = useState<View>(sandboxOnEntry ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
   const [menu, setMenu] = useState(false)
   const [availOpen, setAvailOpen] = useState(false)
-  const [messagePatient, setMessagePatient] = useState<string | undefined>(undefined)
 
-  /* The badge has to count the live thread as well as the seeded fixtures, or
-     a message a patient sent from their own app raises no flag anywhere. */
-  const { rows: messageRows } = useMessages()
-  const unread =
-    unreadCount(state) +
-    state.patients.reduce((n, p) => n + unreadFor(messageRows, threadIdFor(p), 'therapist'), 0)
   const lowAdherence = lowAdherencePatients(state)
 
   /* The appointment id is the ROOM both devices join. The patient books
@@ -313,7 +302,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppPr
             nav={nav}
             setNav={(n) => { setNav(n); setView({ kind: 'nav' }) }}
             account={state.account}
-            unread={unread}
             requests={state.requests.length}
             lowAdherence={lowAdherence}
             collapsed
@@ -358,7 +346,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppPr
           setView(n === 'sandbox' ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
         }}
         account={state.account}
-        unread={unread}
         requests={state.requests.length}
         lowAdherence={lowAdherence}
       />
@@ -380,7 +367,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppPr
                 patient={patient}
                 update={update}
                 onCall={() => startCall(patient.id)}
-                onMessage={() => { setMessagePatient(patient.id); setNav('messages'); setView({ kind: 'nav' }) }}
                 onOpenReport={(sessionId) => {
                   const row = patient.sessions.find((s) => s.id === sessionId)
                   if (row) setView({ kind: 'report', patientId: patient.id, row })
@@ -394,14 +380,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppPr
               )}
               {nav === 'calendar' && (
                 <Calendar state={state} update={update} onOpenPatient={(id) => setView({ kind: 'patient', id })} onCall={startCall} />
-              )}
-              {nav === 'messages' && (
-                <Messages
-                  state={state}
-                  update={update}
-                  initialPatientId={messagePatient}
-                  onOpenPatient={(id) => setView({ kind: 'patient', id })}
-                />
               )}
               {nav === 'prescriptions' && (
                 <Prescriptions state={state} update={update} onOpenPatient={(id) => setView({ kind: 'patient', id })} />
@@ -465,7 +443,6 @@ function Sidebar({
   nav,
   setNav,
   account,
-  unread,
   requests,
   lowAdherence,
   collapsed,
@@ -473,7 +450,6 @@ function Sidebar({
   nav: Nav
   setNav: (n: Nav) => void
   account: { fullName: string; online: boolean }
-  unread: number
   requests: number
   lowAdherence: number
   collapsed?: boolean
@@ -497,8 +473,7 @@ function Sidebar({
           <div className="w-sidebar__grouptitle">{t(g.title)}</div>
           {g.items.map((i) => {
             const badge =
-              i.id === 'messages' && unread > 0 ? String(unread)
-              : i.id === 'calendar' && requests > 0 ? '·'
+              i.id === 'calendar' && requests > 0 ? '·'
               : i.id === 'prescriptions' && lowAdherence > 0 ? '·'
               : null
             return (

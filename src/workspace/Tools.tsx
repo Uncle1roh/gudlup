@@ -25,16 +25,11 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
-import { threadFor, unreadFor, type ChatMessage } from '../data/messageStore'
-import { useThreads } from '../data/threads'
 import {
   NOTIFICATION_ROWS,
-  threadIdFor as threadId,
   adherenceBand,
   adherencePct,
   performance,
-  slaBand,
-  type MessageTemplate,
   type WorkspaceState,
 } from './data'
 
@@ -51,174 +46,6 @@ const HOUR = 3_600_000
  * shape, so one list renders both. They are read-only history: everything
  * written from here on goes to the store.
  */
-function fixtureRows(p: { id: string; bridged: boolean; messages: { id: string; from: 'patient' | 'therapist'; text: string; at: number; read: boolean }[] }): ChatMessage[] {
-  return p.messages.map((m) => ({
-    id: `fx-${m.id}`,
-    patientId: threadId(p),
-    from: m.from,
-    text: m.text,
-    at: m.at,
-    readByPatient: true,
-    readByTherapist: m.read,
-  }))
-}
-
-/* --------------------------------------------------------------- TH-MSG -- */
-
-export function Messages({ state, update, onOpenPatient, initialPatientId }: ToolProps & { initialPatientId?: string }) {
-  const { t, d } = useI18n()
-  const { rows, send: postToThread, markRead: markThreadRead } = useThreads()
-
-  /* A conversation counts as existing if EITHER side has written — the store
-     or the seeded fixtures. Filtering on the fixtures alone hid every patient
-     who had only ever written from their own app. */
-  const withMessages = state.patients.filter((p) => p.messages.length || threadFor(rows, threadId(p)).length)
-  const [selected, setSelected] = useState<string | null>(initialPatientId ?? withMessages[0]?.id ?? null)
-  const [search, setSearch] = useState('')
-  const [draft, setDraft] = useState('')
-  const [templatesOpen, setTemplatesOpen] = useState(false)
-
-  /** One patient's whole conversation: seeded history plus the live thread. */
-  function conversation(p: (typeof state.patients)[number]): ChatMessage[] {
-    return [...fixtureRows(p), ...threadFor(rows, threadId(p))].sort((a, b) => a.at - b.at)
-  }
-
-  function lastAt(p: (typeof state.patients)[number]): number {
-    const conv = conversation(p)
-    return conv[conv.length - 1]?.at ?? 0
-  }
-
-  const list = withMessages
-    .filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => lastAt(b) - lastAt(a))
-
-  const patient = state.patients.find((p) => p.id === selected)
-  const thread = patient ? conversation(patient) : []
-
-  function send() {
-    const text = draft.trim()
-    if (!text || !patient) return
-    /* Both ends read one table. Writing into the workspace's own state was
-       what made the therapist's replies invisible to the patient — and
-       `threadId` is the SERVER's patient id wherever there is one, so the
-       message lands in the thread the person's own app reads. */
-    void postToThread(text, threadId(patient))
-    void markThreadRead('therapist', threadId(patient))
-    update((s) => ({
-      ...s,
-      patients: s.patients.map((p) => (p.id === patient.id ? { ...p, messages: p.messages.map((m) => ({ ...m, read: true })) } : p)),
-    }))
-    setDraft('')
-  }
-
-  function openThread(id: string) {
-    setSelected(id)
-    const p = state.patients.find((x) => x.id === id)
-    if (p) void markThreadRead('therapist', threadId(p))
-    update((s) => ({
-      ...s,
-      patients: s.patients.map((x) => (x.id === id ? { ...x, messages: x.messages.map((m) => ({ ...m, read: true })) } : x)),
-    }))
-  }
-
-  if (!withMessages.length) {
-    return (
-      <>
-        <h1 className="w-h1">{t('Messages')}</h1>
-        <div className="w-empty"><p>{t('No conversations yet.')}</p></div>
-      </>
-    )
-  }
-
-  return (
-    <>
-      <h1 className="w-h1">{t('Messages')}</h1>
-      <div className="w-msglayout">
-        <div className="w-msglist">
-          <input className="w-input w-input--sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search messages…')} />
-          <ul>
-            {list.map((p) => {
-              const conv = conversation(p)
-              const last = conv[conv.length - 1]
-              const unread =
-                p.messages.some((m) => m.from === 'patient' && !m.read) ||
-                unreadFor(rows, threadId(p), 'therapist') > 0
-              const sla = slaBand(p)
-              return (
-                <li key={p.id}>
-                  <button
-                    className={`w-msgrow${selected === p.id ? ' is-on' : ''}${unread ? ' is-unread' : ''}`}
-                    onClick={() => openThread(p.id)}
-                  >
-                    <span className="w-avatar" aria-hidden="true">{initials(p.name)}</span>
-                    <span className="w-msgrow__body">
-                      <strong>{p.name}</strong>
-                      <em className="w-small">{last?.text ?? ''}</em>
-                    </span>
-                    <span className="w-msgrow__meta">
-                      <span className="w-small">{last ? rel(last.at, t) : ''}</span>
-                      {sla !== 'none' && <span className={`w-sla w-sla--${sla}`} title={t('Awaiting your reply')} />}
-                      {unread && <span className="w-unreaddot" aria-hidden="true" />}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-
-        {patient && (
-          <div className="w-thread">
-            <header className="w-thread__head">
-              <strong>{patient.name}</strong>
-              <button className="w-link" onClick={() => onOpenPatient(patient.id)}>{t('View patient card')}</button>
-            </header>
-            <div className="w-thread__body">
-              {!thread.length && <p className="w-small">{t('No messages yet.')}</p>}
-              {thread.map((m) => (
-                <div key={m.id} className={`w-bubble w-bubble--${m.from}`}>
-                  <p>{m.text}</p>
-                  <span className="w-small">
-                    {d(m.at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="w-thread__compose">
-              <button className="w-btn w-btn--ghost" onClick={() => setTemplatesOpen((v) => !v)}>{t('Templates')}</button>
-              <input className="w-input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('Write a message…')} onKeyDown={(e) => e.key === 'Enter' && send()} maxLength={2000} />
-              <button className="w-btn w-btn--primary" disabled={!draft.trim()} onClick={send}>{t('Send')}</button>
-            </div>
-            {templatesOpen && (
-              <ul className="w-templates">
-                {state.settings.templates.map((tpl) => (
-                  <li key={tpl.id}>
-                    <button onClick={() => { setDraft(tpl.text); setTemplatesOpen(false) }}>{tpl.text}</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {/* The encryption claim that used to sit here was not true of this
-                build, and a privacy promise the product does not keep is worse
-                than no promise. What IS true is who can see the SLA. */}
-            <p className="w-note">
-              {t('The 48-hour SLA indicator is visible to you only — never to the patient or an administrator.')}
-            </p>
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
-
-/* "5m ago" was hard-coded English on an Italian-default interface. */
-function rel(at: number, t: (k: string, v?: Record<string, string | number>) => string): string {
-  const diff = Date.now() - at
-  if (diff < HOUR) return t('{n}m ago', { n: Math.max(1, Math.round(diff / 60_000)) })
-  if (diff < 24 * HOUR) return t('{n}h ago', { n: Math.round(diff / HOUR) })
-  return t('{n}d ago', { n: Math.round(diff / (24 * HOUR)) })
-}
-
 /* ---------------------------------------------------------------- TH-RX -- */
 
 type RxFilter = 'all' | 'active' | 'completed' | 'low'
@@ -470,13 +297,12 @@ function Spark({ values }: { values: number[] }) {
 
 /* ---------------------------------------------------------- TH-SETTINGS -- */
 
-type SettingsSection = 'profile' | 'availability' | 'notifications' | 'templates' | 'privacy'
+type SettingsSection = 'profile' | 'availability' | 'notifications' | 'privacy'
 
 const SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'availability', label: 'Availability' },
   { id: 'notifications', label: 'Notifications' },
-  { id: 'templates', label: 'Message templates' },
   { id: 'privacy', label: 'Privacy & security' },
 ]
 
@@ -495,7 +321,6 @@ export function WorkspaceSettings({
   const [section, setSection] = useState<SettingsSection>('profile')
   const [bio, setBio] = useState(state.account.bio)
   const [email, setEmail] = useState(state.account.email)
-  const [newTemplate, setNewTemplate] = useState('')
 
   function setSpec(s: string) {
     update((w) => ({
@@ -604,58 +429,6 @@ export function WorkspaceSettings({
                   </li>
                 ))}
               </ul>
-            </>
-          )}
-
-          {section === 'templates' && (
-            <>
-              <h2 className="w-h2">{t('Message templates')}</h2>
-              <ul className="w-templatelist">
-                {state.settings.templates.map((tpl) => (
-                  <li key={tpl.id}>
-                    <textarea
-                      className="w-input"
-                      rows={2}
-                      value={tpl.text}
-                      onChange={(e) =>
-                        update((w) => ({
-                          ...w,
-                          settings: {
-                            ...w.settings,
-                            templates: w.settings.templates.map((x) => (x.id === tpl.id ? { ...x, text: e.target.value } : x)),
-                          },
-                        }))
-                      }
-                    />
-                    {/* Built-in templates can be edited but not deleted — the
-                        list must never be empty when a therapist needs it. */}
-                    {!tpl.builtIn && (
-                      <button
-                        className="w-link"
-                        onClick={() =>
-                          update((w) => ({ ...w, settings: { ...w.settings, templates: w.settings.templates.filter((x) => x.id !== tpl.id) } }))
-                        }
-                      >
-                        {t('Delete')}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="w-inline">
-                <input className="w-input" value={newTemplate} onChange={(e) => setNewTemplate(e.target.value)} placeholder={t('New template…')} />
-                <button
-                  className="w-btn w-btn--ghost"
-                  disabled={!newTemplate.trim()}
-                  onClick={() => {
-                    const tpl: MessageTemplate = { id: `tpl-${Date.now()}`, text: newTemplate.trim(), builtIn: false }
-                    update((w) => ({ ...w, settings: { ...w.settings, templates: [...w.settings.templates, tpl] } }))
-                    setNewTemplate('')
-                  }}
-                >
-                  {t('Add template')}
-                </button>
-              </div>
             </>
           )}
 

@@ -17,7 +17,7 @@
      toward the Self Use pathway.
    ============================================================================ */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
@@ -52,8 +52,6 @@ import {
   SELF_USE_PATIENT_ID,
 } from '../data/assessmentStore'
 import { INSTRUMENTS } from '../data/assessments'
-import { threadFor, unreadFor, MAX_LENGTH } from '../data/messageStore'
-import { useThreads } from '../data/threads'
 import { useBackLayer } from './backStack'
 
 interface TherapistTabProps {
@@ -440,7 +438,6 @@ export function TherapistTab(props: TherapistTabProps) {
         ))}
       </ul>
 
-      <Messages patientId={SELF_USE_PATIENT_ID} therapistName={link.therapist.name} />
     </div>
   )
 }
@@ -860,99 +857,5 @@ function ToggleRow({
         </button>
       </div>
     </div>
-  )
-}
-
-/* -------------------------------------------------------------- messages -- */
-
-/**
- * The patient's half of one thread.
- *
- * It reads and writes `messageStore`, which the therapist's desktop also reads
- * and writes. Before that, this component wrote into the therapy link and the
- * workspace wrote into its own state: two chats that each looked like they
- * worked and never met.
- *
- * Deliberately NOT here: a delivery receipt, a typing indicator, or "seen".
- * This is not an instant messenger — a therapist answers between appointments,
- * and a read receipt on a message about a bad week creates an expectation of
- * an immediate reply that nobody has promised.
- */
-function Messages({ patientId, therapistName }: { patientId: string; therapistName: string }) {
-  const { t, d } = useI18n()
-  const { rows, send, markRead } = useThreads()
-  const [text, setText] = useState('')
-  const endRef = useRef<HTMLDivElement | null>(null)
-
-  const msgs = threadFor(rows, patientId)
-  const unread = unreadFor(rows, patientId, 'patient')
-
-  /* Opening the tab IS reading them. */
-  useEffect(() => {
-    if (unread > 0) void markRead('patient')
-  }, [unread, markRead])
-
-  /* A thread opens on its newest message, not its oldest — a conversation is
-     read from the bottom. */
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [msgs.length])
-
-  function submit() {
-    const body = text.trim()
-    if (!body) return
-    /* No patientId: the person's own link names their thread, so this app
-       cannot address a conversation that is not theirs. */
-    void send(body)
-    setText('')
-  }
-
-  const over = text.length > MAX_LENGTH - 100
-
-  return (
-    <>
-      <h3 className="home__sect">{t('Messages')}</h3>
-      <p className="small muted">
-        {t('Your therapist reads these between sessions. For anything urgent, use the emergency numbers in your profile.')}
-      </p>
-
-      {!msgs.length ? (
-        <p className="small muted msgs__empty">
-          {t('No messages yet. Write to {name} whenever something is worth saying between sessions.', { name: therapistName })}
-        </p>
-      ) : (
-        <div className="msgs" role="log" aria-label={t('Messages')}>
-          {msgs.map((m) => (
-            <div key={m.id} className={`msg msg--${m.from}`}>
-              <p>{m.text}</p>
-              <span className="small muted msg__at">
-                {d(m.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-              </span>
-            </div>
-          ))}
-          <div ref={endRef} />
-        </div>
-      )}
-
-      <div className="msgs__compose">
-        <input
-          className="ob-input"
-          value={text}
-          maxLength={MAX_LENGTH}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
-          }}
-          placeholder={t('Write a message…')}
-          aria-label={t('Write a message…')}
-        />
-        <button className="btn btn--primary" onClick={submit} disabled={!text.trim()}>{t('Send')}</button>
-      </div>
-      {over && (
-        <p className="small muted msgs__count">
-          {t('{n} characters left', { n: MAX_LENGTH - text.length })}
-        </p>
-      )}
-    </>
   )
 }

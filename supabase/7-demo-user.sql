@@ -157,6 +157,7 @@ begin
   from generate_series(1, 6) as n;
 
   -- ---- the conversation ----------------------------------------------------
+  -- the app has no chat any more; the rows are harmless and the table is kept
   delete from messages where patient_id = patient_row;
 
   insert into messages (patient_id, sender, body, at, read_by_patient, read_by_therapist)

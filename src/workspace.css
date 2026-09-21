@@ -492,38 +492,7 @@
 
 /* ------------------------------------------------------------- messages -- */
 
-.w-msglayout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 1100px) { .w-msglayout { grid-template-columns: 1fr; } }
-.w-msglist { background: var(--w-surface); border: 1px solid var(--w-line); border-radius: 12px; padding: 12px; }
-.w-msglist ul { list-style: none; margin-top: 10px; }
-.w-msgrow { display: flex; align-items: center; gap: 9px; width: 100%; padding: 10px 8px; border-radius: 8px; text-align: left; }
-.w-msgrow:hover { background: var(--w-bg); }
-.w-msgrow.is-on { background: var(--w-bg); }
-.w-msgrow.is-unread strong { font-weight: 800; }
-.w-msgrow__body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.w-msgrow__body strong { font-size: 13px; }
-.w-msgrow__body em { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.w-msgrow__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-.w-sla { width: 8px; height: 8px; border-radius: 50%; }
-.w-sla--amber { background: #d3a53c; }
-.w-sla--red { background: var(--w-danger); }
-.w-unreaddot { width: 8px; height: 8px; border-radius: 50%; background: var(--w-accent); }
 
-.w-thread { background: var(--w-surface); border: 1px solid var(--w-line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.w-thread__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--w-line); }
-.w-thread__body { display: flex; flex-direction: column; gap: 10px; max-height: 440px; overflow-y: auto; }
-.w-bubble { max-width: 74%; padding: 10px 13px; border-radius: 12px; font-size: 13px; }
-.w-bubble p { line-height: 1.45; }
-.w-bubble--patient { align-self: flex-start; background: var(--w-bg); }
-.w-bubble--therapist { align-self: flex-end; background: var(--w-accent); color: #fff; }
-.w-bubble--therapist .w-small { color: rgba(255,255,255,0.72); }
-.w-thread__compose { display: flex; gap: 8px; align-items: center; }
-.w-thread__compose .w-input { flex: 1; }
-.w-templates { list-style: none; display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 9px; background: var(--w-bg); }
-.w-templates button { text-align: left; font-size: 12.5px; padding: 7px 9px; border-radius: 7px; width: 100%; }
-.w-templates button:hover { background: var(--w-surface); }
-.w-templatelist { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
-.w-templatelist li { display: flex; gap: 10px; align-items: flex-start; }
 
 /* ---------------------------------------------------------- performance -- */
 
@@ -651,7 +620,6 @@
 .w-idcell,
 .w-pathead,
 .w-pathead > div,
-.w-msgrow__body,
 .w-upcoming__body,
 .w-reflist li,
 .w-goals li,
@@ -664,7 +632,6 @@
 .w-summary dd,
 .w-notes p,
 .w-quicknotes li,
-.w-bubble,
 .w-signature { overflow-wrap: anywhere; }
 
 /* The connection code: monospace with tracking inside a 520px modal. */

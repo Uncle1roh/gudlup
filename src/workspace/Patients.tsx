@@ -40,8 +40,6 @@ import {
   type WorkspaceState,
 } from './data'
 import type { Duration } from '../types/domain'
-import { unreadFor } from '../data/messageStore'
-import { useThreads } from '../data/threads'
 import {
   INSTRUMENTS,
   SCHEDULE,
@@ -87,18 +85,10 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
   const [sort, setSort] = useState<'next' | 'name' | 'last' | 'vas'>('next')
   const [addOpen, setAddOpen] = useState(false)
   const now = Date.now()
-  const { rows: msgRows } = useThreads()
-
-  /* A message written from the patient's own app is unread work exactly like a
-     seeded one, so both the alert filter and the row badge count them. */
-  const unreadOf = (p: WorkspacePatient) =>
-    p.messages.filter((m) => m.from === 'patient' && !m.read).length +
-    unreadFor(msgRows, threadIdFor(p), 'therapist')
 
   const rows = useMemo(() => {
     const alerts = (p: WorkspacePatient) =>
       Boolean(assessmentDueLabel(p)) ||
-      unreadOf(p) > 0 ||
       (p.lastSessionAt != null && now - p.lastSessionAt > 30 * DAY)
 
     let list = state.patients
@@ -119,9 +109,8 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
     })
     // Alert rows float to the top of whatever ordering is in force.
     return [...sorted.filter(alerts), ...sorted.filter((p) => !alerts(p))]
-    // msgRows is a dependency: a message arriving from the patient's app has
     // to re-sort the roster, not wait for something else to invalidate it.
-  }, [state.patients, filter, sort, now, msgRows])
+  }, [state.patients, filter, sort, now])
 
   if (!state.patients.length) {
     return (
@@ -174,7 +163,6 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
         <tbody>
           {rows.map((p) => {
             const due = assessmentDueLabel(p)
-            const unread = unreadOf(p)
             const inactive = !p.lastSessionAt || now - p.lastSessionAt > 30 * DAY
             const inSession = p.nextSessionAt != null && Math.abs(now - p.nextSessionAt) < 15 * 60_000
             return (
@@ -199,8 +187,7 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
                 <td className="w-alertcell">
                   {due && <span title={t('Assessment due')}>🔔</span>}
                   {inactive && <span title={t('Inactive')}>▲</span>}
-                  {unread > 0 && <span title={t('Unread message')}>💬</span>}
-                  {!due && !inactive && !unread && <span className="w-muted">—</span>}
+                  {!due && !inactive && <span className="w-muted">—</span>}
                 </td>
                 <td>
                   <button
@@ -342,21 +329,19 @@ interface CardProps {
   patient: WorkspacePatient
   update: RosterProps['update']
   onCall: () => void
-  onMessage: () => void
   onOpenReport: (sessionId: string) => void
 }
 
 const SECTIONS = ['history', 'assessments', 'selfuse', 'prescriptions', 'notes', 'goals'] as const
 type Section = (typeof SECTIONS)[number]
 
-export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }: CardProps) {
+export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps) {
   const { t } = useI18n()
   const [open, setOpen] = useState<Record<Section, boolean>>({
     history: true, assessments: true, selfuse: false, prescriptions: true, notes: true, goals: false,
   })
   const [assessOpen, setAssessOpen] = useState(false)
   const { rows, update: updateAssessments } = useAssessments()
-  const { rows: msgRows } = useThreads()
   const dp = useDataProvider()
   /* A bridged patient is the one whose Self Use app this build actually drives,
      so their queue is read under the Self Use id. Everyone else keeps their own
@@ -370,9 +355,6 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
 
   const toggle = (s: Section) => setOpen((o) => ({ ...o, [s]: !o[s] }))
   const due = assessmentDueLabel(patient)
-  const unread =
-    patient.messages.filter((m) => m.from === 'patient' && !m.read).length +
-    unreadFor(msgRows, queueId, 'therapist')
   const rxAvg = patient.prescriptions.length
     ? Math.round(patient.prescriptions.reduce((n, r) => n + adherencePct(r), 0) / patient.prescriptions.length)
     : null
@@ -606,7 +588,6 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
       <aside className="w-col-side">
         <div className="w-sticky">
           <button className="w-btn w-btn--primary w-btn--block w-btn--lg" onClick={onCall}>📹 {t('Start Video Call')}</button>
-          <button className="w-btn w-btn--ghost w-btn--block" onClick={onMessage}>{t('Send message')}</button>
           <button className="w-btn w-btn--ghost w-btn--block" onClick={() => setRxOpen(true)}>{t('New prescription')}</button>
 
           <div className="w-sidecard">
@@ -620,11 +601,6 @@ export function PatientCard({ patient, update, onCall, onMessage, onOpenReport }
           <div className="w-sidecard">
             <div className="w-field__label">{t('Prescription adherence')}</div>
             <strong>{rxAvg == null ? '—' : `${rxAvg}%`}</strong>
-          </div>
-          <div className="w-sidecard">
-            <div className="w-field__label">{t('Unread messages')}</div>
-            <strong>{unread}</strong>
-            {unread > 0 && <button className="w-link" onClick={onMessage}>{t('View')}</button>}
           </div>
         </div>
       </aside>

@@ -27,7 +27,7 @@ security policies in `DATA_MODEL.sql` enforce, and what the data-access layer
 | Assessment scores (DASS-21…) | R(own) | RW (their patients) | agg |
 | B2B session + rapid notes | — | RW (their patients) | — |
 | Session reports | R(own, on request) | RW (their patients) | — |
-| Messages | RW(own thread) | RW (their patients) | — |
+| Messages | — | — | — | *(retired: no chat surface in the app; the `messages` table is kept for what was already written)* |
 | Consents | RW(own) | R (their patients) | — |
 | Clinical events (audit) | — (append only) | — (append only) | agg |
 | NR-1 / PGR aggregates | — | — | R (agg) |
