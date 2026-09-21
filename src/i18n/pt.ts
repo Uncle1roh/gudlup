@@ -828,6 +828,13 @@ export const PT: Record<string, string> = {
   'Begin Session': 'Começar a sessão',
   'Put your headphones on. We will play a short tone in one ear.':
     'Coloque os fones. Vamos tocar um som curto em um dos ouvidos.',
+  'Put your headphones on. We will play a short tone in one ear, then in the other.':
+    'Coloque os fones. Vamos tocar um som curto em um ouvido e depois no outro.',
+  'Tone 1 of 2': 'Som 1 de 2',
+  'Tone 2 of 2': 'Som 2 de 2',
+  'Left ear: correct.': 'Ouvido esquerdo: certo.',
+  'Now the other ear — the tone moves to the right.': 'Agora o outro ouvido: o som passa para a direita.',
+  'Play the right-ear tone': 'Tocar o som da direita',
   'Play the tone': 'Tocar o som',
   'Which ear hears the tone?': 'Qual ouvido escutou o som?',
   'Left': 'Esquerdo',

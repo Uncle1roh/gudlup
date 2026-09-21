@@ -222,35 +222,72 @@ function PreSession({
 
 /* ------------------------------------------------------------- SES-2 ----- */
 
+/* ---- the stereo check, as a state machine ----
+
+   It asks about the LEFT ear, then the RIGHT one. The two questions used to
+   look identical: answering the first correctly played the second tone and
+   changed nothing on screen, so a person tapped "Left", saw no reaction,
+   tapped "Right" — and landed in the session. Two questions were asked and
+   one was experienced, which is the same as not checking at all.
+
+   Every step is now its own screen, and an answer is only accepted for an ear
+   whose tone has actually been played. Pure, so it can be argued with in
+   tools/test-stereo-check.ts rather than by clicking. */
+
+export type StereoStage = 'intro' | 'ask-left' | 'confirmed-left' | 'ask-right'
+
+export function stereoAnswer(stage: StereoStage, side: 'left' | 'right'):
+  { next: StereoStage; warn: boolean; pass: boolean } {
+  if (stage === 'ask-left') {
+    return side === 'left'
+      ? { next: 'confirmed-left', warn: false, pass: false }
+      : { next: 'ask-left', warn: true, pass: false }
+  }
+  if (stage === 'ask-right') {
+    return side === 'right'
+      ? { next: 'ask-right', warn: false, pass: true }
+      : { next: 'ask-right', warn: true, pass: false }
+  }
+  /* No tone has been played for this stage: nothing to answer. */
+  return { next: stage, warn: false, pass: false }
+}
+
 /**
- * Two ears, in order. Answering correctly moves on by itself; a wrong or mono
- * answer warns and still lets the person continue — a headphone problem is a
- * quality problem, not a safety one.
+ * Two ears, one at a time, each one visible. A wrong or mono answer warns and
+ * still lets the person continue — a headphone problem is a quality problem,
+ * not a safety one — but it is not recorded as a pass.
  */
 function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; onBack: () => void }) {
   const { t } = useI18n()
-  const [ear, setEar] = useState<'left' | 'right'>('left')
+  const [stage, setStage] = useState<StereoStage>('intro')
   const [warn, setWarn] = useState(false)
-  const [started, setStarted] = useState(false)
 
   const play = useCallback((side: 'left' | 'right') => playEarTone(side), [])
 
   /* The tone is played from a TAP, never from an effect on mount.
      Browsers only let audio start inside a user-gesture call stack; an
      auto-played tone comes out of a suspended context and is silent, so the
-     person is asked about a sound that never happened. The first tap starts
-     the check, and moving to the second ear plays from inside that same tap. */
+     person is asked about a sound that never happened. Each step plays its own
+     tone from inside the tap that opened it. */
   function begin() {
-    setStarted(true)
+    setStage('ask-left')
     play('left')
   }
 
-  function answer(side: 'left' | 'right') {
-    if (side !== ear) { setWarn(true); return }
-    setWarn(false)
-    if (ear === 'left') { setEar('right'); play('right'); return }
-    onDone(true)
+  function toRightEar() {
+    setStage('ask-right')
+    play('right')
   }
+
+  function answer(side: 'left' | 'right') {
+    const r = stereoAnswer(stage, side)
+    setWarn(r.warn)
+    if (r.pass) { onDone(true); return }
+    setStage(r.next)
+  }
+
+  const asking = stage === 'ask-left' || stage === 'ask-right'
+  const ear: 'left' | 'right' = stage === 'ask-right' ? 'right' : 'left'
 
   return (
     <div className={SESSION_FRAME}>
@@ -258,13 +295,21 @@ function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; on
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
           <h2 className="display">{t("Let's check your headphones")}</h2>
-          {!started ? (
+
+          {stage === 'intro' && (
             <>
-              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear.')}</p>
+              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear, then in the other.')}</p>
               <button className="btn btn--primary" onClick={begin}>{t('Play the tone')}</button>
             </>
-          ) : (
+          )}
+
+          {asking && (
             <>
+              {/* WHICH of the two questions this is — the whole point of the
+                  fix: the second one has to look like a second one. */}
+              <span className="stereo__step">
+                {stage === 'ask-left' ? t('Tone 1 of 2') : t('Tone 2 of 2')}
+              </span>
               <p className="lead">{t('Which ear hears the tone?')}</p>
               <div className="chip-row stereo__answers">
                 <button className="chip" onClick={() => answer('left')}>
@@ -275,6 +320,16 @@ function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; on
                 </button>
               </div>
               <button className="btn btn--quiet" onClick={() => play(ear)}>{t('Play the tone again')}</button>
+            </>
+          )}
+
+          {stage === 'confirmed-left' && (
+            <>
+              {/* The first answer is ACKNOWLEDGED. Without this the check ran
+                  two questions behind one screen and read as one. */}
+              <p className="lead stereo__ok">{t('Left ear: correct.')}</p>
+              <p className="small muted">{t('Now the other ear — the tone moves to the right.')}</p>
+              <button className="btn btn--primary" onClick={toRightEar}>{t('Play the right-ear tone')}</button>
             </>
           )}
 

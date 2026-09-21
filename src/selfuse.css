@@ -399,6 +399,8 @@
 .stereo__body { justify-content: center; align-items: center; gap: 18px; text-align: center; }
 .stereo__art { font-size: 56px; }
 .stereo__answers { width: 100%; max-width: 280px; }
+.stereo__step { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--aura); }
+.stereo__ok { color: var(--ink); font-weight: 600; }
 .stereo__warn { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-md); background: var(--mist-2); }
 
 .player__ready { display: grid; place-items: center; gap: 30px; padding: 26px; text-align: center; }

@@ -198,6 +198,13 @@ export const IT_SELF_USE: Record<string, string> = {
   'Get comfortable.': 'Mettiti comodo.',
   'Headphones recommended': 'Cuffie consigliate',
   'Begin Session': 'Inizia la sessione',
+  'Put your headphones on. We will play a short tone in one ear, then in the other.':
+    'Metti le cuffie. Riproduciamo un suono breve in un orecchio, poi nell’altro.',
+  'Tone 1 of 2': 'Suono 1 di 2',
+  'Tone 2 of 2': 'Suono 2 di 2',
+  'Left ear: correct.': 'Orecchio sinistro: giusto.',
+  'Now the other ear — the tone moves to the right.': 'Ora l’altro orecchio: il suono passa a destra.',
+  'Play the right-ear tone': 'Riproduci il suono a destra',
   "Let's check your headphones": 'Controlliamo le cuffie',
   'Which ear hears the tone?': 'Da quale orecchio senti il suono?',
   'Left': 'Sinistro',
