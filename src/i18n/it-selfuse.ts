@@ -514,6 +514,21 @@ export const IT_SELF_USE: Record<string, string> = {
   'Start listening': 'Inizia ad ascoltare',
   'Step {n} of {total}': 'Passo {n} di {total}',
   /* ---- the first run: two wizards (with / without a company code) ---- */
+  'Your data, your control.': 'I tuoi dati, sotto il tuo controllo.',
+  'Good Loop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.':
+    'Good Loop è costruito secondo gli standard LGPD e GDPR. Quello che ascolti e come dici di stare è tuo: non viene mai venduto, non viene mostrato alla tua azienda e non viene condiviso con un terapeuta se non lo chiedi tu.',
+  'What we keep': 'Cosa conserviamo',
+  'Your account, the sessions you play and the check-ins you fill in — nothing else.':
+    'Il tuo account, le sessioni che ascolti e i check-in che compili. Nient’altro.',
+  'Your company sees': 'La tua azienda vede',
+  'Anonymous aggregate figures only, and only above a threshold that cannot identify anyone.':
+    'Solo numeri aggregati e anonimi, e solo sopra una soglia che non permette di riconoscere nessuno.',
+  'You can stop': 'Puoi fermarti',
+  'Withdraw a consent or export everything from Profile → Privacy & Data, at any time.':
+    'Revoca un consenso o esporta tutto da Profilo → Privacy e dati, quando vuoi.',
+  'I have read and accept the Terms and the Privacy Policy.':
+    'Ho letto e accetto i Termini e l’Informativa sulla privacy.',
+  'Accept & continue': 'Accetta e continua',
   'One method, two ways to use it': 'Un metodo, due modi di usarlo',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
     'La tua azienda te li dà entrambi. Quasi sempre apri Good Loop da solo; quando vuoi qualcuno accanto, lo stesso metodo te lo porta un professionista abilitato.',

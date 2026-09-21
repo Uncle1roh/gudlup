@@ -265,7 +265,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      stamped whether they read it or skip it, and it is stored with the rest
      of the person's state (per account, on this device, like `onboardedAt`).
      Profile → "How Good Loop Works" is where it lives from then on. */
-  if (!state.tutorialSeenAt) {
+  if (!state.consents.termsAt || !state.tutorialSeenAt) {
     /* Which of the two wizards: a company code means an employer bought this
        and the flow opens by saying what they were given. Without one, that
        card would be an advertisement for a plan nobody has. */
@@ -273,6 +273,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       <FirstRun
         hasCompanyCode={!!convention}
         professional={hasProfessionalSupport(convention)}
+        /* Two gates, one screen. The legal acceptance is asked until it is
+           given; the explainer is shown until it is seen or skipped. An
+           account that accepted long ago and a new one both land in the right
+           place without a second flow. */
+        needsTerms={!state.consents.termsAt}
+        needsTutorial={!state.tutorialSeenAt}
+        onAcceptTerms={() => update((s) => ({ ...s, consents: { ...s.consents, termsAt: Date.now() } }))}
         onDone={() => update((s) => ({ ...s, tutorialSeenAt: Date.now() }))}
       />
     )

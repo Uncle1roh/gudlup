@@ -74,6 +74,15 @@ export function takeSignupIntake(): SignupIntake | null {
 }
 
 export interface Consents {
+  /**
+   * REQUIRED — the Terms of Service and the Privacy Policy.
+   *
+   * Accepted on the FIRST screen after registering, before anything else is
+   * shown, and recorded the moment the box is ticked. Null is what makes the
+   * app ask: an account that predates this screen is asked once, the next
+   * time it opens, rather than being assumed to have agreed.
+   */
+  termsAt: number | null
   /** REQUIRED — app usage & session data. */
   usageAt: number | null
   /** REQUIRED FOR MEASUREMENT — wellbeing check-ins. */
@@ -178,6 +187,7 @@ export function emptyState(): SelfUseState {
     companyCode: null,
     intake: { challenge: null, duration: null, time: null, matters: null },
     consents: {
+      termsAt: null,
       usageAt: null,
       measurementAt: null,
       aggregate: false,

@@ -1060,6 +1060,21 @@ export const PT: Record<string, string> = {
   'Nervous before a meeting': 'Nervoso antes de uma reunião',
   'Normal': 'Normal',
   'Overwhelmed by tasks': 'Soterrado de tarefas',
+  'Your data, your control.': 'Seus dados, sob o seu controle.',
+  'Good Loop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.':
+    'O Good Loop segue os padrões da LGPD e do GDPR. O que você escuta e como você diz que está é seu: nunca é vendido, nunca é mostrado à sua empresa e só é compartilhado com um terapeuta se você pedir.',
+  'What we keep': 'O que guardamos',
+  'Your account, the sessions you play and the check-ins you fill in — nothing else.':
+    'Sua conta, as sessões que você ouve e os check-ins que você preenche. Nada além disso.',
+  'Your company sees': 'A sua empresa vê',
+  'Anonymous aggregate figures only, and only above a threshold that cannot identify anyone.':
+    'Apenas números agregados e anônimos, e só acima de um limite que não permite identificar ninguém.',
+  'You can stop': 'Você pode parar',
+  'Withdraw a consent or export everything from Profile → Privacy & Data, at any time.':
+    'Retire um consentimento ou exporte tudo em Perfil → Privacidade e dados, quando quiser.',
+  'I have read and accept the Terms and the Privacy Policy.':
+    'Li e aceito os Termos e a Política de Privacidade.',
+  'Accept & continue': 'Aceitar e continuar',
   'One method, two ways to use it': 'Um método, dois jeitos de usar',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
     'A sua empresa oferece os dois. Na maioria dos dias você abre o Good Loop sozinho; quando quiser alguém junto, o mesmo método vem com um profissional habilitado.',

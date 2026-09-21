@@ -1197,6 +1197,18 @@
 }
 .fr__quote figcaption { font-size: 16px; line-height: 1.35; color: var(--slate); }
 .fr__fine { font-size: 16px; line-height: 1.45; color: var(--slate); }
+
+/* The acceptance. A 48px row, the box big enough to hit with a thumb, and the
+   whole line is the label — nobody should have to aim at a 13px square. */
+.fr__accept {
+  display: flex; align-items: flex-start; gap: 12px;
+  min-height: 48px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--mist-2); text-align: left; cursor: pointer;
+}
+.fr__accept input { width: 22px; height: 22px; margin-top: 1px; accent-color: var(--aura); flex: none; }
+.fr__accept span { font-size: 16px; line-height: 1.4; color: var(--ink); }
+.fr__foot .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .fr__title { font-size: 32px; line-height: 1.16; }
 .fr__body { font-size: 16px; line-height: 1.5; color: var(--slate); }
 
