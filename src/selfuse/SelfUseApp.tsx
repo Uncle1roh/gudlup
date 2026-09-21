@@ -266,7 +266,16 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      of the person's state (per account, on this device, like `onboardedAt`).
      Profile → "How Good Loop Works" is where it lives from then on. */
   if (!state.tutorialSeenAt) {
-    return <FirstRun onDone={() => update((s) => ({ ...s, tutorialSeenAt: Date.now() }))} />
+    /* Which of the two wizards: a company code means an employer bought this
+       and the flow opens by saying what they were given. Without one, that
+       card would be an advertisement for a plan nobody has. */
+    return (
+      <FirstRun
+        hasCompanyCode={!!convention}
+        professional={hasProfessionalSupport(convention)}
+        onDone={() => update((s) => ({ ...s, tutorialSeenAt: Date.now() }))}
+      />
+    )
   }
 
   /* ------------------------------------------------------ the session --- */

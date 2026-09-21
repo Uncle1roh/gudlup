@@ -510,6 +510,47 @@ export const IT_SELF_USE: Record<string, string> = {
   /* ---- the first run: three cards, once, before the library ---- */
   'Start listening': 'Inizia ad ascoltare',
   'Step {n} of {total}': 'Passo {n} di {total}',
+  /* ---- the first run: two wizards (with / without a company code) ---- */
+  'One method, two ways to use it': 'Un metodo, due modi di usarlo',
+  'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
+    'La tua azienda te li dà entrambi. Quasi sempre apri Good Loop da solo; quando vuoi qualcuno accanto, lo stesso metodo te lo porta un professionista abilitato.',
+  'On your own': 'Da solo',
+  'Short guided audio sessions for the day you are having — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.':
+    'Brevi sessioni audio guidate per la giornata che hai — 6, 12 o 24 minuti, quando vuoi, senza chiedere niente a nessuno.',
+  'With a professional': 'Con un professionista',
+  'Included in your plan: sessions with a licensed psychologist, booked and held inside the app.':
+    'Incluso nel tuo piano: sedute con uno psicologo abilitato, prenotate e svolte dentro l’app.',
+  'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.':
+    'Disponibile con il piano esteso della tua azienda: sedute con uno psicologo abilitato, prenotate e svolte dentro l’app.',
+
+  'Made for the working day': 'Fatto per la giornata di lavoro',
+  'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
+    'Metti le cuffie, scegli una durata e ascolta: la voce e il suono intorno fanno il lavoro. Niente da leggere, niente a cui rispondere, e nessuno sa cosa hai scelto.',
+  'Before': 'Prima',
+  'A meeting you are dreading, a call you have been putting off.': 'Una riunione che temi, una telefonata che rimandi.',
+  'After': 'Dopo',
+  'Something that went badly, and is still in your shoulders.': 'Qualcosa andato storto, che hai ancora sulle spalle.',
+  'At the end': 'A fine giornata',
+  'Closing the day so it does not follow you home.': 'Chiudere la giornata perché non ti segua a casa.',
+
+  'Not belief. Neuroscience.': 'Non è una credenza. È neuroscienza.',
+  'Good Loop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.':
+    'Good Loop non inventa nuova scienza: mette insieme ciò che già funziona. Sei fasi, costruite su tecniche cliniche consolidate e consegnate come suono.',
+  'bilateral stimulation': 'stimolazione bilaterale',
+  'Polyvagal theory': 'Teoria polivagale',
+  'nervous-system regulation': 'regolazione del sistema nervoso',
+  'Binaural beats': 'Battimenti binaurali',
+  'calibrated frequencies': 'frequenze calibrate',
+  'Guided breathing': 'Respirazione guidata',
+  'parasympathetic activation': 'attivazione parasimpatica',
+  'Mindfulness': 'Mindfulness',
+  'stress and regulation': 'stress e regolazione',
+  'emotional tolerance': 'tolleranza emotiva',
+  'The body knows how to process — when given the space.': 'Il corpo sa come elaborare, quando gli si dà lo spazio.',
+  'Giampiero Varetti · Clinical psychologist · Creator of the methodology · 30+ years of practice':
+    'Giampiero Varetti · Psicologo clinico · Creatore della metodologia · 30+ anni di pratica',
+  'Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
   'Press play and listen': 'Premi play e ascolta',
   'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
     'Good Loop è una libreria di brevi sessioni audio guidate per il tuo benessere. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Sei, dodici o ventiquattro minuti, quanto sta nella giornata che hai.',

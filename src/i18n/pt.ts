@@ -1061,6 +1061,43 @@ export const PT: Record<string, string> = {
   'Nervous before a meeting': 'Nervoso antes de uma reunião',
   'Normal': 'Normal',
   'Overwhelmed by tasks': 'Soterrado de tarefas',
+  'One method, two ways to use it': 'Um método, dois jeitos de usar',
+  'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
+    'A sua empresa oferece os dois. Na maioria dos dias você abre o Good Loop sozinho; quando quiser alguém junto, o mesmo método vem com um profissional habilitado.',
+  'On your own': 'Sozinho',
+  'Short guided audio sessions for the day you are having — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.':
+    'Sessões curtas de áudio guiado para o dia que você está tendo — 6, 12 ou 24 minutos, quando quiser, sem precisar pedir a ninguém.',
+  'With a professional': 'Com um profissional',
+  'Included in your plan: sessions with a licensed psychologist, booked and held inside the app.':
+    'Incluído no seu plano: sessões com um psicólogo habilitado, agendadas e realizadas dentro do app.',
+  'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.':
+    'Disponível com o plano estendido da sua empresa: sessões com um psicólogo habilitado, agendadas e realizadas dentro do app.',
+  'Made for the working day': 'Feito para o dia de trabalho',
+  'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
+    'Coloque os fones, escolha uma duração e escute: a voz e o som ao redor fazem o trabalho. Nada para ler, nada para responder, e ninguém fica sabendo o que você escolheu.',
+  'Before': 'Antes',
+  'A meeting you are dreading, a call you have been putting off.': 'Uma reunião que você teme, uma ligação que vem adiando.',
+  'After': 'Depois',
+  'Something that went badly, and is still in your shoulders.': 'Algo que deu errado e ainda está nos seus ombros.',
+  'At the end': 'No fim do dia',
+  'Closing the day so it does not follow you home.': 'Fechar o dia para ele não ir junto para casa.',
+  'Not belief. Neuroscience.': 'Não é crença. É neurociência.',
+  'Good Loop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.':
+    'O Good Loop não inventa ciência nova: ele organiza o que já funciona. Seis fases, construídas sobre técnicas clínicas consolidadas e entregues como som.',
+  'bilateral stimulation': 'estimulação bilateral',
+  'Polyvagal theory': 'Teoria polivagal',
+  'nervous-system regulation': 'regulação do sistema nervoso',
+  'Binaural beats': 'Batimentos binaurais',
+  'calibrated frequencies': 'frequências calibradas',
+  'Guided breathing': 'Respiração guiada',
+  'parasympathetic activation': 'ativação parassimpática',
+  'stress and regulation': 'estresse e regulação',
+  'emotional tolerance': 'tolerância emocional',
+  'The body knows how to process — when given the space.': 'O corpo sabe processar, quando recebe espaço.',
+  'Giampiero Varetti · Clinical psychologist · Creator of the methodology · 30+ years of practice':
+    'Giampiero Varetti · Psicólogo clínico · Criador da metodologia · 30+ anos de prática',
+  'Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'O Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
   'Press play and listen': 'Aperte play e escute',
   'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
     'O Good Loop é uma biblioteca de sessões curtas de áudio guiado para o seu bem-estar. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Seis, doze ou vinte e quatro minutos, o que couber no seu dia.',

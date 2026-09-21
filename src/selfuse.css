@@ -1143,6 +1143,10 @@
   justify-content: safe center;
   text-align: center;
   gap: 20px;
+  /* The method card carries six techniques and a quote: on a short phone that
+     is taller than the screen, and the buttons must never be the part that
+     falls off. The column scrolls; the footer stays. */
+  overflow-y: auto;
 }
 .fr__top {
   width: 100%;
@@ -1162,8 +1166,16 @@
   cursor: pointer;
 }
 
-.fr__art { margin: 0; width: min(260px, 62vw); }
-.fr__art--wide { width: min(340px, 80vw); }
+.fr__art { margin: 0; width: min(210px, 50vw); }
+.fr__art--wide { width: min(280px, 68vw); }
+.fr__art--small { width: min(132px, 34vw); }
+/* Two of the five cards carry a list as well as a picture; on a short phone
+   the words matter more than the illustration, so it gives way first. */
+@media (max-height: 740px) {
+  .fr__art { width: min(150px, 38vw); }
+  .fr__art--wide { width: min(190px, 46vw); }
+  .fr__art--small { width: min(104px, 26vw); }
+}
 .fr-art { display: block; width: 100%; height: auto; }
 /* one soft disc of ground light behind each drawing, so the art sits IN the
    screen instead of floating on it */
@@ -1186,10 +1198,40 @@
 .fr-art__bars rect { fill: var(--aura); opacity: 0.5; }
 
 .fr__words { display: flex; flex-direction: column; gap: 10px; max-width: 36ch; }
+
+/* What a card LISTS: the two modes, the three moments, the six techniques.
+   One column, label first — at six entries this is a glance, not a read. */
+.fr__points { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.fr__points li { display: flex; flex-direction: column; gap: 1px; }
+.fr__points b { font-size: 16px; font-weight: 600; color: var(--ink); }
+.fr__points span { font-size: 16px; line-height: 1.4; color: var(--slate); }
+/* Six one-word techniques read as a list, not as paragraphs: put the note on
+   the same line and let it wrap only if it must. */
+.fr__points--tight li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+
+.fr__quote { margin: 6px 0 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.fr__quote blockquote {
+  margin: 0; padding-left: 14px; border-left: 2px solid var(--aura);
+  font-family: var(--display); font-size: 24px; line-height: 1.25; color: var(--ink);
+}
+@media (max-height: 900px) {
+  .fr__quote blockquote { font-size: 16px; line-height: 1.35; }
+}
+.fr__quote figcaption { font-size: 16px; line-height: 1.35; color: var(--slate); }
+.fr__fine { font-size: 16px; line-height: 1.45; color: var(--slate); }
 .fr__title { font-size: 32px; line-height: 1.16; }
 .fr__body { font-size: 16px; line-height: 1.5; color: var(--slate); }
 
-.fr__foot { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.fr__foot {
+  width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px;
+  margin-top: 4px;
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 max(6px, env(safe-area-inset-bottom));
+  /* the ground fading up, so text scrolling under the buttons does not
+     collide with them */
+  background: linear-gradient(to top, var(--mist) 62%, transparent);
+}
 .fr__foot .btn { width: 100%; }
 
 @keyframes fr-in {
