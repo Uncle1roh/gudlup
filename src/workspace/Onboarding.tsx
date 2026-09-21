@@ -53,8 +53,15 @@ const REGIONS = ['SP', 'RJ', 'MG', 'RS', 'PR', 'BA', 'SC', 'PE', 'CE', 'DF', 'Ot
 export function TherapistOnboarding({ account, cred, onSubmit, onCredChanged, onSign, onFinish }: OnboardingProps) {
   /* Registration is asked for once; after that the SERVER decides whether this
      flow continues. A therapist who has submitted sits on TH-ON-2 until a
-     reviewer moves them, and no amount of clicking in here changes that. */
-  if (!account.submittedAt && !cred.documents.length) {
+     reviewer moves them, and no amount of clicking in here changes that.
+
+     APPROVED IS APPROVED. This used to ask for a registration whenever the
+     credential row carried no uploaded documents — and a therapist approved by
+     a reviewer who filed the paperwork elsewhere has none. They were sent to
+     fill in a form about credentials that had already been accepted, on every
+     browser they opened, and the workspace behind it stayed shut. The local
+     `submittedAt` is a UI breadcrumb; the row's status is the fact. */
+  if (cred.status !== 'approved' && !account.submittedAt && !cred.documents.length) {
     return <Registration account={account} cred={cred} onSubmit={onSubmit} onCredChanged={onCredChanged} />
   }
   if (cred.status !== 'approved') return <VerificationPending account={account} cred={cred} onCredChanged={onCredChanged} />
