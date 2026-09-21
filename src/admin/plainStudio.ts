@@ -182,6 +182,80 @@ interface Lane {
   xfades: number[]
 }
 
+/* ---------------------------------------------------------------- fades ---
+
+   WHY THIS EXISTS: a fade-out used to have exactly two sources — the sheet's
+   `fade_out_s`, and a `crossfade_prec_s` on the next clip IN THE SAME LANE.
+   Put the six songs of a 24-minute protocol on six lanes (MUS-1…MUS-6, one
+   clip each, which is how the POs write a protocol whose pieces have
+   different levels) and NO clip has a predecessor in its own lane: not one of
+   them fades out. The music stops dead six times, and the sheet looks right.
+
+   A handover is a handover whichever lane the next piece lives on. So the
+   rule is stated in TIME, per kind of bed, not per lane:
+
+   · a clip another one takes over from fades out over the incoming
+     crossfade — or over HANDOVER_S when the sheet asked for neither;
+   · the LAST music of the session fades over CLOSE_S, because a session
+     ending on a hard cut is the one thing every protocol agrees on.
+
+   The sheet always wins when it says MORE. Nothing here shortens a fade an
+   author wrote, and every inferred fade is announced in the notes so it can
+   be written into the workbook and stop being inferred. */
+
+/** A bed handing over to the next one, when nobody said how long. */
+const HANDOVER_S = 3
+/** The last music of a session, when the sheet leaves it at zero. */
+const CLOSE_S = 8
+/** No fade may eat more than this share of its own clip. */
+const MAX_SHARE = 1 / 3
+
+export interface FadeOutPlan {
+  /** clipId → the fade-out it should have, only where it beats the sheet. */
+  byClip: Map<string, number>
+  /** What was inferred, for the notes. */
+  reasons: { clipId: string; sec: number; why: 'handover' | 'closing' }[]
+}
+
+/**
+ * The fade-out every sample clip should end on, across lanes.
+ *
+ * Pure, and asserted in tools/test-music-fade.ts.
+ */
+export function planSampleFadeOuts(clips: PlainClip[]): FadeOutPlan {
+  const plan: FadeOutPlan = { byClip: new Map(), reasons: [] }
+  const EPS = 0.5
+
+  for (const tipo of ['music', 'soundscape'] as const) {
+    const rows = clips
+      .filter((c) => c.tipo === tipo && c.endS > c.startS)
+      .sort((a, b) => a.startS - b.startS || String(a.clipId).localeCompare(String(b.clipId)))
+
+    rows.forEach((c, i) => {
+      const own = c.fadeOutS ?? 0
+      const len = c.endS - c.startS
+      /* The next bed of the same kind, wherever it plays. It takes over when
+         it starts at or before this one ends — the Excel writes abutting
+         times, and a crossfade makes the overlap real. */
+      const next = rows.slice(i + 1).find((n) => n.startS <= c.endS + EPS)
+      let want = 0
+      let why: 'handover' | 'closing' = 'handover'
+      if (next) {
+        want = Math.max(next.crossfadePrecS ?? 0, HANDOVER_S)
+      } else if (tipo === 'music') {
+        want = CLOSE_S
+        why = 'closing'
+      }
+      if (!want) return
+      want = Math.min(want, +(len * MAX_SHARE).toFixed(3))
+      if (want <= own + 0.001) return
+      plan.byClip.set(String(c.clipId), want)
+      plan.reasons.push({ clipId: String(c.clipId), sec: want, why })
+    })
+  }
+  return plan
+}
+
 export function plainToStudioTracks(
   timeline: PlainTimeline,
   version: PlainVersion,
@@ -195,6 +269,9 @@ export function plainToStudioTracks(
   /* one ledger for the whole protocol: no music file is drawn twice while its
      phase pool still has an unused one */
   const ledger = newDrawLedger()
+
+  /* Every bed's fade-out, decided across lanes (see planSampleFadeOuts). */
+  const fadeOuts = planSampleFadeOuts(version.clips)
 
   /* Lanes keyed by final track name, created in file order so the Studio
      shows the same top-to-bottom structure as the Excel. */
@@ -357,7 +434,9 @@ export function plainToStudioTracks(
           drawPhase: c.tipo === 'music' ? (c.faseFrom ?? 1) : undefined,
         } as SampleParams,
         fadeInSec: c.fadeInS,
-        fadeOutSec: c.fadeOutS,
+        /* The sheet, or the handover this clip is part of — whichever is
+           longer. A lane of its own is not a reason to stop dead. */
+        fadeOutSec: Math.max(c.fadeOutS, fadeOuts.byClip.get(String(c.clipId)) ?? 0),
       }
       l.track.clips.push(clip)
       l.clipDbs.push(nominalDb)
@@ -627,6 +706,20 @@ export function plainToStudioTracks(
       applied++
     }
     if (applied) notes.push(`"${l.track.name}": ${applied} crossfade${applied === 1 ? '' : 's'} (crossfade_prec_s) applied as real equal-power overlaps.`)
+  }
+
+  /* Every fade this file decided rather than read. It is worth saying: the
+     fix for an inferred fade is to write it in the sheet, and the operator
+     cannot do that without being told it happened. */
+  if (fadeOuts.reasons.length) {
+    const handovers = fadeOuts.reasons.filter((r) => r.why === 'handover')
+    const closings = fadeOuts.reasons.filter((r) => r.why === 'closing')
+    if (handovers.length) {
+      notes.push(`Dissolvenza in uscita aggiunta a ${handovers.length} clip che passano il testimone alla successiva (${handovers.map((r) => `${r.clipId} ${r.sec}s`).join(', ')}): il foglio non la indicava e senza di essa il letto sonoro si interrompe di colpo. Scrivila in fade_out_s per deciderla tu.`)
+    }
+    if (closings.length) {
+      notes.push(`Dissolvenza finale aggiunta a ${closings.map((r) => `${r.clipId} (${r.sec}s)`).join(', ')}: è l'ultima musica della sessione e il foglio la lasciava a zero.`)
+    }
   }
 
   /* A lane the Excel asked for and nothing landed on.

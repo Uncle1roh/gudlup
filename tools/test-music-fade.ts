@@ -28,6 +28,8 @@ class FakeAB {
 ;(globalThis as unknown as { AudioBuffer: unknown }).AudioBuffer = FakeAB
 
 import { applyClipShape, sampleCoveredSec } from '../src/studio/multitrack'
+import { planSampleFadeOuts } from '../src/admin/plainStudio'
+import type { PlainClip } from '../src/admin/plainTimeline'
 
 let pass = 0
 const fails: string[] = []
@@ -69,6 +71,57 @@ assert(at(faded, 359.9) < 0.02, 'the last moments are effectively silent — the
 // the old behaviour, for contrast: the same fade over a 24-minute window
 const windowed = applyClipShape(tone(1440) as unknown as AudioBuffer, undefined, 0, 8) as unknown as InstanceType<typeof FakeAB>
 assert(at(windowed, 359.9) > 0.49, 'baked over the whole window instead, minute 6 is at full level — nothing fades where the music ends')
+
+/* ------------------------------------- the fade-out every bed should have */
+console.log('\n--- where a fade-out comes from ---')
+
+const clip = (o: Partial<PlainClip> & { clipId: string; tipo: string; startS: number; endS: number }): PlainClip =>
+  ({ traccia: o.traccia ?? 'MUS', fadeInS: 0, fadeOutS: 0, crossfadePrecS: null, ...o }) as unknown as PlainClip
+
+// the bug the POs hit: six songs, six lanes, one clip each — nobody has a
+// predecessor in their own lane, so nothing ever faded
+const sixLanes = [0, 240, 480, 720, 960, 1200].map((start, i) =>
+  clip({ clipId: `MU-00${i + 1}`, tipo: 'music', traccia: `MUS-${i + 1}`, startS: start, endS: start + 240 }))
+const six = planSampleFadeOuts(sixLanes)
+assert(six.byClip.size === 6, 'all six fade out even though each is alone on its lane')
+assert(six.byClip.get('MU-001') === 3, 'a bed handing over fades for 3s when the sheet says nothing')
+assert(six.byClip.get('MU-006') === 8, 'and the last music of the session closes over 8s')
+assert(six.reasons.filter((r) => r.why === 'closing').length === 1, 'exactly one closing fade')
+
+// the sheet always wins when it asks for more
+const authored = planSampleFadeOuts([
+  clip({ clipId: 'A', tipo: 'music', startS: 0, endS: 300, fadeOutS: 12 }),
+  clip({ clipId: 'B', tipo: 'music', startS: 300, endS: 600, fadeOutS: 20 }),
+])
+assert(!authored.byClip.has('A'), '12s written in the sheet is not replaced by a 3s handover')
+assert(!authored.byClip.has('B'), 'nor is a 20s closing fade')
+
+// a crossfade on the incoming clip sets the length of the outgoing fade
+const xf = planSampleFadeOuts([
+  clip({ clipId: 'A', tipo: 'music', startS: 0, endS: 300 }),
+  clip({ clipId: 'B', tipo: 'music', startS: 300, endS: 600, crossfadePrecS: 6 }),
+])
+assert(xf.byClip.get('A') === 6, "the outgoing clip fades over the incoming clip's crossfade")
+
+// a gap is not a handover — silence between two beds is deliberate
+const gapped = planSampleFadeOuts([
+  clip({ clipId: 'A', tipo: 'music', startS: 0, endS: 100 }),
+  clip({ clipId: 'B', tipo: 'music', startS: 400, endS: 600 }),
+])
+assert(gapped.byClip.get('A') === 8, 'a bed with silence after it closes rather than hands over')
+assert(gapped.reasons.find((r) => r.clipId === 'A')?.why === 'closing', 'and it is reported as a closing')
+
+// no fade may eat its own clip
+const tiny = planSampleFadeOuts([clip({ clipId: 'T', tipo: 'music', startS: 0, endS: 9 })])
+assert(tiny.byClip.get('T') === 3, 'a 9s clip closes over 3s, not 8')
+
+// soundscapes hand over too, but the session's end is the music's job
+const beds = planSampleFadeOuts([
+  clip({ clipId: 'S1', tipo: 'soundscape', startS: 0, endS: 300 }),
+  clip({ clipId: 'S2', tipo: 'soundscape', startS: 300, endS: 600 }),
+])
+assert(beds.byClip.get('S1') === 3, 'one soundscape handing over to the next fades out')
+assert(!beds.byClip.has('S2'), 'the last soundscape is left alone — it is not the closing')
 
 console.log(`\n${pass} passed, ${fails.length} failed`)
 if (fails.length) { for (const f of fails) console.log('  -', f); throw new Error('music fade tests failed') }
