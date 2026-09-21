@@ -17,7 +17,7 @@ import {
   getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource,
   hydrateTtsSettings, saveSharedTtsSettings, clearSharedTtsSettings, type SharedState,
 } from './settings'
-import { ARCHETYPES, defaultPrimary, defaultSecondary, VOICE_CATALOG, voiceById, voicesByArchetype, voicesSyncedAt } from './voiceCatalog'
+import { ARCHETYPES, defaultPrimary, defaultSecondary, resolveVoiceId, VOICE_CATALOG, voicesByArchetype, voicesSyncedAt } from './voiceCatalog'
 import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
@@ -39,12 +39,15 @@ const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
  * will fail at render time and should not look like a normal selection.
  */
 function VoiceSelect({ value, onChange, allowDefault }: { value: string; onChange: (v: string) => void; allowDefault?: { label: string } }) {
-  const known = voiceById(value)
+  const res = resolveVoiceId(value)
   return (
     <select className="voice-panel__input" value={value} onChange={(e) => onChange(e.target.value)}>
       {allowDefault && <option value="">{allowDefault.label}</option>}
-      {!known && value && (
+      {!res.voice && value && (
         <option value={value}>⚠ {value} — non in questo account</option>
+      )}
+      {res.remappedFrom && (
+        <option value={value}>↪ {res.remappedFrom.name} (account precedente) → {res.voice?.name}</option>
       )}
       {ARCHETYPES.map((a) => {
         const list = voicesByArchetype(a.id)
@@ -139,8 +142,14 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     : 'nessuna chiave ElevenLabs — voce di ripiego'
   /* Name the voice we are actually going to use. Printing "Valeria" for an id
      the account cannot see would be a comfortable lie about what will render. */
-  const pName = voiceById(voiceId)?.name ?? voiceId
-  const mName = voiceById(voiceIdM)?.name ?? voiceIdM
+  const pRes = resolveVoiceId(voiceId)
+  const mRes = resolveVoiceId(voiceIdM)
+  const pName = pRes.voice?.name ?? voiceId
+  const mName = mRes.voice?.name ?? voiceIdM
+  /* A key change moves every id. The choice is kept as it was saved and served
+     by the same archetype here, so the panel says which voice is speaking now
+     instead of showing an id that belongs to an account nobody is using. */
+  const remapped = [pRes, mRes].filter((r) => r.remappedFrom)
 
   /**
    * Write the settings down. Called by the Salva button AND by every change.
@@ -305,6 +314,13 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         <button className="voice-panel__btn voice-panel__btn--quiet" onClick={() => void clear()}>Cancella</button>
       </div>
 
+      {remapped.length > 0 && (
+        <p className="voice-panel__ok">
+          {remapped.map((r) => `${r.remappedFrom?.name} → ${r.voice?.name}`).join(' · ')} — {remapped.length === 1 ? 'la voce scelta appartiene' : 'le voci scelte appartengono'} a un altro account
+          ElevenLabs. Qui {remapped.length === 1 ? 'la sostituisce' : 'le sostituiscono'} lo stesso archetipo: la scelta resta com’era, e con la chiave di prima torna la voce di prima.
+          Per fissare quella di adesso, riselezionala qui sopra.
+        </p>
+      )}
       {status && <p className="voice-panel__ok">{status}</p>}
       {error && <p className="voice-panel__err">{error}</p>}
       <p className="voice-panel__fine">

@@ -1041,6 +1041,8 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .mt-exit:hover { background: var(--mt-panel2); color: var(--mt-text); }
 
 .mt-hint { font-size: 12px; color: var(--mt-sub); padding: 6px 16px; background: var(--mt-bg); border-bottom: 1px solid var(--mt-line); flex-shrink: 0; }
+/* the same strip, when it is reporting rather than explaining */
+.mt-hint--warn { color: #ffd98a; background: #2a2109; border-bottom-color: #55430f; }
 
 /* arrange body */
 .mt-body { flex: 1; min-height: 0; overflow: auto; }

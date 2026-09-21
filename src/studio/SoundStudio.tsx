@@ -46,7 +46,7 @@ import { getTtsProvider, ttsLanguage, type TtsSpan } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
-import { ARCHETYPES, defaultPrimary, voiceById, voicesByArchetype, type CatalogVoice } from '../tts/voiceCatalog'
+import { ARCHETYPES, defaultPrimary, resolveVoiceId, voiceById, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
@@ -682,7 +682,14 @@ function StudioDesktop() {
       ...t,
       clips: t.clips.map((c) => (c.id !== clipId ? c : {
         ...c,
-        params: { ...(c.params as VoiceParams), voiceId: voiceId || undefined },
+        params: {
+          ...(c.params as VoiceParams),
+          voiceId: voiceId || undefined,
+          /* …and what that voice IS, so the choice survives a key change on a
+             machine that never synced this account (see VoiceParams). */
+          voiceArchetype: voiceId ? voiceById(voiceId)?.archetype : undefined,
+          voiceGender: voiceId ? voiceById(voiceId)?.gender : undefined,
+        },
         ttsSource: null, // a different voice = a new TTS render — ♪ or "Tutte le voci"
       })),
     })))
@@ -908,6 +915,32 @@ function StudioDesktop() {
     resolveVoiceOverlaps()
     if (!failed) setTtsError(null)
   }, [setClipBuffer])
+
+  /* What the connected ElevenLabs account can answer for. Recomputed when the
+     tracks change or the key does (ttsTick), which is exactly when it moves. */
+  const voiceAccount = useMemo(() => {
+    let remapped = 0
+    let stale = 0
+    const examples: string[] = []
+    for (const t of tracks) {
+      if (t.type !== 'voice') continue
+      for (const c of t.clips) {
+        const vp = c.params as VoiceParams
+        const id = vp.voiceId
+        if (!id) continue
+        const res = resolveVoiceId(id, voiceHint(vp))
+        if (res.remappedFrom) {
+          remapped++
+          const line = `${res.remappedFrom.name} → ${res.voice?.name ?? '—'}`
+          if (!examples.includes(line) && examples.length < 3) examples.push(line)
+        } else if (!res.voice) {
+          stale++
+        }
+      }
+    }
+    return { remapped, stale, examples }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, ttsTick])
 
   /* any edit after the first paint means the saved project is behind */
   const firstTracks = useRef(true)
@@ -1473,6 +1506,21 @@ function StudioDesktop() {
       {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
 
       <div className="mt-hint">🎧 Use headphones — the binaural beat lives in the L/R difference.</div>
+      {/* The voices were authored against one ElevenLabs account; the key can
+          now point at another. Every clip keeps the id it was saved with and
+          is served by the same archetype here, but that is worth saying once,
+          at the top — the alternative reads as "the Studio lost my voices". */}
+      {(voiceAccount.remapped > 0 || voiceAccount.stale > 0) && (
+        <div className="mt-hint mt-hint--warn">
+          {voiceAccount.remapped > 0 && (
+            <>🎙 {voiceAccount.remapped} clip {voiceAccount.remapped === 1 ? 'usa una voce' : 'usano voci'} di un altro account ElevenLabs: {voiceAccount.examples.join(' · ')}{voiceAccount.examples.length < voiceAccount.remapped ? ' …' : ''}. Le sintetizza lo stesso archetipo di questo account. </>
+          )}
+          {voiceAccount.stale > 0 && (
+            <>⚠ {voiceAccount.stale} clip {voiceAccount.stale === 1 ? 'ha' : 'hanno'} una voce che questo account non può sostituire: scegline una nell’ispettore prima di sintetizzare. </>
+          )}
+          Cambiando di nuovo chiave, tornano le voci di prima.
+        </div>
+      )}
 
       {/* ---- arrange view ---- */}
       {editMsg && <div className="mt-editmsg" onClick={() => setEditMsg(null)}>{editMsg} ✕</div>}
@@ -2136,7 +2184,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           </div>
         </> })()}
 
-        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const txt = (clip.text ?? '').trim(); const staleText = !!clip.ttsSource && clip.ttsText !== txt; const rendered = !!clip.ttsSource && !staleText; const hasText = !!txt; const voice = effectiveVoice(p); const stale = staleVoiceId(p); return <>
+        {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const txt = (clip.text ?? '').trim(); const staleText = !!clip.ttsSource && clip.ttsText !== txt; const rendered = !!clip.ttsSource && !staleText; const hasText = !!txt; const voice = effectiveVoice(p); const stale = staleVoiceId(p); const remap = remappedVoice(p); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
               <span className="mt-tts__lbl">Affermazione</span>
@@ -2172,6 +2220,13 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
             )}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
+          {remap && (
+            <div className="mt-note">
+              Voce <b>{remap.name}</b> dell’account ElevenLabs precedente: qui la fa <b>{voice.name}</b>, stesso archetipo.
+              La clip conserva l’id salvato — se torni alla chiave di prima, torna la voce di prima.
+              Per fissare quella di adesso, scegli <b>{voice.name}</b> qui sotto.
+            </div>
+          )}
           <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
           <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
@@ -2222,14 +2277,23 @@ function masterSessionBuffer(buffer: AudioBuffer): string {
    voice when that id is still in the catalog, otherwise the engine default.
    Everything that speaks must agree — a preview that resolves differently from
    the render is exactly the bug the POs reported. */
+const voiceHint = (p: VoiceParams) => ({ archetype: p.voiceArchetype, gender: p.voiceGender })
+
 function effectiveVoice(p: VoiceParams): CatalogVoice {
-  return (p.voiceId ? voiceById(p.voiceId) : undefined) ?? defaultPrimary()
+  return resolveVoiceId(p.voiceId, voiceHint(p)).voice ?? defaultPrimary()
 }
 
-/** An id the clip still carries but the catalog no longer offers (imported
-    before the roster was narrowed to the POs' voices). */
+/** The voice this clip was saved with, when it came from another ElevenLabs
+    account and is being served by the same archetype here. */
+function remappedVoice(p: VoiceParams): KnownVoice | null {
+  return resolveVoiceId(p.voiceId, voiceHint(p)).remappedFrom ?? null
+}
+
+/** An id the clip carries that NOTHING in this account can serve — neither
+    the id itself nor its archetype. Imported before the roster was narrowed,
+    or from an account this browser has never synced. */
 function staleVoiceId(p: VoiceParams): string | null {
-  return p.voiceId && !voiceById(p.voiceId) ? p.voiceId : null
+  return p.voiceId && !resolveVoiceId(p.voiceId, voiceHint(p)).voice ? p.voiceId : null
 }
 
 /* ---- the lines around a voice clip, for TTS request stitching ----
@@ -2334,7 +2398,8 @@ function voiceContext(tracks: Track[], clipId: string): { previousText?: string;
 /* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
 function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
   void rendered
-  const known = !value || !!voiceById(value)
+  const res = resolveVoiceId(value)
+  const known = !value || !!res.voice
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
       <span className="mt-tts__lbl">Voce</span>
@@ -2343,6 +2408,11 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
         {/* an id that left the catalog stays visible instead of silently
             showing "Predefinita" while the clip still uses the old voice */}
         {!known && <option value={value}>⚠ Voce fuori catalogo — {value}</option>}
+        {/* the saved id is another account's, and an archetype here answers
+            for it: name the stand-in rather than showing a raw id */}
+        {res.remappedFrom && (
+          <option value={value}>↪ {res.remappedFrom.name} (altro account) → {res.voice?.name}</option>
+        )}
         {ARCHETYPES.map((a) => {
           const list = voicesByArchetype(a.id)
           return list.length ? (

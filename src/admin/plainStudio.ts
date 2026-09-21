@@ -441,7 +441,7 @@ export function plainToStudioTracks(
           l.track.clips.push({
             startSec: start,
             durationSec: dur,
-            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: seqSpeed, voiceId: voice.id } as VoiceParams,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: seqSpeed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
             text: aff.testo,
             fadeInSec: 1,
             fadeOutSec: 2,
@@ -496,7 +496,7 @@ export function plainToStudioTracks(
                   toneHz: 320,
                   // the tail really slows DOWN: speed is divided, not multiplied
                   speed: inTail ? tailSpeed : baseSpeed,
-                  voiceId: voice.id,
+                  voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender,
                 } as VoiceParams,
                 text: fragments[i],
                 fadeInSec: 1,
@@ -530,7 +530,7 @@ export function plainToStudioTracks(
           l.track.clips.push({
             startSec: start,
             durationSec: dur,
-            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: loopSpeed, voiceId: voice.id } as VoiceParams,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: loopSpeed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
             text: aff.testo,
             fadeInSec: 1, // Rules doc: per-affirmation envelope is an app default
             fadeOutSec: 2,
@@ -565,7 +565,7 @@ export function plainToStudioTracks(
     l.track.clips.push({
       startSec: c.startS,
       durationSec: c.endS - c.startS,
-      params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, voiceId: voice.id } as VoiceParams,
+      params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
       text: c.testo,
       fadeInSec: c.fadeInS,
       fadeOutSec: c.fadeOutS,

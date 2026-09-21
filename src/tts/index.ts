@@ -15,7 +15,7 @@ import { createBrowserTts } from './browser'
 import { createElevenLabsTts } from './elevenlabs'
 import { createAzureTts } from './azure'
 import { getTtsSettings } from './settings'
-import { defaultPrimary, defaultSecondary, voiceById } from './voiceCatalog'
+import { defaultPrimary, defaultSecondary, resolveVoiceId } from './voiceCatalog'
 
 const env = import.meta.env
 
@@ -25,8 +25,11 @@ export function getTtsProvider(): TtsProvider {
     // the PO voice catalog supplies the defaults — nobody types ids anymore.
     // Ids saved BEFORE the catalog existed (e.g. the old male primary) are
     // not in the catalog → treated as unset, so Valeria/Marco take over.
-    const pid = voiceById(saved.voiceId) ? saved.voiceId : defaultPrimary().id
-    const sid = voiceById(saved.voiceIdSecondary) ? saved.voiceIdSecondary! : defaultSecondary().id
+    /* A saved id from another account resolves to the same archetype here
+       (see resolveVoiceId) instead of silently falling back to the default —
+       which is what turned a Paternal protocol into Valeria on a key change. */
+    const pid = resolveVoiceId(saved.voiceId).voice?.id ?? defaultPrimary().id
+    const sid = resolveVoiceId(saved.voiceIdSecondary).voice?.id ?? defaultSecondary().id
     return createElevenLabsTts(saved.apiKey, pid, sid)
   }
 

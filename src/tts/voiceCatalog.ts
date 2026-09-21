@@ -125,6 +125,8 @@ export function registerVoices(list: CatalogVoice[], at: number = Date.now()): v
   if (!list.length) return
   VOICE_CATALOG.splice(0, VOICE_CATALOG.length, ...list)
   lastSyncAt = at
+  // every sync feeds the ledger, so yesterday's account stays readable
+  rememberVoices(list)
 }
 
 /** When the list last came from ElevenLabs (null = still the seed). */
@@ -148,6 +150,99 @@ export function defaultPrimary(): CatalogVoice {
 /** The default secondary — [M] rows of the Deep double-induction. */
 export function defaultSecondary(): CatalogVoice {
   return pick(SECONDARY_PREFERENCE, (v) => v.archetype === 'paternal' || v.gender === 'M')
+}
+
+/* ============================================================================
+   Following a voice into another ElevenLabs account
+
+   A voice id belongs to the ACCOUNT that made it. Rotate the key — a new
+   workspace, a rebuilt one, the agency's account handed over to the client —
+   and every id saved in a protocol points at a voice that no longer exists:
+   the Studio shows "non in questo account" on every clip and nothing will
+   synthesize.
+
+   The ids change; the PO naming convention does not. "[ok] ASMR (M) - ITA"
+   is an ASMR voice in any account, so the ARCHETYPE (with the gender) is the
+   identity worth keeping, and an id is only its address in one workspace.
+
+   Two pieces make that work:
+   · a ledger of every voice this browser has ever seen, so the archetype of
+     an id from the OLD account is still known after the catalog is replaced;
+   · `resolveVoiceId`, which every caller uses instead of `voiceById` — exact
+     id first, then the same archetype in the account that is connected now.
+
+   Nothing is rewritten on disk by this. A protocol keeps the id it was saved
+   with, and the moment the old key comes back, so does the exact voice.
+   ============================================================================ */
+
+const KNOWN_KEY = 'gl.tts.voices.known'
+
+export interface KnownVoice {
+  id: string
+  name: string
+  archetype: ArchetypeId
+  gender: 'F' | 'M'
+}
+
+function readKnown(): Record<string, KnownVoice> {
+  try {
+    const raw = localStorage.getItem(KNOWN_KEY)
+    const parsed = raw ? (JSON.parse(raw) as Record<string, KnownVoice>) : {}
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+let KNOWN: Record<string, KnownVoice> = typeof localStorage === 'undefined' ? {} : readKnown()
+
+/** Remember what these voices ARE, so their ids stay readable after a key
+    change. Merged, never replaced: the old account's voices stay on file. */
+export function rememberVoices(list: CatalogVoice[]): void {
+  let changed = false
+  for (const v of list) {
+    const prev = KNOWN[v.id]
+    if (prev && prev.archetype === v.archetype && prev.gender === v.gender && prev.name === v.name) continue
+    KNOWN[v.id] = { id: v.id, name: v.name, archetype: v.archetype, gender: v.gender }
+    changed = true
+  }
+  if (!changed) return
+  try { localStorage.setItem(KNOWN_KEY, JSON.stringify(KNOWN)) } catch { /* private mode: in memory only */ }
+}
+
+/** What this browser knows about an id, whichever account it came from. */
+export function knownVoice(id: string | undefined): KnownVoice | undefined {
+  return id ? KNOWN[id] : undefined
+}
+
+export interface VoiceResolution {
+  /** The voice to use now, or undefined when nothing in this account fits. */
+  voice?: CatalogVoice
+  /** Set when the saved id belongs to another account and this is its stand-in. */
+  remappedFrom?: KnownVoice
+}
+
+/**
+ * The voice a saved id means in the account connected right now.
+ *
+ * Exact id · then the same archetype AND gender · then the same archetype.
+ * Gender is allowed to give way because an account may carry only one voice
+ * of an archetype; archetype never is, because it is the clinical choice.
+ */
+export function resolveVoiceId(id: string | undefined, hint?: { archetype?: string; gender?: 'F' | 'M' }): VoiceResolution {
+  if (!id) return {}
+  const exact = VOICE_CATALOG.find((v) => v.id === id)
+  if (exact) return { voice: exact }
+  /* The ledger only holds accounts THIS browser has synced. A protocol
+     authored on another machine carries its own answer: the archetype saved
+     on the clip. Either source names the same thing. */
+  const was: KnownVoice | undefined = KNOWN[id] ?? (hint?.archetype
+    ? { id, name: hint.archetype, archetype: hint.archetype as ArchetypeId, gender: hint.gender ?? 'F' }
+    : undefined)
+  if (!was) return {}
+  const byBoth = VOICE_CATALOG.find((v) => v.archetype === was.archetype && v.gender === was.gender)
+  const byArchetype = byBoth ?? VOICE_CATALOG.find((v) => v.archetype === was.archetype)
+  return byArchetype ? { voice: byArchetype, remappedFrom: was } : {}
 }
 
 export function voiceById(id: string | undefined): CatalogVoice | undefined {

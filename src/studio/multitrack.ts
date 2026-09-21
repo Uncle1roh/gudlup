@@ -21,7 +21,23 @@ export type Texture = 'lake' | 'air' | 'deep'
 export interface BinauralParams { carrierHz: number; beatHz: number }
 export interface SoundscapeParams { texture: Texture; warmth: number }
 export interface BreathParams { breathsPerMin: number; toneHz: number }
-export interface VoiceParams { pan: number; pulseHz: number; toneHz: number; speed?: number; voiceId?: string }
+export interface VoiceParams {
+  pan: number
+  pulseHz: number
+  toneHz: number
+  speed?: number
+  voiceId?: string
+  /**
+   * WHAT the voice is, beside WHICH voice it was.
+   *
+   * `voiceId` addresses one ElevenLabs account; the archetype is the choice a
+   * PO actually made and it means the same thing in any account. Saved with
+   * the clip so a protocol authored on one machine, under one key, still
+   * resolves on another machine that never saw that account's roster.
+   */
+  voiceArchetype?: string
+  voiceGender?: 'F' | 'M'
+}
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }
 /* ---- bilateral pulse sounds (PO library) --------------------------------
