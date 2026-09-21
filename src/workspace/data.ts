@@ -22,7 +22,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { WeeklySlot } from '../data/scheduling'
+import type { WeeklySlot, Appointment as Booking } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { PROTOCOLS } from '../data/protocols'
 import { isClinicalOnly, sessionForProtocol } from '../data/selfuse'
@@ -620,6 +620,82 @@ export function mergeServerPatients(state: WorkspaceState, server: ServerPatient
 
   if (!fresh.length && !adopted.size) return state
   return { ...state, patients: [...patients, ...fresh] }
+}
+
+/* ------------------------------------------------------ what was booked ----
+
+   A patient books a time in their own app; the row lands in `appointments`
+   against this therapist. The workspace read that list for exactly one
+   purpose — finding the video room id — and showed it nowhere, so the
+   roster's "Prossima sessione" only ever held what the therapist had typed
+   into the calendar themselves. From this side a booking simply had not
+   happened.
+
+   Two functions, because there are two cases: the person is already on the
+   roster (their next session is now known), or they are not (a booking from
+   someone this therapist has never seen, which is what a company list is
+   FOR). The second must be visible, never silently dropped.
+
+   They are matched by name, which is the only key the local roster and the
+   server rows share; `linkBooking` below records the id once the therapist
+   accepts, so the match stops depending on spelling. */
+
+function nameKey(s: string | undefined): string {
+  return (s ?? '').trim().toLowerCase()
+}
+
+export function applyAppointments(state: WorkspaceState, appts: Booking[]): WorkspaceState {
+  if (!appts.length) return state
+  const next = new Map<string, number>()
+  for (const a of appts) {
+    if (a.status !== 'booked') continue
+    const key = nameKey(a.patientName)
+    if (!key) continue
+    const at = next.get(key)
+    if (at == null || a.startsAtMs < at) next.set(key, a.startsAtMs)
+  }
+  let touched = false
+  const patients = state.patients.map((p) => {
+    const at = next.get(nameKey(p.name))
+    if (at == null || p.nextSessionAt === at) return p
+    touched = true
+    return { ...p, nextSessionAt: at }
+  })
+  return touched ? { ...state, patients } : state
+}
+
+/** Bookings with nobody on the roster to attach them to. */
+export function pendingBookings(state: WorkspaceState, appts: Booking[], nowMs = Date.now()): Booking[] {
+  const known = new Set(state.patients.map((p) => nameKey(p.name)))
+  return appts
+    .filter((a) => a.status === 'booked' && a.startsAtMs > nowMs - 2 * 3_600_000)
+    .filter((a) => !known.has(nameKey(a.patientName)))
+    .sort((a, b) => a.startsAtMs - b.startsAtMs)
+}
+
+/** Put a booked person on the roster, carrying the session they booked. */
+export function linkBooking(state: WorkspaceState, a: Booking, serverPatientId?: string): WorkspaceState {
+  const key = nameKey(a.patientName)
+  if (state.patients.some((p) => nameKey(p.name) === key)) return applyAppointments(state, [a])
+  const now = Date.now()
+  const patient: WorkspacePatient = {
+    id: `bk-${a.id}`,
+    linkedPatientId: serverPatientId,
+    name: a.patientName ?? 'Paziente',
+    memberSince: now,
+    status: 'active',
+    linkedAt: now,
+    nextSessionAt: a.startsAtMs,
+    sessions: [],
+    assessments: [],
+    notes: [],
+    goals: [],
+    prescriptions: [],
+    bridged: false,
+    bridgedSessions: [],
+    consentTherapy: true,
+  }
+  return { ...state, patients: [...state.patients, patient] }
 }
 
 /* ------------------------------------------------- availability, published --

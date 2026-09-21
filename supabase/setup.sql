@@ -1025,6 +1025,135 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Connection codes: how a clinician takes someone on.
+--
+-- The therapist mints a code and gives it to a person; the person types it
+-- into their app and the two are linked. The table and both functions were
+-- called by the app and defined nowhere, so on a real database every code was
+-- refused and a patient the therapist HAD connected never saw them.
+create table if not exists therapist_codes (
+  code         text primary key,
+  therapist_id uuid not null references therapists(id) on delete cascade,
+  label        text,
+  active       boolean not null default true,
+  created_at   timestamptz not null default now()
+);
+alter table therapist_codes enable row level security;
+-- Only the clinician who owns a code can see or change it. A patient never
+-- reads this table at all — redemption goes through the function below, which
+-- is why it can stay closed.
+drop policy if exists tc_owner_all on therapist_codes;
+create policy tc_owner_all on therapist_codes
+  for all using (therapist_id = current_profile())
+  with check (therapist_id = current_profile());
+
+-- Redeem one. Returns the link, and is idempotent: a person who types the
+-- same code twice is linked once, not twice.
+create or replace function redeem_therapist_code(p_code text)
+  returns table (patient_id uuid, therapist_id uuid, therapist_name text, crp text)
+  language plpgsql volatile security definer set search_path = public as $$
+declare
+  v_me    uuid := current_profile();
+  v_th    uuid;
+  v_pid   uuid;
+  v_name  text;
+begin
+  if v_me is null then
+    raise exception 'not signed in';
+  end if;
+
+  select c.therapist_id into v_th
+    from therapist_codes c
+   where upper(c.code) = upper(trim(p_code)) and c.active;
+  if v_th is null then
+    raise exception 'unknown code';
+  end if;
+
+  select p.id into v_pid
+    from patients p
+   where p.therapist_id = v_th and p.b2c_profile_id = v_me
+   limit 1;
+
+  if v_pid is null then
+    select p.name into v_name from profiles p where p.id = v_me;
+    insert into patients (therapist_id, b2c_profile_id, name, reason)
+    values (v_th, v_me, coalesce(v_name, 'Paziente'), 'Connected by code')
+    returning id into v_pid;
+  end if;
+
+  return query
+    select v_pid, v_th, p.name, t.crp
+      from profiles p
+      join therapists t on t.id = p.id
+     where p.id = v_th;
+end $$;
+
+-- The link the signed-in person already has, if any. The app asks on every
+-- start so a connection made from the clinician's side shows up here too.
+create or replace function my_therapist_link()
+  returns table (patient_id uuid, therapist_id uuid, therapist_name text, crp text, since timestamptz)
+  language sql stable security definer set search_path = public as $$
+  select pt.id, pt.therapist_id, pr.name, th.crp, pt.created_at
+    from patients pt
+    join profiles pr on pr.id = pt.therapist_id
+    left join therapists th on th.id = pt.therapist_id
+   where pt.b2c_profile_id = current_profile()
+   order by pt.created_at desc
+   limit 1
+$$;
+
+revoke all on function redeem_therapist_code(text) from public;
+revoke all on function my_therapist_link() from public;
+grant execute on function redeem_therapist_code(text) to authenticated;
+grant execute on function my_therapist_link() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Booking, both directions.
+--
+-- The app has called these two since booking was written; neither existed in
+-- this file, so on a real database `rpc('booked_times')` and
+-- `rpc('my_appointments')` both failed. The first is survivable — every slot
+-- looks free and the unique index refuses the clash. The second is not: the
+-- appointment a person had just booked came back as null, so their Terapeuta
+-- tab showed no session, the join window never opened, and the booking read
+-- as "nothing happened".
+
+-- Which instants are taken, and NOTHING else about them. A patient must see
+-- that 14:00 is gone without learning who took it: no ids, no names, no rows.
+create or replace function booked_times(t_id uuid, from_at timestamptz, to_at timestamptz)
+  returns table (starts_at timestamptz)
+  language sql stable security definer set search_path = public as $$
+  select a.starts_at
+    from appointments a
+   where a.therapist_id = t_id
+     and a.status = 'booked'
+     and a.starts_at >= from_at
+     and a.starts_at <  to_at
+$$;
+
+-- The signed-in person's own appointments, with the clinician's NAME.
+-- SECURITY DEFINER because that name lives in `profiles` behind a join the
+-- patient cannot make: an inner join to a table RLS hides drops the parent
+-- row, which is how a booking that was written came back as nothing.
+create or replace function my_appointments()
+  returns table (
+    id uuid, therapist_id uuid, therapist_name text,
+    starts_at timestamptz, duration_min int, status text
+  )
+  language sql stable security definer set search_path = public as $$
+  select a.id, a.therapist_id, p.name, a.starts_at, a.duration_min, a.status
+    from appointments a
+    left join profiles p on p.id = a.therapist_id
+   where a.profile_id = current_profile()
+   order by a.starts_at
+$$;
+
+revoke all on function booked_times(uuid, timestamptz, timestamptz) from public;
+revoke all on function my_appointments() from public;
+grant execute on function booked_times(uuid, timestamptz, timestamptz) to authenticated;
+grant execute on function my_appointments() to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- PostgREST schema-cache reload. Supabase's API layer caches the table schema;
 -- after the ALTERs above (protocols.plain, asset_meta) a stale cache yields
 -- "Could not find the 'plain' column of 'protocols' in the schema cache" on

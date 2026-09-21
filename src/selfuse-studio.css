@@ -1047,6 +1047,17 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .slotday { margin-bottom: 18px; }
 .su-studio .slotday__row { gap: 10px; margin-top: 10px; }
 .su-studio .slot { padding: 10px 14px; }
+/* `.su-studio .su-page > *` zeroes side padding for every child, so this needs
+   the same weight to keep its own gutter back. */
+.su-studio .su-page > .thr-book__bar {
+  margin-inline: calc(var(--su-inset) * -1);
+  padding-left: var(--su-inset);
+  padding-right: var(--su-inset);
+  background: linear-gradient(to top, var(--su-ground) 72%, transparent);
+  border-top: 1px solid var(--su-hair);
+}
+.su-studio .thr-book__chosen { color: var(--su-muted); font-size: 16px; }
+.su-studio .thr-book__bar.is-ready .thr-book__chosen { color: var(--su-fg); }
 .su-studio .msr-bars { gap: 12px; }
 .su-studio .consent-row + .consent-row { margin-top: 14px; }
 .su-studio .rx-card__top { gap: 10px; }
@@ -1733,6 +1744,53 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio .thr-col > .home__sect:first-child { margin-top: 0; }
   /* The history and the goals read as lists, not as full-width bands. */
   .su-studio .thr-col .chron__row { padding: 10px 0; }
+
+  /* ---- and the screens BEHIND that tab, which were still phone-only ----
+
+     Finding a clinician and booking a time are two more full pages, and at
+     this width they were a single 1300px column: one card per line, then
+     three weeks of times stacked under a profile, with the confirm at the
+     very bottom. Same markup, given the desk. */
+  .su-studio .thr-find,
+  .su-studio .thr-book { max-width: 1180px; }
+
+  /* The roster of clinicians reads as cards side by side. */
+  .su-studio .thr-find .thr-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .su-studio .thr-find .thr-card { height: 100%; justify-content: space-between; }
+
+  /* Who they are on the left, when you can see them on the right. */
+  .su-studio .thr-book {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-areas:
+      'back  back'
+      'who   when'
+      'bar   bar';
+    gap: 0 40px;
+    align-content: start;
+  }
+  .su-studio .thr-book > .su-back { grid-area: back; justify-self: start; }
+  .su-studio .thr-book__who {
+    grid-area: who; display: flex; flex-direction: column; gap: 10px;
+    position: sticky; top: 8px; align-self: start;
+  }
+  .su-studio .thr-book__when { grid-area: when; display: flex; flex-direction: column; min-width: 0; }
+  /* At a desk the bar belongs to the page, not to the window edge, and the
+     action is a button rather than a full-width band. */
+  .su-studio .su-page > .thr-book__bar {
+    grid-area: bar;
+    margin-inline: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .su-studio .thr-book__bar .btn { width: auto; flex: 0 0 auto; padding-inline: 28px; }
+  /* Times in even columns rather than a ragged wrap. */
+  .su-studio .thr-book .slotday__row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 
   /* ---- the content, given the room it now has ---- */
   .su-studio .su-greet,

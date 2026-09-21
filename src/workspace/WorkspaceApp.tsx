@@ -24,7 +24,7 @@ import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { LiveCatalogProvider } from '../data/liveCatalog'
-import { mergeServerPatients } from './data'
+import { mergeServerPatients, applyAppointments, pendingBookings, linkBooking } from './data'
 import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
 import { TherapistOnboarding } from './Onboarding'
@@ -224,6 +224,35 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   }, [dp])
   useEffect(loadAppointments, [loadAppointments])
 
+  /* A booking is a fact about this therapist's week, so it belongs on the
+     roster — "Prossima sessione" used to show only what the therapist had
+     typed into their own calendar, and a patient booking a time appeared
+     nowhere on this side at all. Known people get their next session; the
+     rest are offered below, because a booking from someone not yet on the
+     roster is precisely what a company list produces. */
+  useEffect(() => {
+    if (!appointments.length) return
+    update((s) => applyAppointments(s, appointments))
+  }, [appointments, update])
+  const bookings = useMemo(() => pendingBookings(state, appointments), [state, appointments])
+
+  const acceptBooking = useCallback(
+    (b: Appointment) => {
+      update((s) => linkBooking(s, b))
+      /* Give the person a real record on the server too, so the plan, the
+         prescriptions and the notes have somewhere to live. Best effort: the
+         roster entry above already exists either way. */
+      void dp.patientForAppointment(b)
+        .then((serverId) => update((s) => ({
+          ...s,
+          patients: s.patients.map((p) =>
+            p.id === `bk-${b.id}` && !p.linkedPatientId ? { ...p, linkedPatientId: serverId } : p),
+        })))
+        .catch(() => undefined)
+    },
+    [dp, update],
+  )
+
   /* People who connected with a code exist in the database; this roster is
      local. Merge them in so a therapist actually SEES someone who joined —
      without which the connection code led nowhere on this side either. Local
@@ -397,7 +426,14 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
           ) : (
             <>
               {nav === 'patients' && (
-                <Roster state={state} update={update} onOpen={(id) => setView({ kind: 'patient', id })} onCall={startCall} />
+                <Roster
+                  state={state}
+                  update={update}
+                  onOpen={(id) => setView({ kind: 'patient', id })}
+                  onCall={startCall}
+                  bookings={bookings}
+                  onAcceptBooking={acceptBooking}
+                />
               )}
               {nav === 'calendar' && (
                 <Calendar state={state} update={update} onOpenPatient={(id) => setView({ kind: 'patient', id })} onCall={startCall} />

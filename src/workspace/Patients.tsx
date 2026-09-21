@@ -27,6 +27,7 @@ import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
 import { useDataProvider } from '../data/provider'
 import { planItemsForPrescription } from '../data/plan'
+import type { Appointment as Booking } from '../data/scheduling'
 import {
   CLUSTER_LABEL,
   adherenceBand,
@@ -67,6 +68,46 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 const DAY = 86_400_000
 
+/* --------------------------------------------------------- bookings ------
+
+   Sessions booked from the patient's app for people this roster does not
+   know yet. They are shown before anything else on the page: a booking the
+   therapist never sees is the same as no booking at all, and accepting one
+   is what turns it into a patient record with a session attached. */
+
+function BookingsPanel({ bookings, onAccept }: { bookings: Booking[]; onAccept?: (b: Booking) => void }) {
+  const { t } = useI18n()
+  if (!bookings.length) return null
+  return (
+    <section className="w-bookings">
+      <div className="w-bookings__head">
+        <h2 className="w-h2">{t('Booked with you')}</h2>
+        <span className="w-count">{t('{n} new', { n: bookings.length })}</span>
+      </div>
+      <p className="w-small">
+        {t('Sessions people booked in the Good Loop app. Accepting one adds them to your patient list with the session already on it.')}
+      </p>
+      <ul className="w-bookings__list">
+        {bookings.map((b) => (
+          <li key={b.id}>
+            <div>
+              <strong>{b.patientName ?? t('a patient')}</strong>
+              <div className="w-small">
+                {localeDate(b.startsAtMs, { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                {' · '}
+                {t('{n} min', { n: b.durationMin })}
+              </div>
+            </div>
+            {onAccept && (
+              <button className="w-btn w-btn--primary" onClick={() => onAccept(b)}>{t('Accept')}</button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 /* ------------------------------------------------------- TH-PAT-LIST ---- */
 
 interface RosterProps {
@@ -74,9 +115,12 @@ interface RosterProps {
   update: (fn: (s: WorkspaceState) => WorkspaceState) => void
   onOpen: (id: string) => void
   onCall: (id: string) => void
+  /** Sessions people booked in their own app, for nobody on this roster. */
+  bookings?: Booking[]
+  onAcceptBooking?: (b: Booking) => void
 }
 
-export function Roster({ state, update, onOpen, onCall }: RosterProps) {
+export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptBooking }: RosterProps) {
   const { t } = useI18n()
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<'next' | 'name' | 'last'>('next')
@@ -111,6 +155,10 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
           <h1 className="w-h1">{t('Patients')}</h1>
           <button className="w-btn w-btn--primary" onClick={() => setAddOpen(true)}>+ {t('Add patient')}</button>
         </div>
+        {/* A therapist whose first patient booked them through the app has an
+            empty roster and a real appointment. Showing "no patients yet" and
+            nothing else is how that booking went missing. */}
+        <BookingsPanel bookings={bookings} onAccept={onAcceptBooking} />
         <div className="w-empty">
           <h2>{t('No patients yet')}</h2>
           <p className="w-lead">
@@ -132,6 +180,8 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
         </div>
         <button className="w-btn w-btn--primary" onClick={() => setAddOpen(true)}>+ {t('Add patient')}</button>
       </div>
+
+      <BookingsPanel bookings={bookings} onAccept={onAcceptBooking} />
 
       <div className="w-filters">
         {FILTERS.map((f) => (

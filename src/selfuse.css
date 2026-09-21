@@ -119,9 +119,15 @@
   animation: screen-in 320ms var(--ease) backwards;
 }
 .su-h1 { font-size: 24px; line-height: 1.15; }
+/* `.su-page` is a column flex container, so this button was stretched to the
+   full width of the page and a <button>'s default `text-align: center` put
+   "‹ Indietro" in the middle of the screen on every screen that has one.
+   It shrinks to its label and sits at the start of the line. */
 .su-back {
   display: inline-block; font-size: 16px; font-weight: 600; color: var(--slate);
   padding: 8px 0 14px;
+  align-self: flex-start;
+  text-align: left;
 }
 .su-back:hover { color: var(--ink); }
 .su-dev { position: absolute; top: 10px; right: 10px; z-index: 30; }
@@ -534,6 +540,22 @@
    desk layout. */
 .thr-cols { display: contents; }
 .thr-col { display: contents; }
+/* Same on the booking screen: one column on a phone, two at a desk. */
+.thr-book__who, .thr-book__when { display: contents; }
+
+/* The confirm bar for a booking. It sticks to the bottom of the scrolling
+   page so the button is reachable from anywhere in three weeks of slots,
+   and it says which time is about to be requested. */
+.thr-book__bar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 8px -22px 0; padding: 12px 22px max(12px, env(safe-area-inset-bottom));
+  background: var(--mist);
+  border-top: 1px solid var(--line);
+}
+.thr-book__bar .btn { margin-left: auto; min-width: 180px; }
+.thr-book__chosen { font-size: 15px; font-weight: 600; color: var(--slate); }
+.thr-book__bar.is-ready .thr-book__chosen { color: var(--ink); }
 
 .slotday { margin-bottom: 14px; }
 .slotday__row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }

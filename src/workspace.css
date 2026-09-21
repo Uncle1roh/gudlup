@@ -228,6 +228,26 @@
 .w-adh--yellow > span { background: #d3a53c; }
 .w-adh--red > span { background: var(--w-danger); }
 
+/* Sessions booked from the patient's app, for people not yet on the roster.
+   It sits above the table and is meant to be noticed: the accent edge is the
+   only one on the page. */
+.w-bookings {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 18px; padding: 16px 18px;
+  background: var(--w-surface);
+  border: 1px solid var(--w-line);
+  border-left: 3px solid var(--w-accent);
+  border-radius: 12px;
+}
+.w-bookings__head { display: flex; align-items: baseline; gap: 10px; }
+.w-bookings__list { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
+.w-bookings__list li {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--w-line); border-radius: 10px;
+}
+.w-bookings__list li > div { min-width: 0; flex: 1 1 220px; }
+.w-bookings__list .w-btn { margin-left: auto; }
+
 .w-empty {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   padding: 60px 24px; text-align: center;

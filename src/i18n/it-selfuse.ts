@@ -395,6 +395,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Areas:': 'Aree:',
   'Languages:': 'Lingue:',
   'Available slots': 'Orari disponibili',
+  'Pick a time above': 'Scegli un orario qui sopra',
   'Request Session': 'Richiedi una seduta',
   'Booking shares only your name, the slot and your company. No health data is sent.':
     'La prenotazione condivide solo il tuo nome, l’orario e la tua azienda. Nessun dato sanitario viene inviato.',

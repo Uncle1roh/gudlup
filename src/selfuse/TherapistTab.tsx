@@ -504,7 +504,7 @@ function TherapistList({ onBack, onOpen }: { onBack: () => void; onOpen: (id: st
   }, [dp])
 
   return (
-    <div className="su-page">
+    <div className="su-page thr-find">
       <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
       <h1 className="display su-h1">{t('Find a Therapist')}</h1>
       <p className="small muted">{t('Professionals available through your company')}</p>
@@ -622,9 +622,10 @@ function TherapistProfileScreen({
   }
 
   return (
-    <div className="su-page">
+    <div className="su-page thr-book">
       <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
 
+      <div className="thr-book__who">
       {therapist && (
         <>
           <div className="thr-card__id thr-card__id--lg">
@@ -645,7 +646,9 @@ function TherapistProfileScreen({
           )}
         </>
       )}
+      </div>
 
+      <div className="thr-book__when">
       <h3 className="home__sect">{t('Available slots')}</h3>
       {openings === null && <p className="small muted">{t('Loading…')}</p>}
       {openings !== null && !openings.length && (
@@ -668,13 +671,25 @@ function TherapistProfileScreen({
       ))}
 
       {error && <p className="ob-error">{error}</p>}
-
-      <button className="btn btn--primary" disabled={slot == null || busy} onClick={() => void book()}>
-        {busy ? t('Requesting…') : t('Request Session')}
-      </button>
       <p className="small muted">
         {t('Booking shares only your name, the slot and your company. No health data is sent.')}
       </p>
+      </div>
+
+      {/* The confirm used to sit below three weeks of slots: on a phone you
+          tapped a time, nothing visibly happened, and the button that would
+          have booked it was four screens further down. It travels with the
+          page now and names the time you picked. */}
+      <div className={`thr-book__bar${slot != null ? ' is-ready' : ''}`}>
+        <span className="thr-book__chosen">
+          {slot != null
+            ? fmtDate(slot, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            : t('Pick a time above')}
+        </span>
+        <button className="btn btn--primary" disabled={slot == null || busy} onClick={() => void book()}>
+          {busy ? t('Requesting…') : t('Request Session')}
+        </button>
+      </div>
     </div>
   )
 }
