@@ -216,7 +216,6 @@
 .w-sort { font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; }
 .w-idcell { display: flex; align-items: center; gap: 9px; }
 .w-now { color: var(--w-accent); }
-.w-alertcell { display: flex; gap: 6px; font-size: 13px; }
 .w-vas { display: flex; align-items: center; gap: 6px; color: var(--w-accent); }
 .w-vas svg { width: 46px; height: 20px; }
 
@@ -659,13 +658,6 @@
 @media (max-width: 1280px) {
   .w-availlist li { grid-template-columns: 1fr; row-gap: 6px; }
   .w-form { grid-template-columns: 1fr; }
-}
-
-/* The roster's VAS sparkline is the first column worth dropping when the table
-   is squeezed — it is a nicety; the name and the time are not. */
-@media (max-width: 1180px) {
-  .w-table--roster th:nth-child(4),
-  .w-table--roster td:nth-child(4) { display: none; }
 }
 
 /* ----------------------------------------------------------------------------

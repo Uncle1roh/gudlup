@@ -334,6 +334,12 @@ export function TherapistTab(props: TherapistTabProps) {
         )}
       </article>
 
+      {/* Below 1100px this is one column and the wrappers do nothing. On a
+          desk they are the two columns: what is ASKED OF YOU on the left,
+          what has HAPPENED on the right. */}
+      <div className="thr-cols">
+        <div className="thr-col">
+
       {(pending.length > 0 || finished.length > 0) && (
         <>
           <h3 className="home__sect">{t('Questionnaires')}</h3>
@@ -409,7 +415,13 @@ export function TherapistTab(props: TherapistTabProps) {
         )
       })}
 
+        </div>
+
+        <div className="thr-col">
       <h3 className="home__sect">{t('Session history')}</h3>
+      {/* A heading with nothing under it reads as a failure. It is not: there
+          has simply been no session yet. */}
+      {!link.sessions.length && <p className="small muted">{t('Your sessions together will be listed here.')}</p>}
       <ul className="chron">
         {link.sessions.map((s) => {
           const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
@@ -428,6 +440,7 @@ export function TherapistTab(props: TherapistTabProps) {
       </ul>
 
       <h3 className="home__sect">{t('Therapy goals')}</h3>
+      {!link.goals.length && <p className="small muted">{t('Goals you agree on with your therapist appear here.')}</p>}
       <ul className="goals">
         {link.goals.map((g) => (
           <li key={g.id}>
@@ -438,6 +451,8 @@ export function TherapistTab(props: TherapistTabProps) {
         ))}
       </ul>
 
+        </div>
+      </div>
     </div>
   )
 }

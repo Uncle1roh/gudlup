@@ -1075,6 +1075,8 @@ export const PT: Record<string, string> = {
   'I have read and accept the Terms and the Privacy Policy.':
     'Li e aceito os Termos e a Política de Privacidade.',
   'Accept & continue': 'Aceitar e continuar',
+  'Your sessions together will be listed here.': 'As sessões de vocês vão aparecer aqui.',
+  'Goals you agree on with your therapist appear here.': 'Os objetivos que você combinar com seu terapeuta aparecem aqui.',
   'One method, two ways to use it': 'Um método, dois jeitos de usar',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
     'A sua empresa oferece os dois. Na maioria dos dias você abre o Good Loop sozinho; quando quiser alguém junto, o mesmo método vem com um profissional habilitado.',

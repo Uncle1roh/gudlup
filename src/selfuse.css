@@ -529,6 +529,12 @@
 .thr-pending__slot { display: flex; flex-direction: column; gap: 2px; }
 .thr-hero { display: flex; flex-direction: column; gap: 12px; }
 
+/* One column on a phone — the wrappers are transparent. The desktop rules
+   live in selfuse-studio.css § the 1100px canvas, with the rest of the
+   desk layout. */
+.thr-cols { display: contents; }
+.thr-col { display: contents; }
+
 .slotday { margin-bottom: 14px; }
 .slotday__row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .slot {

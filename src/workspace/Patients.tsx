@@ -34,8 +34,6 @@ import {
   assessmentDueLabel,
   threadIdFor,
   codeExpired,
-  vasDirection,
-  vasSeries,
   type WorkspacePatient,
   type WorkspaceState,
 } from './data'
@@ -64,7 +62,6 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'today', label: "Today's sessions" },
   { id: 'assessment', label: 'Assessment due' },
-  { id: 'alerts', label: 'Alerts' },
   { id: 'inactive', label: 'Inactive' },
 ]
 
@@ -82,7 +79,7 @@ interface RosterProps {
 export function Roster({ state, update, onOpen, onCall }: RosterProps) {
   const { t } = useI18n()
   const [filter, setFilter] = useState<Filter>('all')
-  const [sort, setSort] = useState<'next' | 'name' | 'last' | 'vas'>('next')
+  const [sort, setSort] = useState<'next' | 'name' | 'last'>('next')
   const [addOpen, setAddOpen] = useState(false)
   const now = Date.now()
 
@@ -100,11 +97,6 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
     const sorted = [...list].sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name)
       if (sort === 'last') return (b.lastSessionAt ?? 0) - (a.lastSessionAt ?? 0)
-      if (sort === 'vas') {
-        const av = vasSeries(a).slice(-1)[0] ?? -Infinity
-        const bv = vasSeries(b).slice(-1)[0] ?? -Infinity
-        return bv - av
-      }
       return (a.nextSessionAt ?? Infinity) - (b.nextSessionAt ?? Infinity)
     })
     // Alert rows float to the top of whatever ordering is in force.
@@ -155,15 +147,11 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
             <th><button className="w-sort" onClick={() => setSort('name')}>{t('Patient')}</button></th>
             <th><button className="w-sort" onClick={() => setSort('next')}>{t('Next session')}</button></th>
             <th><button className="w-sort" onClick={() => setSort('last')}>{t('Last session')}</button></th>
-            <th><button className="w-sort" onClick={() => setSort('vas')}>{t('VAS trend')}</button></th>
-            <th>{t('Alerts')}</th>
             <th>{t('Actions')}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((p) => {
-            const due = assessmentDueLabel(p)
-            const inactive = !p.lastSessionAt || now - p.lastSessionAt > 30 * DAY
             const inSession = p.nextSessionAt != null && Math.abs(now - p.nextSessionAt) < 15 * 60_000
             return (
               <tr key={p.id} className="w-row" onClick={() => onOpen(p.id)}>
@@ -183,12 +171,6 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
                   )}
                 </td>
                 <td className="w-muted">{p.lastSessionAt ? fmtDate(p.lastSessionAt) : t('Never')}</td>
-                <td><VasCell patient={p} /></td>
-                <td className="w-alertcell">
-                  {due && <span title={t('Assessment due')}>🔔</span>}
-                  {inactive && <span title={t('Inactive')}>▲</span>}
-                  {!due && !inactive && <span className="w-muted">—</span>}
-                </td>
                 <td>
                   <button
                     className="w-btn w-btn--sm"
@@ -207,20 +189,6 @@ export function Roster({ state, update, onOpen, onCall }: RosterProps) {
 
       {addOpen && <AddPatientModal state={state} update={update} onClose={() => setAddOpen(false)} />}
     </>
-  )
-}
-
-function VasCell({ patient }: { patient: WorkspacePatient }) {
-  const s = vasSeries(patient, 5)
-  const dir = vasDirection(patient)
-  if (!s.length) return <span className="w-muted">—</span>
-  const max = Math.max(...s, 1)
-  const pts = s.map((v, i) => `${(i / Math.max(1, s.length - 1)) * 46},${18 - (v / max) * 16}`).join(' ')
-  return (
-    <span className="w-vas">
-      <svg viewBox="0 0 46 20" aria-hidden="true"><polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
-      <span>{dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→'}</span>
-    </span>
   )
 }
 

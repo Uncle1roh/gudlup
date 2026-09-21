@@ -1698,6 +1698,42 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio .tabbar__icon { font-size: 24px; }
   .su-studio .tabbar__label { font-size: 16px; font-weight: inherit; letter-spacing: 0; }
 
+  /* ---- the Therapist tab, on a desk ----
+
+     It was written for a phone: one column, everything under everything, so
+     at 1400px the appointment sat alone on a line and the history was three
+     screens down. The page is the same markup; here it becomes what a desk
+     can read at once — the clinician and what is ASKED of you on the left,
+     what has HAPPENED on the right, and both stop before the line gets too
+     long to read. */
+  .su-studio .thr-active { max-width: 1180px; }
+  .su-studio .thr-active .thr-hero {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .su-studio .thr-active .thr-hero .thr-card__id { flex: 1 1 260px; }
+  .su-studio .thr-active .thr-hero .btn { width: auto; min-width: 200px; }
+  .su-studio .thr-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0 34px;
+    align-items: start;
+  }
+  .su-studio .thr-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  /* A heading that opens a block, rather than one crammed against the card
+     above it. */
+  .su-studio .thr-col .home__sect { margin-top: 10px; }
+  .su-studio .thr-col > .home__sect:first-child { margin-top: 0; }
+  /* The history and the goals read as lists, not as full-width bands. */
+  .su-studio .thr-col .chron__row { padding: 10px 0; }
+
   /* ---- the content, given the room it now has ---- */
   .su-studio .su-greet,
   .su-studio .su-hello__line,

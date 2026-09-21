@@ -529,6 +529,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'I have read and accept the Terms and the Privacy Policy.':
     'Ho letto e accetto i Termini e l’Informativa sulla privacy.',
   'Accept & continue': 'Accetta e continua',
+  'Your sessions together will be listed here.': 'Le sedute che farete insieme compariranno qui.',
+  'Goals you agree on with your therapist appear here.': 'Gli obiettivi che concordi con il tuo terapeuta compaiono qui.',
   'One method, two ways to use it': 'Un metodo, due modi di usarlo',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
     'La tua azienda te li dà entrambi. Quasi sempre apri Good Loop da solo; quando vuoi qualcuno accanto, lo stesso metodo te lo porta un professionista abilitato.',
