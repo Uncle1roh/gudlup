@@ -33,6 +33,7 @@ import {
   type SelfUseTheme,
 } from '../data/selfuse'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
+import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { coverFor, coverStyle } from './artwork'
 import type { Duration } from '../types/domain'
 import { Icon } from './icons'
@@ -62,13 +63,8 @@ interface CatalogProps {
       and giving them two different-looking answers would say otherwise. */
   query?: string
   onClearQuery?: () => void
-}
-
-interface Rail {
-  id: string
-  title: string
-  subtitle?: string
-  items: ResolvedSession[]
+  /** The shelf an admin defined. Absent or empty = the built-in rails. */
+  storedRails?: ExploreRail[] | null
 }
 
 export function Catalog({
@@ -82,6 +78,7 @@ export function Catalog({
   pathwaysSlot,
   query = '',
   onClearQuery,
+  storedRails,
 }: CatalogProps) {
   const { t } = useI18n()
   const [dur, setDur] = useState<Duration | 'all'>('all')
@@ -125,42 +122,10 @@ export function Catalog({
     return all.find((s) => s.theme === 'calm' && s.durations.includes(6)) ?? all[0]
   }, [all, featuredSlug])
 
-  const rails = useMemo<Rail[]>(() => {
-    if (!all.length) return []
-    const byTheme = (th: SelfUseTheme) => all.filter((s) => s.theme === th)
-    const out: Rail[] = []
-
-    const quick = all.filter((s) => s.durations.includes(6))
-    if (quick.length) {
-      out.push({
-        id: 'quick',
-        title: 'Six minutes',
-        subtitle: 'When that is all you have',
-        items: quick,
-      })
-    }
-
-    for (const th of SELF_USE_THEMES) {
-      const items = byTheme(th.id)
-      if (items.length) out.push({ id: th.id, title: th.label, items })
-    }
-
-    const deep = all.filter((s) => s.durations.includes(24))
-    if (deep.length) {
-      out.push({
-        id: 'deep',
-        title: 'Longer sessions',
-        subtitle: 'For when you will not be interrupted',
-        items: deep,
-      })
-    }
-
-    // Newly published library material, if the catalog carries any.
-    const fresh = all.filter((s) => s.fromCatalog)
-    if (fresh.length) out.push({ id: 'new', title: 'New in the library', items: fresh })
-
-    return out
-  }, [all])
+  /* The shelf an admin defined, or the one the app has always had when there
+     is none. The rule and the defaults live in data/rails.ts so the console's
+     editor and this screen cannot disagree about what a rail is. */
+  const rails = useMemo(() => resolveRails(storedRails, all), [storedRails, all])
 
   if (!all.length) {
     return (
@@ -385,7 +350,7 @@ function Hero({
 
 /* ---------------------------------------------------------------- rail --- */
 
-function RailRow({ rail, onOpen }: { rail: Rail; onOpen: (slug: string) => void }) {
+function RailRow({ rail, onOpen }: { rail: ResolvedRail; onOpen: (slug: string) => void }) {
   const { t } = useI18n()
   const track = useRef<HTMLDivElement>(null)
 

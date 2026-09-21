@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
+import type { ExploreRail } from './rails'
 import type { Plan, PlanItem } from './plan'
 import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
@@ -109,7 +110,15 @@ export interface DataProvider {
 
   // --- Admin: therapist credentialing queue ---
   listCredentialRequests(): Promise<CredentialRequest[]>
-  decideCredential(id: string, decision: CredentialDecision, reason?: string): Promise<void>
+  /** `decidedBy` is the reviewer: recorded with the decision, never inferred
+      later from an audit line that may have been pruned. */
+  decideCredential(id: string, decision: CredentialDecision, reason?: string, decidedBy?: string): Promise<void>
+
+  // --- The Self Use home rails (admin-managed) ---
+  /** Every rail, in order. Empty = the app's built-in rails. */
+  listExploreRails(): Promise<ExploreRail[]>
+  /** Replace the whole set: what the editor holds IS the shelf. */
+  saveExploreRails(rails: ExploreRail[]): Promise<void>
 
   // --- Admin: companies (tenants) ---
   listCompanies(): Promise<Company[]>

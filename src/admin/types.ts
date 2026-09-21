@@ -57,6 +57,10 @@ export interface CredentialRequest {
   /** Reviewer reason on reject / request-more. */
   reason?: string
   decidedAt?: number
+  /** The reviewer who decided it — an email, as the console knows them. A
+      credential review is one person vouching for another's licence; an
+      approval with nobody's name on it cannot be answered for later. */
+  decidedBy?: string
 }
 
 /** One entry in the immutable admin audit trail. */

@@ -22,7 +22,10 @@ export function CredentialQueue({ actor }: { actor: string }) {
     const reason = reasons[r.id]?.trim() || undefined
     setBusy(r.id)
     try {
-      await dp.decideCredential(r.id, decision, reason)
+      /* The reviewer is recorded WITH the decision. The audit line below says
+         the same thing, but an audit trail can be pruned and a credential
+         record cannot be allowed to forget who vouched for a licence. */
+      await dp.decideCredential(r.id, decision, reason, actor)
       await dp.logAudit({ actor, action: `credential.${decision}`, target: r.name, detail: r.crp + (reason ? ` — ${reason}` : '') })
       refetch()
     } catch (e) {
@@ -108,7 +111,7 @@ export function CredentialQueue({ actor }: { actor: string }) {
           <h2 className="adm-h2">Decise di recente</h2>
           <div className="adm-table adm-table--cred">
             <div className="adm-tr adm-tr--head">
-              <div>Nome</div><div>Albo</div><div>Decisione</div><div>Quando</div><div>Motivo</div>
+              <div>Nome</div><div>Albo</div><div>Decisione</div><div>Quando</div><div>Da chi</div><div>Motivo</div>
             </div>
             {decided.map((r) => (
               <div className="adm-tr" key={r.id}>
@@ -116,6 +119,9 @@ export function CredentialQueue({ actor }: { actor: string }) {
                 <div className="adm-mono">{r.crp}</div>
                 <div><span className={`adm-pill ${STATUS_TAG[r.status].cls}`}>{STATUS_TAG[r.status].label}</span></div>
                 <div>{r.decidedAt ? fmtDateTime(r.decidedAt) : '—'}</div>
+                {/* Decisions taken before this was recorded have nobody's name
+                    on them, and say so rather than guessing. */}
+                <div className="adm-muted">{r.decidedBy ?? '—'}</div>
                 <div className="adm-muted">{r.reason ?? '—'}</div>
               </div>
             ))}

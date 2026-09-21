@@ -1391,7 +1391,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-pill--live { background: #e2f3e8; color: #1f7a4d; }
 .adm-pill--btn { border: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 600; }
 .adm-pill--btn:disabled { cursor: default; opacity: 0.7; }
-.adm-table--cred .adm-tr { grid-template-columns: 1.4fr 140px 130px 150px 1.6fr; }
+.adm-table--cred .adm-tr { grid-template-columns: 1.3fr 130px 120px 140px 1fr 1.4fr; }
 .adm-table--companies .adm-tr { grid-template-columns: 1.5fr 1.1fr 1.2fr 110px 100px 108px; }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
@@ -2438,3 +2438,23 @@ td, th { overflow-wrap: anywhere; }
 .adm-wipe__row > div:first-child { display: flex; flex-direction: column; gap: 2px; flex: 1 1 320px; }
 .adm-wipe__acts { flex-wrap: wrap; align-items: center; }
 .adm-wipe button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---- admin: the library shelves (ExploreRails) ---- */
+.adm-rails { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.adm-rail { border: 1px solid var(--line); border-radius: var(--r-md); background: #fff; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.adm-rail.is-off { opacity: 0.6; }
+.adm-rail__head { display: grid; grid-template-columns: minmax(200px, 1.2fr) minmax(180px, 1fr) max-content; gap: 10px; align-items: center; }
+.adm-rail__title { font-weight: 600; }
+.adm-rail__acts { display: flex; align-items: center; gap: 6px; }
+.adm-rail__body { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.adm-rail__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-chip { font-size: 13px; font-weight: 600; color: var(--ink); background: var(--mist-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.adm-chip:hover { border-color: var(--aura); }
+.adm-rail__picker { width: 100%; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.adm-rail__list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2px; max-height: 320px; overflow-y: auto; }
+.adm-rail__opt { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.adm-rail__opt:hover { background: var(--mist); }
+.adm-rail__opt input { width: 17px; height: 17px; accent-color: var(--aura); }
+.adm-rail__opt .adm-muted { margin-left: auto; font-size: 12.5px; white-space: nowrap; }
+.adm-rail__preview { margin: 8px 0 0 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+@media (max-width: 900px) { .adm-rail__head { grid-template-columns: 1fr; } }

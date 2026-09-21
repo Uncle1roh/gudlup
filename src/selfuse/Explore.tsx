@@ -12,13 +12,15 @@
    session has a clinical identity, and the person listening never sees it.
    ============================================================================ */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { greeting, longDate } from './greeting'
 import { PathwayFinder } from './PathwayFinder'
 import { Icon, type IconName } from './icons'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Catalog } from './Catalog'
+import { useDataProvider } from '../data/provider'
+import type { ExploreRail } from '../data/rails'
 import { coverFor, coverStyle } from './artwork'
 import {
   useCatalog,
@@ -52,7 +54,19 @@ type View =
 export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery }: ExploreProps) {
   const { t } = useI18n()
   const catalog = useCatalog()
+  const dp = useDataProvider()
   const [view, setView] = useState<View>({ kind: 'list' })
+  /* The shelf an admin arranged. Read once, and a failure is not an error
+     here: no rails means the library's built-in rows, which is what this
+     screen showed before anyone could arrange anything. */
+  const [rails, setRails] = useState<ExploreRail[] | null>(null)
+  useEffect(() => {
+    let alive = true
+    void dp.listExploreRails()
+      .then((rows) => { if (alive) setRails(rows) })
+      .catch(() => { if (alive) setRails([]) })
+    return () => { alive = false }
+  }, [dp])
   /* Every view here has the same ‹ Back: it returns to the library. */
   useBackLayer(view.kind !== 'list', () => setView({ kind: 'list' }))
 
@@ -138,6 +152,7 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
 
       <Catalog
         catalog={catalog}
+        storedRails={rails}
         featuredSlug={todaySlug}
         onOpen={(slug) => setView({ kind: 'session', slug })}
         onQuickStart={(slug, duration) => onStart({ slug, duration })}

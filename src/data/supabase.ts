@@ -18,6 +18,7 @@
 import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
+import type { ExploreRail } from './rails'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
@@ -180,6 +181,7 @@ function mapCredReq(r: any): CredentialRequest {
     submittedAt: toMs(r.created_at), status,
     reason: r.review_reason ?? undefined,
     decidedAt: r.decided_at ? toMs(r.decided_at) : undefined,
+    decidedBy: r.decided_by ?? undefined,
   }
 }
 function mapAudit(r: any): AuditEvent {
@@ -834,8 +836,55 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
       return (data ?? []).map(mapCredReq)
     },
-    async decideCredential(id, decision, reason): Promise<void> {
-      const { error } = await sb.from('therapists').update({ status: decision, review_reason: reason ?? null, decided_at: toIso(Date.now()) }).eq('id', id)
+    async decideCredential(id, decision, reason, decidedBy): Promise<void> {
+      const { error } = await sb.from('therapists').update({
+        status: decision,
+        review_reason: reason ?? null,
+        decided_at: toIso(Date.now()),
+        /* WHO. Written with the decision, not reconstructed later from an
+           audit line: the audit trail can be pruned, a credential record
+           cannot lose the name of the person who vouched for it. */
+        decided_by: decidedBy ?? null,
+      }).eq('id', id)
+      if (error) throw error
+    },
+
+    // --- The Self Use home rails ---
+    async listExploreRails(): Promise<ExploreRail[]> {
+      /* A database that has not run the migration has no table, and that is
+         not an error here: no rails means the app's built-in shelf. */
+      const { data, error } = await sb.from('explore_rails').select('*').order('position')
+      if (error) return []
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        id: String(r.id),
+        title: String(r.title ?? ''),
+        subtitle: (r.subtitle as string | null) ?? undefined,
+        slugs: Array.isArray(r.slugs) ? (r.slugs as string[]) : [],
+        position: Number(r.position ?? 0),
+        enabled: r.enabled !== false,
+      }))
+    },
+    async saveExploreRails(rails: ExploreRail[]): Promise<void> {
+      /* The editor holds the whole shelf, so the whole shelf is written: rows
+         it no longer contains are rails somebody deleted. */
+      const { data: existing } = await sb.from('explore_rails').select('id')
+      const keep = new Set(rails.map((r) => r.id))
+      const gone = (existing ?? []).map((r: { id: string }) => r.id).filter((id: string) => !keep.has(id))
+      if (gone.length) {
+        const { error } = await sb.from('explore_rails').delete().in('id', gone)
+        if (error) throw error
+      }
+      if (!rails.length) return
+      const rows = rails.map((r, i) => ({
+        id: r.id,
+        title: r.title,
+        subtitle: r.subtitle ?? null,
+        slugs: r.slugs,
+        position: i,
+        enabled: r.enabled,
+        updated_at: toIso(Date.now()),
+      }))
+      const { error } = await sb.from('explore_rails').upsert(rows, { onConflict: 'id' })
       if (error) throw error
     },
 

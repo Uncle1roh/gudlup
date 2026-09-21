@@ -7,15 +7,17 @@ import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
 import { AssetLibrary } from './AssetLibrary'
 import { CredentialQueue } from './CredentialQueue'
+import { ExploreRails } from './ExploreRails'
 import { Companies } from './Companies'
 import { Users } from './Users'
 import { AuditLog } from './AuditLog'
 
-type Section = 'overview' | 'catalog' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
   { id: 'catalog', label: 'Catalogo protocolli', icon: '♪' },
+  { id: 'rails', label: 'Scaffali della libreria', icon: '▤' },
   { id: 'assets', label: 'Libreria audio', icon: '♫' },
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
   { id: 'companies', label: 'Aziende', icon: '◭' },
@@ -67,6 +69,7 @@ export function AdminApp() {
       <main className="adm-main">
         {section === 'overview' && <Overview onGo={setSection} />}
         {section === 'catalog' && <CatalogAdmin actor={actor} />}
+        {section === 'rails' && <ExploreRails actor={actor} />}
         {section === 'assets' && <AssetLibrary actor={actor} />}
         {section === 'credentials' && <CredentialQueue actor={actor} />}
         {section === 'companies' && <Companies actor={actor} />}

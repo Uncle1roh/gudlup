@@ -71,6 +71,33 @@ create table if not exists therapists (
 -- here; the proof behind it had nowhere to go, so the review was a number
 -- someone typed about themselves.
 alter table therapists add column if not exists documents jsonb not null default '[]';
+-- WHO decided. A credential review is a person vouching for another person's
+-- licence, and "approved" with nobody's name on it is an unanswerable question
+-- the first time a patient asks how a therapist got in.
+alter table therapists add column if not exists decided_by text;
+
+-- ---------------------------------------------------------------------------
+-- The rails on the Self Use home screen: a title and the sessions in it.
+-- They used to be written in code, so the shelf could only change with a
+-- deploy. Readable by anyone signed in (the app renders them), writable by an
+-- admin. No rows = the app's built-in rails, which is what every install has
+-- today and what a fresh database should keep.
+create table if not exists explore_rails (
+  id         text primary key,
+  title      text not null,
+  subtitle   text,
+  slugs      jsonb not null default '[]',
+  position   integer not null default 0,
+  enabled    boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table explore_rails enable row level security;
+drop policy if exists explore_rails_read on explore_rails;
+create policy explore_rails_read on explore_rails
+  for select using (auth.uid() is not null);
+drop policy if exists explore_rails_admin_write on explore_rails;
+create policy explore_rails_admin_write on explore_rails
+  for all using (is_admin()) with check (is_admin());
 
 create table if not exists patients (
   id                uuid primary key default gen_random_uuid(),

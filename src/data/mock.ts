@@ -3,6 +3,7 @@ import type { DataProvider, SessionRequest } from './provider'
 import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient, type Therapist } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
+import type { ExploreRail } from './rails'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode, type TherapistLink, type TherapistCode } from './link'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from '../admin/types'
@@ -76,6 +77,10 @@ const link: TherapistLink = {
 let therapistCodes: TherapistCode[] = [
   { code: 'GL-DEMO-CODE', label: 'Demo', active: true, createdAt: Date.now() - 86_400_000 },
 ]
+/* No rails stored: the app's built-in shelf is what a demo shows, which is
+   also what a fresh database gives a real tenant. */
+let exploreRails: ExploreRail[] = []
+
 let sessions: SessionRecord[] = [...SEED_HISTORY]
 const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
   ...p,
@@ -451,9 +456,15 @@ export function createMockProvider(): DataProvider {
 
     // --- Credentialing queue ---
     listCredentialRequests: () => delay(credentialRequests.map((r) => ({ ...r }))),
-    decideCredential: async (id, decision, reason) => {
+    listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs] })) },
+    saveExploreRails: async (rails) => {
+      await wait()
+      exploreRails = rails.map((r) => ({ ...r, slugs: [...r.slugs] }))
+    },
+
+    decideCredential: async (id, decision, reason, decidedBy) => {
       credentialRequests = credentialRequests.map((r) =>
-        r.id === id ? { ...r, status: decision, reason, decidedAt: Date.now() } : r,
+        r.id === id ? { ...r, status: decision, reason, decidedAt: Date.now(), decidedBy } : r,
       )
       /* The demo clinician's own row is the one the workspace reads back. */
       if (id === DEMO_SELF_CRED) {
