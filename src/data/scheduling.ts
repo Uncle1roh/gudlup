@@ -30,8 +30,14 @@ export interface Appointment {
 }
 
 export const APPOINTMENT_MIN = 50
-/** The "enter/start" window opens this many ms before the start. */
-export const JOIN_EARLY_MS = 5 * 60 * 1000
+/** The "enter/start" window opens this many ms before the start.
+
+    Fifteen minutes, which is what every screen tells the person: "si attiva
+    15 minuti prima dell'inizio della seduta". It used to be five, so someone
+    arriving early read that promise next to a dead button and concluded the
+    video call did not work. Both sides use this one constant, so patient and
+    therapist can always enter the room at the same moment. */
+export const JOIN_EARLY_MS = 15 * 60 * 1000
 
 export function slotKey(s: WeeklySlot): string {
   return `${s.weekday}|${s.hhmm}`

@@ -315,14 +315,9 @@ export function adherence(p: Prescription): number {
   return Math.min(100, Math.round((p.done / p.perWeek) * 100))
 }
 
-/** "Join Session" opens 15 minutes before the start and stays open until the
-    slot has run its course. */
-export const JOIN_WINDOW_MS = 15 * 60_000
-
-export function canJoin(nextSessionAt: number | null, now = Date.now()): boolean {
-  if (!nextSessionAt) return false
-  return now >= nextSessionAt - JOIN_WINDOW_MS && now < nextSessionAt + 60 * 60_000
-}
+/* The join window used to be defined twice — 15 minutes here, 5 minutes in
+   `data/scheduling`, and the screens used the other one. One rule now lives
+   in `JOIN_EARLY_MS`; this copy is gone so the two cannot drift again. */
 
 /** A demo link, used when a person connects with a valid code so every screen
     downstream (progress, prescriptions, chronology) has something to show. */

@@ -4,6 +4,7 @@
    ============================================================================ */
 
 import type { CredentialDoc } from './credentials'
+import { currentLocale, formatDate } from '../i18n'
 
 const DAY = 86_400_000
 const HOUR = 3_600_000
@@ -252,12 +253,15 @@ export const PRESETS: Record<string, Preset> = {
   'GL-RESIL': { binaural: 'SMR 12 Hz', loop: '16 s', voice: 'Neutral', breathing: '5-5', audioFile: 'gl-resil_5-1_deep_ptBR.wav' },
 }
 
+/* These were pinned to pt-BR, so the admin console printed "23 de jun." under
+   an otherwise Italian interface. The locale is a single process-global value;
+   these read it like everything else does. */
 export function fmtDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return formatDate(currentLocale(), ts, { day: '2-digit', month: 'short' })
 }
 
 export function fmtDateTime(ts: number): string {
-  return new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return formatDate(currentLocale(), ts, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 export function relWhen(ts: number): string {

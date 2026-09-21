@@ -34,7 +34,6 @@ import { durationLabel } from '../data/selfuse'
 import { useCatalog } from '../data/liveCatalog'
 import {
   seedLink,
-  adherence,
   profileFor,
   type TherapistProfile,
   type TherapyState,
@@ -110,7 +109,7 @@ export function TherapistTab(props: TherapistTabProps) {
   const linkedPrescriptions = therapy.link?.prescriptions
   const prescriptions = useMemo(() => {
     const fromPlan = prescriptionsFromPlan(plan)
-    if (!fromPlan.length) return linkedPrescriptions ?? []
+    if (!fromPlan.length) return (linkedPrescriptions ?? []).map((rx) => ({ ...rx, total: rx.perWeek }))
     return fromPlan.map((rx, i) => {
       const session = catalog.sessions.find((x) => x.protocolCode === rx.protocolCode)
       return {
@@ -120,6 +119,9 @@ export function TherapistTab(props: TherapistTabProps) {
         perWeek: rx.perWeek,
         assignedAt: plan?.updatedAt ?? Date.now(),
         done: rx.done,
+        /* Done is counted across the WHOLE prescription; perWeek is the weekly
+           rhythm. Printing one against the other produced "2 of 1 done". */
+        total: rx.total,
         status: (rx.done >= rx.total ? 'completed' : 'active') as 'active' | 'completed',
       }
     })
@@ -403,9 +405,11 @@ export function TherapistTab(props: TherapistTabProps) {
               <strong>{t('{n}× {name} this week', { n: rx.perWeek, name: t(s.name) })}</strong>
               <span className="small muted">({t(durationLabel(rx.duration))} {rx.duration}m)</span>
             </div>
-            <div className="rx-card__bar" aria-hidden="true"><span style={{ width: `${adherence(rx)}%` }} /></div>
-            <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.perWeek })}</div>
-            {rx.done < rx.perWeek && playable && (
+            <div className="rx-card__bar" aria-hidden="true">
+              <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
+            </div>
+            <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
+            {rx.done < rx.total && playable && (
               <button
                 className="btn btn--ghost"
                 onClick={() => props.onStartPrescription({ slug: rx.slug, duration: rx.duration }, rx.id)}
