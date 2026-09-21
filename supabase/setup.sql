@@ -82,6 +82,118 @@ alter table therapists add column if not exists decided_by text;
 -- deploy. Readable by anyone signed in (the app renders them), writable by an
 -- admin. No rows = the app's built-in rails, which is what every install has
 -- today and what a fresh database should keep.
+-- ---------------------------------------------------------------------------
+-- A COMPANY'S THERAPISTS
+--
+-- Who an employee may book is the list their employer put together, and a
+-- therapist joins it by entering an activation code — never by an employer
+-- typing a name. Two tables and one function:
+--
+--   therapist_activation_codes   what HR (or a Good Loop admin) hands out
+--   company_therapists           who is on the list
+--   redeem_therapist_activation  the ONLY way a row gets into it
+--
+-- The privacy boundary is the point: HR sees which therapists are enrolled,
+-- and never which employee booked which one. Nothing here joins a therapist
+-- to a patient.
+create table if not exists therapist_activation_codes (
+  code       text primary key,
+  company_id text not null references companies(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  created_by text,
+  used_by    uuid references therapists(id) on delete set null,
+  used_at    timestamptz,
+  revoked_at timestamptz
+);
+
+create table if not exists company_therapists (
+  company_id   text not null references companies(id) on delete cascade,
+  therapist_id uuid not null references therapists(id) on delete cascade,
+  added_at     timestamptz not null default now(),
+  primary key (company_id, therapist_id)
+);
+
+create or replace function is_hr() returns boolean
+  language sql stable security definer set search_path = public as
+  $$ select exists (select 1 from profiles where auth_uid = auth.uid() and role = 'hr_admin') $$;
+
+alter table therapist_activation_codes enable row level security;
+alter table company_therapists enable row level security;
+
+-- HR sees and issues codes for THEIR company; an admin for any.
+drop policy if exists codes_admin on therapist_activation_codes;
+create policy codes_admin on therapist_activation_codes
+  for all using (is_admin()) with check (is_admin());
+drop policy if exists codes_hr on therapist_activation_codes;
+create policy codes_hr on therapist_activation_codes
+  for all using (is_hr() and company_id = my_company_id())
+  with check (is_hr() and company_id = my_company_id());
+
+-- The list is readable by anyone signed in: an employee has to be able to see
+-- who their company offers. It carries no clinical data and no patient link.
+drop policy if exists company_therapists_read on company_therapists;
+create policy company_therapists_read on company_therapists
+  for select using (auth.uid() is not null);
+drop policy if exists company_therapists_admin on company_therapists;
+create policy company_therapists_admin on company_therapists
+  for all using (is_admin()) with check (is_admin());
+drop policy if exists company_therapists_hr on company_therapists;
+create policy company_therapists_hr on company_therapists
+  for all using (is_hr() and company_id = my_company_id())
+  with check (is_hr() and company_id = my_company_id());
+
+-- The only way onto a list. SECURITY DEFINER so a therapist never needs read
+-- access to the code table: they present a code, and either they are enrolled
+-- or they are told why not.
+create or replace function redeem_therapist_activation(p_code text)
+  returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_row therapist_activation_codes%rowtype;
+  v_therapist uuid;
+begin
+  select t.id into v_therapist
+    from therapists t join profiles p on p.id = t.id
+   where p.auth_uid = auth.uid();
+  if v_therapist is null then return 'NOT_A_THERAPIST'; end if;
+
+  select * into v_row from therapist_activation_codes
+   where upper(code) = upper(trim(p_code)) for update;
+  if v_row.code is null then return 'UNKNOWN'; end if;
+  if v_row.revoked_at is not null then return 'REVOKED'; end if;
+  if v_row.used_at is not null and v_row.used_by <> v_therapist then return 'ALREADY_USED'; end if;
+
+  insert into company_therapists (company_id, therapist_id)
+       values (v_row.company_id, v_therapist)
+  on conflict do nothing;
+
+  update therapist_activation_codes
+     set used_by = v_therapist, used_at = now()
+   where code = v_row.code;
+
+  return 'OK:' || v_row.company_id;
+end $$;
+
+-- Which therapists an employee may book: the ones their company enrolled.
+-- A company that has enrolled nobody keeps the previous behaviour — every
+-- approved therapist — so no tenant loses professional support the day this
+-- ships.
+create or replace function public_therapists()
+  returns table (id uuid, name text, crp text, avatar_url text)
+  language sql stable security definer set search_path = public as $$
+  with mine as (select my_company_id() as cid)
+  select p.id, p.name, t.crp, p.avatar_url
+    from therapists t
+    join profiles p on p.id = t.id
+   where t.status = 'approved' and p.active
+     and (
+       not exists (select 1 from company_therapists ct where ct.company_id = (select cid from mine))
+       or exists (
+         select 1 from company_therapists ct
+          where ct.company_id = (select cid from mine) and ct.therapist_id = t.id
+       )
+     )
+$$;
+
 create table if not exists explore_rails (
   id         text primary key,
   title      text not null,

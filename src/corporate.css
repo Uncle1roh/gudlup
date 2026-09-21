@@ -453,3 +453,17 @@
 
 /* A modal must never be taller than the screen with its actions off-frame. */
 .c-modal { max-height: 88dvh; }
+
+/* ---- the company's therapist list (CompanyTherapists) ---- */
+.c-h3 { font-size: 15px; font-weight: 700; color: var(--c-ink); margin-top: 14px; }
+.c-row { display: flex; align-items: center; gap: 12px; }
+.c-row--between { justify-content: space-between; flex-wrap: wrap; }
+.c-err { font-size: 13px; color: #9b2c20; background: #fdecea; border: 1px solid #f5c6c0; border-radius: 8px; padding: 8px 11px; }
+.c-codes { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; }
+.c-codes li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--c-line); border-radius: 9px; }
+.c-codes--quiet li { border-style: dashed; opacity: 0.75; }
+.c-code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 15px; font-weight: 700; letter-spacing: 0.06em; color: var(--c-ink); }
+.c-link--danger { color: #9b2c20; }
+.c-details { margin-top: 8px; }
+.c-details summary { cursor: pointer; }
+.c-right { text-align: right; }

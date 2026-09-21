@@ -688,3 +688,9 @@
   .w-queue__row { grid-template-columns: minmax(0, 1fr) auto; }
   .w-queue__score { grid-column: 1 / -1; text-align: left; }
 }
+
+/* ---- joining a company's list (Tools → CompanyActivation) ---- */
+.w-activation { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--w-line); border-radius: 10px; margin-bottom: 16px; }
+.w-activation .w-inline { margin-top: 4px; }
+.w-ok { font-size: 13px; color: #1f7a5a; }
+.w-err { font-size: 13px; color: #9b2c20; }

@@ -19,6 +19,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
 import type { ExploreRail } from './rails'
+import type { CompanyTherapist, TherapistActivationCode } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
@@ -244,6 +245,15 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       const last = list[list.length - 1]
       if (last) patient.b2cInactiveDays = Math.max(0, Math.round((Date.now() - last.date) / 86_400_000))
     }
+  }
+
+  /** The company on the caller's OWN profile. A screen may pass an id (an
+    admin acting for a tenant); everyone else gets their own, and
+    row-level security has the final word either way. */
+  async function myCompanyId(): Promise<string | null> {
+    const uid = await authUid()
+    const { data } = await sb.from('profiles').select('company_id').eq('auth_uid', uid).maybeSingle()
+    return ((data as { company_id: string | null } | null)?.company_id) ?? null
   }
 
   async function authUid(): Promise<string> {
@@ -847,6 +857,80 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         decided_by: decidedBy ?? null,
       }).eq('id', id)
       if (error) throw error
+    },
+
+    /* --- a company's therapists ---
+       "my company" is the company_id on the caller's own profile: the id a
+       screen must never be allowed to pass for somebody else. */
+    async listCompanyTherapists(companyId?: string) {
+      const cid = companyId ?? (await myCompanyId())
+      if (!cid) return []
+      const { data, error } = await sb
+        .from('company_therapists')
+        .select('added_at, therapists!inner(id, crp, status, profiles!inner(name))')
+        .eq('company_id', cid)
+      if (error) return []
+      return (data ?? []).map((r: Record<string, any>) => ({
+        id: String(r.therapists.id),
+        name: String(r.therapists.profiles?.name ?? ''),
+        crp: String(r.therapists.crp ?? ''),
+        status: r.therapists.status,
+        addedAt: toMs(r.added_at),
+      })) as CompanyTherapist[]
+    },
+    async removeCompanyTherapist(therapistId: string, companyId?: string) {
+      const cid = companyId ?? (await myCompanyId())
+      if (!cid) throw new Error('Nessuna azienda collegata a questo account.')
+      const { error } = await sb.from('company_therapists').delete().eq('company_id', cid).eq('therapist_id', therapistId)
+      if (error) throw error
+    },
+    async listCompanyTherapistCodes(companyId?: string) {
+      const cid = companyId ?? (await myCompanyId())
+      if (!cid) return []
+      const { data, error } = await sb
+        .from('therapist_activation_codes')
+        .select('*, therapists(profiles(name))')
+        .eq('company_id', cid)
+        .order('created_at', { ascending: false })
+      if (error) return []
+      return (data ?? []).map((r: Record<string, any>) => ({
+        code: String(r.code),
+        companyId: String(r.company_id),
+        createdAt: toMs(r.created_at),
+        createdBy: r.created_by ?? undefined,
+        usedBy: r.used_by ?? undefined,
+        usedByName: r.therapists?.profiles?.name ?? undefined,
+        usedAt: r.used_at ? toMs(r.used_at) : undefined,
+        revokedAt: r.revoked_at ? toMs(r.revoked_at) : undefined,
+      })) as TherapistActivationCode[]
+    },
+    async createCompanyTherapistCode(companyId?: string, createdBy?: string) {
+      const cid = companyId ?? (await myCompanyId())
+      if (!cid) throw new Error('Nessuna azienda collegata a questo account.')
+      /* Readable down a phone line: no I/O/0/1, and the company in the prefix
+         so a therapist can see whose list they are joining. */
+      const ALPHABET = 'ABCDEFGHJKLMNPQRSTVWXYZ23456789'
+      const tail = Array.from({ length: 4 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('')
+      const code = `${cid.split('-')[0].toUpperCase()}-TH-${tail}`
+      const { error } = await sb.from('therapist_activation_codes').insert({
+        code, company_id: cid, created_by: createdBy ?? null,
+      })
+      if (error) throw error
+      return { code, companyId: cid, createdAt: Date.now(), createdBy }
+    },
+    async revokeCompanyTherapistCode(code: string) {
+      const { error } = await sb.from('therapist_activation_codes').update({ revoked_at: toIso(Date.now()) }).eq('code', code)
+      if (error) throw error
+    },
+    async redeemCompanyTherapistCode(code: string) {
+      const { data, error } = await sb.rpc('redeem_therapist_activation', { p_code: code })
+      if (error) throw error
+      const answer = String(data ?? '')
+      if (answer.startsWith('OK:')) return { ok: true as const, companyId: answer.slice(3) }
+      if (answer === 'REVOKED') return { ok: false as const, reason: 'revoked' as const }
+      if (answer === 'ALREADY_USED') return { ok: false as const, reason: 'already-used' as const }
+      if (answer === 'NOT_A_THERAPIST') return { ok: false as const, reason: 'not-a-therapist' as const }
+      return { ok: false as const, reason: 'unknown' as const }
     },
 
     // --- The Self Use home rails ---

@@ -22,6 +22,21 @@ import type { Company } from './types'
 
 export function Companies({ actor }: { actor: string }) {
   const dp = useDataProvider()
+  /* Issuing a therapist code for a tenant. HR can do this themselves in their
+     own dashboard; this is here for the support call where they cannot. */
+  const [codeFor, setCodeFor] = useState<string | null>(null)
+  const [issued, setIssued] = useState<string | null>(null)
+  async function issueTherapistCode(companyId: string) {
+    setCodeFor(companyId); setIssued(null)
+    try {
+      const made = await dp.createCompanyTherapistCode(companyId, actor)
+      setIssued(made.code)
+      await dp.logAudit({ actor, action: 'therapist_code.issued', target: companyId, detail: made.code }).catch(() => undefined)
+    } catch (e) {
+      window.alert(`Impossibile generare il codice: ${(e as Error).message}`)
+      setCodeFor(null)
+    }
+  }
   const { data, loading, refetch } = useCompanies()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -145,6 +160,11 @@ export function Companies({ actor }: { actor: string }) {
                 <div>{fmtDate(c.createdAt)}</div>
                 <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">Attiva</span> : <span className="adm-pill adm-pill--warn">In pausa</span>}</div>
                 <div className="adm-tr__right">
+                  {/* The company can issue these themselves; this is for the
+                      support call where they cannot. */}
+                  <button className="b2b-btn b2b-btn--ghost" onClick={() => void issueTherapistCode(c.id)}>
+                    {codeFor === c.id && issued ? issued : 'Codice terapeuta'}
+                  </button>
                   <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? 'Sospendi' : 'Riattiva'}</button>
                 </div>
               </div>

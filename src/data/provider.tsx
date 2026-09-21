@@ -3,6 +3,31 @@ import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
 import type { ExploreRail } from './rails'
+
+/** One therapist on a company's list. Nothing clinical, by construction. */
+export interface CompanyTherapist {
+  id: string
+  name: string
+  crp: string
+  /** The credential state a reviewer left on them. */
+  status: 'pending' | 'approved' | 'rejected' | 'more_info'
+  addedAt: number
+}
+
+export interface TherapistActivationCode {
+  code: string
+  companyId: string
+  createdAt: number
+  createdBy?: string
+  usedBy?: string
+  usedByName?: string
+  usedAt?: number
+  revokedAt?: number
+}
+
+export type RedeemResult =
+  | { ok: true; companyId: string }
+  | { ok: false; reason: 'unknown' | 'revoked' | 'already-used' | 'not-a-therapist' }
 import type { Plan, PlanItem } from './plan'
 import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
@@ -113,6 +138,25 @@ export interface DataProvider {
   /** `decidedBy` is the reviewer: recorded with the decision, never inferred
       later from an audit line that may have been pruned. */
   decideCredential(id: string, decision: CredentialDecision, reason?: string, decidedBy?: string): Promise<void>
+
+  /* --- A company's therapists ------------------------------------------
+     Who an employee may book is the list their employer put together. A
+     therapist joins it by redeeming an activation code; HR never types a
+     name, and nothing here joins a therapist to a patient — which employee
+     saw whom is not the employer's business and is not in this data. */
+
+  /** The therapists enrolled with a company. Omit the id for "my company". */
+  listCompanyTherapists(companyId?: string): Promise<CompanyTherapist[]>
+  /** Take a therapist off the list. Their account and their patients stay. */
+  removeCompanyTherapist(therapistId: string, companyId?: string): Promise<void>
+  /** Activation codes issued for a company, newest first. */
+  listCompanyTherapistCodes(companyId?: string): Promise<TherapistActivationCode[]>
+  /** Issue one. HR may do this for their own company, an admin for any. */
+  createCompanyTherapistCode(companyId?: string, createdBy?: string): Promise<TherapistActivationCode>
+  /** Stop a code that has not been used, or a therapist who should not have had it. */
+  revokeCompanyTherapistCode(code: string): Promise<void>
+  /** The therapist's side: present a code, join a company's list. */
+  redeemCompanyTherapistCode(code: string): Promise<RedeemResult>
 
   // --- The Self Use home rails (admin-managed) ---
   /** Every rail, in order. Empty = the app's built-in rails. */

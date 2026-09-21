@@ -26,21 +26,41 @@ import { useI18n } from '../i18n'
 import { SetupWizard } from './Setup'
 import { Overview, Engagement, Wellbeing, Reports } from './Screens'
 import { Management } from './Management'
+import { CompanyTherapists } from './CompanyTherapists'
 import { Settings } from './Settings'
 import { buildAggregates, useCorporateState } from './data'
 import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
 import { BrandLogo } from '../components/Brand'
 
-type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'management' | 'settings'
+type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 'management' | 'settings'
 
-const NAV: { id: Nav; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'engagement', label: 'Engagement' },
-  { id: 'wellbeing', label: 'Wellbeing' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'management', label: 'Management' },
+/* ---- what this dashboard is FOR ----------------------------------------
+
+   Four things, and the product owners were explicit that it is four:
+
+     · anonymous, aggregate participation figures, with small groups
+       suppressed so nobody can be identified;
+     · no individual records, ever — which is a property of the data this
+       screen receives, not a filter applied to it;
+     · an activation code that puts a therapist on the company's list;
+     · a panel to manage or remove the therapists on that list.
+
+   Wellbeing trends, the PDF reports and the licence tables are NOT gone —
+   they are behind this flag, code and all, because "not now" and "never"
+   are different decisions and only one of them is reversible. Turning it on
+   restores them; nobody has to rebuild them from the git history. */
+const EXTRAS = false
+
+const ALL_NAV: { id: Nav; label: string; extra?: boolean }[] = [
+  { id: 'overview', label: 'Participation' },
+  { id: 'therapists', label: 'Therapists' },
+  { id: 'engagement', label: 'Engagement', extra: true },
+  { id: 'wellbeing', label: 'Wellbeing', extra: true },
+  { id: 'reports', label: 'Reports', extra: true },
+  { id: 'management', label: 'Management', extra: true },
   { id: 'settings', label: 'Settings' },
 ]
+const NAV = ALL_NAV.filter((n) => EXTRAS || !n.extra)
 
 export function CorporateApp() {
   const { t } = useI18n()
@@ -139,7 +159,10 @@ export function CorporateApp() {
             onView={markViewed}
           />
         )}
-        {nav === 'management' && <Management state={state} agg={agg} update={update} />}
+        {nav === 'therapists' && (
+          <CompanyTherapists companyId={state.companyCode || undefined} actor={user?.email ?? undefined} />
+        )}
+        {nav === 'management' && EXTRAS && <Management state={state} agg={agg} update={update} />}
         {nav === 'settings' && (
           <Settings state={state} registered={cellValue(agg.kpis.registered) ?? 0} update={update} />
         )}

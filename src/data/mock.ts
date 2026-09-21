@@ -1,5 +1,5 @@
 import type { SessionRecord } from '../types/domain'
-import type { DataProvider, SessionRequest } from './provider'
+import type { CompanyTherapist, DataProvider, SessionRequest, TherapistActivationCode } from './provider'
 import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient, type Therapist } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
@@ -80,6 +80,12 @@ let therapistCodes: TherapistCode[] = [
 /* No rails stored: the app's built-in shelf is what a demo shows, which is
    also what a fresh database gives a real tenant. */
 let exploreRails: ExploreRail[] = []
+
+/* A company's therapist list, in memory. The demo company is the one the
+   corporate dashboard signs in as. */
+const DEMO_COMPANY_ID = 'DEMO-2026-GL'
+let companyTherapists: { companyId: string; therapist: CompanyTherapist; addedAt: number }[] = []
+let therapistCompanyCodes: TherapistActivationCode[] = []
 
 let sessions: SessionRecord[] = [...SEED_HISTORY]
 const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
@@ -456,6 +462,56 @@ export function createMockProvider(): DataProvider {
 
     // --- Credentialing queue ---
     listCredentialRequests: () => delay(credentialRequests.map((r) => ({ ...r }))),
+    /* --- a company's therapists (demo: in memory) --- */
+    listCompanyTherapists: async (companyId) => {
+      await wait()
+      const cid = companyId ?? DEMO_COMPANY_ID
+      return companyTherapists.filter((r) => r.companyId === cid).map((r) => ({ ...r.therapist, addedAt: r.addedAt }))
+    },
+    removeCompanyTherapist: async (therapistId, companyId) => {
+      await wait()
+      const cid = companyId ?? DEMO_COMPANY_ID
+      companyTherapists = companyTherapists.filter((r) => !(r.companyId === cid && r.therapist.id === therapistId))
+    },
+    listCompanyTherapistCodes: async (companyId) => {
+      await wait()
+      const cid = companyId ?? DEMO_COMPANY_ID
+      return therapistCompanyCodes.filter((c) => c.companyId === cid).map((c) => ({ ...c }))
+    },
+    createCompanyTherapistCode: async (companyId, createdBy) => {
+      await wait()
+      const cid = companyId ?? DEMO_COMPANY_ID
+      const code = {
+        code: `${cid.split('-')[0].toUpperCase()}-TH-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+        companyId: cid,
+        createdAt: Date.now(),
+        createdBy,
+      }
+      therapistCompanyCodes = [code, ...therapistCompanyCodes]
+      return { ...code }
+    },
+    revokeCompanyTherapistCode: async (code) => {
+      await wait()
+      therapistCompanyCodes = therapistCompanyCodes.map((c) => (c.code === code ? { ...c, revokedAt: Date.now() } : c))
+    },
+    redeemCompanyTherapistCode: async (code) => {
+      await wait()
+      const hit = therapistCompanyCodes.find((c) => c.code.toUpperCase() === code.trim().toUpperCase())
+      if (!hit) return { ok: false as const, reason: 'unknown' as const }
+      if (hit.revokedAt) return { ok: false as const, reason: 'revoked' as const }
+      const me: CompanyTherapist = {
+        id: 'demo-therapist', name: demoTherapist.name, crp: demoTherapist.crp,
+        status: demoTherapist.status, addedAt: Date.now(),
+      }
+      if (hit.usedAt && hit.usedBy !== me.id) return { ok: false as const, reason: 'already-used' as const }
+      therapistCompanyCodes = therapistCompanyCodes.map((c) =>
+        c.code === hit.code ? { ...c, usedBy: me.id, usedByName: me.name, usedAt: Date.now() } : c)
+      if (!companyTherapists.some((r) => r.companyId === hit.companyId && r.therapist.id === me.id)) {
+        companyTherapists = [...companyTherapists, { companyId: hit.companyId, therapist: me, addedAt: Date.now() }]
+      }
+      return { ok: true as const, companyId: hit.companyId }
+    },
+
     listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs] })) },
     saveExploreRails: async (rails) => {
       await wait()

@@ -23,6 +23,7 @@
 
 import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
+import { useDataProvider } from '../data/provider'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
 import {
@@ -308,6 +309,68 @@ const SECTIONS: { id: SettingsSection; label: string }[] = [
 
 const SPECIALIZATIONS = ['Anxiety', 'Depression', 'Stress', 'Burnout', 'Resilience', 'Sleep', 'Work-life balance', 'Trauma']
 
+/* ---- joining a company's list -------------------------------------------
+
+   A company decides which therapists its people may book, and a therapist
+   joins that list by entering the code the company gave them. It is the
+   therapist who acts: an employer cannot add a clinician to their own list,
+   because a name typed by an employer is not a verified professional. */
+function CompanyActivation() {
+  const { t } = useI18n()
+  const dp = useDataProvider()
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function redeem() {
+    const entered = code.trim()
+    if (!entered) return
+    setBusy(true); setMsg(null)
+    try {
+      const res = await dp.redeemCompanyTherapistCode(entered)
+      if (res.ok) {
+        setMsg({ ok: true, text: t('Done — you are on {company}\u2019s list. Their people can book you.', { company: res.companyId }) })
+        setCode('')
+      } else {
+        setMsg({
+          ok: false,
+          text:
+            res.reason === 'revoked' ? t('That code was revoked. Ask the company for a new one.')
+            : res.reason === 'already-used' ? t('That code has already been used by someone else.')
+            : res.reason === 'not-a-therapist' ? t('Only a verified clinician account can join a company list.')
+            : t('That code does not exist. Check it and try again.'),
+        })
+      }
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="w-activation">
+      <span className="w-field__label">{t('Join a company list')}</span>
+      <p className="w-small">
+        {t('Enter the activation code a company gave you. Their employees will be able to book you; the company never sees who books you or anything about the sessions.')}
+      </p>
+      <div className="w-inline">
+        <input
+          className="w-input"
+          value={code}
+          placeholder="ACME-TH-7K2Q"
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => { if (e.key === 'Enter') void redeem() }}
+        />
+        <button className="w-btn w-btn--primary" disabled={busy || !code.trim()} onClick={() => void redeem()}>
+          {busy ? t('Joining…') : t('Join')}
+        </button>
+      </div>
+      {msg && <p className={msg.ok ? 'w-ok' : 'w-err'}>{msg.text}</p>}
+    </div>
+  )
+}
+
 export function WorkspaceSettings({
   state,
   update,
@@ -350,6 +413,7 @@ export function WorkspaceSettings({
           {section === 'profile' && (
             <>
               <h2 className="w-h2">{t('Profile')}</h2>
+              <CompanyActivation />
               <div className="w-form">
                 <label className="w-field">
                   <span className="w-field__label">{t('Name')} <em>· {t('read-only after verification')}</em></span>
