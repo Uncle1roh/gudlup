@@ -98,6 +98,33 @@ export function TherapistTab(props: TherapistTabProps) {
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
 
+  /* Prescriptions come from the therapist's PLAN on the server. They used to
+     come from `seedLink` fixtures written into this app's own storage, so
+     anything a real clinician prescribed reached nobody. The local list is
+     still the fallback for the demo, where there is no plan to read.
+
+     This is computed HERE, above every early return below, because a hook
+     that runs only on one of the screens is not a hook — React counts them
+     in order, and the screens below would render fewer than the root did.
+     That is exactly what crashed the booking screen. */
+  const linkedPrescriptions = therapy.link?.prescriptions
+  const prescriptions = useMemo(() => {
+    const fromPlan = prescriptionsFromPlan(plan)
+    if (!fromPlan.length) return linkedPrescriptions ?? []
+    return fromPlan.map((rx, i) => {
+      const session = catalog.sessions.find((x) => x.protocolCode === rx.protocolCode)
+      return {
+        id: `plan-${rx.protocolCode}-${rx.duration}-${i}`,
+        slug: session?.slug ?? '',
+        duration: rx.duration,
+        perWeek: rx.perWeek,
+        assignedAt: plan?.updatedAt ?? Date.now(),
+        done: rx.done,
+        status: (rx.done >= rx.total ? 'completed' : 'active') as 'active' | 'completed',
+      }
+    })
+  }, [plan, linkedPrescriptions, catalog.sessions])
+
   /* ---------------------------------------------------- booking flow ----- */
 
   if (view.kind === 'list') {
@@ -265,26 +292,6 @@ export function TherapistTab(props: TherapistTabProps) {
      link's remembered time — a rescheduled session must move the button. */
   const nextAt = props.appointment?.startsAtMs ?? link.nextSessionAt
 
-  /* Prescriptions come from the therapist's PLAN on the server. They used to
-     come from `seedLink` fixtures written into this app's own storage, so
-     anything a real clinician prescribed reached nobody. The local list is
-     still the fallback for the demo, where there is no plan to read. */
-  const prescriptions = useMemo(() => {
-    const fromPlan = prescriptionsFromPlan(plan)
-    if (!fromPlan.length) return link.prescriptions
-    return fromPlan.map((rx, i) => {
-      const session = catalog.sessions.find((x) => x.protocolCode === rx.protocolCode)
-      return {
-        id: `plan-${rx.protocolCode}-${rx.duration}-${i}`,
-        slug: session?.slug ?? '',
-        duration: rx.duration,
-        perWeek: rx.perWeek,
-        assignedAt: plan?.updatedAt ?? Date.now(),
-        done: rx.done,
-        status: (rx.done >= rx.total ? 'completed' : 'active') as 'active' | 'completed',
-      }
-    })
-  }, [plan, link.prescriptions, catalog.sessions])
   const joinable = props.appointment ? joinWindowOpen(props.appointment, Date.now()) : false
 
   return (
