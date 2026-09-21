@@ -21,13 +21,26 @@
      homework — `prescribableProtocols()` is the single place that holds.
    ============================================================================ */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WeeklySlot } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { PROTOCOLS } from '../data/protocols'
 import { isClinicalOnly, sessionForProtocol } from '../data/selfuse'
 
-const KEY = 'gl.workspace'
+/* ONE key per account.
+
+   It used to be a single `gl.workspace` for the whole browser, seeded with a
+   demo caseload — so every therapist who signed in was shown Dr. Ana Ribeiro
+   and her ten fictional patients, and two therapists sharing a computer shared
+   a workspace. The store is local UI state (drafts, layout, the onboarding
+   step); who the therapist IS comes from the server, and what is local is now
+   filed under their own id.
+
+   The legacy key is deliberately NOT migrated: everything in it was demo
+   content, and handing one account another's leftovers is the bug, not the
+   fix. */
+const LEGACY_KEY = 'gl.workspace'
+const keyFor = (userId: string | null) => (userId ? `gl.workspace.${userId}` : LEGACY_KEY)
 const DAY = 86_400_000
 const HOUR = 3_600_000
 
@@ -386,12 +399,21 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
 
 /* ---------------------------------------------------------------- hook --- */
 
-export function loadWorkspace(): WorkspaceState {
+/**
+ * This account's workspace.
+ *
+ * `demo` is what decides the STARTING point, and it means "there is no
+ * backend" — not "this looks like a demo". With a database behind it the
+ * roster arrives from `listPatients()` under row-level security, so an empty
+ * workspace is the honest beginning; without one, the seeded caseload is the
+ * only way the downstream screens are reachable at all.
+ */
+export function loadWorkspace(userId: string | null, demo: boolean): WorkspaceState {
+  const base = demo ? demoWorkspace() : emptyWorkspace()
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return demoWorkspace()
+    const raw = localStorage.getItem(keyFor(userId))
+    if (!raw) return base
     const parsed = JSON.parse(raw) as WorkspaceState
-    const base = demoWorkspace()
     return {
       ...base,
       ...parsed,
@@ -399,25 +421,79 @@ export function loadWorkspace(): WorkspaceState {
       settings: { ...base.settings, ...parsed.settings },
     }
   } catch {
-    return demoWorkspace()
+    return base
   }
 }
 
-export function saveWorkspace(s: WorkspaceState): void {
-  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* private mode */ }
+export function saveWorkspace(userId: string | null, s: WorkspaceState): void {
+  try { localStorage.setItem(keyFor(userId), JSON.stringify(s)) } catch { /* private mode */ }
 }
 
-export function useWorkspace() {
-  const [state, setState] = useState<WorkspaceState>(() => loadWorkspace())
+export function useWorkspace(userId: string | null, demo: boolean) {
+  const [state, setState] = useState<WorkspaceState>(() => loadWorkspace(userId, demo))
+  /* Signing out and back in as someone else must not leave the previous
+     therapist's workspace on screen. */
+  const loadedFor = useRef(userId)
+  useEffect(() => {
+    if (loadedFor.current === userId) return
+    loadedFor.current = userId
+    setState(loadWorkspace(userId, demo))
+  }, [userId, demo])
   const update = useCallback((fn: (s: WorkspaceState) => WorkspaceState) => {
     setState((prev) => {
       const next = fn(prev)
-      saveWorkspace(next)
+      saveWorkspace(userId, next)
       return next
     })
-  }, [])
-  useEffect(() => { saveWorkspace(state) }, [state])
+  }, [userId])
+  useEffect(() => { saveWorkspace(userId, state) }, [userId, state])
   return { state, update }
+}
+
+/**
+ * The account block, as the SERVER describes it.
+ *
+ * Name, email, licence and verification are not this browser's to invent:
+ * they are the credential row a reviewer approved and the session a person
+ * signed in with. Everything a therapist writes about themselves — bio,
+ * specializations, availability, the onboarding stamps — is left alone.
+ */
+export function useServerIdentity(
+  cred: { name: string; crp: string; status: 'pending' | 'approved' | 'rejected' | 'more_info' } | null,
+  email: string | null,
+  update: (fn: (s: WorkspaceState) => WorkspaceState) => void,
+): void {
+  const name = cred?.name ?? null
+  const crp = cred?.crp ?? null
+  const status = cred?.status ?? null
+  useEffect(() => {
+    if (name == null || crp == null || status == null) return
+    update((s) => {
+      const next = accountFromServer(s.account, { name, crp, status }, email)
+      const same =
+        next.fullName === s.account.fullName &&
+        next.email === s.account.email &&
+        next.licenceNumber === s.account.licenceNumber &&
+        next.verification === s.account.verification
+      return same ? s : { ...s, account: next }
+    })
+  }, [name, crp, status, email, update])
+}
+
+export function accountFromServer(
+  account: TherapistAccount,
+  cred: { name: string; crp: string; status: 'pending' | 'approved' | 'rejected' | 'more_info' },
+  email: string | null,
+): TherapistAccount {
+  const verification: VerificationState =
+    cred.status === 'approved' ? 'approved' : cred.status === 'rejected' ? 'rejected' : cred.status === 'more_info' ? 'docs-needed' : 'pending'
+  return {
+    ...account,
+    fullName: cred.name || account.fullName,
+    email: email ?? account.email,
+    licenceNumber: cred.crp || account.licenceNumber,
+    verification,
+  }
 }
 
 /* ----------------------------------------------------------- selectors --- */

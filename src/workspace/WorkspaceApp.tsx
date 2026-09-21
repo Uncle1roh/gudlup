@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
+import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients } from './data'
 import type { Therapist } from '../b2b/data'
@@ -33,6 +34,7 @@ import { LiveSession, type SessionResult } from './LiveSession'
 import { SessionReport } from './Report'
 import { Prescriptions, ReportsArchive, Performance, WorkspaceSettings } from './Tools'
 import {
+  useServerIdentity,
   demoWorkspace,
   lowAdherencePatients,
   useWorkspace,
@@ -109,7 +111,12 @@ export function WorkspaceApp(props: WorkspaceAppProps) {
 function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
-  const { state, update } = useWorkspace()
+  const { user } = useAuth()
+  /* No backend = the demo caseload, because otherwise nothing past this screen
+     is reachable. With one, the roster is the server's answer and it starts
+     empty rather than borrowed from a fictional colleague. */
+  const demo = !hasSupabaseEnv()
+  const { state, update } = useWorkspace(user?.id ?? null, demo)
   const [sandboxOnEntry, setSandboxOnEntry] = useState(false)
 
   /* ---- may this account see patients? ------------------------------------
@@ -131,6 +138,15 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
       .catch((e: Error) => { setCred(null); setCredErr(e.message) })
   }, [dp])
   useEffect(loadCred, [loadCred])
+
+  /* WHO this is: the credential row a reviewer approved, and the session they
+     signed in with. The local store holds what a therapist writes about
+     themselves; it does not get to name them.
+
+     Called ABOVE the `if (!cred)` return, with the rest of the hooks — a hook
+     after an early return changes how many run between renders, which is the
+     mistake this file was split into two components to avoid. */
+  useServerIdentity(cred, user?.email ?? null, update)
 
   if (!cred) {
     return (
@@ -163,9 +179,10 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
           update((s) => ({
             ...s,
             account: { ...s.account, sandboxSeenAt: Date.now() },
-            // A brand-new therapist has an empty roster; a demo build seeds one
-            // so every downstream screen is reachable.
-            patients: s.patients.length ? s.patients : demoWorkspace().patients,
+            /* A brand-new therapist has an empty roster, and that is the
+               truth: their patients arrive by connection code. Only a build
+               with no backend seeds one. */
+            patients: s.patients.length || !demo ? s.patients : demoWorkspace().patients,
           }))
           // the workspace does not exist yet; it opens on the sandbox instead
           if (sandbox) setSandboxOnEntry(true)
@@ -173,14 +190,18 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
       />
     )
   }
-  return <WorkspaceSurface demoSeconds={demoSeconds} sandboxOnEntry={sandboxOnEntry} />
+  return <WorkspaceSurface demoSeconds={demoSeconds} sandboxOnEntry={sandboxOnEntry} cred={cred} />
 }
 
-function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry }: WorkspaceAppProps & { sandboxOnEntry?: boolean }) {
+function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: WorkspaceAppProps & { sandboxOnEntry?: boolean; cred: Therapist }) {
   const { t } = useI18n()
   const { user } = useAuth()
   const dp = useDataProvider()
-  const { state, update } = useWorkspace()
+  const { state, update } = useWorkspace(user?.id ?? null, !hasSupabaseEnv())
+  /* The surface keeps its own copy of the store, so it applies the identity
+     itself: the gate's correction lives in the gate's copy, and the name on
+     screen is this one. */
+  useServerIdentity(cred, user?.email ?? null, update)
   const [nav, setNav] = useState<Nav>(sandboxOnEntry ? 'sandbox' : 'patients')
   const [view, setView] = useState<View>(sandboxOnEntry ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
   const [menu, setMenu] = useState(false)
