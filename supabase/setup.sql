@@ -19,6 +19,13 @@ create extension if not exists "pgcrypto";
 -- 1. Enums (guarded so re-runs don't fail)
 -- ---------------------------------------------------------------------------
 do $$ begin create type user_role as enum ('b2c_user', 'therapist', 'admin'); exception when duplicate_object then null; end $$;
+-- 'hr_admin' is the company-side role. The app has written it at sign-up since
+-- the corporate dashboard shipped, and `is_hr()` below compares against it, but
+-- the enum never had the value: on a real database an HR sign-up failed with
+-- "invalid input value for enum user_role" and every policy calling is_hr()
+-- raised instead of returning false. Added separately because ADD VALUE cannot
+-- be used in the same transaction that creates the type.
+do $$ begin alter type user_role add value if not exists 'hr_admin'; exception when duplicate_object then null; end $$;
 do $$ begin create type therapist_status as enum ('pending', 'approved', 'rejected'); exception when duplicate_object then null; end $$;
 do $$ begin create type consent_kind as enum ('therapy', 'sharing', 'aggregates'); exception when duplicate_object then null; end $$;
 do $$ begin create type goal_status as enum ('achieved', 'in-progress', 'review'); exception when duplicate_object then null; end $$;
