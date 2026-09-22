@@ -85,12 +85,12 @@ it after any demo where someone watched you type it.
 
 `7-demo-user.sql` (one folder up) creates the person and the clinician as they
 should look on stage: several weeks of session history, a prescribed plan,
-measurements over time, and an appointment coming up. It reads the two logins
-you just made.
+measurements over time, and an appointment coming up, both on the demo company.
+It reads the two logins you just made.
 
-`3-demo-company.sql` then puts the whole demo on one company — **Good Loop
-Demo, code `DEMO-2026-GL`** — approves the clinician, adds them to that
-company's bookable list, and creates the HR profile.
+`3-demo-company.sql` then adds the employer side: the HR profile, the
+clinician's place on the company's bookable list, and a spare activation code
+so "a therapist joins a company list" can be shown live.
 
 That code matters: `DEMO-2026-GL` is the one the app resolves to *Self Use +
 Professional Support*. On any other code the Terapeuta tab shows "your plan

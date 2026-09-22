@@ -21,12 +21,15 @@
 -- making a second copy, so you can re-run it to reset the demo between
 -- meetings. Nothing outside these two accounts is touched.
 --
--- Run scripts 5 and 6 first — this uses the tables they create.
+-- Run setup.sql first: it now carries everything scripts 1-8 added, including
+-- the booking functions (`my_appointments`, `booked_times`) the app calls and
+-- the `therapist_codes` table this script writes to.
 -- ============================================================================
 
 do $$
 declare
-  -- ---- edit these two if you used different addresses ---------------------
+  -- ---- edit these if you used different addresses -------------------------
+  demo_company    text := 'DEMO-2026-GL';   -- Self Use + Professional Support
   patient_email   text := 'demo@goodloop.app';
   therapist_email text := 'terapeuta@goodloop.app';
   -- -------------------------------------------------------------------------
@@ -98,10 +101,10 @@ begin
 
   -- ---- the person ---------------------------------------------------------
   insert into profiles (auth_uid, role, name, email, locale, company_id, active, team)
-  values (patient_auth, 'b2c_user', 'Giulia Marchetti', patient_email, 'it', 'ACME-2026', true, 'Operations')
+  values (patient_auth, 'b2c_user', 'Giulia Marchetti', patient_email, 'it', demo_company, true, 'Operations')
   on conflict (auth_uid) do update
     set role = 'b2c_user', name = excluded.name, email = excluded.email,
-        company_id = 'ACME-2026', active = true
+        company_id = demo_company, active = true
   returning id into p_profile;
 
   -- ---- the link, which is what "has a therapist" actually means ------------
@@ -156,16 +159,12 @@ begin
          case when n <= 2 then now_ts - (7 - n) * day end
   from generate_series(1, 6) as n;
 
-  -- ---- the conversation ----------------------------------------------------
-  -- the app has no chat any more; the rows are harmless and the table is kept
+  -- ---- the conversation, which no longer exists ---------------------------
+  -- Chat was removed from every screen; the only conversation is the one
+  -- inside a live video session. This used to seed four messages into a
+  -- thread nothing opens any more, so it seeds none — and clears any left
+  -- over from an earlier run of this script.
   delete from messages where patient_id = patient_row;
-
-  insert into messages (patient_id, sender, body, at, read_by_patient, read_by_therapist)
-  values
-    (patient_row, 'therapist', 'Ciao Giulia — ho impostato il percorso per le prossime tre settimane. Fammi sapere come va il respiro la sera.', now_ts - 20 * day, true, true),
-    (patient_row, 'patient',   'Grazie! La sera è ancora il momento più difficile, ma la sessione da 12 minuti aiuta.',                             now_ts - 19 * day, true, true),
-    (patient_row, 'therapist', 'Perfetto. Proviamo ad aggiungere la Quick da 6 minuti prima delle riunioni.',                                       now_ts - 13 * day, true, true),
-    (patient_row, 'patient',   'Questa settimana è stata pesante, ne ho saltata una.',                                                              now_ts -  3 * day, true, false);
 
   -- ---- measurements the therapist's charts read ----------------------------
   delete from scores where patient_id = patient_row;
@@ -183,7 +182,7 @@ begin
   -- ---- the next appointment, and the video room it opens -------------------
   delete from appointments where profile_id = p_profile and status = 'booked';
   insert into appointments (therapist_id, profile_id, patient_name, company_id, starts_at, duration_min, status)
-  values (t_profile, p_profile, 'Giulia Marchetti', 'ACME-2026',
+  values (t_profile, p_profile, 'Giulia Marchetti', demo_company,
           date_trunc('day', now_ts + 2 * day) + interval '10 hour',
           50, 'booked');
 
@@ -197,8 +196,8 @@ select
      where p.email = 'demo@goodloop.app')                                                        as own_sessions,
   (select count(*) from plan_items pi join patients pa on pa.id = pi.patient_id
      join profiles p on p.id = pa.b2c_profile_id where p.email = 'demo@goodloop.app')            as prescribed_sessions,
-  (select count(*) from messages m join patients pa on pa.id = m.patient_id
-     join profiles p on p.id = pa.b2c_profile_id where p.email = 'demo@goodloop.app')            as messages,
+  (select count(*) from scores s2 join patients pa on pa.id = s2.patient_id
+     join profiles p on p.id = pa.b2c_profile_id where p.email = 'demo@goodloop.app')            as measures,
   (select to_char(min(starts_at), 'DD/MM HH24:MI') from appointments a
      join profiles p on p.id = a.profile_id
      where p.email = 'demo@goodloop.app' and a.status = 'booked')                                as next_appointment;

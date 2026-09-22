@@ -3,9 +3,9 @@
 --
 -- Run this AFTER ../7-demo-user.sql, which builds the demo person and the demo
 -- clinician (with their history, prescriptions, measurements and an upcoming
--- appointment). That script puts the person on ACME-2026; this one moves the
--- whole demo onto ONE company — Good Loop Demo, code DEMO-2026-GL — and adds
--- the employer side, which 7 does not cover.
+-- appointment), both on the demo company. This one adds the employer side,
+-- which that script does not cover: the HR login, the clinician's place on the
+-- company's bookable list, and a spare activation code.
 --
 -- Needs one more login, created the same way as the other two:
 --   Authentication → Users → Add user → Auto Confirm User ON
