@@ -35,18 +35,30 @@ Each script is one file. Open it, select all, paste into a **new query** in the
 SQL Editor, press **Run**. Do them in order and read the output of each before
 moving on.
 
+> **The editor shows only the last result.** If you paste several queries into
+> one Supabase tab, you see the output of the last one and the others vanish.
+> Every script here is written around that: the dry run and the check are a
+> single query, and the wipe ends with its own summary. Run one file per tab.
+
 ### Step 1 — Look before you delete · `1-dry-run.sql`
 
-Deletes nothing. Prints how many people, therapists, patients, appointments and
-companies would go, and how many protocols, shelves, tags and admin accounts
-would stay.
+Deletes nothing. Returns one table in four blocks:
 
-Two things to check in its output:
+```
+=== WOULD BE DELETED ===        people, therapists, patients, appointments,
+                                companies, logins — with counts
+=== WOULD BE KEPT ===           PROTOCOLS, shelves, audio tags, operator
+                                settings, audit trail, admin profiles
+=== ADMINS THAT SURVIVE ===     one line per admin account
+=== PROTOCOLS LIMITED TO ONE COMPANY ===
+```
 
-- the admin list contains `admin@goodloop.app`;
-- the last query, about protocols restricted to one company, returns **no
-  rows**. If it returns any, stop and say so — those protocols would become
-  invisible when their company is deleted.
+Two things to check before going on:
+
+- the admins block lists `admin@goodloop.app`;
+- the last block says **"none — every protocol is visible to all tenants"**.
+  If it names protocols instead, stop and say so: those would become invisible
+  to everyone once their company is deleted.
 
 ### Step 2 — Delete · `2-wipe.sql`
 

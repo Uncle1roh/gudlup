@@ -78,3 +78,26 @@ begin
 end $$;
 
 notify pgrst, 'reload schema';
+
+-- What you should be looking at now. (The editor shows only the last result,
+-- so this is the one that matters.)
+select line, detail
+from (
+  select 10 as ord, '=== THE DEMO COMPANY ===' as line, '' as detail
+  union all select 11, c.id, c.name || ' · ' || c.active_users || ' of ' || c.seats || ' seats · ' || c.status
+              from companies c where c.id = 'DEMO-2026-GL'
+  union all select 20, '', ''
+  union all select 21, '=== ON ITS BOOKABLE LIST ===', ''
+  union all select 22, p.name, coalesce(p.email, '') || ' · ' || t.status::text
+              from company_therapists ct
+              join profiles p on p.id = ct.therapist_id
+              join therapists t on t.id = ct.therapist_id
+             where ct.company_id = 'DEMO-2026-GL'
+  union all select 23, 'nobody on the list — run ../7-demo-user.sql first, then this script again', ''
+              where not exists (select 1 from company_therapists where company_id = 'DEMO-2026-GL')
+  union all select 30, '', ''
+  union all select 31, '=== PEOPLE ON THIS COMPANY ===', ''
+  union all select 32, coalesce(p.email, '(no email)'), p.role::text
+              from profiles p where p.company_id = 'DEMO-2026-GL'
+) x
+order by ord, line;
