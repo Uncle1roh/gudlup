@@ -147,10 +147,17 @@
 }
 .badge--on { background: var(--aura-deep); color: #fff; }
 
+/* An empty state belongs to its PAGE, so it reads from the same left edge as
+   the heading above it. Centred text under a left-aligned H1 put three
+   alignments in one column — heading left, body centred, panel left — which
+   is the thing that made these screens feel unplaced. Same dashed panel as
+   `.thr-empty`, because they are the same idea. */
 .empty {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  text-align: center; padding: 44px 18px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  text-align: left; padding: 22px 20px;
+  border: 1px dashed var(--line); border-radius: var(--r-md);
 }
+.empty > p { margin: 0; }
 .empty h3 { font-family: var(--display); font-size: 24px; font-weight: 500; }
 
 .segmented {
@@ -401,7 +408,13 @@
 
 .stereo__body { justify-content: center; align-items: center; gap: 18px; text-align: center; }
 .stereo__art { font-size: 56px; }
-.stereo__answers { width: 100%; max-width: 280px; }
+/* The two answers to "which ear hears the tone". 280px split in two left each
+   chip narrower than the word on it, and `.chip__label`'s overflow hardening
+   then broke "Sinistro" into "Sinistr / o" — one answer two lines tall beside
+   a one-line answer. A two-word question gets the room for its two words. */
+.stereo__answers { width: 100%; max-width: 360px; }
+.stereo__answers .chip { padding-inline: 12px; }
+.stereo__answers .chip__label { overflow-wrap: normal; word-break: keep-all; hyphens: none; }
 .stereo__step { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--aura); }
 .stereo__ok { color: var(--ink); font-weight: 600; }
 .stereo__warn { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-md); background: var(--mist-2); }
@@ -561,7 +574,7 @@
    page so the button is reachable from anywhere in three weeks of slots,
    and it says which time is about to be requested. */
 .thr-book__bar {
-  position: sticky; bottom: 0; z-index: 5;
+  position: sticky; bottom: 0; z-index: 5; isolation: isolate;
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin: 8px -22px 0; padding: 12px 22px max(12px, env(safe-area-inset-bottom));
   background: var(--mist);
@@ -1242,7 +1255,17 @@
 .fr-art__key { fill: var(--core); }
 .fr-art__bars rect { fill: var(--aura); opacity: 0.5; }
 
-.fr__words { display: flex; flex-direction: column; gap: 10px; max-width: 36ch; }
+/* One text column, one alignment.
+
+   The card centres its brand, its drawing and its title — display elements,
+   which want to be centred. Everything that is READ sits left: the paragraph,
+   the labelled points, the fine print. It used to alternate — centred
+   paragraph, left-aligned points, centred disclaimer — so the eye restarted
+   from a different place four times down one card. The title stays centred
+   above it, which is a pairing people read every day. */
+.fr__words { display: flex; flex-direction: column; gap: 10px; max-width: 36ch; text-align: left; }
+.fr__words .fr__title { text-align: center; }
+.fr__fine { text-align: left; }
 
 /* What a card LISTS: the two modes, the three moments, the six techniques.
    One column, label first — at six entries this is a glance, not a read. */

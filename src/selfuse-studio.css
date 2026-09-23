@@ -1064,12 +1064,23 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .slot { padding: 10px 14px; }
 /* `.su-studio .su-page > *` zeroes side padding for every child, so this needs
    the same weight to keep its own gutter back. */
+/* OPAQUE. This was a gradient to transparent, which looked considered and
+   meant the day heading and the slot pills scrolled up THROUGH the words on
+   it — two layers of type reading over each other at the one moment somebody
+   is confirming a time. The fade lives above the bar instead, where there is
+   nothing to read. */
 .su-studio .su-page > .thr-book__bar {
   margin-inline: calc(var(--su-inset) * -1);
   padding-left: var(--su-inset);
   padding-right: var(--su-inset);
-  background: linear-gradient(to top, var(--su-ground) 72%, transparent);
+  background: var(--su-ground);
   border-top: 1px solid var(--su-hair);
+}
+.su-studio .su-page > .thr-book__bar::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 100%; height: 24px;
+  background: linear-gradient(to top, var(--su-ground), transparent);
+  pointer-events: none;
 }
 .su-studio .thr-book__chosen { color: var(--su-muted); font-size: 16px; }
 .su-studio .thr-book__bar.is-ready .thr-book__chosen { color: var(--su-fg); }
@@ -2061,3 +2072,13 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
   border-radius: 14px;
   padding: 16px 18px;
 }
+
+/* Empty states on the dark ground, matching `.thr-empty`. */
+.su-studio .empty {
+  border-color: var(--su-hair-2);
+  border-radius: 14px;
+  padding: 20px 20px 22px;
+  gap: 12px;
+}
+.su-studio .empty p { color: var(--su-muted); font-size: 16px; }
+.su-studio .empty .btn { align-self: flex-start; width: auto; min-width: 220px; }

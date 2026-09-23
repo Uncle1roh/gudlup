@@ -1477,7 +1477,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* The action cell holds two buttons since a company can be handed a therapist
    activation code from here — 108px was one button wide, so the second one
    grew over the Stato pill next to it. */
-.adm-table--companies .adm-tr { grid-template-columns: 1.4fr 1fr 1.1fr 104px 92px 226px; }
+.adm-table--companies .adm-tr { grid-template-columns: 1.3fr minmax(170px, 0.9fr) 1fr 104px 92px 226px; }
 .adm-table--companies .adm-tr__right { flex-wrap: wrap; gap: 6px; }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
@@ -1601,6 +1601,10 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   color: var(--ink);
 }
 .adm-code--btn { cursor: pointer; }
+/* A company code is one token. Narrowing the column to make room for the
+   second action button broke "AURORA-2026-Z5" across two lines at its own
+   hyphens, which reads as two different codes. */
+.adm-code { white-space: nowrap; }
 .adm-code--btn:hover { border-color: var(--aura); }
 .adm-made {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
