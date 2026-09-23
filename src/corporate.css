@@ -117,7 +117,12 @@
 
 .c-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px; }
 @media (max-width: 1080px) { .c-kpis { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 720px)  { .c-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 720px) {
+  .c-kpis { grid-template-columns: 1fr 1fr; }
+  /* Five figures in two columns leaves the fifth alone beside a gap. The odd
+     one out takes the whole row instead of half of it. */
+  .c-kpis > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 
 .c-kpi {
   background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 12px;

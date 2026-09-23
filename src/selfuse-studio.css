@@ -1756,6 +1756,16 @@ body:has(.su-studio) { overflow: hidden; }
   /* A prescription's action is a button, not a band across the card. */
   .su-studio .thr-active .rx-card > .btn,
   .su-studio .thr-active .asmt-card > .btn { align-self: flex-start; width: auto; min-width: 200px; }
+
+  /* ---- screens that are a single column of rows --------------------------
+
+     A week's plan and a pathway's weeks are lists: one label, one line of
+     text. Left to fill 1440px they became 1400px rules with a word at each
+     end, under a cream button the width of the monitor. A column has a
+     comfortable measure and it does not change because the window grew. */
+  .su-studio .weekly,
+  .su-studio .pw-full__plan { max-width: 860px; margin-inline: auto; }
+  .su-studio .weekly > .btn { align-self: flex-start; width: auto; min-width: 260px; }
   .su-studio .thr-cols {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
