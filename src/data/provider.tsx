@@ -235,6 +235,40 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
   const demo = !USE_SUPABASE || previewing()
   const [provider, setProvider] = useState<DataProvider | null>(() => (demo ? createMockProvider() : null))
 
+  /* ---- a preview reads the REAL catalogue ---------------------------------
+
+     The split is between the PRODUCT and the PEOPLE.
+
+     The catalogue is the product: the published protocols, their covers, the
+     rendered audio, the library shelves. None of it is personal, all of it is
+     what a customer is being shown, and the fixtures have no audio at all —
+     so a walkthrough on fixtures plays the placeholder bed and shows drawn
+     motifs instead of the real artwork. That is a demo of the wrong product.
+
+     The people stay fictional: patients, appointments, rosters, companies,
+     clinical records. Nothing here reads them and nothing here writes
+     anywhere — only two READ methods are taken from the live provider, and
+     every write in a preview still lands in memory and dies with the tab. */
+  const wantsLiveCatalog = USE_SUPABASE && previewing()
+  const [catalogLive, setCatalogLive] = useState(false)
+  useEffect(() => {
+    if (!wantsLiveCatalog || catalogLive) return
+    let active = true
+    void import('./supabase')
+      .then(({ createSupabaseProvider }) => {
+        if (!active) return
+        const live = createSupabaseProvider(SB_URL as string, SB_KEY as string)
+        setProvider((p) => (p ? { ...p, listProtocols: () => live.listProtocols(), listExploreRails: () => live.listExploreRails() } : p))
+        setCatalogLive(true)
+      })
+      .catch(() => {
+        /* No reachable backend: the walkthrough keeps the fixtures, which is
+           the old behaviour rather than an empty library. */
+        if (active) setCatalogLive(true)
+      })
+    return () => { active = false }
+  }, [wantsLiveCatalog, catalogLive])
+
   useEffect(() => {
     if (provider) return
     let active = true
