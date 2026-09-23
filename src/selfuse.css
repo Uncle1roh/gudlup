@@ -205,7 +205,7 @@
 }
 .ob-input:focus { outline: none; border-color: var(--aura); box-shadow: 0 0 0 3px rgba(0,155,119,0.14); }
 .ob-input.is-error { border-color: #b23b3b; }
-.ob-input--code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+.ob-input--code { font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
 .ob-error { color: #b23b3b; font-size: 16px; margin-top: 6px; }
 .ob-codebox { padding: 16px; border-radius: var(--r-md); background: var(--mist-2); }
 .ob-policy { display: inline-block; }

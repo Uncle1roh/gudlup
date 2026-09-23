@@ -1381,7 +1381,7 @@ body:has(.su-studio) { background: var(--su-void); }
   gap: 12px;
 }
 .su-studio .finder .ob-qcount {
-  font-family: var(--mono, ui-monospace), ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 16px;
   color: var(--su-faint);
   font-variant-numeric: tabular-nums;

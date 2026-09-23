@@ -1,43 +1,66 @@
-# Brand fonts — bundled
+# Fonts — Roboto, bundled
 
-The app now ships with the Good Loop typefaces from the identity book, applied
-across the **whole app** (B2C, B2B, and the Studio):
+The whole product is set in **Roboto**: the Self Use app, the Therapist
+Workspace, the company dashboard, the admin console and the Sound Studio.
+Headings, body and UI all draw on the same family; anywhere digits have to line
+up in a column — timecodes in the Studio, licence numbers, company codes — uses
+**Roboto Mono**, so even those stay in the family instead of falling back to
+whatever monospace the machine happens to have.
 
-- **Fragment Sans** (PP Fragment) — display / headings
-- **TT Commons Pro** — body / UI
+## Served from here, never from Google
 
-## What's included
+The faces live in `public/fonts/` and are referenced with plain `/fonts/…`
+URLs. There is no `fonts.googleapis.com` link anywhere, and that is deliberate:
+a `<link>` to Google Fonts makes every visitor's browser announce its IP
+address to a third party before the first word is drawn. For a mental-health
+app under LGPD and GDPR that is not a trade worth making for one line of HTML.
 
-Converted to `.woff2` (≈40% the size of the source OTF) and placed in
-`public/fonts/`. Only the weights the UI actually uses are bundled:
+## What is bundled
+
+The variable faces, so a single file per subset covers every weight from 100 to
+900 — no synthetic bolding, and no eight-file download.
 
 ```
 public/fonts/
-  FragmentSans-Light.woff2       (300)
-  FragmentSans-Regular.woff2     (400–600 — display headings)
-  FragmentSans-ExtraBold.woff2   (700–800)
-  TTCommons-Regular.woff2        (400)
-  TTCommons-Italic.woff2         (400 italic)
-  TTCommons-Medium.woff2         (500)
-  TTCommons-DemiBold.woff2       (600)
-  TTCommons-Bold.woff2           (700)
+  Roboto-Roman-latin.woff2          42 KB   weights 100–900
+  Roboto-Roman-latin-ext.woff2      29 KB
+  Roboto-Italic-latin.woff2         46 KB   weights 100–900, italic
+  Roboto-Italic-latin-ext.woff2     31 KB
+  RobotoMono-Roman-latin.woff2      32 KB   weights 100–700
+  RobotoMono-Roman-latin-ext.woff2  22 KB
 ```
 
-The `@font-face` rules are in `src/index.css`. Fragment Sans has only Light /
-Regular / ExtraBold, so the Regular face answers the 400–600 weight range the UI
-requests (no synthetic bold), and ExtraBold covers 700+. `index.html` preloads
-the two Regular faces so there's no flash of fallback text. Nothing is loaded
-from Google Fonts anymore — fully self-hosted, works offline.
+Latin and Latin Extended only. Italian, Portuguese and English are covered by
+the first file; each `@font-face` carries the `unicode-range` Google publishes,
+so a browser fetches the `-ext` file only if a page actually needs a character
+from it. `index.html` preloads `Roboto-Roman-latin.woff2` — the one face every
+screen needs — to avoid a flash of fallback text.
 
-## ⚠️ Licensing before launch
+Roboto is licensed under the Apache License 2.0: free to bundle, ship and
+modify, commercially, with no attribution required in the interface.
 
-The files you sent are **not yet production-licensed**:
+## How it is wired
 
-- **PP Fragment** is the *"Free for Personal Use"* build (the EULA is in your
-  zip). A commercial licence from Pangram Pangram is required to ship it.
-- **TT Commons** came from a free font-host, not the TT Commons **Pro** foundry
-  release. The proper licence is from TypeType.
+Three tokens in `src/index.css`, and everything else reads them:
 
-They're fine for internal builds and the closed beta, but both need a real
-licence (or a substitute) before any public release. The wiring won't change —
-just drop the licensed `.woff2` files over these with the same names.
+```css
+--display: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+--sans:    'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+--mono:    'Roboto Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+```
+
+`--display` and `--sans` are the same family now, but both are kept: the
+distinction is still meaningful in the stylesheets, and it is what a later
+change back to a two-face brand would turn on again. `--gl-display` and
+`--gl-body` are aliases of the two.
+
+To change the whole product's typeface, change these three lines and the
+`@font-face` block above them. Nothing else names a family.
+
+## The previous typefaces
+
+Fragment Sans (display) and TT Commons Pro (body/UI), from the identity book,
+are still in `public/fonts/` as `FragmentSans-*.woff2` and `TTCommons-*.woff2`.
+Nothing references them; they are kept because they are licensed brand assets
+and putting them back is then a question of editing three tokens rather than
+finding the files again.

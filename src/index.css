@@ -31,9 +31,10 @@
   --blue:        #2465ab;
   --sand:        #e89d64;
 
-  /* --- Type — Fragment Sans (display) + TT Commons Pro (body/UI) --- */
-  --display: 'PP Fragment', 'TT Commons Pro', system-ui, sans-serif;
-  --sans: 'TT Commons Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* --- Type — Roboto throughout, self-hosted (see the @font-face block) --- */
+  --display: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --sans: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --mono: 'Roboto Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   /* --- Scale / spacing --- */
   --r-sm: 12px;
@@ -465,51 +466,57 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
    them up automatically; until then everything falls back gracefully.
    ============================================================================ */
 
-/* Fragment Sans — display. The cut has Light/Regular/ExtraBold only, so the
-   Regular face answers the 400–600 range the UI requests (no synthetic bold),
-   and ExtraBold covers 700–800. */
+/* Roboto, self-hosted.
+
+   One family for the whole product: display, UI and body all sit on Roboto,
+   and the places that line up digits — timecodes, licence numbers, company
+   codes — use Roboto Mono so they stay in the same family instead of falling
+   back to whatever monospace the machine happens to have.
+
+   These are the variable faces, so one file per subset covers every weight
+   from 100 to 900 and there is no synthetic bolding anywhere. They are served
+   from /fonts and never from Google: a person opening a mental-health app
+   should not have their IP address handed to a third party to draw the text.
+
+   Latin and Latin Extended only — Italian, Portuguese and English are covered,
+   and the browser fetches the second file only if a page actually needs it. */
 @font-face {
-  font-family: 'PP Fragment';
-  src: url('/fonts/FragmentSans-Light.woff2') format('woff2');
-  font-weight: 300; font-style: normal; font-display: swap;
+  font-family: 'Roboto';
+  src: url('/fonts/Roboto-Italic-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: italic; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'PP Fragment';
-  src: url('/fonts/FragmentSans-Regular.woff2') format('woff2');
-  font-weight: 400 600; font-style: normal; font-display: swap;
+  font-family: 'Roboto';
+  src: url('/fonts/Roboto-Italic-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: italic; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'PP Fragment';
-  src: url('/fonts/FragmentSans-ExtraBold.woff2') format('woff2');
-  font-weight: 700 800; font-style: normal; font-display: swap;
+  font-family: 'Roboto';
+  src: url('/fonts/Roboto-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Roboto';
+  src: url('/fonts/Roboto-Roman-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('/fonts/RobotoMono-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('/fonts/RobotoMono-Roman-latin.woff2') format('woff2');
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* TT Commons Pro — body / UI */
-@font-face {
-  font-family: 'TT Commons Pro';
-  src: url('/fonts/TTCommons-Regular.woff2') format('woff2');
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'TT Commons Pro';
-  src: url('/fonts/TTCommons-Italic.woff2') format('woff2');
-  font-weight: 400; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'TT Commons Pro';
-  src: url('/fonts/TTCommons-Medium.woff2') format('woff2');
-  font-weight: 500; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'TT Commons Pro';
-  src: url('/fonts/TTCommons-DemiBold.woff2') format('woff2');
-  font-weight: 600; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'TT Commons Pro';
-  src: url('/fonts/TTCommons-Bold.woff2') format('woff2');
-  font-weight: 700; font-style: normal; font-display: swap;
-}
 
 :root {
   --gl-emerald: #009b77;
@@ -525,8 +532,9 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   --gl-blue: #2465ab;
   --gl-ink: #173a30;
 
-  --gl-display: 'PP Fragment', system-ui, sans-serif;
-  --gl-body: 'TT Commons Pro', system-ui, -apple-system, sans-serif;
+  /* The brand aliases now point at the same family as everything else. */
+  --gl-display: var(--display);
+  --gl-body: var(--sans);
 }
 
 /* --- Studio shell --- */
@@ -989,13 +997,13 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   --mt-text: #e6efe9; --mt-sub: #88a298; --mt-accent: #1FBF94; --mt-play: #F4F0BE;
   position: fixed; inset: 0; display: flex; flex-direction: column;
   background: var(--mt-bg); color: var(--mt-text);
-  font-family: var(--font-ui, system-ui, sans-serif); overflow: hidden;
+  font-family: var(--sans); overflow: hidden;
 }
 .mt-studio input[type=range] { accent-color: var(--mt-accent); cursor: pointer; }
 .mt-studio button { font-family: inherit; }
 
 /* desktop gate */
-.mt-gate { position: fixed; inset: 0; display: grid; place-items: center; background: #0e1413; color: #e6efe9; padding: 24px; font-family: system-ui, sans-serif; }
+.mt-gate { position: fixed; inset: 0; display: grid; place-items: center; background: #0e1413; color: #e6efe9; padding: 24px; font-family: var(--sans); }
 .mt-gate__card { max-width: 420px; text-align: center; background: #14201e; border: 1px solid #243430; border-radius: 18px; padding: 40px 32px; }
 .mt-gate__icon { font-size: 44px; }
 .mt-gate__card h1 { font-size: 20px; margin: 14px 0 8px; }
@@ -1400,7 +1408,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
 
-.adm-mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px; color: var(--ink); }
+.adm-mono { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
 .adm-muted { color: var(--slate); font-size: 13px; }
 .adm-tag { font-size: 12px; color: var(--slate); }
 
@@ -1461,7 +1469,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* add row / selects / bars */
 .adm-addrow { display: flex; gap: 10px; margin-bottom: 10px; }
 .adm-addrow__seats { max-width: 110px; }
-.adm-addrow__code { max-width: 190px; font-family: var(--mono, ui-monospace, monospace); letter-spacing: 0.04em; }
+.adm-addrow__code { max-width: 190px; font-family: var(--mono); letter-spacing: 0.04em; }
 
 /* --- the company code, which is also the way in ---------------------------
    Shown as a thing to be COPIED: HR registers with it and every employee
@@ -1513,7 +1521,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   border-radius: var(--r-sm);
   background: var(--mist-2);
   border: 1px solid var(--line);
-  font-family: var(--mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 12.5px;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -1533,7 +1541,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-bar > span { display: block; height: 100%; background: var(--aura); border-radius: var(--r-pill); }
 
 /* audit namespace chips */
-.adm-ns { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; padding: 2px 8px; border-radius: var(--r-sm); background: var(--mist-2); color: var(--slate); }
+.adm-ns { font-family: var(--mono); font-size: 12px; padding: 2px 8px; border-radius: var(--r-sm); background: var(--mist-2); color: var(--slate); }
 .adm-ns--credential { background: #e2f3e8; color: #1f7a4d; }
 .adm-ns--company { background: #e6eef8; color: #2f5fa0; }
 .adm-ns--user { background: #f1e9f4; color: #6b4680; }
@@ -1724,7 +1732,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* ---- Admin · protocol-document import (SpecImport) ---- */
 .adm-spec__card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-md); padding: 18px; display: flex; flex-direction: column; gap: 12px; max-width: 860px; }
 .adm-spec__id { display: flex; align-items: center; gap: 12px; }
-.adm-spec__code { font-family: ui-monospace, monospace; font-weight: 700; font-size: 15px; color: var(--ink); background: var(--mist-2); border-radius: var(--r-sm); padding: 6px 10px; white-space: nowrap; }
+.adm-spec__code { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--ink); background: var(--mist-2); border-radius: var(--r-sm); padding: 6px 10px; white-space: nowrap; }
 .adm-spec__title { flex: 1; font-size: 15px; }
 .adm-spec__facts { display: flex; flex-wrap: wrap; gap: 8px; }
 .adm-spec__facts > span { font-size: 12px; color: var(--slate); background: var(--mist-2); border-radius: 999px; padding: 4px 10px; }
@@ -2432,7 +2440,7 @@ td, th { overflow-wrap: anywhere; }
   display: flex; flex-direction: column; gap: 2px;
   padding: 10px 14px; border-radius: 10px;
   background: #3b2a06; border: 1px solid #b7862a; color: #fff4dc;
-  font-family: var(--sans, system-ui, sans-serif); font-size: 13px; line-height: 1.35;
+  font-family: var(--sans); font-size: 13px; line-height: 1.35;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   animation: el-notice 200ms ease both;
 }

@@ -33,7 +33,7 @@
 .w-lead { font-size: 14px; color: var(--w-muted); line-height: 1.5; }
 .w-small { font-size: 12px; color: var(--w-muted); line-height: 1.45; }
 .w-muted { color: var(--w-muted); }
-.w-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 12px; }
+.w-mono { font-family: var(--mono); font-size: 12px; }
 .w-note { font-size: 11.5px; color: var(--w-muted); line-height: 1.5; margin-top: 10px; font-style: italic; }
 .w-center { text-align: center; }
 .w-error { display: block; font-size: 11.5px; color: var(--w-danger); margin-top: 4px; }
@@ -546,7 +546,7 @@
 .w-modal--sm { width: min(400px, 100%); }
 .w-modal--wide { width: min(680px, 100%); }
 .w-code { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 10px; background: var(--w-bg); border: 1px dashed var(--w-line); }
-.w-code__value { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 22px; font-weight: 600; letter-spacing: 0.08em; }
+.w-code__value { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: 0.08em; }
 .w-steps ol { margin: 8px 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--w-muted); }
 
 /* ---------------------------------------------------------------- auth --- */
