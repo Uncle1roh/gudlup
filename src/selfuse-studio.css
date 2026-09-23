@@ -777,6 +777,21 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .btn--primary:hover,
 .su-studio .btn--light:hover { background: var(--su-cream-2); }
+/* A disabled action had no state of its own: cream at the browser's default
+   disabled rendering came out a muddy olive that read as a broken button
+   rather than an inactive one. Unavailable is quiet and outlined — the shape
+   of the action stays, the invitation does not. */
+.su-studio .btn--primary:disabled,
+.su-studio .btn--light:disabled,
+.su-studio .btn--primary[aria-disabled='true'] {
+  background: transparent;
+  color: var(--su-faint);
+  border: 1px solid var(--su-hair-2);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.su-studio .btn--primary:disabled:hover,
+.su-studio .btn--light:disabled:hover { background: transparent; }
 .su-studio .btn--ghost {
   background: transparent;
   border: 1px solid var(--su-hair-2);
@@ -1717,15 +1732,30 @@ body:has(.su-studio) { overflow: hidden; }
      can read at once — the clinician and what is ASKED of you on the left,
      what has HAPPENED on the right, and both stop before the line gets too
      long to read. */
-  .su-studio .thr-active { max-width: 1180px; }
+  /* Centred, or on a 2560px monitor the whole tab hugs the left edge with two
+     thirds of the screen empty beside it. */
+  .su-studio .thr-active { max-width: 1180px; margin-inline: auto; }
+
+  /* Who · when · what you can do, on one line, each in its own column rather
+     than five children wrapping wherever they land. The actions sit at the
+     right edge because that is where this screen's decisions are. */
   .su-studio .thr-active .thr-hero {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(220px, 1.1fr) minmax(180px, 1fr) auto;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 18px;
+    gap: 16px 32px;
+    padding: 22px 24px;
   }
-  .su-studio .thr-active .thr-hero .thr-card__id { flex: 1 1 260px; }
-  .su-studio .thr-active .thr-hero .btn { width: auto; min-width: 200px; }
+  .su-studio .thr-active .thr-hero .thr-card__id { min-width: 0; }
+  .su-studio .thr-active .thr-hero__acts { flex-direction: row; gap: 10px; }
+  .su-studio .thr-active .thr-hero__acts .btn { width: auto; min-width: 176px; }
+  /* Two lines of type, so it aligns to the identity beside it rather than to
+     the middle of a button. */
+  .su-studio .thr-active .thr-hero__note { margin-top: 4px; max-width: 34ch; }
+
+  /* A prescription's action is a button, not a band across the card. */
+  .su-studio .thr-active .rx-card > .btn,
+  .su-studio .thr-active .asmt-card > .btn { align-self: flex-start; width: auto; min-width: 200px; }
   .su-studio .thr-cols {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -2012,3 +2042,12 @@ html[data-su-theme='light'] .su-studio.su-dark {
 html[data-su-theme='light'] .su-studio.su-dark .gl-grain,
 html[data-su-theme='light'] .su-studio.su-dark .su-grained::after { opacity: 0.16; }
 html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; }
+
+/* The dashed empty panel, on the dark ground. */
+.su-studio .thr-empty {
+  border-color: var(--su-hair-2);
+  color: var(--su-muted);
+  font-size: 16px;
+  border-radius: 14px;
+  padding: 16px 18px;
+}

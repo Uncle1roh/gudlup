@@ -308,39 +308,48 @@ export function TherapistTab(props: TherapistTabProps) {
             <div className="small muted">{t(link.therapist.role)}</div>
           </div>
         </div>
-        {nextAt ? (
-          <div className="small muted">
-            {t('Next session:')}{' '}
-            {d(nextAt, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-          </div>
-        ) : (
-          <div className="small muted">{t('No session is scheduled yet.')}</div>
-        )}
-        <button className="btn btn--primary" disabled={!joinable} onClick={props.onJoinCall}>
-          {t('Join Session')}
-        </button>
-        {/* A linked person had NO way to book. The slot picker was reachable
-            only from the unlinked state, through "find a therapist" — so once
-            somebody had a therapist the app told them "your therapist will
-            propose a time" and offered nothing, on either side. */}
-        <button
-          className="btn btn--ghost"
-          onClick={() => setView({ kind: 'profile', id: link.therapist.id })}
-        >
-          {nextAt ? t('Change the time') : t('Book a session')}
-        </button>
-        {/* The line under the button explains the DISABLED button, so it has to
-            agree with the line above it. It used to say "no session is
-            scheduled yet" whenever there was no confirmed appointment — printed
-            directly beneath a date, which is the one place a person looks to
-            find out when they are next seen. */}
-        {!joinable && (
-          <p className="small muted">
-            {nextAt
-              ? t('Opens 15 minutes before your session starts.')
-              : t('Your therapist will propose a time.')}
-          </p>
-        )}
+        {/* WHEN, as one block: the appointment and the line that explains it.
+            They were siblings of the buttons in a single wrapping flex row, so
+            on a desk the status floated between the name and the actions and
+            its own footnote wrapped onto a second line under the avatar. */}
+        <div className="thr-hero__when">
+          {nextAt && <span className="small muted">{t('Next session:')}</span>}
+          {nextAt ? (
+            <strong className="thr-hero__next">
+              {d(nextAt, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </strong>
+          ) : (
+            <strong className="thr-hero__next thr-hero__next--none">{t('No session is scheduled yet.')}</strong>
+          )}
+          {/* The line explains the DISABLED button, so it has to agree with
+              the line above it. It used to say "no session is scheduled yet"
+              whenever there was no confirmed appointment — printed directly
+              beneath a date, which is the one place a person looks to find
+              out when they are next seen. */}
+          {!joinable && (
+            <p className="small muted thr-hero__note">
+              {nextAt
+                ? t('Opens 15 minutes before your session starts.')
+                : t('Your therapist will propose a time.')}
+            </p>
+          )}
+        </div>
+
+        <div className="thr-hero__acts">
+          <button className="btn btn--primary" disabled={!joinable} onClick={props.onJoinCall}>
+            {t('Join Session')}
+          </button>
+          {/* A linked person had NO way to book. The slot picker was reachable
+              only from the unlinked state, through "find a therapist" — so once
+              somebody had a therapist the app told them "your therapist will
+              propose a time" and offered nothing, on either side. */}
+          <button
+            className="btn btn--ghost"
+            onClick={() => setView({ kind: 'profile', id: link.therapist.id })}
+          >
+            {nextAt ? t('Change the time') : t('Book a session')}
+          </button>
+        </div>
       </article>
 
       {/* Below 1100px this is one column and the wrappers do nothing. On a
@@ -405,10 +414,15 @@ export function TherapistTab(props: TherapistTabProps) {
               <strong>{t('{n}× {name} this week', { n: rx.perWeek, name: t(s.name) })}</strong>
               <span className="small muted">({t(durationLabel(rx.duration))} {rx.duration}m)</span>
             </div>
-            <div className="rx-card__bar" aria-hidden="true">
-              <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
+            {/* Bar and count are ONE thing — the bar is the count drawn — so
+                they sit together with their own small gap rather than being
+                two children of the card's larger rhythm. */}
+            <div className="rx-card__progress">
+              <div className="rx-card__bar" aria-hidden="true">
+                <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
+              </div>
+              <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
             </div>
-            <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
             {rx.done < rx.total && playable && (
               <button
                 className="btn btn--ghost"
@@ -432,7 +446,7 @@ export function TherapistTab(props: TherapistTabProps) {
       <h3 className="home__sect">{t('Session history')}</h3>
       {/* A heading with nothing under it reads as a failure. It is not: there
           has simply been no session yet. */}
-      {!link.sessions.length && <p className="small muted">{t('Your sessions together will be listed here.')}</p>}
+      {!link.sessions.length && <p className="thr-empty">{t('Your sessions together will be listed here.')}</p>}
       <ul className="chron">
         {link.sessions.map((s) => {
           const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
@@ -451,7 +465,7 @@ export function TherapistTab(props: TherapistTabProps) {
       </ul>
 
       <h3 className="home__sect">{t('Therapy goals')}</h3>
-      {!link.goals.length && <p className="small muted">{t('Goals you agree on with your therapist appear here.')}</p>}
+      {!link.goals.length && <p className="thr-empty">{t('Goals you agree on with your therapist appear here.')}</p>}
       <ul className="goals">
         {link.goals.map((g) => (
           <li key={g.id}>
