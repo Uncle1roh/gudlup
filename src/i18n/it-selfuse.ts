@@ -158,6 +158,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'ACTIVE': 'IN CORSO',
   'COMPLETED': 'COMPLETATO',
   'Start Pathway': 'Inizia il percorso',
+  'Week by week': 'Settimana per settimana',
   'Continue': 'Continua',
   'Restart': 'Ricomincia',
   '{per}/wk': '{per}/sett.',

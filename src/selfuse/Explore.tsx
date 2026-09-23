@@ -295,28 +295,54 @@ function PathwayDetail({
   const { t } = useI18n()
   const [open, setOpen] = useState<number | null>(1)
 
+  /* A pathway gets the same screen a protocol does: the picture IS the page.
+     It had a 140px glow above a column of text, which read as a settings page
+     for the one screen where somebody decides to commit to six weeks.
+
+     The picture it wears is its OWN first session's cover — the thing they
+     will actually open on day one — rather than a new illustration nobody has
+     drawn. Stable, because that session's cover is derived from its slug. */
+  const lead = pathway.plan.length ? primaryBlock(pathway.plan[0]) : undefined
+  const leadSession = lead ? catalog.sessions.find((x) => x.slug === lead.slug) : undefined
+  const cover = leadSession
+    ? coverFor(leadSession.slug, leadSession.theme, leadSession.coverUrl)
+    : coverFor(pathway.id, 'calm')
+
   return (
-    <div className="su-page pw-detail">
-      <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
-      <div className="pw-detail__art" aria-hidden="true"><span className="ob-art__glow" /></div>
+    <div className="pw-full">
+      <section className="sess-full sess-full--hero" style={coverStyle(cover)}>
+        <div className="sess-full__scrim" aria-hidden="true" />
 
-      <h1 className="display su-h1">{t(pathway.name)}</h1>
-      <p className="small muted">
-        {t(pathway.lengthLabel)} · {t('{per} sessions/wk', { per: pathway.perWeekLabel })}
-      </p>
-      <p className="lead pw-detail__about">{t(pathway.about)}</p>
-      {pathway.dropped > 0 && (
-        <p className="small muted">
-          {t('{n} week(s) of this pathway are not available right now, so it is shorter than usual.', { n: pathway.dropped })}
-        </p>
-      )}
+        <div className="sess-full__top">
+          <button className="sess-full__back" onClick={onBack}>‹ {t('Back')}</button>
+        </div>
 
-      {active ? (
-        <button className="btn btn--primary" onClick={onOpenWeekly}>{t('Continue')}</button>
-      ) : (
-        <button className="btn btn--primary" onClick={onStartPathway}>{t('Start Pathway')}</button>
-      )}
+        <div className="sess-full__body">
+          {/* `lengthLabel` is English copy from the catalogue ("4 weeks") and
+              has no translation behind it — the rails count the weeks instead,
+              and so does this, or the eyebrow reads "4 WEEKS" in an Italian
+              app. */}
+          <p className="sess-full__eyebrow">
+            {t('{n} weeks', { n: pathway.weeks })} · {t('{per} sessions/wk', { per: pathway.perWeekLabel })}
+          </p>
+          <h1 className="display sess-full__title">{t(pathway.name)}</h1>
+          <p className="sess-full__about">{t(pathway.about)}</p>
+          {pathway.dropped > 0 && (
+            <p className="sess-full__note">
+              {t('{n} week(s) of this pathway are not available right now, so it is shorter than usual.', { n: pathway.dropped })}
+            </p>
+          )}
 
+          {active ? (
+            <button className="btn btn--light pw-full__cta" onClick={onOpenWeekly}>{t('Continue')}</button>
+          ) : (
+            <button className="btn btn--light pw-full__cta" onClick={onStartPathway}>{t('Start Pathway')}</button>
+          )}
+        </div>
+      </section>
+
+      <div className="su-page pw-full__plan">
+        <h2 className="home__sect">{t('Week by week')}</h2>
       <div className="weeks">
         {pathway.plan.map((w) => {
           const lead = primaryBlock(w)
@@ -355,6 +381,7 @@ function PathwayDetail({
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )
