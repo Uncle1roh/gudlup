@@ -35,6 +35,7 @@ import type { CredentialDoc } from '../b2b/credentials'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
 import { createMockProvider } from './mock'
+import { previewing } from '../admin/preview'
 import { registerProtocols } from './protocols'
 
 /**
@@ -227,7 +228,12 @@ const USE_SUPABASE = Boolean(SB_URL && SB_KEY)
  * - Supabase env present → dynamically import and use the real provider.
  */
 export function DataLayerProvider({ children }: { children: ReactNode }) {
-  const [provider, setProvider] = useState<DataProvider | null>(() => (USE_SUPABASE ? null : createMockProvider()))
+  /* An admin walking sales through the other apps runs on the DEMO fixtures,
+     never on the live database — so the walkthrough shows populated screens,
+     writes nothing anybody can lose, and reads nobody's clinical record. The
+     flag is per tab and only an admin can set it; see src/admin/preview.ts. */
+  const demo = !USE_SUPABASE || previewing()
+  const [provider, setProvider] = useState<DataProvider | null>(() => (demo ? createMockProvider() : null))
 
   useEffect(() => {
     if (provider) return

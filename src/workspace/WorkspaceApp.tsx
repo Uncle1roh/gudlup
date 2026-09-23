@@ -25,6 +25,7 @@ import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients, applyAppointments, pendingBookings, linkBooking } from './data'
+import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
 import { TherapistOnboarding } from './Onboarding'
@@ -115,8 +116,10 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
   /* No backend = the demo caseload, because otherwise nothing past this screen
      is reachable. With one, the roster is the server's answer and it starts
      empty rather than borrowed from a fictional colleague. */
-  const demo = !hasSupabaseEnv()
-  const { state, update } = useWorkspace(user?.id ?? null, demo)
+  /* An admin's preview counts as no backend: the walkthrough opens on the demo
+     caseload, which is the point of it, and writes nowhere near a real one. */
+  const demo = previewing() || !hasSupabaseEnv()
+  const { state, update } = useWorkspace(previewing() ? PREVIEW_USER_ID : user?.id ?? null, demo)
   const [sandboxOnEntry, setSandboxOnEntry] = useState(false)
 
   /* ---- may this account see patients? ------------------------------------
@@ -197,7 +200,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   const { t } = useI18n()
   const { user } = useAuth()
   const dp = useDataProvider()
-  const { state, update } = useWorkspace(user?.id ?? null, !hasSupabaseEnv())
+  const { state, update } = useWorkspace(previewing() ? PREVIEW_USER_ID : user?.id ?? null, previewing() || !hasSupabaseEnv())
   /* The surface keeps its own copy of the store, so it applies the identity
      itself: the gate's correction lives in the gate's copy, and the name on
      screen is this one. */

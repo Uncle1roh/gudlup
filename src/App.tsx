@@ -14,6 +14,8 @@ import { I18nProvider } from './i18n'
 import { Hub } from './hub/Hub'
 import { initVoiceSync } from './tts/voiceSync'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PreviewBar } from './admin/PreviewBar'
+import { previewing } from './admin/preview'
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash)
@@ -140,11 +142,29 @@ export default function App() {
      translated later) and is keyed on the route: navigating away from a broken
      screen clears the error by itself, instead of stranding the user on the
      fallback until they reload. */
+  /* The preview bar sits ABOVE the surface, outside the error boundary: if a
+     screen throws while sales is walking through it, the way out is still on
+     screen. It renders only while an admin has preview on. */
+  /* The preview bar sits ABOVE the surface, outside the error boundary: if a
+     screen throws while sales is walking through it, the way out is still on
+     screen. The shell is a column because #root centres its children in a ROW
+     — without it the bar and the app end up side by side — and it publishes
+     its own height as `--pvw-h`, which the four surface shells subtract from
+     their 100dvh so nothing is pushed below the fold. */
+  const bar = previewing() && route !== '#admin'
+  const body = (
+    <ErrorBoundary resetKey={route} label={route || '#home'}>
+      {content()}
+    </ErrorBoundary>
+  )
   return (
     <I18nProvider>
-      <ErrorBoundary resetKey={route} label={route || '#home'}>
-        {content()}
-      </ErrorBoundary>
+      {bar ? (
+        <div className="pvw-shell">
+          <PreviewBar />
+          <div className="pvw-shell__surface">{body}</div>
+        </div>
+      ) : body}
     </I18nProvider>
   )
 }

@@ -29,6 +29,7 @@ import { PatientVideoCall } from './VideoCall'
 import { useSelfUseStore, takeSignupIntake, type Launch } from '../data/selfUseStore'
 import { accountName, displayName } from './greeting'
 import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
+import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
 import { Icon, type IconName } from './icons'
@@ -87,9 +88,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const catalog = useCatalog()
   const { user, signOut } = useAuth()
   const dp = useDataProvider()
-  const { state, update, reset } = useSelfUseStore(user?.id)
+  /* In an admin's preview the local state is keyed to the preview, not to
+     whoever is signed in: a sales walkthrough must not write itself into the
+     admin's own Self Use record, and must not read one either. */
+  const storeId = previewing() ? PREVIEW_USER_ID : user?.id
+  const { state, update, reset } = useSelfUseStore(storeId)
   const { update: updateAssessments } = useAssessments()
-  const { state: therapy, update: updateTherapy } = useTherapyStore(user?.id)
+  const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 
   const [tab, setTab] = useState<Tab>('home')
   /* One search, shared by the top bar and the library's own header, so a

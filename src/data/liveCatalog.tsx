@@ -31,6 +31,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useDataProvider } from './provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
+import { previewing } from '../admin/preview'
 import { syncProtocols } from './protocols'
 import {
   CATALOG_DURATIONS,
@@ -118,7 +119,10 @@ export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
     if (v.audioUrl && Object.values(v.audioUrl).some((u) => Boolean(u))) rendered.add(v.duration)
   }
   if (rendered.size) return CATALOG_DURATIONS.filter((d) => rendered.has(d))
-  if (hasSupabaseEnv() || p.source !== 'seed') return []
+  /* A walkthrough runs on the seed catalogue, so it keeps the demo exemption
+     a configured backend otherwise removes — without it every card in the
+     library offers no length to press, which is not a demo of anything. */
+  if ((hasSupabaseEnv() && !previewing()) || p.source !== 'seed') return []
   const declared = new Set<Duration>([
     ...p.versions.map((v) => v.duration).filter((d): d is Duration => CATALOG_DURATIONS.includes(d)),
     ...plainDurations(p),

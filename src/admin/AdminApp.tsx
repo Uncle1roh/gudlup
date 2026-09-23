@@ -11,6 +11,7 @@ import { ExploreRails } from './ExploreRails'
 import { Companies } from './Companies'
 import { Users } from './Users'
 import { AuditLog } from './AuditLog'
+import { SURFACES, openPreview } from './preview'
 
 type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
 
@@ -57,6 +58,26 @@ export function AdminApp() {
             </button>
           ))}
         </nav>
+
+        {/* Open the other apps from here.
+
+            Sales has to show the whole product from one login, and three
+            accounts is not a demo. Each of these opens that surface on the
+            DEMO data — populated screens, and nothing real read or written.
+            The bar at the top of the surface moves between them and gets
+            back out. */}
+        <div className="adm-open">
+          <span className="adm-open__title">Apri un’altra app</span>
+          <span className="adm-open__note">Anteprima con dati dimostrativi</span>
+          <div className="adm-open__row">
+            {SURFACES.filter((s) => s.id !== 'admin').map((s) => (
+              <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="adm-side__foot">
           <div className="adm-who">
             <AvatarUpload size={30} fallback="⚙️" className="avatarup--bar" />

@@ -6,6 +6,7 @@ import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n } from '../i18n'
+import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from '../selfuse/theme'
 
@@ -314,8 +315,20 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
   /* The account has a surface and it is not this one: go there. A person who
      followed an old link, or a bookmark from another role, should end up in
      their own app rather than reading about why they cannot be here. */
+  /* One exception, and only one: an admin walking sales through the product.
+     Preview is per tab, only the console can turn it on, and the surface it
+     opens runs on the demo fixtures rather than the live database — so this
+     widens what an ADMIN may look at, never what they may touch. */
   const allowed = allow ?? [ROLE_FOR_SURFACE[mode]]
-  const misplaced = ready && !!user && !!role && !allowed.includes(role)
+  const inPreview = previewing() && role === 'admin'
+  const misplaced = ready && !!user && !!role && !allowed.includes(role) && !inPreview
+
+  /* A flag left behind — an admin who signed out in this tab and somebody else
+     signed in, or a flag set by hand — must not put anyone else on demo data
+     without knowing it. Only an admin keeps it. */
+  useEffect(() => {
+    if (ready && role && role !== 'admin' && previewing()) clearPreview()
+  }, [ready, role])
   useEffect(() => {
     if (misplaced && role) window.location.hash = HOME_FOR_ROLE[role]
   }, [misplaced, role])

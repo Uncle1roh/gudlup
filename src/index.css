@@ -1350,6 +1350,80 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-nav__item:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .adm-nav__item.is-active { background: var(--aura); color: #fff; }
 .adm-nav__icon { width: 18px; text-align: center; opacity: 0.9; }
+/* Opening the other apps from the console, for a walkthrough. */
+.adm-open {
+  margin-top: auto; padding: 14px 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.adm-open__title { font-size: 12.5px; font-weight: 700; color: #cfe0d4; }
+.adm-open__note { font-size: 11px; color: #8ba394; margin-bottom: 8px; }
+.adm-open__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-open__btn {
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
+  color: #e7f0e9; font-size: 12.5px; font-weight: 600;
+}
+.adm-open__btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); }
+
+/* ---- the bar an admin carries through the other apps --------------------
+   Amber, because it must not read as part of any surface it sits above, and
+   because "this is not real data" is the one thing on it that matters.
+
+   The shell is a COLUMN: #root centres its children in a row, so without it
+   the bar and the app stand side by side. Each surface below sizes itself to
+   the viewport, so the shell hands them the height it did not take. */
+.pvw-shell {
+  --pvw-h: 44px;
+  width: 100%; min-height: 100dvh;
+  display: flex; flex-direction: column;
+}
+.pvw-shell__surface { flex: 1; min-height: 0; display: flex; align-items: stretch; justify-content: center; }
+.pvw-shell__surface > * { width: 100%; }
+.pvw-shell .app-frame { height: calc(100dvh - var(--pvw-h)); }
+.pvw-shell .adm,
+.pvw-shell .w-app,
+.pvw-shell .c-app,
+.pvw-shell .w-sidebar { min-height: calc(100dvh - var(--pvw-h)); }
+.pvw-shell .w-sidebar { height: calc(100dvh - var(--pvw-h)); top: var(--pvw-h); }
+
+.pvw {
+  position: sticky; top: 0; z-index: 900; min-height: var(--pvw-h, 44px);
+  display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+  padding: 8px max(12px, env(safe-area-inset-left)) 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  background: #3a2b0e; color: #f7e7c6;
+  border-bottom: 1px solid #6b5220;
+  font-size: 13px;
+}
+.pvw__tag {
+  font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px;
+  background: #e0b267; color: #2a1f08; padding: 3px 9px; border-radius: 999px;
+}
+.pvw__note { color: #d8c49a; min-width: 0; }
+.pvw__nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.pvw__btn {
+  padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  border: 1px solid rgba(247,231,198,0.28); background: transparent; color: #f7e7c6;
+}
+.pvw__btn:hover { background: rgba(247,231,198,0.12); }
+.pvw__btn.is-on { background: #f7e7c6; color: #2a1f08; border-color: #f7e7c6; }
+.pvw__exit {
+  padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  border: 1px solid #e0b267; background: #e0b267; color: #2a1f08;
+}
+/* On a phone it has to stay ONE row: a second row eats into the app below it,
+   and the frame is sized against a bar of a known height. The note goes, and
+   so does the exit button — "Admin" already leaves preview — and what is left
+   scrolls sideways rather than wrapping. */
+@media (max-width: 560px) {
+  .pvw { gap: 6px; padding-inline: 8px; flex-wrap: nowrap; }
+  .pvw__note, .pvw__exit { display: none; }
+  .pvw__nav { margin-left: auto; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pvw__nav::-webkit-scrollbar { display: none; }
+  .pvw__btn { white-space: nowrap; }
+}
+
 .adm-side__foot { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
 .adm-who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #a9bcaf; }
 .adm-who__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--halo); box-shadow: 0 0 0 3px rgba(122,198,155,0.2); }
