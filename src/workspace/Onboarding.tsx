@@ -379,12 +379,17 @@ function Terms({ account, onSign }: { account: TherapistAccount; onSign: () => v
   const [busy, setBusy] = useState(false)
   const doc = legalDoc('professional', locale)
 
+  const [signError, setSignError] = useState<string | null>(null)
   async function sign() {
     setBusy(true)
+    setSignError(null)
     try {
       await legal.accept('professional')
       await dp.updateMyProfessionalRecord({ termsVersion: LEGAL_VERSION, termsAcceptedAt: Date.now() }).catch(() => undefined)
       onSign()
+    } catch {
+      // said out loud: a silent failure here left the button doing nothing
+      setSignError(t('We could not record your signature just now. Check your connection and try again.'))
     } finally {
       setBusy(false)
     }
@@ -418,6 +423,7 @@ function Terms({ account, onSign }: { account: TherapistAccount; onSign: () => v
           {t('I have read and accept the Professional Terms')}
         </label>
 
+        {signError && <p className="w-error" role="alert">{signError}</p>}
         <button className="w-btn w-btn--primary w-btn--block" disabled={!checked || busy} onClick={() => void sign()}>
           {busy ? t('Please wait…') : t('Sign and continue')}
         </button>

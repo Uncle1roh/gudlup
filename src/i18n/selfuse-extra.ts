@@ -3,6 +3,7 @@
    base dictionaries, so a key here wins over the same key elsewhere. */
 
 export const IT_SELFUSE_EXTRA: Record<string, string> = {
+  'We could not save your answer just now. Check your connection and try again.': 'Non siamo riusciti a salvare la tua risposta. Controlla la connessione e riprova.',
   /* ---- the pathways: what each is for, the week focus lines, the when ---- */
   '4 weeks': '4 settimane',
   '6 weeks': '6 settimane',
@@ -136,6 +137,7 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
+  'We could not save your answer just now. Check your connection and try again.': 'Não conseguimos salvar sua resposta agora. Verifique a conexão e tente de novo.',
   /* ---- the weekly check-in: questions, scale ends and trends ---- */
   'How has your energy been this week?': 'Como esteve sua energia esta semana?',
   'How well have you been sleeping?': 'Como você tem dormido?',

@@ -2211,3 +2211,6 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 @media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
   .su-studio .cat-rail__head { padding-right: calc(28px + 52px + 12px - var(--su-inset)); }
 }
+
+/* A save that failed on the first run, said above the button that made it. */
+.su-studio .fr__error { margin: 0 0 10px; font-size: 15px; line-height: 1.45; color: var(--su-warm-fg, #e8a37c); }

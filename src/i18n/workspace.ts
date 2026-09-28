@@ -521,6 +521,7 @@ const ROWS: Row[] = [
   ['No', 'No', 'Não'],
   /* not the base "Not recorded" — that one is about a call being recorded */
   ['None recorded', 'Nessun valore registrato', 'Nenhum valor registrado'],
+  ['We could not record your signature just now. Check your connection and try again.', 'Non siamo riusciti a registrare la tua firma. Controlla la connessione e riprova.', 'Não conseguimos registrar sua assinatura agora. Verifique a conexão e tente de novo.'],
   ['We could not verify your credentials', 'Non siamo riusciti a verificare le tue credenziali', 'Não foi possível verificar suas credenciais'],
 ]
 

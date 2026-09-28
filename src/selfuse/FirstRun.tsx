@@ -178,6 +178,7 @@ export function FirstRun({
   const [personalEmail, setPersonalEmail] = useState('')
   const [sheet, setSheet] = useState<LegalDocId | null>(null)
   const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const legalSteps: Step[] = needsTerms
     ? [{ kind: 'how' }, { kind: 'terms' }, ...(hasCompanyCode ? [{ kind: 'sponsored' } as Step] : [])]
@@ -198,6 +199,7 @@ export function FirstRun({
   async function next() {
     if (blocked || busy) return
     setBusy(true)
+    setSaveError(null)
     try {
       if (step.kind === 'how') {
         await legal.accept('crisis-ack')
@@ -213,6 +215,11 @@ export function FirstRun({
       if (step.kind === 'sponsored' && personalEmail.trim()) {
         await dp.updateMyProfile({ personalEmail: personalEmail.trim() }).catch(() => undefined)
       }
+    } catch {
+      /* The acceptance is what lets the person in, so a failed save must be
+         said out loud — it used to leave the button doing nothing at all. */
+      setSaveError(t('We could not save your answer just now. Check your connection and try again.'))
+      return
     } finally {
       setBusy(false)
     }
@@ -347,6 +354,7 @@ export function FirstRun({
         </div>
 
         <div className="fr__foot">
+          {saveError && <p className="fr__error" role="alert">{saveError}</p>}
           {dots}
           <button className="btn btn--primary" onClick={() => void next()} disabled={blocked || busy}>
             {step.kind === 'terms' ? t('Accept & continue') : last ? t('Start listening') : t('Next')}

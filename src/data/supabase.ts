@@ -275,15 +275,24 @@ function mapAudit(r: any): AuditEvent {
 export function createSupabaseProvider(url: string, anonKey: string): DataProvider {
   const sb: SupabaseClient = getSupabaseClient(url, anonKey)
 
+  /* The profile id is cached PER ACCOUNT. It used to be cached per tab and
+     never cleared on sign-out, so after one account signed out and another
+     signed in, every write went out with the first account's id — refused by
+     RLS, and the button that made it (accepting the terms, above all) just
+     did nothing. The cache now forgets on every auth change and is keyed to
+     the auth uid it was read for. */
   let cachedProfileId: string | null = null
+  let cachedForUid: string | null = null
+  sb.auth.onAuthStateChange(() => { cachedProfileId = null; cachedForUid = null })
   async function profileId(): Promise<string> {
-    if (cachedProfileId) return cachedProfileId
     const { data: auth } = await sb.auth.getUser()
     const uid = auth.user?.id
     if (!uid) throw new Error('Not signed in')
+    if (cachedProfileId && cachedForUid === uid) return cachedProfileId
     const { data, error } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
     if (error) throw error
     cachedProfileId = (data as any).id as string
+    cachedForUid = uid
     return cachedProfileId
   }
 

@@ -12,6 +12,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
+import { useAuth } from '../auth/auth'
 import { legalMsg, type LegalMessageId, type Market } from './messages'
 import { DEFAULT_CRISIS, marketForLocale, type CrisisResource } from './market'
 import type { Acceptance, ConsentEvent, ConsentPurpose, LegalProfile } from './records'
@@ -42,6 +43,13 @@ const Ctx = createContext<LegalApi | null>(null)
 export function LegalProvider({ children }: { children: ReactNode }) {
   const dp = useDataProvider()
   const { locale } = useI18n()
+  /* The provider sits ABOVE the sign-in gate, so it mounts before anybody is
+     signed in. It used to load once, at mount — signed out, so with nothing —
+     and never again: after signing in, every account looked as if it had
+     accepted nothing and had no profile. It reloads whenever the signed-in
+     account changes, and says "not loaded" until it has. */
+  const { user } = useAuth()
+  const uid = user?.id ?? null
   const [profile, setProfile] = useState<LegalProfile | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [acceptances, setAcceptances] = useState<Acceptance[]>([])
@@ -49,6 +57,7 @@ export function LegalProvider({ children }: { children: ReactNode }) {
   const [crisisAll, setCrisisAll] = useState<CrisisResource[]>(DEFAULT_CRISIS)
 
   const refresh = useCallback(async () => {
+    setLoaded(false)
     try {
       const p = await dp.getMyLegalProfile()
       setProfile(p)
@@ -65,7 +74,7 @@ export function LegalProvider({ children }: { children: ReactNode }) {
     }
   }, [dp])
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => { void refresh() }, [refresh, uid])
 
   /* The numbers come from configuration (CRS-03). An unreachable table
      leaves the seed list in place: a crisis sheet is never empty. */
