@@ -345,15 +345,22 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           </button>
         )}
 
-        <div className="auth__legalrow">
-          <a className="auth__hub" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
-          {/* On every screen, the door included (CRS-01). */}
-          <HelpNowButton variant="inline" />
-        </div>
-        <a className="auth__hub" href="#hub">{t('All apps')} ↗</a>
-
         {demo && <p className="auth__demo">{t('Demo mode — any email & password works. Tap {action}.', { action: signup ? t('Create account') : t('Sign in') })}</p>}
         {isB2b && !demo && <p className="auth__fine">{t('Clinician accounts start unverified — credentialing is reviewed before patient sessions.')}</p>}
+
+        {/* The card's foot, one centred column below a hairline: Help now on
+            its own line (on every screen, the door included — CRS-01), then
+            the two secondary links side by side. They used to be three
+            differently aligned rows — two links split across a ragged row
+            with the pill, and a third centred under them. */}
+        <div className="auth__foot">
+          <HelpNowButton variant="inline" />
+          <nav className="auth__links" aria-label={t('Links')}>
+            <a className="auth__hub" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
+            <span className="auth__sep" aria-hidden="true">·</span>
+            <a className="auth__hub" href="#hub">{t('All apps')} ↗</a>
+          </nav>
+        </div>
       </div>
     </div>
   )

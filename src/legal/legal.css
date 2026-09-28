@@ -290,7 +290,6 @@ html[data-su-theme='light'] .su-shell { background: #eceee6; }
 .auth__gatefield { display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.4; text-align: left; }
 .auth__gatefield > span { color: var(--su-fg-2, inherit); }
 .auth__code--block { font-weight: 600; }
-.auth__legalrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 
 /* ---- admin: conformità -------------------------------------------------- */
 

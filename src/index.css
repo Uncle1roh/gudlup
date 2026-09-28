@@ -1990,6 +1990,18 @@ img, svg, video, canvas { max-width: 100%; }
 }
 .auth__hub:hover { text-decoration: underline; }
 
+/* The card's foot: a hairline, then one centred column — Help now, and the
+   secondary links on a single line (they wrap together on a narrow card). */
+.auth__foot {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line);
+}
+.auth__links { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 10px; }
+.auth__links .auth__hub { display: inline; margin: 0; }
+.auth__sep { color: var(--slate); opacity: 0.6; }
+.su-studio .auth__foot { border-top-color: var(--su-hair); }
+.su-studio .auth__sep { color: var(--su-muted); }
+
 
 /* ----------------------------------------------------------------------------
    Desktop layout — the B2C column widens instead of staying phone-locked
