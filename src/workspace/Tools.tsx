@@ -21,17 +21,17 @@
      is sent so it cannot become pestering.
    ============================================================================ */
 
-import { useMemo, useState } from 'react'
-import { useI18n } from '../i18n'
+import { useMemo, useState, useEffect } from 'react'
 import { useDataProvider } from '../data/provider'
+import { CONSENT_TEMPLATE_ITEMS, consentTemplateComplete, type InformedConsentTemplate, type ProfessionalRecord } from '../legal/records'
+import { REVERIFY_MONTHS } from '../legal/market'
+import { useI18n } from '../i18n'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
 import {
   NOTIFICATION_ROWS,
-  adherenceBand,
-  adherencePct,
-  performance,
   type WorkspaceState,
+  rxTarget,
 } from './data'
 
 interface ToolProps {
@@ -40,8 +40,6 @@ interface ToolProps {
   onOpenPatient: (id: string) => void
 }
 
-const HOUR = 3_600_000
-
 /**
  * The fixture messages a demo patient was seeded with, in the shared thread's
  * shape, so one list renders both. They are read-only history: everything
@@ -49,93 +47,69 @@ const HOUR = 3_600_000
  */
 /* ---------------------------------------------------------------- TH-RX -- */
 
-type RxFilter = 'all' | 'active' | 'completed' | 'low'
+type RxFilter = 'all' | 'active' | 'completed'
 
-export function Prescriptions({ state, update, onOpenPatient }: ToolProps) {
+/**
+ * Everything the professional has selected for people to listen to between
+ * sessions, by patient name. It used to sort by an adherence percentage and
+ * offer a "nudge" below 70% — the list answering "who needs attention" was
+ * the software ranking people on a metric it computed (M2R-17, MN-29).
+ * What is left is a record: what was chosen, for whom, and how many times it
+ * was listened to.
+ */
+export function Prescriptions({ state, onOpenPatient }: ToolProps) {
   const { t } = useI18n()
   const [filter, setFilter] = useState<RxFilter>('active')
 
   const rows = useMemo(() => {
     const all = state.patients.flatMap((p) => p.prescriptions.map((rx) => ({ rx, patient: p })))
     const filtered = all.filter(({ rx }) => {
-      const a = adherencePct(rx)
-      if (filter === 'completed') return a >= 100
-      if (filter === 'low') return a < 70
-      if (filter === 'active') return rx.toAt >= Date.now() || a < 100
+      const done = rx.done >= rxTarget(rx)
+      if (filter === 'completed') return done
+      if (filter === 'active') return rx.toAt >= Date.now() || !done
       return true
     })
-    // Lowest adherence first — the list answers "who needs attention".
-    return filtered.sort((x, y) => adherencePct(x.rx) - adherencePct(y.rx))
+    return filtered.sort((x, y) => x.patient.name.localeCompare(y.patient.name))
   }, [state.patients, filter])
-
-  function nudge(patientId: string, rxId: string) {
-    update((s) => ({
-      ...s,
-      patients: s.patients.map((p) =>
-        p.id === patientId ? { ...p, prescriptions: p.prescriptions.map((r) => (r.id === rxId ? { ...r, nudgedAt: Date.now() } : r)) } : p,
-      ),
-    }))
-  }
 
   return (
     <>
-      <h1 className="w-h1">{t('Prescriptions')}</h1>
+      <h1 className="w-h1">{t('Selected content')}</h1>
       <div className="w-filters">
-        {(['all', 'active', 'completed', 'low'] as RxFilter[]).map((f) => (
+        {(['all', 'active', 'completed'] as RxFilter[]).map((f) => (
           <button key={f} className="w-chip" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-            {t(f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : 'Low adherence')}
+            {t(f === 'all' ? 'All' : f === 'active' ? 'Active' : 'Completed')}
           </button>
         ))}
       </div>
 
       {!rows.length ? (
-        <div className="w-empty"><p>{t('No active prescriptions.')}</p></div>
+        <div className="w-empty"><p>{t('Nothing selected.')}</p></div>
       ) : (
         <table className="w-table">
           <thead>
             <tr>
-              <th>{t('Patient')}</th><th>{t('Prescription')}</th><th>{t('Freq.')}</th><th>{t('Period')}</th><th>{t('Adherence')}</th><th />
+              <th>{t('Patient')}</th><th>{t('Content')}</th><th>{t('Freq.')}</th><th>{t('Period')}</th><th>{t('Listened')}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ rx, patient }) => {
-              const a = adherencePct(rx)
-              const nudgeBlocked = rx.nudgedAt != null && Date.now() - rx.nudgedAt < 48 * HOUR
-              return (
-                <tr key={rx.id} className="w-row" onClick={() => onOpenPatient(patient.id)}>
-                  <td>
-                    <span className="w-idcell">
-                      <span className="w-avatar" aria-hidden="true">{initials(patient.name)}</span>
-                      {patient.name}
-                    </span>
-                  </td>
-                  <td className="w-mono w-small">{rx.protocolCode} · {versionShort(rx.version)}</td>
-                  <td>{rx.perWeek}×/{t('week')}</td>
-                  <td className="w-small">{fmtDate(rx.fromAt)} – {fmtDate(rx.toAt)}</td>
-                  <td>
-                    <span className={`w-adh w-adh--${adherenceBand(a)}`}><span style={{ width: `${a}%` }} /></span>
-                    <span className="w-small"> {a}%</span>
-                  </td>
-                  <td>
-                    {a < 70 && (
-                      <button
-                        className="w-btn w-btn--sm"
-                        disabled={nudgeBlocked}
-                        onClick={(e) => { e.stopPropagation(); nudge(patient.id, rx.id) }}
-                      >
-                        {nudgeBlocked ? `${t('Sent')} ✓` : t('Nudge')}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
+            {rows.map(({ rx, patient }) => (
+              <tr key={rx.id} className="w-row" onClick={() => onOpenPatient(patient.id)}>
+                <td>
+                  <span className="w-idcell">
+                    <span className="w-avatar" aria-hidden="true">{initials(patient.name)}</span>
+                    {patient.name}
+                  </span>
+                </td>
+                <td className="w-mono w-small">{rx.protocolCode} · {versionShort(rx.version)}</td>
+                <td>{rx.perWeek}×/{t('week')}</td>
+                <td className="w-small">{fmtDate(rx.fromAt)} – {fmtDate(rx.toAt)}</td>
+                <td className="w-small">{t('{done} of {total} done', { done: rx.done, total: rxTarget(rx) })}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       )}
-      <p className="w-note">
-        {t('A nudge sends a gentle push notification and is disabled for 48 hours afterwards.')}
-      </p>
     </>
   )
 }
@@ -246,63 +220,15 @@ export function ReportsArchive({ state, onOpen }: { state: WorkspaceState; onOpe
   )
 }
 
-/* -------------------------------------------------------------- TH-PERF -- */
-
-export function Performance({ state }: { state: WorkspaceState }) {
-  const { t } = useI18n()
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month')
-  const cards = performance(state, period)
-
-  return (
-    <>
-      <div className="w-pagehead">
-        <h1 className="w-h1">{t('Performance')}</h1>
-        <div className="w-segmented">
-          {(['week', 'month', 'quarter'] as const).map((p) => (
-            <button key={p} aria-pressed={period === p} onClick={() => setPeriod(p)}>
-              {t(p === 'week' ? 'This week' : p === 'month' ? 'This month' : 'This quarter')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="w-note">{t('Private to you · a corporate client sees only aggregate counts, never per-therapist figures.')}</p>
-
-      <div className="w-perfgrid">
-        {cards.map((c) => (
-          <article key={c.label} className="w-perfcard">
-            <div className="w-field__label">{t(c.label)}</div>
-            <div className="w-perfcard__value">
-              {c.value}{c.unit && <em> {c.unit}</em>}
-            </div>
-            <div className="w-small">{t(c.sub)}</div>
-            <Spark values={c.series} />
-            <div className="w-perfcard__trend">{c.trend}</div>
-          </article>
-        ))}
-      </div>
-    </>
-  )
-}
-
-function Spark({ values }: { values: number[] }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values, 1)
-  const pts = values.map((v, i) => `${(i / (values.length - 1)) * 100},${20 - (v / max) * 18}`).join(' ')
-  return (
-    <svg className="w-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  )
-}
 
 /* ---------------------------------------------------------- TH-SETTINGS -- */
 
-type SettingsSection = 'profile' | 'availability' | 'notifications' | 'privacy'
+type SettingsSection = 'profile' | 'availability' | 'consent' | 'notifications' | 'privacy'
 
 const SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'availability', label: 'Availability' },
+  { id: 'consent', label: 'Consent form' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy & security' },
 ]
@@ -420,8 +346,9 @@ export function WorkspaceSettings({
                   <input className="w-input" value={state.account.fullName} readOnly />
                 </label>
                 <label className="w-field">
-                  <span className="w-field__label">{t('License number')} <em>· {t('read-only')}</em></span>
+                  <span className="w-field__label">{t('Registration')} <em>· {t('read-only')}</em></span>
                   <input className="w-input" value={state.account.licenceNumber} readOnly />
+                  <ProfessionalStatusLine />
                 </label>
                 <label className="w-field w-field--wide">
                   <span className="w-field__label">{t('Email')} <em>· {t('editable with re-verification')}</em></span>
@@ -496,23 +423,19 @@ export function WorkspaceSettings({
             </>
           )}
 
+          {section === 'consent' && <ConsentTemplateEditor />}
+
           {section === 'privacy' && (
             <>
               <h2 className="w-h2">{t('Privacy & security')}</h2>
-              <ul className="w-switches">
-                <li>
-                  <span>{t('Two-factor authentication')}</span>
-                  <button
-                    className={`switch${state.settings.twoFactor ? ' is-on' : ''}`}
-                    role="switch"
-                    aria-checked={state.settings.twoFactor}
-                    aria-label={t('Two-factor authentication')}
-                    onClick={() => update((w) => ({ ...w, settings: { ...w.settings, twoFactor: !w.settings.twoFactor } }))}
-                  >
-                    <span className="switch__knob" />
-                  </button>
-                </li>
-              </ul>
+              {/* No toggle that does nothing: a security control the product
+                  pretends to have is a misrepresentation (D-10 drafting note).
+                  Multi-factor sign-in for professionals is enabled in the
+                  authentication service (DAT-10); until it is, this says so. */}
+              <p className="w-lead">
+                {t('Encryption in transit and at rest, access limited to your own account, and every access logged — built so you can meet your own duty of confidentiality. Good Loop holds no certification or clearance for this and claims none: the duty is yours, and these are the tools for it.')}
+              </p>
+              <p className="w-small">{t('Two-factor sign-in for professional accounts is enabled by the Good Loop team in the authentication service; ask support if it is not yet active on yours.')}</p>
 
               <div className="w-field__label">{t('Active sessions')}</div>
               <ul className="w-reflist">
@@ -534,9 +457,9 @@ export function WorkspaceSettings({
                 >
                   {t('Export all my data')}
                 </button>
-                <button className="w-btn w-btn--danger">{t('Delete account')}</button>
+                <DeletionRequestButton />
               </div>
-              <p className="w-note">{t('Account deletion has a 30-day grace period.')}</p>
+              <p className="w-note">{t('Closing a professional account is a request we log and confirm within two working days, so that anyone you are working with gets an orderly handover first (Professional Terms P3.5).')}</p>
             </>
           )}
         </div>
@@ -553,4 +476,119 @@ function slug(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+/* ----------------------------------------------------- the professional --
+
+   The registration line as the patient sees it (PRF-1), with the date a
+   reviewer last verified it and when the next check falls due (M2R-02). */
+function ProfessionalStatusLine() {
+  const { t, d } = useI18n()
+  const dp = useDataProvider()
+  const [rec, setRec] = useState<ProfessionalRecord | null>(null)
+  useEffect(() => { dp.getMyProfessionalRecord().then(setRec).catch(() => setRec(null)) }, [dp])
+  if (!rec) return null
+  const due = rec.verifiedAt ? new Date(rec.verifiedAt) : null
+  if (due) due.setMonth(due.getMonth() + REVERIFY_MONTHS)
+  return (
+    <span className="w-small">
+      {rec.verifiedAt
+        ? t('Verified {date} · next check by {due}', { date: d(rec.verifiedAt, { day: 'numeric', month: 'short', year: 'numeric' }), due: due ? d(due.getTime(), { day: 'numeric', month: 'short', year: 'numeric' }) : '' })
+        : t('Verification pending')}
+      {rec.insuranceExpiresAt ? ` · ${t('insurance to {date}', { date: rec.insuranceExpiresAt })}` : ''}
+    </span>
+  )
+}
+
+/**
+ * The informed-consent form the professional writes and every person accepts
+ * before their first session (M2R-06, P3.2). Eight items, all mandatory: the
+ * form cannot be published with any of them empty. The platform gives the
+ * mechanism; the content is the professional's.
+ */
+const TEMPLATE_LABELS: Record<(typeof CONSENT_TEMPLATE_ITEMS)[number], string> = {
+  nature: 'The nature and purpose of the sessions',
+  remote: 'Working at a distance, and what that means',
+  medium: 'The limits of the medium and what happens if the connection fails',
+  confidentiality: 'Confidentiality and its limits',
+  records: 'How records are kept, where, for how long and who may access them',
+  risk: 'What happens if the person is at risk',
+  fees: 'Fees and cancellation',
+  alternatives: 'The alternatives to working at a distance',
+}
+
+function ConsentTemplateEditor() {
+  const { t, d } = useI18n()
+  const dp = useDataProvider()
+  const empty = () => Object.fromEntries(CONSENT_TEMPLATE_ITEMS.map((k) => [k, ''])) as InformedConsentTemplate['items']
+  const [items, setItems] = useState<InformedConsentTemplate['items']>(empty)
+  const [published, setPublished] = useState<InformedConsentTemplate | null>(null)
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+
+  useEffect(() => {
+    dp.getMyProfessionalRecord().then((r) => {
+      if (r.consentTemplate) { setPublished(r.consentTemplate); setItems({ ...empty(), ...r.consentTemplate.items }) }
+    }).catch(() => undefined)
+  }, [dp])
+
+  const draft: InformedConsentTemplate = { version: (published?.version ?? 0) + 1, items, updatedAt: Date.now() }
+  const complete = consentTemplateComplete(draft)
+
+  async function publish() {
+    if (!complete) return
+    setState('saving')
+    try {
+      await dp.updateMyProfessionalRecord({ consentTemplate: draft })
+      setPublished(draft)
+      setState('saved')
+    } catch {
+      setState('failed')
+    }
+  }
+
+  return (
+    <>
+      <h2 className="w-h2">{t('Informed consent form')}</h2>
+      <p className="w-lead">{t('Your form, in your words. Every person accepts it before their first session with you, and a copy of what they accepted is kept. It cannot be published until all eight items are written (P3.2).')}</p>
+      {published && (
+        <p className="w-small">{t('Published version {v} · {date}', { v: String(published.version), date: d(published.updatedAt, { day: 'numeric', month: 'short', year: 'numeric' }) })}</p>
+      )}
+      <div className="w-form">
+        {CONSENT_TEMPLATE_ITEMS.map((k) => (
+          <label key={k} className="w-field w-field--wide">
+            <span className="w-field__label">{t(TEMPLATE_LABELS[k])}</span>
+            <textarea className="w-input" rows={3} value={items[k]} onChange={(e) => setItems({ ...items, [k]: e.target.value })} />
+          </label>
+        ))}
+      </div>
+      <div className="w-actions">
+        <button className="w-btn w-btn--primary" disabled={!complete || state === 'saving'} onClick={() => void publish()}>
+          {state === 'saving' ? t('Publishing…') : published ? t('Publish new version') : t('Publish')}
+        </button>
+        {!complete && <span className="w-small">{t('All eight items are required.')}</span>}
+        {state === 'saved' && <span className="w-small">{t('Published.')}</span>}
+        {state === 'failed' && <span className="w-small w-err">{t('Could not publish just now.')}</span>}
+      </div>
+    </>
+  )
+}
+
+/** Closing a professional account is a logged request, not a button that
+    deletes: the people they work with come first (P3.5, cl. 15.4). */
+function DeletionRequestButton() {
+  const { t } = useI18n()
+  const dp = useDataProvider()
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+  return (
+    <button
+      className="w-btn w-btn--danger"
+      disabled={state === 'sending' || state === 'sent'}
+      onClick={() => {
+        setState('sending')
+        dp.createDataRequest('deletion', 'professional account').then(() => setState('sent')).catch(() => setState('failed'))
+      }}
+    >
+      {state === 'sent' ? t('Request logged') : state === 'failed' ? t('Try again') : t('Request account closure')}
+    </button>
+  )
 }

@@ -20,7 +20,8 @@
 import { useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import { BarList, Donut, GroupedBars, LineChart, NotEnoughData, PairedBars, StackedArea } from './Charts'
-import { cellValue, movement, movementText, suppressed } from './metrics'
+import { cellValue, movement, movementText, suppressed, MIN_CELL } from './metrics'
+import { useLegal } from '../legal/LegalContext'
 import type { Aggregates } from './data'
 import type { CorporateState, ReportRow } from './metrics'
 import { buildCorporateReportPdf } from './reportPdf'
@@ -28,12 +29,10 @@ import { buildCorporateReportPdf } from './reportPdf'
 /* `data.ts` owns the concrete aggregate shape; the screens only read it. */
 type A = Aggregates
 
-const PRIVACY_FOOTER =
-  'All data shown is anonymized and aggregated · metrics require at least 5 participants (N≥5)'
-
+/** SPC-2 — under every report (SPN-02). */
 export function PrivacyFooter() {
-  const { t } = useI18n()
-  return <p className="c-footer">{t(PRIVACY_FOOTER)}</p>
+  const { m } = useLegal()
+  return <p className="c-footer">{m('SPC-2')}</p>
 }
 
 /* ------------------------------------------------------------ Overview --- */
@@ -53,8 +52,6 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
   const registered = cellValue(k.registered)
   const active = cellValue(k.active7)
   const sessions = cellValue(k.sessions)
-  const who5 = cellValue(k.who5Avg)
-  const glCheck = cellValue(k.glCheckAvg)
 
   return (
     <>
@@ -84,18 +81,10 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
           sub={t('avg {n} per user/week', { n: cellValue(k.sessionsPerUserWeek) ?? '—' })}
           trend={movementText(movement(sessions, k.previous.sessions, 5, 0), '', t('last month'))}
         />
-        <Kpi
-          label={t('WHO-5 Avg')}
-          value={who5}
-          sub={t('Scale: 0–100')}
-          trend={movementText(movement(who5, k.previous.who5Avg, 1, 0), '', t('last month'))}
-        />
-        <Kpi
-          label={t('GL-Check Avg')}
-          value={glCheck}
-          sub={t('5 dimensions · scale 1–5')}
-          trend={movementText(movement(glCheck, k.previous.glCheckAvg, 0.05, 1), '', t('last month'))}
-        />
+        {/* No WHO-5 or GL-Check average here: an aggregated reading of how
+            a workforce FEELS is inferential health information about that
+            workforce (Part VII.7). A sponsor receives take-up and use, and
+            nothing about people (D-08). */}
       </div>
 
       <div className="c-grid2">
@@ -152,18 +141,9 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
         </section>
       </div>
 
-      {agg.professionalSupport && (
-        <section className="c-card c-support">
-          <header className="c-card__head">
-            <h2>🔒 {t('Professional Support')}</h2>
-          </header>
-          <div className="c-support__num">{agg.professionalSupport.employees}</div>
-          <p className="c-support__label">{t('employees currently using professional support sessions')}</p>
-          <p className="c-note">
-            {t('This number is anonymized — no individual details are available. Never broken down.')}
-          </p>
-        </section>
-      )}
+      {/* No count of people in professionally guided use, however anonymous:
+          a sponsor sees combined utilisation only, never a separate Mode 2
+          figure (SPN-04, D-08). */}
 
       <section className="c-card">
         <header className="c-card__head"><h2>{t('Notifications')}</h2></header>
@@ -307,7 +287,7 @@ export function Engagement({ agg }: { agg: A }) {
           rows={e.pathways.map((p) => ({
             label: p.name,
             value: p.pct,
-            note: p.n < 5 ? t('Not enough data') : `${p.pct}%`,
+            note: p.n < MIN_CELL ? t('Not enough data') : `${p.pct}%`,
           }))}
         />
         <p className="c-note">
@@ -418,7 +398,7 @@ export function Wellbeing({ agg }: { agg: A }) {
         <header className="c-card__head">
           <h2>{t('Daily mood check-in — response distribution')}</h2>
         </header>
-        {w.moodRespondents < 5 || !w.moodCurrent ? (
+        {w.moodRespondents < MIN_CELL || !w.moodCurrent ? (
           <NotEnoughData />
         ) : (
           <>

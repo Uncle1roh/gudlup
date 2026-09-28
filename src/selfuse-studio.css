@@ -2082,3 +2082,33 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 }
 .su-studio .empty p { color: var(--su-muted); font-size: 16px; }
 .su-studio .empty .btn { align-self: flex-start; width: auto; min-width: 220px; }
+
+/* ------------------------------------------------------------ Partner --
+   Offers from partner brands (admin accounts only for now). One card per
+   offer: the brand and the deal on one line, the product, what it includes,
+   then the code to quote and the way to redeem it. */
+.su-studio .partners__lede { color: var(--su-muted); font-size: 16px; line-height: 1.5; }
+.su-studio .partners__note { color: var(--su-muted); font-size: 15px; }
+.su-studio .partners__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--su-gap-sm, 14px); padding-bottom: 32px; }
+.su-studio .partner-card { gap: 10px; min-width: 0; }
+.su-studio .partner-card__img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; background: var(--su-well); }
+.su-studio .partner-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.su-studio .partner-card__brand { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--su-muted); overflow-wrap: anywhere; }
+.su-studio .partner-card__deal { padding: 3px 10px; border-radius: 999px; background: var(--su-accent); color: var(--su-on-accent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.su-studio .partner-card__title { font-size: 19px; line-height: 1.25; font-weight: 600; color: var(--su-fg); margin: 0; overflow-wrap: anywhere; }
+.su-studio .partner-card__desc { color: var(--su-fg-2); font-size: 15px; line-height: 1.5; margin: 0; white-space: pre-line; }
+.su-studio .partner-card__acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.su-studio .partner-card__code {
+  display: inline-flex; align-items: baseline; gap: 8px; padding: 9px 12px;
+  border: 1px dashed var(--su-hair-2); border-radius: 10px; background: var(--su-well);
+  color: var(--su-fg); font: inherit; font-size: 15px; cursor: pointer;
+}
+.su-studio .partner-card__code b { font-family: var(--mono, monospace); letter-spacing: 0.06em; }
+.su-studio .partner-card__code-lbl { font-size: 12px; color: var(--su-muted); }
+.su-studio .partner-card__go { text-decoration: none; }
+
+/* Five tabs (an admin sees Partner) do not fit five full labels at phone
+   width; the labels step down rather than overflow. */
+@media (max-width: 520px) {
+  .su-studio .tabbar--5 .tabbar__label { font-size: 12.5px; }
+}

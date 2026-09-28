@@ -8,6 +8,7 @@ import { DatasheetImport } from './DatasheetImport'
 import { SpecImport } from './SpecImport'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
 import { audienceOf, durationState, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
+import { publishBlockers, gateComplete, emptyGate } from '../legal/claims'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
 import { ProtocolCardEditor, applyCardDraft, cardDraftError, type ProtocolCardDraft } from './ProtocolCard'
 import { entryForPublish, familyFromCode } from './publishPlain'
@@ -50,7 +51,7 @@ function materialLabel(p: CatalogProtocol): string {
   return bits.length ? bits.join(' · ') : 'nessun workbook'
 }
 
-const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', i18n: {}, tags: [], coverUrl: '' }
+const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', i18n: {}, tags: [], coverUrl: '', tier: 'green', claimsGate: emptyGate() }
 
 /** A GL code, the way the workbooks write it: "GL-ANX 1.1". */
 const CODE_SHAPE = /^GL-[A-Z]{2,8}\s+\d+\.\d+$/
@@ -88,6 +89,8 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
     publicTitle: draft.publicTitle.trim() || undefined,
     publicBlurb: draft.publicBlurb.trim() || undefined,
     tags: draft.tags,
+    tier: draft.tier,
+    claimsGate: draft.claimsGate,
     updatedAt: now,
   }
 }
@@ -251,15 +254,26 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   }
 
   async function toggle(p: CatalogProtocol) {
+    /* Enabling is publishing. Nothing goes live without the lexicon pass,
+       the four-question sign-off and the tier rule (M1-14, ADM-01..03);
+       disabling is always allowed. */
+    if (!p.enabled) {
+      const blockers = publishBlockers(p)
+      if (blockers.length) {
+        setImportError(`${p.code}: ` + blockers.map((b) => b.message).join(' · '))
+        return
+      }
+    }
+    setImportError(null)
     setBusyCode(p.code)
     await dp.setProtocolEnabled(p.code, !p.enabled)
-    await dp.logAudit({ actor, action: p.enabled ? 'protocol.disabled' : 'protocol.enabled', target: p.code })
+    await dp.logAudit({ actor, action: p.enabled ? 'protocol.disabled' : 'protocol.enabled', target: p.code, detail: p.enabled ? undefined : `revisione: ${p.claimsGate?.approvedBy ?? ''}` })
     setBusyCode(null)
     refetch()
   }
 
   async function remove(p: CatalogProtocol) {
-    const ok = window.confirm(`Eliminare ${p.code} — "${p.title}" dal catalogo?\n\nIl protocollo viene rimosso per tutte le aziende, con tutti i suoi Excel e le sessioni dello Studio. I file audio già renderizzati restano nello storage.`)
+    const ok = window.confirm(`Eliminare ${p.code} — "${p.title}" dal catalogo?\n\nIl contenuto viene rimosso per tutte le aziende, con tutti i suoi Excel e le sessioni dello Studio. I file audio già renderizzati restano nello storage.`)
     if (!ok) return
     setBusyCode(p.code)
     setImportError(null)
@@ -383,11 +397,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           <h1 className="b2b-h1">Catalogo</h1>
           <p className="b2b-sub">
             {shelf === 'clinical'
-              ? `Materiale clinico: entra solo nei percorsi scritti dai terapeuti. ${protocols.length} protocoll${protocols.length === 1 ? 'o' : 'i'}.`
-              : `Libreria a uso libero: audio che le persone sfogliano e scelgono da sole, nominati per il momento che servono. ${protocols.length} audio.`}
+              ? `Materiale per professionisti: lo sceglie solo il professionista, la piattaforma non propone nulla. ${protocols.length} contenut${protocols.length === 1 ? 'o' : 'i'}.`
+              : `Libreria a uso autonomo: audio che le persone sfogliano e scelgono da sole, nominati per il momento che servono. ${protocols.length} audio.`}
           </p>
           <div className="mt-seg" style={{ marginTop: 8 }}>
-            <button className={shelf === 'clinical' ? 'is-on' : ''} onClick={() => { setShelf('clinical'); setDraft(null); setCard(null); setPicked([]) }}>Percorsi clinici</button>
+            <button className={shelf === 'clinical' ? 'is-on' : ''} onClick={() => { setShelf('clinical'); setDraft(null); setCard(null); setPicked([]) }}>Contenuti clinici</button>
             <button className={shelf === 'library' ? 'is-on' : ''} onClick={() => { setShelf('library'); setDraft(null); setCard(null); setPicked([]) }}>Libreria</button>
           </div>
         </div>
@@ -502,7 +516,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       {!loading && (
         <div className="adm-table adm-table--catalog">
           <div className="adm-tr adm-tr--head">
-            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Durate</div><div>Disponibilità</div><div>Origine</div><div className="adm-tr__right">Stato</div>
+            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Durate</div><div>Disponibilità</div><div>Revisione</div><div className="adm-tr__right">Stato</div>
           </div>
           {protocols.map((p) => {
             const openable = !!mergedPlain(p)
@@ -565,6 +579,15 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>
+                {/* The tier and the four-question sign-off (ADM-02/03): what
+                    decides whether the Stato toggle will accept "Attivo". */}
+                <span className={`adm-pill ${(p.tier ?? 'green') === 'red' ? 'adm-pill--bad' : (p.tier ?? 'green') === 'amber' ? 'adm-pill--warn' : 'adm-pill--ok'}`}>
+                  {(p.tier ?? 'green') === 'red' ? 'Rosso' : (p.tier ?? 'green') === 'amber' ? 'Ambra' : 'Verde'}
+                </span>{' '}
+                {gateComplete(p.claimsGate)
+                  ? <span className="adm-pill adm-pill--ok" title={`Firmata da ${p.claimsGate?.approvedBy}`}>firmata</span>
+                  : <span className="adm-pill adm-pill--idle">da firmare</span>}
+                {' '}
                 {isDraft(p)
                   ? <span className="adm-pill adm-pill--warn">Bozza</span>
                   : p.source === 'imported'

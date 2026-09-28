@@ -15,12 +15,16 @@ import { LIBRARY_CATEGORIES, LIBRARY_PHASES, LIBRARY_PREFIX, type LibraryCategor
 import type { CatalogProtocol } from '../data/catalog'
 import type { Duration } from '../types/domain'
 
+/* The ids are machinery (they match the check-in's clusters and are stored
+   on rows); the LABELS are what a PO reads, and they name a moment, never a
+   condition — "ansia", "umore basso" and "esaurimento" are condition names
+   in the claims lexicon (Lexicon_Avoid 1; Lexicon_Notes 9, 10). */
 const TAGS: { id: LibraryTag; label: string }[] = [
-  { id: 'anxiety', label: 'Ansia' },
-  { id: 'stress', label: 'Stress' },
-  { id: 'depression', label: 'Umore basso' },
-  { id: 'burnout', label: 'Esaurimento' },
-  { id: 'resilience', label: 'Resilienza' },
+  { id: 'anxiety', label: 'Prima di qualcosa di importante' },
+  { id: 'stress', label: 'Giornata piena' },
+  { id: 'depression', label: 'Quando manca la spinta' },
+  { id: 'burnout', label: 'Dopo una settimana pesante' },
+  { id: 'resilience', label: 'Per rafforzarsi' },
   { id: 'maintenance', label: 'Sto bene' },
 ]
 

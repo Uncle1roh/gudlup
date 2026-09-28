@@ -523,31 +523,27 @@ export const CLUSTER_LABEL: Record<string, string> = {
   'GL-LIB': 'Library',
 }
 
-export function adherencePct(rx: WorkspacePrescription): number {
+/**
+ * How many listenings the professional asked for. The only arithmetic the
+ * platform does on selected content: what was chosen, times the weeks it was
+ * chosen for. No percentage, no band, no colour — a progress metric generated
+ * by the software is an outcome statement by the software (Path A, M2R-17,
+ * MN-29). "3 of 6 done" is a fact; "50% adherence, red" is a judgement.
+ */
+export function rxTarget(rx: WorkspacePrescription): number {
   const weeks = Math.max(1, Math.round((rx.toAt - rx.fromAt) / (7 * DAY)))
-  const target = rx.perWeek * weeks
-  return target > 0 ? Math.min(100, Math.round((rx.done / target) * 100)) : 0
+  return rx.perWeek * weeks
 }
 
-export type AdherenceBand = 'green' | 'yellow' | 'red'
-export function adherenceBand(p: number): AdherenceBand {
-  return p >= 70 ? 'green' : p >= 40 ? 'yellow' : 'red'
-}
-
-/** VAS deltas for the last N sessions, oldest first — the sparkline source. */
-export function vasSeries(p: WorkspacePatient, n = 8): number[] {
+/** The professional's own VAS entries, as they wrote them: pre → post per
+    session, oldest first. Printed back verbatim; never averaged, never
+    trended — the reading is theirs (M2R-17). */
+export function vasPairs(p: WorkspacePatient, n = 8): { at: number; pre: number; post: number }[] {
   return [...p.sessions]
     .filter((s) => s.vasPre != null && s.vasPost != null)
     .sort((a, b) => a.at - b.at)
     .slice(-n)
-    .map((s) => (s.vasPre as number) - (s.vasPost as number))
-}
-
-export function vasDirection(p: WorkspacePatient): 'up' | 'down' | 'flat' | null {
-  const s = vasSeries(p)
-  if (s.length < 2) return null
-  const diff = s[s.length - 1] - s[0]
-  return Math.abs(diff) < 0.5 ? 'flat' : diff > 0 ? 'up' : 'down'
+    .map((s) => ({ at: s.at, pre: s.vasPre as number, post: s.vasPost as number }))
 }
 
 /**
@@ -739,23 +735,14 @@ export function slotsFromAvailability(
   return out
 }
 
-export function lowAdherencePatients(state: WorkspaceState): number {
-  return state.patients.filter((p) => p.prescriptions.some((rx) => adherenceBand(adherencePct(rx)) === 'red')).length
-}
-
 export function nextSessionNumber(p: WorkspacePatient): number {
   return Math.max(0, ...p.sessions.map((s) => s.noteNumber)) + 1
 }
 
-/** Assessment timing: T0 baseline, then end of months 1, 2 and 3. */
-export function assessmentDueLabel(p: WorkspacePatient, now = Date.now()): string | null {
-  if (!p.sessions.length) return 'T0 (baseline)'
-  const first = Math.min(...p.sessions.map((s) => s.at))
-  const months = Math.floor((now - first) / (30 * DAY))
-  const taken = p.assessments.filter((a) => a.instrument === 'DASS-21').length
-  if (months >= 1 && taken < months + 1 && months <= 3) return `T${months} due`
-  return null
-}
+/* assessmentDueLabel is gone: the platform no longer proposes when a
+   questionnaire is "due". An instrument administered on the software's
+   schedule is the software taking a clinical decision (M2R-15, MN-27); the
+   professional sends what they decide to send, when they decide to. */
 
 /** A single-use connection code, valid for 72 hours. */
 export function generateConnectionCode(): string {
@@ -768,46 +755,6 @@ export function codeExpired(code: { issuedAt: number } | null, now = Date.now())
   return !code || now - code.issuedAt > CODE_TTL_MS
 }
 
-/* ---------------------------------------------------------- performance -- */
-
-export interface PerformanceCard {
-  label: string
-  value: string
-  unit?: string
-  sub: string
-  trend: string
-  series: number[]
-}
-
-/**
- * The therapist's own figures. NOT visible to admin or corporate individually —
- * corporate sees one anonymous count of employees using professional support,
- * and nothing that could be attributed to a named professional.
- */
-export function performance(state: WorkspaceState, period: 'week' | 'month' | 'quarter'): PerformanceCard[] {
-  const factor = period === 'week' ? 0.25 : period === 'quarter' ? 3 : 1
-  const all = state.patients.flatMap((p) => p.sessions)
-  const withGl = all.filter((s) => s.kind === 'gl-video')
-  const durations = all.map((s) => s.minutes)
-  const avgDuration = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
-  const deltas = all
-    .filter((s) => s.vasPre != null && s.vasPost != null)
-    .map((s) => (s.vasPost as number) - (s.vasPre as number))
-  const avgDelta = deltas.length ? Number((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1)) : 0
-  const rxs = state.patients.flatMap((p) => p.prescriptions)
-  const avgAdherence = rxs.length ? Math.round(rxs.reduce((n, r) => n + adherencePct(r), 0) / rxs.length) : 0
-  const activePatients = state.patients.filter((p) => p.lastSessionAt && Date.now() - p.lastSessionAt < 30 * DAY).length
-
-  const spark = (base: number) => Array.from({ length: 8 }, (_, i) => base * (0.85 + ((i * 7) % 5) / 20))
-
-  return [
-    { label: 'Total sessions', value: String(Math.round(all.length * 8 * factor)), sub: `this ${period}`, trend: '+12%', series: spark(40) },
-    { label: 'Avg session duration', value: String(avgDuration), unit: 'min', sub: `this ${period}`, trend: '+3%', series: spark(50) },
-    { label: 'Good Loop utilization', value: String(all.length ? Math.round((withGl.length / all.length) * 100) : 0), unit: '%', sub: 'of sessions include treatment', trend: '+8%', series: spark(60) },
-    { label: 'Avg VAS delta', value: String(avgDelta), unit: 'pre→post', sub: 'lower is a larger drop', trend: '+0.3', series: spark(2) },
-    { label: 'Prescription adherence', value: String(avgAdherence), unit: '%', sub: 'across active prescriptions', trend: '−2%', series: spark(74) },
-    { label: 'Cancellation rate', value: '6', unit: '%', sub: `this ${period}`, trend: 'Stable', series: spark(6) },
-    { label: 'Patient satisfaction', value: '4.7', unit: '/ 5', sub: 'where collected', trend: '+0.1', series: spark(4.7) },
-    { label: 'Active patients', value: String(activePatients), sub: 'last 30 days', trend: '+2', series: spark(activePatients || 1) },
-  ]
-}
+/* The "Performance" figures are gone: fabricated trends, a satisfaction
+   score nobody collected, an average VAS delta and an adherence percentage —
+   every one a platform-generated outcome metric (M2R-17, MN-29). */

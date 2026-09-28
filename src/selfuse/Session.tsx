@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
 import { useI18n } from '../i18n'
+import { useLegal } from '../legal/LegalContext'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { durationLabel } from '../data/selfuse'
 import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
@@ -104,6 +105,20 @@ interface SessionFlowProps {
   onCancel: () => void
   /** "Need support" — hands control to the Safety Gateway Level 3. */
   onNeedSupport: () => void
+  /** PLY-4: the link every self-guided session ends with (M1-06). */
+  onFindProfessional: () => void
+}
+
+/* The safe-use note (PLY-1, CRS-06) is shown once, before the first audio
+   session ever, on this device. A first-occurrence note is static in the
+   sense that matters: every person gets it on the same trigger, and nothing
+   about the person is inferred. */
+const SAFE_USE_KEY = 'gl.legal.safeuse.v1'
+function safeUseSeen(): boolean {
+  try { return localStorage.getItem(SAFE_USE_KEY) === '1' } catch { return true }
+}
+function markSafeUseSeen(): void {
+  try { localStorage.setItem(SAFE_USE_KEY, '1') } catch { /* storage unavailable */ }
 }
 
 type Stage = 'pre' | 'stereo' | 'play' | 'post'
@@ -127,7 +142,7 @@ export function SessionFlow(props: SessionFlowProps) {
   const completed = useRef(true)
   const vasPre = useRef<number | null>(null)
 
-  function begin(pre: number) {
+  function begin(pre: number | null) {
     vasPre.current = pre
     startedAt.current = Date.now()
     setStage(needsStereoCheck ? 'stereo' : 'play')
@@ -172,6 +187,7 @@ export function SessionFlow(props: SessionFlowProps) {
           vasPost: post ?? undefined,
         })
       }}
+      onFindProfessional={props.onFindProfessional}
     />
   )
 }
@@ -186,11 +202,13 @@ function PreSession({
 }: {
   session: ResolvedSession
   duration: Duration
-  onBegin: (vasPre: number) => void
+  onBegin: (vasPre: number | null) => void
   onCancel: () => void
 }) {
   const { t } = useI18n()
+  const { m } = useLegal()
   const [vas, setVas] = useState<number | null>(null)
+  const [safeNote, setSafeNote] = useState(() => !safeUseSeen())
   return (
     <div className={SESSION_FRAME}>
       <div className="screen screen--center pre-session">
@@ -204,13 +222,24 @@ function PreSession({
           </ul>
           <p className="small muted"><Icon name="headphones" size={15} /> {t('Headphones recommended')}</p>
 
+          {/* PLY-1 — once, before the first audio session (Tier C). */}
+          {safeNote && (
+            <div className="legal-note legal-note--safety" role="note">
+              <p className="legal-note__text">{m('PLY-1')}</p>
+              <button type="button" className="legal-note__ok" onClick={() => { markSafeUseSeen(); setSafeNote(false) }}>{t('OK')}</button>
+            </div>
+          )}
+
+          {/* PLY-3 — optional, skippable, shown back only as the person's own
+              history; never compared to a threshold, never labelled (M1-08).
+              The wording follows PLY-3 on the register's five-face scale. */}
           <div className="vas-block">
-            <p className="small">{t('How do you feel right now?')}</p>
+            <p className="small">{t('How settled do you feel? — optional.')}</p>
             <VasRow value={vas} onPick={setVas} />
           </div>
         </div>
         <div className="screen__footer btn-stack">
-          <button className="btn btn--primary" disabled={vas == null} onClick={() => onBegin(vas as number)}>
+          <button className="btn btn--primary" onClick={() => onBegin(vas)}>
             {t('Begin Session')}
           </button>
           <button className="btn btn--quiet" onClick={onCancel}>{t('Cancel')}</button>
@@ -437,7 +466,6 @@ function ImmersiveSession({
   const fadeRef = useRef<number | null>(null)
 
   const { index: phaseIdx, within } = phaseAt(elapsed, total, fractions)
-  const phase = protocol?.phases[phaseIdx]
   const isBreath = phaseIdx === 1
   const isClosing = phaseIdx === fractions.length - 1
 
@@ -603,7 +631,11 @@ function ImmersiveSession({
             >
               <Icon name="close" size={18} />
             </button>
-            <span className="hud__phase">{t('Phase {n}', { n: phaseIdx + 1 })}{phase ? ` · ${t(phase.name)}` : ''}</span>
+            {/* A person reads the PART of the audio they are in, never the
+                phase's clinical name: "Processing" and "Integration" are the
+                therapeutic-arc framing Path A strips from anything
+                client-facing (Lexicon_Avoid 16). */}
+            <span className="hud__phase">{t('Part {n} of {total}', { n: phaseIdx + 1, total: session.entry?.phases.length ?? 6 })}</span>
             <span className="hud__spacer" aria-hidden="true" />
           </div>
 
@@ -677,13 +709,16 @@ function PostSession({
   duration,
   contextLine,
   onFeedback,
+  onFindProfessional,
 }: {
   session: ResolvedSession
   duration: Duration
   contextLine?: string
   onFeedback: (f: PostFeedback | null, vasPost: number | null) => void
+  onFindProfessional: () => void
 }) {
   const { t } = useI18n()
+  const { m } = useLegal()
   const [picked, setPicked] = useState<PostFeedback | null>(null)
   const [vas, setVas] = useState<number | null>(null)
   const isDeep = duration === 24
@@ -715,14 +750,15 @@ function PostSession({
               the one before the session and the delta between them is the
               only number here that means anything. */}
           <div className="vas-block">
-            <p className="small">{t('How do you feel right now?')}</p>
+            <p className="small">{t('How settled do you feel? — optional.')}</p>
             <VasRow value={vas} onPick={setVas} />
           </div>
 
-          {/* What the chip row carried that the VAS cannot: the way out. It is
-              not a mood option among four — asking someone to rank "I need
-              support" beside "Relaxed" was always the wrong shape — it is a
-              door, standing open. */}
+          {/* PLY-4 — the one link every self-guided session ends with: a
+              professional. Static, the same for everyone (D-17). */}
+          <button type="button" className="legal-link post__pro" onClick={onFindProfessional}>{m('PLY-4')}</button>
+
+          {/* The way out. A door, standing open. */}
           <button className="btn btn--quiet post__support" onClick={() => choose('support')}>
             <Icon name="support" size={16} /> {t('I need support')}
           </button>
@@ -731,7 +767,7 @@ function PostSession({
         </div>
 
         <div className="screen__footer">
-          <button className="btn btn--primary" disabled={vas == null} onClick={() => onFeedback(picked, vas)}>
+          <button className="btn btn--primary" onClick={() => onFeedback(picked, vas)}>
             {t('Back to Home')}
           </button>
         </div>

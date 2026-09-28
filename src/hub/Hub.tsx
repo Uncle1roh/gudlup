@@ -24,21 +24,16 @@ const SURFACES: Surface[] = [
   },
   {
     href: '#therapist', icon: '🩺', title: 'Therapist Workspace',
-    blurb: 'Patient roster, patient card, calendar, the live session workspace with the three-tab panel and Good Loop treatment monitoring, session reports, prescriptions and the sandbox.',
+    blurb: 'Patient roster, patient card, calendar, the live session workspace with the content library the professional selects from, session reports and the sandbox.',
   },
   {
-    href: '#employer', icon: '📊', title: 'Corporate Dashboard',
-    blurb: 'Setup wizard, adoption and wellbeing aggregates, reports, management and settings. Aggregates only, k-anonymous below five participants.',
-    loginHint: 'camila@aurora.co',
-  },
-  {
-    href: '#nr1', icon: '📋', title: 'NR-1 report',
-    blurb: 'The regulatory psychosocial-risk report — a separate surface with its own vocabulary.',
+    href: '#employer', icon: '📊', title: 'Sponsor console',
+    blurb: 'Setup wizard, programme totals, therapists and settings. Totals only, hidden below 25 people; no categories, no individuals.',
     loginHint: 'camila@aurora.co',
   },
   {
     href: '#admin', icon: '🛠', title: 'Admin console',
-    blurb: 'Protocol catalog, companies, users, therapist credential approvals.',
+    blurb: 'Content catalogue, companies, users, therapist credential approvals, data requests, reports and legal texts.',
     loginHint: 'admin@goodloop.app',
   },
   {
@@ -46,12 +41,8 @@ const SURFACES: Surface[] = [
     blurb: 'Internal audio-authoring tool (in English).',
   },
   {
-    href: '#b2c-legacy', icon: '🕰', title: 'Previous employee app',
-    blurb: 'The surface that preceded the Self Use spec — kept reachable while the new one beds in.',
-  },
-  {
-    href: '#b2b-legacy', icon: '🕰', title: 'Previous therapist console',
-    blurb: 'The surface that preceded the Workspace spec.',
+    href: '#legal', icon: '§', title: 'Legal information',
+    blurb: 'Terms, notices, privacy, professional terms and previous versions — public, no login.',
   },
 ]
 

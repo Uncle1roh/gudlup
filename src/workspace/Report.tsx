@@ -20,7 +20,7 @@ import { useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import { fmtClock } from './LiveSession'
 import { versionShort } from './Patients'
-import { adherencePct, assessmentDueLabel, type SessionRow, type TherapistAccount, type WorkspacePatient } from './data'
+import { rxTarget, type SessionRow, type TherapistAccount, type WorkspacePatient } from './data'
 import { buildSessionReportPdf } from './sessionPdf'
 
 interface ReportProps {
@@ -45,7 +45,6 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
     return <PostSession patient={patient} row={draft} onDone={onBack} />
   }
 
-  const delta = draft.vasPre != null && draft.vasPost != null ? draft.vasPost - draft.vasPre : null
 
   return (
     <div className="w-report">
@@ -67,7 +66,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
               <dd>{fmtDate(draft.at, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd>
             </div>
             <div><dt>{t('Call duration')}</dt><dd>{draft.minutes} min</dd></div>
-            <div><dt>{t('Good Loop treatment')}</dt><dd>{draft.kind === 'gl-video' ? `${t('Yes')} · ${draft.protocolCode}` : t('No')}</dd></div>
+            <div><dt>{t('Good Loop audio')}</dt><dd>{draft.kind === 'gl-video' ? `${t('Yes')} · ${draft.protocolCode}` : t('No')}</dd></div>
             {draft.kind === 'gl-video' && (
               <>
                 <div><dt>{t('Version · played')}</dt><dd>{versionShort(draft.version)} · {fmtClock((draft.version ?? 0) * 60)}</dd></div>
@@ -119,7 +118,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
             />
           </label>
           <label className="w-field">
-            <span className="w-field__label">{t('VAS post')} {delta != null && <em>· Δ {delta > 0 ? '+' : '−'}{Math.abs(delta)}</em>}</span>
+            <span className="w-field__label">{t('VAS post')}</span>
             <input
               className="w-input" type="number" min={1} max={10}
               value={draft.vasPost ?? ''} readOnly={readOnly}
@@ -210,7 +209,6 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
 
 function PostSession({
   patient,
-  row,
   onDone,
 }: {
   patient: WorkspacePatient
@@ -219,8 +217,10 @@ function PostSession({
 }) {
   const { t } = useI18n()
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({})
-  const suggested = row.at + 7 * 86_400_000
-  const due = assessmentDueLabel(patient)
+  /* Nothing is suggested here any more: no proposed date from a "recurring
+     pattern", no "system proposes DASS-21 is due", no auto-generated
+     continuity summary. Each card is a door; what goes through it is the
+     professional's decision (M2R-15, MN-27). */
   const rx = patient.prescriptions[0]
 
   const dismiss = (k: string) => setDismissed((d) => ({ ...d, [k]: true }))
@@ -238,48 +238,33 @@ function PostSession({
         {!dismissed.schedule && (
           <article className="w-postcard">
             <h3>{t('Schedule next session')}</h3>
-            <p className="w-small">{t('Suggested from recurring pattern + your availability.')}</p>
-            <button className="w-btn w-btn--primary" onClick={() => dismiss('schedule')}>
-              {t('Confirm {date}', { date: fmtDate(suggested, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) })}
-            </button>
-            <button className="w-link" onClick={() => dismiss('schedule')}>{t('Choose different time')}</button>
-            <p className="w-note">{t('Adds to your connected calendar.')}</p>
+            <p className="w-small">{t('When you and {name} decide. Open the calendar to pick a time.', { name: patient.name.split(' ')[0] })}</p>
+            <button className="w-btn w-btn--ghost" onClick={() => dismiss('schedule')}>{t('Open the calendar')}</button>
           </article>
         )}
 
         {!dismissed.rx && (
           <article className="w-postcard">
-            <h3>{t('Inter-session homework')}</h3>
+            <h3>{t('Content between sessions')}</h3>
             <p className="w-small">
               {rx
-                ? t('Current: {code} — {n}% adherence.', { code: `${rx.protocolCode} ${versionShort(rx.version)}`, n: adherencePct(rx) })
-                : t('No prescription assigned yet.')}
+                ? t('Current: {code} — {done} of {total} done.', { code: `${rx.protocolCode} ${versionShort(rx.version)}`, done: rx.done, total: rxTarget(rx) })
+                : t('Nothing selected yet.')}
             </p>
-            <button className="w-btn w-btn--ghost" onClick={() => dismiss('rx')}>{t('Assign prescription')}</button>
-            <button className="w-link" onClick={() => dismiss('rx')}>{t('No homework needed')}</button>
+            <button className="w-btn w-btn--ghost" onClick={() => dismiss('rx')}>{t('Select content')}</button>
+            <button className="w-link" onClick={() => dismiss('rx')}>{t('Nothing this time')}</button>
           </article>
         )}
 
         {!dismissed.assessment && (
           <article className="w-postcard">
-            <h3>{t('Assessment')} {due && <span className="w-tag">{due}</span>}</h3>
-            <p className="w-small">
-              {due ? t('System proposes DASS-21 is due this week.') : t('Nothing due right now.')}
-            </p>
-            <button className="w-btn w-btn--ghost" onClick={() => dismiss('assessment')}>{t('Send DASS-21 to patient')}</button>
-            <button className="w-link" onClick={() => dismiss('assessment')}>{t('Remind me in 1 week')}</button>
+            <h3>{t('Questionnaire')}</h3>
+            <p className="w-small">{t('Send one if you decide it is useful. Which, and when, is yours to choose.')}</p>
+            <button className="w-btn w-btn--ghost" onClick={() => dismiss('assessment')}>{t('Send a questionnaire')}</button>
+            <button className="w-link" onClick={() => dismiss('assessment')}>{t('Not now')}</button>
           </article>
         )}
 
-        {!dismissed.continuity && (
-          <article className="w-postcard">
-            <h3>{t('Continuity report ready')}</h3>
-            <p className="w-small">
-              {t('Auto-generated summary of this session — loads in Pre-Session Preparation before the next appointment.')}
-            </p>
-            <button className="w-link" onClick={() => dismiss('continuity')}>{t('View')}</button>
-          </article>
-        )}
       </div>
 
       <p className="w-note">{t('All of these are optional.')}</p>

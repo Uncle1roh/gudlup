@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
 import { SoundStudio } from './studio/SoundStudio'
-import { ConsumerApp } from './app/ConsumerApp'
 import { SelfUseApp } from './selfuse/SelfUseApp'
-import { TherapistApp } from './b2b/TherapistApp'
 import { WorkspaceApp } from './workspace/WorkspaceApp'
 import { CorporateApp } from './corporate/CorporateApp'
 import { AdminApp } from './admin/AdminApp'
-import { EmployerApp } from './employer/EmployerApp'
 import { DataLayerProvider } from './data/provider'
 import { AuthProvider } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
@@ -16,6 +13,8 @@ import { initVoiceSync } from './tts/voiceSync'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PreviewBar } from './admin/PreviewBar'
 import { previewing } from './admin/preview'
+import { LegalProvider } from './legal/LegalContext'
+import { LegalPage } from './legal/LegalPage'
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash)
@@ -39,19 +38,43 @@ export default function App() {
        #app / (default)  Self Use mobile app        46 screens
        #therapist        Therapist Workspace        28 screens
        #employer / #hr   Corporate Dashboard        19 screens
-       #nr1              NR-1 psychosocial report   (regulatory, separate)
-       #b2c-legacy · #b2b-legacy                    previous surfaces */
-  const isLegacyB2c = route === '#b2c-legacy'
-  const isWorkspace = route === '#therapist'
-  const isLegacyB2b = route === '#b2b' || route === '#b2b-legacy'
+       #legal            Legal information page     (public, no login)
+
+     Three surfaces are no longer routed, because the legal framework (Legal
+     Framework/, v5 Path A) forbids what they do and a reachable screen is a
+     shipped feature whatever the navigation says:
+       #nr1              the employer psychosocial-risk report — D-09 / SPN-07:
+                         Good Loop never assesses psychosocial risk, never
+                         reports risk bands or category breakdowns to a sponsor
+       #b2c-legacy       the previous consumer app — carried the psychosocial
+                         questionnaire (MN-05) and a mood-routed home
+       #b2b-legacy       the previous clinician console — pre-selected content
+                         and generated a 12-week sequence (MN-27)
+     Their folders stay on disk until they are deleted; nothing renders them. */
+  const isWorkspace = route === '#therapist' || route === '#b2b' || route === '#b2b-legacy'
   const isAdmin = route === '#admin'
-  const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate'
-  const isNr1 = route === '#nr1'
+  const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate' || route === '#nr1'
+  const isLegal = route === '#legal' || route.startsWith('#legal/')
 
   function content() {
     // Demo hub: links every surface for testers. No gate — it's just links.
     if (route === '#hub') {
       return <Hub />
+    }
+
+    /* The legal information page is public (LEG-06): no gate, no login. It
+       still sits inside the data layer so the crisis numbers and the version
+       register come from configuration rather than from the binary. */
+    if (isLegal) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <LegalProvider>
+              <LegalPage />
+            </LegalProvider>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
     }
 
     /* The Sound Studio is the authoring tool: it publishes audio into the
@@ -63,9 +86,11 @@ export default function App() {
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <AuthGate mode="b2b" allow={['admin', 'therapist']}>
-              <SoundStudio />
-            </AuthGate>
+            <LegalProvider>
+              <AuthGate mode="b2b" allow={['admin', 'therapist']}>
+                <SoundStudio />
+              </AuthGate>
+            </LegalProvider>
           </DataLayerProvider>
         </AuthProvider>
       )
@@ -76,49 +101,40 @@ export default function App() {
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <AuthGate mode="admin">
-              <AdminApp />
-            </AuthGate>
+            <LegalProvider>
+              <AuthGate mode="admin">
+                <AdminApp />
+              </AuthGate>
+            </LegalProvider>
           </DataLayerProvider>
         </AuthProvider>
       )
     }
 
-    // The Corporate Dashboard — aggregates only, HR role.
+    // The sponsor console — programme totals only, HR role.
     if (isCorporate) {
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <AuthGate mode="hr">
-              <CorporateApp />
-            </AuthGate>
+            <LegalProvider>
+              <AuthGate mode="hr">
+                <CorporateApp />
+              </AuthGate>
+            </LegalProvider>
           </DataLayerProvider>
         </AuthProvider>
       )
     }
 
-    // The NR-1 psychosocial report keeps its own route: it is a regulatory
-    // surface with a risk vocabulary the Corporate Dashboard is not allowed
-    // to use, so the two must not be folded into one navigation.
-    if (isNr1) {
+    if (isWorkspace) {
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <AuthGate mode="hr">
-              <EmployerApp />
-            </AuthGate>
-          </DataLayerProvider>
-        </AuthProvider>
-      )
-    }
-
-    if (isWorkspace || isLegacyB2b) {
-      return (
-        <AuthProvider>
-          <DataLayerProvider>
-            <AuthGate mode="b2b">
-              {isWorkspace ? <WorkspaceApp /> : <TherapistApp />}
-            </AuthGate>
+            <LegalProvider>
+              <AuthGate mode="b2b">
+                <WorkspaceApp />
+              </AuthGate>
+            </LegalProvider>
           </DataLayerProvider>
         </AuthProvider>
       )
@@ -127,9 +143,11 @@ export default function App() {
     return (
       <AuthProvider>
         <DataLayerProvider>
-          <AuthGate mode="b2c">
-            {isLegacyB2c ? <ConsumerApp /> : <SelfUseApp />}
-          </AuthGate>
+          <LegalProvider>
+            <AuthGate mode="b2c">
+              <SelfUseApp />
+            </AuthGate>
+          </LegalProvider>
         </DataLayerProvider>
       </AuthProvider>
     )

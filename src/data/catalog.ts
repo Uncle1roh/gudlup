@@ -96,6 +96,16 @@ export interface CatalogProtocol extends Protocol {
    * goes; nothing else about the card changes.
    */
   coverUrl?: string
+  /**
+   * The application tier (Part VII.6): green, amber or red. Red content is
+   * professionally guided only — it can never be enabled for the
+   * self-guided library, and the database trigger refuses it too (ADM-03).
+   * Absent on rows written before the gate existed: treated as green until
+   * a reviewer says otherwise, which the console asks before enabling.
+   */
+  tier?: import('../legal/claims').ContentTier
+  /** The four-question sign-off (ADM-02). No row is enabled without it. */
+  claimsGate?: import('../legal/claims').ClaimsGate
 }
 
 /* ======================================================== time signatures ==

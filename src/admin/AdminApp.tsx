@@ -9,20 +9,27 @@ import { AssetLibrary } from './AssetLibrary'
 import { CredentialQueue } from './CredentialQueue'
 import { ExploreRails } from './ExploreRails'
 import { Companies } from './Companies'
+import { PromoCodes } from './PromoCodes'
+import { PartnerProducts } from './PartnerProducts'
 import { Users } from './Users'
 import { AuditLog } from './AuditLog'
+import { Compliance } from './Compliance'
+import { HelpNowButton } from '../legal/HelpNow'
 import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'users' | 'audit'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'partners' | 'users' | 'compliance' | 'audit'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
-  { id: 'catalog', label: 'Catalogo protocolli', icon: '♪' },
+  { id: 'catalog', label: 'Catalogo contenuti', icon: '♪' },
   { id: 'rails', label: 'Scaffali della libreria', icon: '▤' },
   { id: 'assets', label: 'Libreria audio', icon: '♫' },
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
   { id: 'companies', label: 'Aziende', icon: '◭' },
+  { id: 'promo', label: 'Codici promo', icon: '%' },
+  { id: 'partners', label: 'Partner', icon: '❖' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
+  { id: 'compliance', label: 'Conformità', icon: '§' },
   { id: 'audit', label: 'Registro attività', icon: '≣' },
 ]
 
@@ -79,6 +86,8 @@ export function AdminApp() {
         </div>
 
         <div className="adm-side__foot">
+          <HelpNowButton variant="inline" />
+          <a className="adm-open__note" href="#legal" target="_blank" rel="noreferrer">Informazioni legali ↗</a>
           <div className="adm-who">
             <AvatarUpload size={30} fallback="⚙️" className="avatarup--bar" />
             <span className="adm-who__email">{actor}</span>
@@ -94,7 +103,10 @@ export function AdminApp() {
         {section === 'assets' && <AssetLibrary actor={actor} />}
         {section === 'credentials' && <CredentialQueue actor={actor} />}
         {section === 'companies' && <Companies actor={actor} />}
+        {section === 'promo' && <PromoCodes actor={actor} />}
+        {section === 'partners' && <PartnerProducts actor={actor} />}
         {section === 'users' && <Users actor={actor} />}
+        {section === 'compliance' && <Compliance actor={actor} />}
         {section === 'audit' && <AuditLog />}
       </main>
     </div>

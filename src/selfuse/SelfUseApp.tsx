@@ -5,12 +5,18 @@
    player) or an active videocall. No badge counts on any tab, and the
    Therapist tab is shown to everyone — what varies is what is inside it.
 
-   The shell owns three things the tabs must not each re-derive:
+   The shell owns two things the tabs must not each re-derive:
    · the onboarding gate,
    · the session launcher (which decides whether a finished session ticks off a
-     pathway week, a prescription, or neither),
-   · the Safety Gateway — Level 2 is evaluated from the measurement series
-     after every state change and shown at most once per trigger cycle.
+     pathway week, a selected session, or neither).
+
+   What it no longer owns: a "Safety Gateway Level 2" that watched the
+   check-in and mood series and opened a sheet saying "we've noticed things
+   have felt heavier". A notice triggered by what a person entered or rated is
+   an output about that person — the behaviour that pulls a wellbeing product
+   inside the medical-device definition (Feature Register MN-03, MN-19; Part
+   VII.4 of the Terms deliverable). The route to help is the Help now button,
+   on every screen, for everyone, always: static, never inferred.
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -23,20 +29,24 @@ import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
 import { ProgressTab } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
-import { GlCheckFlow, Who5Flow, DailyMoodFlow } from './Measures'
-import { SafetyLevel2, SafetyLevel3 } from './Safety'
+import { PartnersTab } from './PartnersTab'
+import { GlCheckFlow, DailyMoodFlow } from './Measures'
+import { SafetyLevel3 } from './Safety'
+import { HelpNowButton } from '../legal/HelpNow'
+import { useLegal } from '../legal/LegalContext'
+import { buildDataExport } from '../legal/dataExport'
 import { PatientVideoCall } from './VideoCall'
 import { useSelfUseStore, takeSignupIntake, type Launch } from '../data/selfUseStore'
 import { accountName, displayName } from './greeting'
 import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
-import { resolveCompanyCode, hasProfessionalSupport, safetyContact } from '../data/convention'
+import { resolveCompanyCode, hasProfessionalSupport } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
 import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
-import { safetyLevel2Trigger, dayKey } from '../data/measures'
+import { dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { BrandLogo } from '../components/Brand'
@@ -47,19 +57,20 @@ import { useBackLayer } from './backStack'
    pathways and the continue card are one screen, because a person opening the
    app wants to choose something, and a Home that only linked to the place
    where you choose was a hop with nothing in it. */
-type Tab = 'home' | 'therapist' | 'progress' | 'profile'
+type Tab = 'home' | 'therapist' | 'progress' | 'partners' | 'profile'
 
 const TABS: { id: Tab; icon: IconName; label: string }[] = [
   { id: 'home', icon: 'library', label: 'Home' },
   { id: 'therapist', icon: 'therapist', label: 'Therapist' },
   { id: 'progress', icon: 'progress', label: 'Progress' },
+  /* Partner offers — ADMIN accounts only for now (see `tabs` below). */
+  { id: 'partners', icon: 'partners', label: 'Partners' },
   { id: 'profile', icon: 'profile', label: 'Profile' },
 ]
 
 type Overlay =
   | { kind: 'none' }
   | { kind: 'glcheck' }
-  | { kind: 'who5' }
   | { kind: 'mood' }
   | { kind: 'safety3' }
   | { kind: 'call' }
@@ -76,6 +87,9 @@ export function SelfUseApp(props: SelfUseAppProps) {
   return (
     <LiveCatalogProvider>
       <SelfUseSurface {...props} />
+      {/* One tap from every screen — the first run, the player, a call, every
+          tab (CRS-01). Rendered once, here, above whatever the surface shows. */}
+      <HelpNowButton variant="floating" className="su-studio" />
     </LiveCatalogProvider>
   )
 }
@@ -86,8 +100,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      colourways and CSS cannot repaint it. */
   const theme = useSuTheme()
   const catalog = useCatalog()
-  const { user, signOut } = useAuth()
+  const { user, role, signOut } = useAuth()
   const dp = useDataProvider()
+  const legal = useLegal()
   /* In an admin's preview the local state is keyed to the preview, not to
      whoever is signed in: a sales walkthrough must not write itself into the
      admin's own Self Use record, and must not read one either. */
@@ -97,12 +112,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 
   const [tab, setTab] = useState<Tab>('home')
+  /* The Partner tab is for admin accounts only while the offers are being
+     put together — an admin reaches it through the console's preview. Any
+     other account never sees the tab, and cannot land on it. */
+  const tabs = role === 'admin' ? TABS : TABS.filter((tb) => tb.id !== 'partners')
   /* One search, shared by the top bar and the library's own header, so a
      query typed in either place is the same query. */
   const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
-  const [safety2, setSafety2] = useState(false)
 
   /* The browser's back, one layer at a time (see backStack.ts). Registered in
      the order they can open, so the most recent is the one a press reaches.
@@ -117,7 +135,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     if (overlay.kind === 'call') return
     setOverlay({ kind: 'none' })
   })
-  useBackLayer(safety2, () => setSafety2(false))
 
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
   const eap = convention?.eap ?? null
@@ -206,25 +223,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     return () => { alive = false }
   }, [dp, updateTherapy])
 
-  /* ------------------------------------------------- Safety Gateway L2 --- */
-  useEffect(() => {
-    if (!state.onboardedAt) return
-    const trigger = safetyLevel2Trigger({
-      glChecks: state.glChecks,
-      moods: state.moods,
-      lastSessionAt: state.logs.length ? state.logs[state.logs.length - 1].at : null,
-      now: Date.now(),
-    })
-    // Once per trigger CYCLE: the same trigger id does not reappear until a
-    // different one fires, or the person's data leaves the triggering shape.
-    if (trigger && state.safetyShown !== trigger) {
-      setSafety2(true)
-      update((s) => ({ ...s, safetyShown: trigger }))
-    } else if (!trigger && state.safetyShown) {
-      update((s) => ({ ...s, safetyShown: null }))
-    }
-  }, [state.glChecks, state.moods, state.logs, state.onboardedAt, state.safetyShown, update])
-
   /* ------------------------------------------------------ first run -----
 
      There is no onboarding any more. A person registers and lands on the
@@ -270,19 +268,23 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      stamped whether they read it or skip it, and it is stored with the rest
      of the person's state (per account, on this device, like `onboardedAt`).
      Profile → "How Good Loop Works" is where it lives from then on. */
-  if (!state.consents.termsAt || !state.tutorialSeenAt) {
-    /* Which of the two wizards: a company code means an employer bought this
-       and the flow opens by saying what they were given. Without one, that
-       card would be an advertisement for a plan nobody has. */
+  /* The acceptance lives server-side (LEG-01): a person who accepted the
+     current version on another device is not asked again here, and one who
+     accepted an OLDER version is (LEG-09). The local stamp is only a mirror
+     for the device. Until the legal context has answered, nothing is shown
+     rather than a screen that might be wrong. */
+  const termsAccepted = legal.accepted('terms') || (!legal.loaded && !!state.consents.termsAt)
+  if (legal.loaded && legal.profile && legal.accepted('terms') && !state.consents.termsAt) {
+    update((s) => ({ ...s, consents: { ...s.consents, termsAt: Date.now() } }))
+  }
+  if (!termsAccepted || !state.tutorialSeenAt) {
+    if (!legal.loaded) return <div className="app-frame su-studio" />
     return (
       <FirstRun
         hasCompanyCode={!!convention}
+        sponsorName={convention?.companyName}
         professional={hasProfessionalSupport(convention)}
-        /* Two gates, one screen. The legal acceptance is asked until it is
-           given; the explainer is shown until it is seen or skipped. An
-           account that accepted long ago and a new one both land in the right
-           place without a second flow. */
-        needsTerms={!state.consents.termsAt}
+        needsTerms={!termsAccepted}
         needsTutorial={!state.tutorialSeenAt}
         onAcceptTerms={() => update((s) => ({ ...s, consents: { ...s.consents, termsAt: Date.now() } }))}
         onDone={() => update((s) => ({ ...s, tutorialSeenAt: Date.now() }))}
@@ -332,6 +334,10 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           onStereoChecked={(passed) => { if (passed) update((s) => ({ ...s, stereoCheckedAt: Date.now() })) }}
           onCancel={() => setLaunch(null)}
           onNeedSupport={() => { setLaunch(null); setOverlay({ kind: 'safety3' }) }}
+          /* PLY-4: the end of every self-guided session links to a
+             professional — the Therapist tab, which is also the way into
+             professionally guided use (M1-06). */
+          onFindProfessional={() => { setLaunch(null); setTab('therapist') }}
           onDone={(o) => { void finishSession(o) }}
         />
       )
@@ -425,15 +431,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       />
     )
   }
-  if (overlay.kind === 'who5') {
-    return (
-      <Who5Flow
-        previous={state.who5[state.who5.length - 1] ?? null}
-        onDone={(e) => update((s) => ({ ...s, who5: [...s.who5, e] }))}
-        onClose={() => setOverlay({ kind: 'none' })}
-      />
-    )
-  }
   if (overlay.kind === 'mood') {
     const today = state.moods.find((m) => m.day === dayKey(Date.now())) ?? null
     return (
@@ -450,6 +447,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         therapist={therapy.link.therapist}
         startsAt={appointment?.startsAtMs ?? therapy.link.nextSessionAt}
         roomId={appointment?.id ?? null}
+        appointmentId={appointment?.id ?? null}
         demoSeconds={demoSeconds}
         onLeave={() => { setOverlay({ kind: 'none' }); setTab('therapist'); loadAppointment() }}
       />
@@ -484,30 +482,50 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       .save(`good-loop-therapy-${dayKey(Date.now())}.pdf`)
   }
 
-  /** GDPR/LGPD portability: everything held about this person, as data. */
-  function exportRawData() {
-    downloadJson(`good-loop-my-data-${dayKey(Date.now())}.json`, {
-      exportedAt: new Date().toISOString(),
-      profile: { email: user?.email ?? null, companyCode: state.companyCode },
-      consents: state.consents,
-      preferences: { notifications: state.notifications, session: state.prefs },
-      pathway: state.pathway,
-      completedPathways: state.completedPathways,
-      logs: state.logs,
-      glChecks: state.glChecks,
-      who5: state.who5,
-      moods: state.moods,
+  /**
+   * The data-subject request (DAT-01, DAT-02): a request row with a 15-day
+   * clock, and the machine-readable copy itself, in the twelve domains of
+   * the DSR specification with an express nil for each domain that holds
+   * nothing — the statement that no score or risk classification exists is
+   * the most valuable sentence in the package (DSR spec 3.3). A
+   * professional's clinical record is NOT here: it is routed, not refused
+   * (4.3), and the file says who holds it.
+   */
+  async function exportRawData() {
+    let requestId: string | null = null
+    try {
+      const req = await dp.createDataRequest('portability')
+      requestId = req.id
+    } catch { /* offline — the copy is still produced */ }
+    const [acceptances, consents] = await Promise.all([
+      dp.listMyAcceptances().catch(() => []),
+      dp.listMyConsents().catch(() => []),
+    ])
+    const pkg = buildDataExport({
+      requestId,
+      profile: legal.profile,
+      email: user?.email ?? null,
+      companyCode: state.companyCode,
+      acceptances,
+      consents,
+      state,
+      sessions: catalog.sessions,
       therapy: therapy.link
         ? {
-            therapist: therapy.link.therapist.name,
+            therapistName: therapy.link.therapist.name,
             sessions: therapy.link.sessions,
-            prescriptions: therapy.link.prescriptions,
-            goals: therapy.link.goals,
-            vas: therapy.link.vas,
-            scores: therapy.link.scores,
+            selected: therapy.link.prescriptions,
           }
         : null,
     })
+    downloadJson(`good-loop-my-data-${dayKey(Date.now())}.json`, pkg)
+  }
+
+  /** DAT-06: the person's rows and login go; the local mirror goes with them. */
+  async function deleteAccount() {
+    try { await dp.deleteMyAccount() } catch { /* the server refused — nothing local is wiped either */ return }
+    reset()
+    void signOut()
   }
 
   return (
@@ -522,6 +540,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             onStart={startFromExplore}
             query={query}
             onQuery={setQuery}
+            sponsored={!!convention}
+            professionalOffered={hasProfessionalSupport(convention)}
+            onFindProfessional={() => setTab('therapist')}
           />
         )}
 
@@ -543,13 +564,14 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             state={state}
             therapy={therapy}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
-            onWho5={() => setOverlay({ kind: 'who5' })}
             onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}
             onExportSelfUse={exportSelfUse}
             onExportTherapy={exportTherapy}
           />
         )}
+
+        {tab === 'partners' && role === 'admin' && <PartnersTab />}
 
         {tab === 'profile' && (
           <ProfileTab
@@ -560,13 +582,14 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             state={state}
             update={update}
             onLogout={() => void signOut()}
-            onDeleteAccount={() => { reset(); void signOut() }}
-            onExport={exportRawData}
+            onDeleteAccount={() => void deleteAccount()}
+            onExport={() => void exportRawData()}
+            onFindProfessional={() => setTab('therapist')}
           />
         )}
       </div>
 
-      <nav className="tabbar">
+      <nav className={`tabbar${tabs.length > 4 ? ' tabbar--5' : ''}`}>
         {/* The wordmark was a `::before` on this nav — fine while it was
             decoration, wrong the moment anything had to sit next to it. It is
             an element now so the search field can stand between it and the
@@ -590,7 +613,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           />
         </label>
 
-        {TABS.map((tb) => (
+        {tabs.map((tb) => (
           <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => setTab(tb.id)}>
             <span className="tabbar__icon"><Icon name={tb.icon} /></span>
             <span className="tabbar__label">{t(tb.label)}</span>
@@ -604,7 +627,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         </button>
       )}
 
-      {safety2 && <SafetyLevel2 eap={safetyContact(convention)} onClose={() => setSafety2(false)} />}
     </div>
   )
 }

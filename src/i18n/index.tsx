@@ -13,6 +13,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { IT } from './it'
 import { IT_SELF_USE } from './it-selfuse'
 import { PT } from './pt'
+import { IT_LEGAL, PT_LEGAL } from './legal'
 
 export type Locale = 'en' | 'it' | 'pt-BR'
 
@@ -20,7 +21,9 @@ const STORAGE_KEY = 'gl.locale'
 /* The Self Use dictionary is merged LAST, so where a string exists in both it
    is the Self Use wording that wins — that surface's copy was written against
    its own spec and reviewed as a unit. */
-const DICTS: Partial<Record<Locale, Record<string, string>>> = { it: { ...IT, ...IT_SELF_USE }, 'pt-BR': PT }
+/* The legal framework's strings are merged LAST (src/i18n/legal.ts): its
+   wording of an existing key is the reviewed one. */
+const DICTS: Partial<Record<Locale, Record<string, string>>> = { it: { ...IT, ...IT_SELF_USE, ...IT_LEGAL }, 'pt-BR': { ...PT, ...PT_LEGAL } }
 
 /** Options shown in Profile → Language. */
 export const LOCALES: { code: Locale; label: string }[] = [

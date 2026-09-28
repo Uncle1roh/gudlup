@@ -31,21 +31,20 @@ import {
   MOOD_LEVELS,
   type MoodEntry,
 } from '../data/measures'
-import { glCheckDue, who5Due, type SelfUseState } from '../data/selfUseStore'
+import { glCheckDue, type SelfUseState } from '../data/selfUseStore'
 import { type TherapyState } from './therapyStore'
 
 interface ProgressProps {
   state: SelfUseState
   therapy: TherapyState
   onGlCheck: () => void
-  onWho5: () => void
   onMood: () => void
   onGoTherapist: () => void
   onExportSelfUse: () => void
   onExportTherapy: () => void
 }
 
-export function ProgressTab({ state, onGlCheck, onWho5, onMood, onExportSelfUse }: ProgressProps) {
+export function ProgressTab({ state, onGlCheck, onMood, onExportSelfUse }: ProgressProps) {
   const { t } = useI18n()
 
   const last = state.glChecks[state.glChecks.length - 1] ?? null
@@ -113,12 +112,10 @@ export function ProgressTab({ state, onGlCheck, onWho5, onMood, onExportSelfUse 
         <button className="btn btn--ghost" onClick={onMood}>{t('How was your day?')}</button>
       </section>
 
-      {/* The two routes the removed cards were the only way to reach. They are
-          actions, not readings: no score is shown, and neither is offered
-          unless it is actually due or actually has something to report. */}
-      {who5Due(state) && (
-        <button className="btn btn--quiet" onClick={onWho5}>{t('Take the monthly snapshot')}</button>
-      )}
+      {/* The WHO-5 monthly snapshot is gone from self-guided use: a validated
+          instrument scored back to the person is a clinical measurement
+          (MN-05; Part VII.2). The weekly check-in above is a plain
+          self-report shown as the person's own history and nothing more. */}
       {state.logs.length > 0 && (
         <button className="btn btn--quiet" onClick={onExportSelfUse}>
           {t('View your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}

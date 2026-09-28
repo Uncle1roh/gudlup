@@ -30,6 +30,9 @@
    ============================================================================ */
 
 import { useRef, useState } from 'react'
+import { useLegal } from '../legal/LegalContext'
+import { legalDoc, blocksFor } from '../legal/corpus'
+import { LEGAL_VERSION } from '../legal/types'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { uploadCredentialDoc, type CredentialDoc } from '../b2b/credentials'
@@ -48,7 +51,12 @@ interface OnboardingProps {
   onFinish: (enterSandbox: boolean) => void
 }
 
-const REGIONS = ['SP', 'RJ', 'MG', 'RS', 'PR', 'BA', 'SC', 'PE', 'CE', 'DF', 'Other']
+/* The professional registers with ONE of two bodies: a Brazilian regional
+   council (CRP, by region) or an Italian Ordine (by region). Which one is
+   the first thing a reviewer needs to know and the first thing the person's
+   profile prints (PRF-1 / PRF-1-IT). */
+const CRP_REGIONS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']
+const ORDINE_REGIONS = ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Emilia-Romagna', 'Friuli Venezia Giulia', 'Lazio', 'Liguria', 'Lombardia', 'Marche', 'Molise', 'Piemonte', 'Puglia', 'Sardegna', 'Sicilia', 'Toscana', 'Trentino-Alto Adige', 'Umbria', "Valle d'Aosta", 'Veneto']
 
 export function TherapistOnboarding({ account, cred, onSubmit, onCredChanged, onSign, onFinish }: OnboardingProps) {
   /* Registration is asked for once; after that the SERVER decides whether this
@@ -85,6 +93,14 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
   const [certificate, setCertificate] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
   const [sendErr, setSendErr] = useState<string | null>(null)
+  /* M2R-01/03/04: which body, where they practise from, and their cover. The
+     attestation is a statement the professional makes, recorded with a date;
+     booking is blocked where it is missing. */
+  const [registry, setRegistry] = useState<'CRP' | 'Ordine'>('CRP')
+  const [practiceCountry, setPracticeCountry] = useState<'BR' | 'IT'>('BR')
+  const [attested, setAttested] = useState(false)
+  const [insuranceExpires, setInsuranceExpires] = useState('')
+  const [insuranceRef, setInsuranceRef] = useState('')
 
   /** Upload first, then write the row. A row pointing at an object that failed
       to upload would put an empty review in front of a reviewer. */
@@ -97,6 +113,10 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
       /* The registration number the reviewer checks. The local account calls it
          a licence; the therapists row calls it `crp`. Same number. */
       await dp.submitCredentials(String(form.licenceNumber ?? account.licenceNumber ?? ''), docs)
+      await dp.updateMyProfessionalRecord({
+        registry, registryRegion: String(form.licenceRegion ?? ''), practiceCountry, attestedAt: Date.now(),
+        insuranceExpiresAt: insuranceExpires || null, insuranceDoc: insuranceRef.trim() || null,
+      }).catch(() => undefined)
       onSubmit({ ...form, submittedAt: Date.now() })
       onCredChanged()
     } catch (e) {
@@ -109,7 +129,7 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
     fullName: account.fullName,
     email: account.email,
     licenceNumber: account.licenceNumber,
-    licenceRegion: account.licenceRegion || REGIONS[0],
+    licenceRegion: account.licenceRegion || '',
     glcpNumber: account.glcpNumber,
     certificateName: account.certificateName ?? '',
     photoDataUrl: account.photoDataUrl,
@@ -151,14 +171,35 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
           <Field label={t('Email')} hint={t('must match GLCP certification email')} error={err('email')}>
             <input className="w-input" type="email" value={form.email} onChange={(e) => set({ email: e.target.value })} onBlur={() => blur('email')} />
           </Field>
-          <Field label={t('Professional license (CRP/CFP)')} error={err('licenceNumber')}>
-            <input className="w-input" value={form.licenceNumber} onChange={(e) => set({ licenceNumber: e.target.value })} onBlur={() => blur('licenceNumber')} placeholder="06/158342" />
-          </Field>
-          <Field label={t('License issuing state/region')}>
-            <select className="w-input" value={form.licenceRegion} onChange={(e) => set({ licenceRegion: e.target.value })}>
-              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          <Field label={t('Professional body')}>
+            <select className="w-input" value={registry} onChange={(e) => { const r = e.target.value as 'CRP' | 'Ordine'; setRegistry(r); setPracticeCountry(r === 'CRP' ? 'BR' : 'IT'); set({ licenceRegion: '' }) }}>
+              <option value="CRP">{t('CRP — Conselho Regional de Psicologia (Brazil)')}</option>
+              <option value="Ordine">{t('Ordine degli Psicologi (Italy)')}</option>
             </select>
           </Field>
+          <Field label={registry === 'CRP' ? t('CRP registration number') : t('Albo registration number')} error={err('licenceNumber')}>
+            <input className="w-input" value={form.licenceNumber} onChange={(e) => set({ licenceNumber: e.target.value })} onBlur={() => blur('licenceNumber')} placeholder={registry === 'CRP' ? '06/158342' : '12345'} />
+          </Field>
+          <Field label={registry === 'CRP' ? t('CRP region') : t('Ordine region')}>
+            <select className="w-input" value={form.licenceRegion} onChange={(e) => set({ licenceRegion: e.target.value })}>
+              <option value="">{t('Choose…')}</option>
+              {(registry === 'CRP' ? CRP_REGIONS : ORDINE_REGIONS).map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </Field>
+          <Field label={t('Where you practise from')} hint={t('the territory your registration authorises (D-12)')}>
+            <select className="w-input" value={practiceCountry} onChange={(e) => setPracticeCountry(e.target.value as 'BR' | 'IT')}>
+              <option value="BR">{t('Brazil')}</option>
+              <option value="IT">{t('Italy')}</option>
+            </select>
+          </Field>
+          <Field label={t('Professional indemnity insurance')} hint={t('expiry date and policy reference')}>
+            <input className="w-input" type="date" value={insuranceExpires} onChange={(e) => setInsuranceExpires(e.target.value)} />
+            <input className="w-input" value={insuranceRef} onChange={(e) => setInsuranceRef(e.target.value)} placeholder={t('insurer · policy number')} />
+          </Field>
+          <label className="w-check">
+            <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} />
+            {t('I confirm that I am registered and authorised to practise in the territory above, that I practise from it, and that no disciplinary proceedings are outstanding against me (P2.1, P2.3).')}
+          </label>
           <Field label={t('GLCP certification number')} hint={t('cross-validated with the training platform')} error={err('glcpNumber')}>
             <input className="w-input" value={form.glcpNumber} onChange={(e) => set({ glcpNumber: e.target.value })} onBlur={() => blur('glcpNumber')} />
           </Field>
@@ -193,7 +234,7 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
         {sendErr && <p className="w-small w-err">{sendErr}</p>}
         <button
           className="w-btn w-btn--primary w-btn--block"
-          disabled={!valid || sending}
+          disabled={!valid || sending || !attested || !form.licenceRegion}
           onClick={() => void send({ ...form, verificationRef: `GLCP-VR-${Math.floor(10000 + Math.random() * 89999)}` })}
         >
           {sending ? t('Sending…') : t('Submit for verification')}
@@ -300,72 +341,63 @@ function VerificationPending({ account, cred, onCredChanged }: {
 
 /* ------------------------------------------------------------ TH-ON-3 --- */
 
-const TERMS = `Good Loop Professional Platform — Terms & Conditions
-
-1. Scope of use
-The Good Loop Professional Platform provides audio protocols, a session workspace and clinical documentation tools for use by licensed mental-health professionals who have completed Good Loop Clinical Practitioner (GLCP) certification.
-
-2. Professional responsibility
-Clinical judgement remains entirely yours. Good Loop protocols are an adjunct to your practice. You determine which protocol is appropriate for a patient, when to run it, when to pause or intervene, and when not to use one at all. Nothing in the platform constitutes a clinical recommendation.
-
-3. Patient consent
-You may not run a Good Loop protocol without an active therapy-data consent from the patient. The pre-launch checklist verifies that consent and will refuse to start treatment without it.
-
-4. Confidentiality
-Clinical notes, session reports, assessment results are end-to-end encrypted and are not visible to Good Loop administrators or to any corporate client. A corporate client receives only aggregate, k-anonymised programme statistics and a single anonymous count of employees using professional support.
-
-5. Records and signature
-Session reports carry your digital signature — your full name, your professional licence number, and a timestamp. Re-opening and re-signing a report creates a new version; previous versions are preserved in an audit trail and are never deleted.
-
-6. Audio safety
-Protocols are mastered to a fixed loudness target with a true-peak limiter. The patient application enforces a maximum sound pressure level. You must instruct patients to use stereo headphones and must not run a protocol where the pre-launch stereo check has failed.
-
-7. Data protection
-You process patient data as a controller under applicable data-protection law (GDPR / LGPD). Good Loop acts as a processor for the data held on the platform. Patients may export or delete their data at any time.
-
-8. Availability and scheduling
-Sessions you accept through the platform are commitments to your patients. Cancellations and reschedules should follow your own professional practice standards.
-
-9. Suspension
-Good Loop may suspend access where certification lapses, where a professional licence is withdrawn, or where platform use breaches these terms.
-
-10. Changes
-Material changes to these terms will be notified by email and require a new signature before continued use.
-
-By signing below you confirm that you have read and agree to these Terms & Conditions.`
-
+/**
+ * The Professional Terms (Part V.D of the legal deliverable), from the legal
+ * corpus in the interface language, accepted by version and recorded on the
+ * server (M2R-05). The old text — "audio protocols", "the pre-launch
+ * checklist will refuse to start treatment", "end-to-end encrypted" — was a
+ * description of Path B and of controls the product does not have.
+ */
 function Terms({ account, onSign }: { account: TherapistAccount; onSign: () => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const dp = useDataProvider()
+  const legal = useLegal()
   const [atBottom, setAtBottom] = useState(false)
   const [checked, setChecked] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const doc = legalDoc('professional', locale)
+
+  async function sign() {
+    setBusy(true)
+    try {
+      await legal.accept('professional')
+      await dp.updateMyProfessionalRecord({ termsVersion: LEGAL_VERSION, termsAcceptedAt: Date.now() }).catch(() => undefined)
+      onSign()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="w-auth">
       <div className="w-auth__card">
-        <h1 className="w-h1">{t('Terms & Conditions')}</h1>
+        <h1 className="w-h1">{doc?.title ?? t('Professional Terms')}</h1>
+        <p className="w-small">{t('Version {v}', { v: LEGAL_VERSION })} · <a href="#legal/professional" target="_blank" rel="noreferrer">{t('Open on the legal information page')} ↗</a></p>
         <div
-          className="w-terms"
+          className="w-terms legal-text"
           onScroll={(e) => {
             const el = e.currentTarget
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setAtBottom(true)
           }}
         >
-          <pre>{TERMS}</pre>
+          {doc && blocksFor(doc, legal.market).map((b, i) => (
+            b.kind === 'h' ? <h2 key={i} className="legal-text__h">{b.text}</h2> : <p key={i}>{b.text}</p>
+          ))}
         </div>
         {!atBottom && <p className="w-small">↓ {t('Scroll to the bottom to enable signature')}</p>}
 
         <div className="w-signature">
-          {t('I,')} <strong>{account.fullName}</strong>, {t('CRP')} <strong>{account.licenceNumber}</strong>,{' '}
-          {t('agree to the Terms & Conditions of the Good Loop Professional Platform.')}
+          {t('I,')} <strong>{account.fullName}</strong>, <strong>{account.licenceNumber}</strong>,{' '}
+          {t('accept the Professional Terms.')}
         </div>
 
         <label className={`w-check${atBottom ? '' : ' is-disabled'}`}>
           <input type="checkbox" disabled={!atBottom} checked={checked} onChange={() => setChecked((v) => !v)} />
-          {t('I have read and agree to the Terms & Conditions')}
+          {t('I have read and accept the Professional Terms')}
         </label>
 
-        <button className="w-btn w-btn--primary w-btn--block" disabled={!checked} onClick={onSign}>
-          {t('Sign and continue')}
+        <button className="w-btn w-btn--primary w-btn--block" disabled={!checked || busy} onClick={() => void sign()}>
+          {busy ? t('Please wait…') : t('Sign and continue')}
         </button>
       </div>
     </div>
@@ -386,7 +418,7 @@ function SandboxIntro({ onFinish }: { onFinish: OnboardingProps['onFinish'] }) {
         </p>
         <ul className="w-bullets">
           <li>{t('Try the video call interface and three-tab layout')}</li>
-          <li>{t('Test protocol selection and treatment monitoring')}</li>
+          <li>{t('Try choosing content and playing it, with a virtual patient')}</li>
           <li>{t('Practice note-taking and report signing')}</li>
           <li>{t('Always available from your sidebar')}</li>
         </ul>

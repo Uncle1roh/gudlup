@@ -292,7 +292,8 @@ export function buildAggregates(state: CorporateState, respondents = state.conse
     kpis,
     engagement,
     wellbeing,
-    professionalSupport: state.conventionType === 'self-use-plus' ? { employees: 14 } : null,
+    /* Never a separate figure for professionally guided use (SPN-04). */
+    professionalSupport: null,
     alerts,
   }
 }

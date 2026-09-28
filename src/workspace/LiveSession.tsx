@@ -40,13 +40,15 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLegal } from '../legal/LegalContext'
+import { RiskButton } from '../legal/RiskButton'
 import { useI18n, fmtDate } from '../i18n'
 import { useVideoCall, type VideoCall } from '../b2b/webrtc/useVideoCall'
 import { PeerVideo, SelfVideo } from './Video'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, audioUrlFor, type ClinicalEntry } from '../data/liveCatalog'
 import { SessionPlayer } from '../lib/audio'
-import { CLUSTER_LABEL, adherencePct, nextSessionNumber, vasSeries, type SessionRow, type WorkspacePatient } from './data'
+import { CLUSTER_LABEL, nextSessionNumber, rxTarget, vasPairs, type SessionRow, type WorkspacePatient } from './data'
 import { initials, versionShort } from './Patients'
 import type { Duration } from '../types/domain'
 import { BrandIcon } from '../components/Brand'
@@ -74,7 +76,7 @@ interface LiveSessionProps {
   onExit: () => void
 }
 
-const PHASES = ['Intro', 'Breath', 'Explore', 'Process', 'Integr', 'Ground']
+const PHASES = ['Open', 'Breath', 'Imagery', 'Altern.', 'Settle', 'Close']
 
 export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEnd, onExit }: LiveSessionProps) {
   const { t } = useI18n()
@@ -219,8 +221,8 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
             )}
 
             <div className="w-prepblock">
-              <div className="w-field__label">{t('VAS trend')}</div>
-              <p className="w-small">{vasSeries(patient).join(' · ') || t('Not recorded')}</p>
+              <div className="w-field__label">{t('VAS you recorded · pre → post')}</div>
+              <p className="w-small">{vasPairs(patient).map((v) => `${v.pre}→${v.post}`).join(' · ') || t('Not recorded')}</p>
             </div>
 
             <div className="w-prepblock">
@@ -232,11 +234,11 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
             </div>
 
             <div className="w-prepblock">
-              <div className="w-field__label">{t('Active prescription adherence')}</div>
+              <div className="w-field__label">{t('Selected content')}</div>
               <p className="w-small">
                 {patient.prescriptions.length
-                  ? `${Math.round(patient.prescriptions.reduce((n, r) => n + adherencePct(r), 0) / patient.prescriptions.length)}%`
-                  : t('No active prescriptions.')}
+                  ? patient.prescriptions.map((r) => `${r.protocolCode} ${t('{done} of {total} done', { done: r.done, total: rxTarget(r) })}`).join(' · ')
+                  : t('Nothing selected.')}
               </p>
             </div>
           </aside>
@@ -318,6 +320,10 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
 
         {!collapsed && (
           <aside className="w-panel">
+            {/* CRS-08 / PRO-1 — one tap, in every state of the call: the
+                escalation procedure, the emergency numbers for the person's
+                market, and an action record written into the notes. */}
+            <RiskButton onRecord={(text) => setQuickNotes((q) => [...q, { at: Date.now(), phase: 0, text }])} />
             <nav className="w-panel__tabs" role="tablist">
               {(['notes', 'goodloop', 'reference'] as Tab[]).map((x) => (
                 <button key={x} role="tab" aria-selected={tab === x} onClick={() => setTab(x)}>
@@ -477,7 +483,7 @@ function NotesTab({
       )}
 
       <p className="w-note">
-        {t('Notes auto-save and are end-to-end encrypted. The VAS is recorded from the patient’s spoken answer — the patient never sees a VAS control.')}
+        {t('Notes auto-save and are stored encrypted, under your account only. The VAS is recorded from the patient’s spoken answer — the patient never sees a VAS control.')}
       </p>
     </div>
   )
@@ -507,8 +513,8 @@ function VasWidget({
           {value == null
             ? placeholder
             : delta != null && from != null
-              ? `Δ ${delta > 0 ? '+' : '−'}${Math.abs(delta)} (${t('from')} ${from} ${t('to')} ${value})`
-              : `${value} — ${vasWord(value)}`}
+              ? `${t('from')} ${from} ${t('to')} ${value}`
+              : String(value)}
         </span>
       </div>
       <div className="w-vasrow">
@@ -518,12 +524,6 @@ function VasWidget({
       </div>
     </div>
   )
-}
-
-function vasWord(n: number): string {
-  if (n <= 3) return 'Low'
-  if (n <= 6) return 'Moderate'
-  return 'High'
 }
 
 /* ----------------------------------------------------- Good Loop tab ---- */
@@ -563,14 +563,16 @@ function GoodLoopTab({
   onTreatmentEnded: () => void
 }) {
   const { t } = useI18n()
+  const { m } = useLegal()
 
   if (state.stage === 'idle') {
     return (
       <div className="w-panel__body w-panel__empty">
         <BrandIcon className="w-glmark" />
-        <h3>{t('Start a Good Loop session')}</h3>
-        <p className="w-small">{t('Select a protocol to begin treatment during this call.')}</p>
-        <button className="w-btn w-btn--primary" onClick={() => setState({ stage: 'wizard' })}>{t('Select protocol')}</button>
+        <h3>{t('Play Good Loop audio')}</h3>
+        <p className="w-small">{t('Choose content to play during this call.')}</p>
+        <p className="w-note">{m('PRO-4')}</p>
+        <button className="w-btn w-btn--primary" onClick={() => setState({ stage: 'wizard' })}>{t('Choose content')}</button>
       </div>
     )
   }
@@ -624,7 +626,7 @@ function GoodLoopTab({
 
   return (
     <div className="w-panel__body">
-      <h3 className="w-h3">{t('Treatment completed')} ✓</h3>
+      <h3 className="w-h3">{t('Audio completed')} ✓</h3>
       <dl className="w-summary">
         <div><dt>{t('Protocol')}</dt><dd className="w-mono">{state.summary.code} {versionShort(state.summary.version)}</dd></div>
         <div><dt>{t('Duration played')}</dt><dd>{fmtClock(state.summary.played)}</dd></div>
@@ -634,7 +636,7 @@ function GoodLoopTab({
       </dl>
       {quickNotes.length > 0 && (
         <>
-          <div className="w-field__label">{t('Notes during treatment')}</div>
+          <div className="w-field__label">{t('Notes during the audio')}</div>
           <ul className="w-quicknotes">
             {quickNotes.map((q, i) => (
               <li key={i}>
@@ -645,7 +647,7 @@ function GoodLoopTab({
         </>
       )}
       <p className="w-note">
-        {t('The panel returned to Notes for the debrief. All treatment data is included in the session report.')}
+        {t('The panel returned to Notes for the debrief. Everything from the audio is included in the session report.')}
       </p>
     </div>
   )
@@ -659,10 +661,12 @@ function ProtocolWizard({
   onProceed: (code: string, version: Duration, rationale: string) => void
 }) {
   const { t } = useI18n()
+  const { m } = useLegal()
   const catalog = useCatalog()
-  /* Every ENABLED clinical protocol the catalog carries — including the six
-     clinical-only ones, which are usable here and only here. A protocol
-     imported and published this morning appears without a code change. */
+  /* Every ENABLED clinical item the catalog carries — including the six
+     clinical-only ones, which are usable here and only here. An item
+     imported and published this morning appears without a code change.
+     Sorted by code: a neutral order, never a recommended one (M2R-15). */
   const clusters = useMemo(() => {
     const m = new Map<string, ClinicalEntry[]>()
     for (const p of catalog.clinical) m.set(p.family, [...(m.get(p.family) ?? []), p])
@@ -681,9 +685,10 @@ function ProtocolWizard({
 
   return (
     <div className="w-panel__body">
-      <div className="w-step">① {t('Protocol')}</div>
+      <p className="w-note">{m('PRO-4')}</p>
+      <div className="w-step">① {t('Content')}</div>
       <div className="w-protolist">
-        {!clusters.length && <p className="w-small">{t('No protocol is published and enabled yet.')}</p>}
+        {!clusters.length && <p className="w-small">{t('No content is published and enabled yet.')}</p>}
         {clusters.map(({ family, list }) => (
           <div key={family}>
             <div className="w-field__label">{t(CLUSTER_LABEL[family] ?? family)}</div>
@@ -707,14 +712,14 @@ function ProtocolWizard({
 
       <div className="w-step">② {t('Version')}</div>
       <div className="w-inline">
-        {!selected && <span className="w-small">{t('Select a protocol first.')}</span>}
+        {!selected && <span className="w-small">{t('Choose content first.')}</span>}
         {versions.map((d) => (
           <button key={d} className="w-chip" aria-pressed={chosenVersion === d} onClick={() => setVersion(d)}>
             {t(d === 6 ? 'Quick' : d === 12 ? 'Standard' : 'Deep')} · {d}m
           </button>
         ))}
         {selected && !versions.length && (
-          <span className="w-small">{t('This protocol has no published time signature yet.')}</span>
+          <span className="w-small">{t('This content has no published time signature yet.')}</span>
         )}
       </div>
 
@@ -728,7 +733,7 @@ function ProtocolWizard({
       />
 
       <p className="w-note">
-        {t('All 25 protocols are available inside a live session. The six clinical-only ones cannot be prescribed as homework.')}
+        {t('Everything published is available inside a live session. Items marked clinical-only cannot be selected for listening between sessions.')}
       </p>
 
       <div className="w-actions">
@@ -786,12 +791,12 @@ function PreLaunchCheck({
         <li className={stereoOk ? 'is-ok' : 'is-bad'}>
           <span>{stereoOk ? '✓' : '✕'}</span>
           <span>{t('Patient stereo headphones')}</span>
-          <span className="w-small">{stereoOk ? t('Stereo output detected') : t('Mono or no output — treatment blocked')}</span>
+          <span className="w-small">{stereoOk ? t('Stereo output detected') : t('Mono or no output — audio blocked')}</span>
         </li>
         <li className={consentActive ? 'is-ok' : 'is-bad'}>
           <span>{consentActive ? '✓' : '✕'}</span>
           <span>{t('Patient consent active')}</span>
-          <span className="w-small">{consentActive ? t('Therapy data consent verified') : t('Missing — treatment blocked')}</span>
+          <span className="w-small">{consentActive ? t('Consent on record') : t('Missing — audio blocked')}</span>
         </li>
         <li className={latencyBand === 'ok' ? 'is-ok' : latencyBand === 'warn' ? 'is-warn' : 'is-bad'}>
           <span>{latencyBand === 'ok' ? '✓' : '!'}</span>
@@ -812,7 +817,7 @@ function PreLaunchCheck({
       )}
 
       <button className="w-btn w-btn--primary w-btn--block" disabled={blocked} onClick={onStart}>
-        {t('Start Treatment')}
+        {t('Start audio')}
       </button>
       <p className="w-note">
         {t("On Start, the patient's screen shows a 10-second countdown, then the immersive player.")}
@@ -937,7 +942,7 @@ function TreatmentMonitor({
       intervening: on,
       interventions: on ? state.interventions + 1 : state.interventions,
     })
-    addQuickNote(on ? 'Intervention started' : 'Treatment resumed', phaseIdx + 1)
+    addQuickNote(on ? 'Intervention started' : 'Audio resumed', phaseIdx + 1)
   }, [state, setState, addQuickNote, phaseIdx, call])
 
   return (
@@ -993,7 +998,7 @@ function TreatmentMonitor({
           ⏹<span>{t('Stop')}</span>
         </button>
         <button className={`w-tbtn w-tbtn--intervene${state.intervening ? ' is-on' : ''}`} onClick={toggleIntervene}>
-          🔴<span>{state.intervening ? t('Resume treatment') : t('Intervene')}</span>
+          🔴<span>{state.intervening ? t('Resume audio') : t('Intervene')}</span>
         </button>
       </div>
 
@@ -1009,7 +1014,7 @@ function TreatmentMonitor({
       {confirmStop && (
         <div className="w-scrim" role="dialog" aria-modal="true">
           <div className="w-modal w-modal--sm">
-            <h2 className="w-h2">{t('End treatment now?')}</h2>
+            <h2 className="w-h2">{t('End the audio now?')}</h2>
             <p className="w-lead">{t('The patient enters reorientation.')}</p>
             <div className="w-actions">
               <button className="w-btn w-btn--ghost" onClick={() => setConfirmStop(false)}>{t('Cancel')}</button>
@@ -1029,7 +1034,7 @@ function TreatmentMonitor({
                   onEnded()
                 }}
               >
-                {t('End treatment')}
+                {t('End audio')}
               </button>
             </div>
           </div>
@@ -1068,8 +1073,7 @@ function ReferenceTab({
   const { t } = useI18n()
   const byInstrument = new Map<string, (typeof patient.assessments)[number]>()
   for (const a of [...patient.assessments].sort((x, y) => x.at - y.at)) byInstrument.set(a.instrument, a)
-  const series = vasSeries(patient)
-  const live = vasPre != null && vasPost != null ? vasPre - vasPost : null
+  const series = vasPairs(patient)
 
   return (
     <div className="w-panel__body">
@@ -1084,18 +1088,18 @@ function ReferenceTab({
         {!byInstrument.size && <li className="w-small">{t('No assessments yet.')}</li>}
       </ul>
 
-      <div className="w-field__label">{t('VAS trend · last 8')}</div>
+      <div className="w-field__label">{t('VAS you recorded · pre → post')}</div>
       <p className="w-small">
-        {series.length ? `${(series.reduce((a, b) => a + b, 0) / series.length).toFixed(1)} ${t('avg drop')}` : t('Not recorded')}
-        {live != null && <> · {t('this session')} {live > 0 ? '−' : '+'}{Math.abs(live)}</>}
+        {series.length ? series.map((v) => `${v.pre}→${v.post}`).join(' · ') : t('Not recorded')}
+        {vasPre != null && vasPost != null && <> · {t('this session')} {vasPre}→{vasPost}</>}
       </p>
 
-      <div className="w-field__label">{t('Active prescriptions')}</div>
+      <div className="w-field__label">{t('Selected content')}</div>
       <ul className="w-reflist">
         {patient.prescriptions.map((rx) => (
           <li key={rx.id}>
             <span className="w-mono w-small">{rx.protocolCode} {versionShort(rx.version)} {rx.perWeek}×/{t('week')}</span>
-            <strong>{adherencePct(rx)}%</strong>
+            <strong>{t('{done} of {total} done', { done: rx.done, total: rxTarget(rx) })}</strong>
           </li>
         ))}
         {!patient.prescriptions.length && <li className="w-small">{t('None.')}</li>}

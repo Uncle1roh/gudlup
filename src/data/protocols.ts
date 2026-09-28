@@ -6,13 +6,18 @@ import type { Protocol, SessionPhase, Intent, Duration } from '../types/domain'
  * into 4 phases; for the player shell we run the same 6 conceptual phases.
  * The orb is shown only in Phase 2.
  */
+/* Phase names are audio-structure labels — what the segment sounds like —
+   and nothing about a therapeutic arc. "Processing" and "Integration" said
+   where the therapy happened; under Path A the software describes what the
+   audio does and the professional draws any clinical connection themselves
+   (PathA_Claims row 2; Lexicon_Avoid 16). */
 export const STANDARD_PHASES: SessionPhase[] = [
-  { id: 1, name: 'Intro + Validation', fraction: 0.11 },
-  { id: 2, name: 'Breath + Body Scan', fraction: 0.16, showOrb: true },
-  { id: 3, name: 'Exploration', fraction: 0.16 },
-  { id: 4, name: 'Processing', fraction: 0.38 },
-  { id: 5, name: 'Integration', fraction: 0.10 },
-  { id: 6, name: 'Outro + Grounding', fraction: 0.09 },
+  { id: 1, name: 'Opening', fraction: 0.11 },
+  { id: 2, name: 'Breathing cues', fraction: 0.16, showOrb: true },
+  { id: 3, name: 'Guided imagery', fraction: 0.16 },
+  { id: 4, name: 'Alternating audio', fraction: 0.38 },
+  { id: 5, name: 'Settling', fraction: 0.10 },
+  { id: 6, name: 'Closing', fraction: 0.09 },
 ]
 
 /** The full catalog: 25 protocols × 3 versions (titles per the B2C wizard

@@ -37,7 +37,7 @@ export type SelfUseSeries = 'focus-management' | 'calm-presence' | 'energy-recov
 export const SELF_USE_SERIES: { id: SelfUseSeries; label: string }[] = [
   { id: 'focus-management', label: 'Focus & Management' },
   { id: 'calm-presence', label: 'Calm & Presence' },
-  { id: 'energy-recovery', label: 'Energy & Recovery' },
+  { id: 'energy-recovery', label: 'Energy & Rest' },
   { id: 'growth-resilience', label: 'Growth & Resilience' },
   { id: 'standalone', label: 'Standalone' },
 ]
@@ -91,7 +91,7 @@ export const SELF_USE_SESSIONS: SelfUseSession[] = [
   },
   {
     slug: 'demand-management',
-    name: 'Demand Management',
+    name: 'Too Much To Do',
     blurb: 'Reorganize competing tasks without feeling swamped.',
     about:
       'For the days when everything is urgent. It separates what is actually yours to carry from what only feels that way, and gives the pile an order you can work with.',
@@ -182,7 +182,7 @@ export const SELF_USE_SESSIONS: SelfUseSession[] = [
     name: 'Permission to Pause',
     blurb: 'Stop, without having to earn it first.',
     about:
-      'The first session of recovery. It does not ask you to do anything — its whole job is to let you stop.',
+      'The first session of rest. It does not ask you to do anything — its whole job is to let you stop.',
     expect: ['Permission to put it down', 'A long, unhurried settle', 'No task at the end'],
     series: 'energy-recovery',
     theme: 'energy',
@@ -206,7 +206,7 @@ export const SELF_USE_SESSIONS: SelfUseSession[] = [
     name: 'Energy Renewal',
     blurb: 'Rebuild after a long stretch of giving.',
     about:
-      'For the part of recovery that comes after stopping. Quiet, restorative, and deliberately slow.',
+      'For the part of rest that comes after stopping. Quiet, restful, and deliberately slow.',
     expect: ['A deeply slow pace', 'Restoration rather than effort', 'Warmth at the close'],
     series: 'energy-recovery',
     theme: 'energy',
@@ -253,7 +253,7 @@ export const SELF_USE_SESSIONS: SelfUseSession[] = [
   },
   {
     slug: 'overcoming-challenges',
-    name: 'Overcoming Challenges',
+    name: 'Facing a Challenge',
     blurb: 'Meet a hard thing with more than dread.',
     about:
       'It takes something difficult that is coming and rehearses meeting it — not avoiding it, and not pretending it is small.',
@@ -434,7 +434,7 @@ export const PATHWAYS: Pathway[] = [
     weeks: 4,
     duration: 12,
     about:
-      'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.',
+      'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, nerves before you go on, putting things off as a deadline closes in.',
     plan: [
       { week: 1, focus: 'Recovering alert calm', blocks: [{ slug: 'focus-clarity', duration: 12, count: 5 }] },
       {
@@ -465,14 +465,14 @@ export const PATHWAYS: Pathway[] = [
   },
   {
     id: 'stress-management',
-    name: 'Stress Management',
+    name: 'The Working Day',
     blurb: 'Regain calm, reorganize demands, and build healthy boundaries.',
     lengthLabel: '4–6 weeks',
     perWeekLabel: '4–5',
     weeks: 6,
     duration: 12,
     about:
-      'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.',
+      'A progressive series for the moments of a working day: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.',
     plan: [
       { week: 1, focus: 'Recovering a state of calm', blocks: [{ slug: 'focus-clarity', duration: 12, count: 5 }] },
       {
@@ -523,7 +523,7 @@ export const PATHWAYS: Pathway[] = [
   },
   {
     id: 'energy-recovery',
-    name: 'Energy & Recovery',
+    name: 'Energy & Rest',
     blurb: 'From exhaustion to renewed vitality. Permission to pause, then rebuild.',
     lengthLabel: '4–6 weeks',
     perWeekLabel: '3–4',

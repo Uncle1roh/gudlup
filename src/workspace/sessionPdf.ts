@@ -101,7 +101,7 @@ export function buildBatchReportPdf(
       { header: 'Date', width: 1.1 },
       { header: 'Patient', width: 1.6 },
       { header: 'Type', width: 1.1 },
-      { header: 'Protocol', width: 1.6 },
+      { header: 'Content', width: 1.6 },
       { header: 'Status', width: 1 },
     ],
     groups.flatMap((g) =>
@@ -150,9 +150,9 @@ function appendReport(
   doc.section('Session')
   doc.keyValue('Date & time', fmtDateTime(row.at))
   doc.keyValue('Call duration', `${row.minutes} min`)
-  doc.keyValue('Good Loop treatment', row.kind === 'gl-video' ? 'Yes' : 'No')
+  doc.keyValue('Good Loop audio', row.kind === 'gl-video' ? 'Yes' : 'No')
   if (row.kind === 'gl-video') {
-    if (row.protocolCode) doc.keyValue('Protocol', row.protocolCode)
+    if (row.protocolCode) doc.keyValue('Content', row.protocolCode)
     if (row.version) doc.keyValue('Version', `${versionShort(row.version)} (${row.version} min)`)
     doc.keyValue('Phases completed', `${row.phasesCompleted ?? 0} / 6`)
     doc.keyValue('Pauses', String(row.pauses ?? 0))

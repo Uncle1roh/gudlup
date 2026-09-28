@@ -306,10 +306,10 @@ function Privacy({ state, registered }: { state: CorporateState; registered: num
       <h2 className="c-h2">{t('Data & Privacy')}</h2>
       <h3 className="c-sect">{t('How employee data is protected')}</h3>
       <ul className="c-bullets">
-        <li>{t('Individual employee data is never visible in this dashboard.')}</li>
-        <li>{t('All metrics require a minimum of 5 responses to be displayed.')}</li>
-        <li>{t('Employees can opt out of anonymous data sharing with zero consequences.')}</li>
-        <li>{t('Therapy sessions are fully confidential — only an anonymous count is shown.')}</li>
+        <li>{t('Individual employee data is never visible in this dashboard — not use, not attendance, not what anyone listened to.')}</li>
+        <li>{t('Every figure is a programme total; any figure derived from fewer than 25 people is hidden, not rounded.')}</li>
+        <li>{t('No breakdown by category or theme is ever shown, and nothing about sessions with a professional — not even a count.')}</li>
+        <li>{t('Employees choose whether to be counted in aggregate figures, with no consequence either way.')}</li>
       </ul>
 
       <section className="c-card">
@@ -323,8 +323,9 @@ function Privacy({ state, registered }: { state: CorporateState; registered: num
       </section>
 
       <div className="c-actions c-actions--left">
-        <a className="c-link" href="#data-retention">{t('Data retention policy')}</a>
-        <a className="c-link" href="#compliance">{t('GDPR / LGPD compliance')}</a>
+        <a className="c-link" href="#legal/D-08" target="_blank" rel="noreferrer">{t('What your people’s employer never sees')}</a>
+        <a className="c-link" href="#legal/D-09" target="_blank" rel="noreferrer">{t('Good Loop and your obligations as an employer')}</a>
+        <a className="c-link" href="#legal/privacy" target="_blank" rel="noreferrer">{t('Privacy Notice')}</a>
       </div>
     </>
   )

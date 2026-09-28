@@ -24,12 +24,28 @@
    ============================================================================ */
 
 import type { ConventionType, EapContact } from '../data/convention'
+import { MIN_COHORT } from '../legal/market'
 
-/** k-anonymity threshold. Below this, a metric is withheld, never rounded. */
-export const MIN_CELL = 5
+/** k-anonymity threshold. Below this, a metric is withheld, never rounded.
+    Twenty-five: the number D-08 and the Master Services Agreement state
+    (SPN-02), enforced here rather than by policy. */
+export const MIN_CELL = MIN_COHORT
 
-/** Never allowed anywhere in dashboard copy. */
+/** Never allowed anywhere in sponsor-console copy. The workplace-statutory
+    terms are SPN-07: a sponsor must never be able to file this product as a
+    compliance control (Lexicon_Avoid 9). */
 export const FORBIDDEN_TERMS = [
+  'nr-1',
+  'nr1',
+  'psychosocial',
+  'psicosociale',
+  'psicossocial',
+  'stress lavoro-correlato',
+  'valutazione dei rischi',
+  'dvr',
+  'pgr',
+  'risk assessment',
+  'compliance',
   'at risk',
   'problematic',
   'concerning',

@@ -20,6 +20,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
+import { useLegal } from '../legal/LegalContext'
+import { HelpNowButton } from '../legal/HelpNow'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
@@ -33,17 +35,16 @@ import { Roster, PatientCard, initials } from './Patients'
 import { Calendar, AvailabilityModal } from './Calendar'
 import { LiveSession, type SessionResult } from './LiveSession'
 import { SessionReport } from './Report'
-import { Prescriptions, ReportsArchive, Performance, WorkspaceSettings } from './Tools'
+import { Prescriptions, ReportsArchive,  WorkspaceSettings } from './Tools'
 import {
   useServerIdentity,
   demoWorkspace,
-  lowAdherencePatients,
   useWorkspace,
   type SessionRow,
   type WorkspacePatient,
 } from './data'
 
-type Nav = 'patients' | 'calendar' | 'prescriptions' | 'reports' | 'performance' | 'sandbox' | 'settings'
+type Nav = 'patients' | 'calendar' | 'prescriptions' | 'reports' | 'sandbox' | 'settings'
 
 const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[] }[] = [
   {
@@ -56,14 +57,13 @@ const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[]
   {
     title: 'Weekly',
     items: [
-      { id: 'prescriptions', icon: '📋', label: 'Prescriptions' },
+      { id: 'prescriptions', icon: '📋', label: 'Selected content' },
       { id: 'reports', icon: '📄', label: 'Reports' },
     ],
   },
   {
     title: 'Utility',
     items: [
-      { id: 'performance', icon: '📈', label: 'Performance' },
       { id: 'sandbox', icon: '▶️', label: 'Sandbox' },
       { id: 'settings', icon: '⚙️', label: 'Settings' },
     ],
@@ -168,7 +168,10 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
     )
   }
 
-  const onboarded = cred.status === 'approved' && state.account.termsSignedAt
+  /* Approved by a reviewer AND the Professional Terms accepted, by version,
+     on the server (M2R-05). The local stamp is a mirror for this device. */
+  const legal = useLegal()
+  const onboarded = cred.status === 'approved' && (legal.accepted('professional') || (state.account.termsSignedAt && !legal.loaded))
 
   if (!onboarded) {
     return (
@@ -209,8 +212,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   const [view, setView] = useState<View>(sandboxOnEntry ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
   const [menu, setMenu] = useState(false)
   const [availOpen, setAvailOpen] = useState(false)
-
-  const lowAdherence = lowAdherencePatients(state)
 
   /* The appointment id is the ROOM both devices join. The patient books
      through the data layer and the therapist reads the same record, so
@@ -356,7 +357,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
             setNav={(n) => { setNav(n); setView({ kind: 'nav' }) }}
             account={state.account}
             requests={state.requests.length}
-            lowAdherence={lowAdherence}
             collapsed
           />
           <div className="w-content">
@@ -400,7 +400,6 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
         }}
         account={state.account}
         requests={state.requests.length}
-        lowAdherence={lowAdherence}
       />
 
       <div className="w-content">
@@ -454,8 +453,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
                   }}
                 />
               )}
-              {nav === 'performance' && <Performance state={state} />}
-              {nav === 'settings' && (
+                            {nav === 'settings' && (
                 <WorkspaceSettings state={state} update={update} onOpenAvailability={() => setAvailOpen(true)} />
               )}
             </>
@@ -504,14 +502,12 @@ function Sidebar({
   setNav,
   account,
   requests,
-  lowAdherence,
   collapsed,
 }: {
   nav: Nav
   setNav: (n: Nav) => void
   account: { fullName: string; online: boolean }
   requests: number
-  lowAdherence: number
   collapsed?: boolean
 }) {
   const { t } = useI18n()
@@ -534,7 +530,6 @@ function Sidebar({
           {g.items.map((i) => {
             const badge =
               i.id === 'calendar' && requests > 0 ? '·'
-              : i.id === 'prescriptions' && lowAdherence > 0 ? '·'
               : null
             return (
               <button key={i.id} className={`w-navitem${nav === i.id ? ' is-on' : ''}`} onClick={() => setNav(i.id)}>
@@ -575,6 +570,8 @@ function TopBar({
         ))}
       </nav>
       <div className="w-topbar__right">
+        {/* On every screen of every surface (CRS-01). */}
+        <HelpNowButton variant="inline" />
         <button className="w-user" onClick={() => setMenu(!menu)} aria-expanded={menu}>
           <span>{account.fullName}</span>
           <span className="w-avatar" aria-hidden="true">{initials(account.fullName)}</span>
@@ -583,6 +580,7 @@ function TopBar({
           <div className="w-usermenu">
             <button className="w-usermenu__row" onClick={() => { onProfile(); setMenu(false) }}>{t('Profile')}</button>
             <a className="w-usermenu__row" href="mailto:support@goodloop.health">{t('Help')}</a>
+            <a className="w-usermenu__row" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
             <SignOutButton className="w-usermenu__row" />
           </div>
         )}

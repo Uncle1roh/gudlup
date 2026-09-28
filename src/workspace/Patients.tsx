@@ -22,6 +22,7 @@
    ============================================================================ */
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLegal } from '../legal/LegalContext'
 import { useI18n, fmtDate as localeDate } from '../i18n'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
@@ -30,20 +31,17 @@ import { planItemsForPrescription } from '../data/plan'
 import type { Appointment as Booking } from '../data/scheduling'
 import {
   CLUSTER_LABEL,
-  adherenceBand,
-  adherencePct,
-  assessmentDueLabel,
   threadIdFor,
   codeExpired,
   type WorkspacePatient,
   type WorkspaceState,
+  rxTarget,
 } from './data'
 import type { Duration } from '../types/domain'
 import {
   INSTRUMENTS,
   SCHEDULE,
   SCORE_DIRECTION,
-  isDueAt,
   type AssessmentRecord,
   type InstrumentId,
   type Timepoint,
@@ -52,9 +50,7 @@ import {
   useAssessments,
   send as sendAssessment,
   forPatient,
-  cbiOffered,
   minutesFor,
-  vasSeries as vasSeriesOf,
 } from '../data/assessmentStore'
 
 type Filter = 'all' | 'today' | 'assessment' | 'alerts' | 'inactive'
@@ -62,7 +58,6 @@ type Filter = 'all' | 'today' | 'assessment' | 'alerts' | 'inactive'
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'today', label: "Today's sessions" },
-  { id: 'assessment', label: 'Assessment due' },
   { id: 'inactive', label: 'Inactive' },
 ]
 
@@ -128,13 +123,14 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
   const now = Date.now()
 
   const rows = useMemo(() => {
+    /* A roster row floats to the top only for an administrative reason —
+       nobody has seen this person for a month. Never for anything the
+       software worked out about them (M2R-15). */
     const alerts = (p: WorkspacePatient) =>
-      Boolean(assessmentDueLabel(p)) ||
       (p.lastSessionAt != null && now - p.lastSessionAt > 30 * DAY)
 
     let list = state.patients
     if (filter === 'today') list = list.filter((p) => p.nextSessionAt && new Date(p.nextSessionAt).toDateString() === new Date().toDateString())
-    if (filter === 'assessment') list = list.filter((p) => assessmentDueLabel(p))
     if (filter === 'alerts') list = list.filter(alerts)
     if (filter === 'inactive') list = list.filter((p) => !p.lastSessionAt || now - p.lastSessionAt > 30 * DAY)
 
@@ -372,10 +368,6 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
   const [newGoal, setNewGoal] = useState('')
 
   const toggle = (s: Section) => setOpen((o) => ({ ...o, [s]: !o[s] }))
-  const due = assessmentDueLabel(patient)
-  const rxAvg = patient.prescriptions.length
-    ? Math.round(patient.prescriptions.reduce((n, r) => n + adherencePct(r), 0) / patient.prescriptions.length)
-    : null
 
   const notes = patient.notes
     .filter((n) => !noteSearch || n.text.toLowerCase().includes(noteSearch.toLowerCase()) || n.tag.toLowerCase().includes(noteSearch.toLowerCase()))
@@ -409,7 +401,7 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
           ) : (
             <table className="w-table">
               <thead>
-                <tr><th>{t('Date')}</th><th>{t('Type')}</th><th>{t('Protocol')}</th><th>{t('Dur.')}</th><th>{t('Notes')}</th><th>{t('Report')}</th></tr>
+                <tr><th>{t('Date')}</th><th>{t('Type')}</th><th>{t('Content')}</th><th>{t('Dur.')}</th><th>{t('Notes')}</th><th>{t('Report')}</th></tr>
               </thead>
               <tbody>
                 {[...patient.sessions].sort((a, b) => b.at - a.at).map((s) => (
@@ -429,7 +421,6 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
 
         <Section
           title={t('Assessments')}
-          badge={due ?? undefined}
           open={open.assessments}
           onToggle={() => toggle('assessments')}
         >
@@ -474,45 +465,40 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
         </Section>
 
         <Section
-          title={t('Active Prescriptions')}
+          title={t('Selected content')}
           count={patient.prescriptions.length}
           open={open.prescriptions}
           onToggle={() => toggle('prescriptions')}
         >
           {!patient.prescriptions.length ? (
-            <p className="w-small">{t('No active prescriptions.')}</p>
+            <p className="w-small">{t('Nothing selected.')}</p>
           ) : (
             <table className="w-table">
               <thead>
-                <tr><th>{t('Prescription')}</th><th>{t('Frequency')}</th><th>{t('Assigned')}</th><th>{t('Adherence')}</th><th>{t('Status')}</th></tr>
+                <tr><th>{t('Content')}</th><th>{t('Frequency')}</th><th>{t('Selected on')}</th><th>{t('Listened')}</th><th>{t('Status')}</th></tr>
               </thead>
               <tbody>
                 {patient.prescriptions.map((rx) => {
-                  const a = adherencePct(rx)
+                  const target = rxTarget(rx)
                   return (
                     <tr key={rx.id}>
                       <td className="w-mono w-small">{rx.protocolCode} {versionShort(rx.version)}</td>
                       <td>{t('{n}× this week', { n: rx.perWeek })}</td>
                       <td className="w-small">{fmtDate(rx.fromAt)}</td>
-                      <td>
-                        <span className={`w-adh w-adh--${adherenceBand(a)}`}>
-                          <span style={{ width: `${a}%` }} />
-                        </span>
-                        <span className="w-small"> {a}%</span>
-                      </td>
-                      <td className="w-small">{a >= 100 ? t('Completed') : t('In progress')}</td>
+                      <td className="w-small">{t('{done} of {total} done', { done: rx.done, total: target })}</td>
+                      <td className="w-small">{rx.done >= target ? t('Completed') : t('In progress')}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
           )}
-          <button className="w-btn w-btn--ghost" onClick={() => setRxOpen(true)}>{t('New prescription')}</button>
+          <button className="w-btn w-btn--ghost" onClick={() => setRxOpen(true)}>{t('Select content')}</button>
         </Section>
 
         <Section
           title={t('Clinical Notes')}
-          badge={t('Therapist only · E2E encrypted')}
+          badge={t('Therapist only · encrypted in transit and at rest')}
           count={patient.notes.length}
           open={open.notes}
           onToggle={() => toggle('notes')}
@@ -606,27 +592,21 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
       <aside className="w-col-side">
         <div className="w-sticky">
           <button className="w-btn w-btn--primary w-btn--block w-btn--lg" onClick={onCall}>📹 {t('Start Video Call')}</button>
-          <button className="w-btn w-btn--ghost w-btn--block" onClick={() => setRxOpen(true)}>{t('New prescription')}</button>
+          <button className="w-btn w-btn--ghost w-btn--block" onClick={() => setRxOpen(true)}>{t('Select content')}</button>
 
           <div className="w-sidecard">
             <div className="w-field__label">{t('Next session')}</div>
             <strong>{patient.nextSessionAt ? fmtWhen(patient.nextSessionAt) : t('Not scheduled')}</strong>
           </div>
-          <div className="w-sidecard">
-            <div className="w-field__label">{t('VAS summary')}</div>
-            <VasSummary patient={patient} rows={rows} queueId={queueId} />
-          </div>
-          <div className="w-sidecard">
-            <div className="w-field__label">{t('Prescription adherence')}</div>
-            <strong>{rxAvg == null ? '—' : `${rxAvg}%`}</strong>
-          </div>
+          {/* No pooled VAS mean and no adherence percentage here: both were
+              outcome figures the software computed about the person
+              (M2R-17). The professional's own entries are on the card. */}
         </div>
       </aside>
 
       {assessOpen && (
         <AssessmentModal
           patient={patient}
-          offerCbi={cbiOffered(rows, queueId)}
           onClose={() => setAssessOpen(false)}
           onSend={(instrument, timepoint) => {
             /* The queue row is what the patient's app reads. The due label is
@@ -673,30 +653,6 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
   )
 }
 
-/**
- * One VAS trend, not two.
- *
- * A patient who sees a therapist AND uses Self Use produces readings on both
- * sides. Averaging only the therapist-guided ones would quietly answer a
- * different question than the one this row appears to ask, so the guided
- * sessions and the app's own pre/post pairs are pooled into a single mean.
- */
-function VasSummary({ patient, rows, queueId }: { patient: WorkspacePatient; rows: AssessmentRecord[]; queueId: string }) {
-  const { t } = useI18n()
-  const guided = patient.sessions
-    .filter((s) => s.vasPre != null && s.vasPost != null)
-    .map((s) => ({ pre: s.vasPre as number, post: s.vasPost as number }))
-  const selfUse = vasSeriesOf(rows, queueId).map((v) => ({ pre: v.pre, post: v.post }))
-  const withVas = [...guided, ...selfUse]
-  if (!withVas.length) return <span className="w-muted">{t('Not recorded')}</span>
-  const pre = withVas.reduce((n, s) => n + s.pre, 0) / withVas.length
-  const post = withVas.reduce((n, s) => n + s.post, 0) / withVas.length
-  return (
-    <strong>
-      {pre.toFixed(1)} → {post.toFixed(1)}
-    </strong>
-  )
-}
 
 /**
  * What has actually been sent, and what came back.
@@ -770,23 +726,19 @@ function AssessmentBlock({ patient }: { patient: WorkspacePatient }) {
       {[...byInstrument.entries()].map(([instrument, points]) => {
         const sorted = [...points].sort((a, b) => a.at - b.at)
         const last = sorted[sorted.length - 1]
-        const prev = sorted[sorted.length - 2]
         return (
           <div key={instrument} className="w-assess__row">
             <div className="w-assess__name">{instrument}</div>
             <div className="w-assess__vals">
-              {last.values.map((v) => {
-                const before = prev?.values.find((x) => x.label === v.label)?.value
-                const pctChange = before != null && before !== 0 ? Math.round(((v.value - before) / before) * 100) : null
-                const better = pctChange != null && pctChange < 0
-                return (
-                  <span key={v.label} className={`w-assess__val${pctChange == null ? '' : better ? ' is-down' : ' is-up'}`}>
-                    <em>{v.label}</em>
-                    <strong>{v.value}</strong>
-                    {pctChange != null && <span className="w-small">{pctChange > 0 ? '+' : '−'}{Math.abs(pctChange)}%</span>}
-                  </span>
-                )
-              })}
+              {/* The values, and only the values: no percentage change and no
+                  colour that means "better" — that reading is the
+                  professional's (M2R-17, MN-29). */}
+              {last.values.map((v) => (
+                <span key={v.label} className="w-assess__val">
+                  <em>{v.label}</em>
+                  <strong>{v.value}</strong>
+                </span>
+              ))}
             </div>
             <div className="w-small w-assess__time">
               {sorted.map((p, i) => (
@@ -796,7 +748,7 @@ function AssessmentBlock({ patient }: { patient: WorkspacePatient }) {
           </div>
         )
       })}
-      <p className="w-note">{t('Numbers and trends only — never a diagnostic label.')}</p>
+      <p className="w-note">{t('Numbers only — never a diagnostic label, never a change the platform computed.')}</p>
     </div>
   )
 }
@@ -821,25 +773,22 @@ const SENDABLE: Exclude<InstrumentId, 'VAS'>[] = ['DASS21', 'PSS10', 'BRS', 'CBI
 
 function AssessmentModal({
   patient,
-  offerCbi,
   onClose,
   onSend,
 }: {
   patient: WorkspacePatient
-  offerCbi: boolean
   onClose: () => void
   onSend: (instrument: InstrumentId, timepoint: Timepoint) => void
 }) {
   const { t } = useI18n()
-  const due = assessmentDueLabel(patient)
-  /* "DASS-21 (T2)" — the fixture's due label carries the timepoint. */
-  const dueTimepoint = (due?.match(/T[0-3]/)?.[0] as Timepoint | undefined) ?? 'T0'
-  const [instrument, setInstrument] = useState<InstrumentId>(due ? 'DASS21' : 'DASS21')
-  const [timepoint, setTimepoint] = useState<Timepoint>(dueTimepoint)
+  /* Nothing is proposed: no "due" instrument, no timepoint the schedule
+     picked, no CBI "offered because the DASS-21 met a trigger". The
+     professional chooses the instrument and the timepoint (M2R-15/16). */
+  const [instrument, setInstrument] = useState<InstrumentId>('DASS21')
+  const [timepoint, setTimepoint] = useState<Timepoint>('T0')
 
-  const options = SENDABLE.filter((id) => id !== 'CBI' || offerCbi)
+  const options = SENDABLE
   const chosen = INSTRUMENTS[instrument as Exclude<InstrumentId, 'VAS'>]
-  const scheduled = instrument !== 'CBI' && isDueAt(instrument, timepoint)
 
   return (
     <div className="w-scrim" onClick={onClose} role="dialog" aria-modal="true">
@@ -850,10 +799,7 @@ function AssessmentModal({
           <span className="w-field__label">{t('Instrument')}</span>
           <select className="w-input" value={instrument} onChange={(e) => setInstrument(e.target.value as InstrumentId)}>
             {options.map((id) => (
-              <option key={id} value={id}>
-                {INSTRUMENTS[id].name}
-                {id === 'CBI' ? ` — ${t('offered')}` : isDueAt(id, timepoint) ? ` — ${t('due at {tp}', { tp: timepoint })}` : ''}
-              </option>
+              <option key={id} value={id}>{INSTRUMENTS[id].name}</option>
             ))}
           </select>
         </label>
@@ -879,14 +825,7 @@ function AssessmentModal({
             licence: t(chosen.licence),
           })}
         </p>
-        {instrument === 'CBI' && (
-          <p className="w-small">
-            {t('Offered because the latest DASS-21 met the trigger. It is not part of the schedule and carries no interpretation.')}
-          </p>
-        )}
-        {!scheduled && instrument !== 'CBI' && (
-          <p className="w-small">{t('Not part of the proposed schedule at this timepoint — sending it anyway is your call.')}</p>
-        )}
+        <p className="w-small">{t('Which instrument, and when, is your decision. Good Loop proposes nothing.')}</p>
 
         <p className="w-lead">
           {t('The patient completes the questionnaire in their own app, at their own pace. It is never administered during a call.')}
@@ -920,12 +859,16 @@ function PrescriptionModal({
      protocol a PO disabled this morning is not in this list, and neither are
      the six clinical-only ones. */
   const options = catalog.prescribable
+  /* Nothing pre-selected, nothing defaulted: the first item in a list is not
+     the software's suggestion, and a frequency of three is not the
+     software's plan (M2R-15, MN-27). Every field is the professional's. */
   const [code, setCode] = useState('')
-  const selected = options.find((o) => o.code === code) ?? options[0]
+  const selected = options.find((o) => o.code === code)
   const [version, setVersion] = useState<Duration | null>(null)
-  const [perWeek, setPerWeek] = useState(3)
+  const [perWeek, setPerWeek] = useState<number | null>(null)
   const [weeks, setWeeks] = useState(1)
   const [note, setNote] = useState('')
+  const { m } = useLegal()
 
   /* Only the time signatures this protocol actually publishes are offered —
      prescribing a 24-minute version that was never rendered would send the
@@ -943,9 +886,9 @@ function PrescriptionModal({
     return (
       <div className="w-scrim" onClick={onClose} role="dialog" aria-modal="true">
         <div className="w-modal" onClick={(e) => e.stopPropagation()}>
-          <h2 className="w-h2">{t('Nothing to prescribe yet')}</h2>
+          <h2 className="w-h2">{t('Nothing to select yet')}</h2>
           <p className="w-lead">
-            {t('No Self Use protocol is published and enabled right now, so there is no homework to assign.')}
+            {t('No self-guided content is published and enabled right now, so there is nothing to select for listening between sessions.')}
           </p>
           <div className="w-actions"><button className="w-btn w-btn--primary" onClick={onClose}>{t('Close')}</button></div>
         </div>
@@ -956,13 +899,16 @@ function PrescriptionModal({
   return (
     <div className="w-scrim" onClick={onClose} role="dialog" aria-modal="true">
       <div className="w-modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="w-h2">{t('New prescription for {name}', { name: patient.name })}</h2>
+        <h2 className="w-h2">{t('Select content for {name}', { name: patient.name })}</h2>
+        {/* PRO-4 — the header line of the content library (M2R-15, D-07). */}
+        <p className="w-note">{m('PRO-4')}</p>
 
         <label className="w-field">
           <span className="w-field__label">
-            {t('Protocol')} <em>· {t('19 Self Use protocols, grouped by cluster')}</em>
+            {t('Content')} <em>· {t('published self-guided content, grouped by family')}</em>
           </span>
           <select className="w-input" value={selected?.code ?? ''} onChange={(e) => { setCode(e.target.value); setVersion(null) }}>
+            <option value="">{t('Choose…')}</option>
             {grouped.map(([family, list]) => (
               <optgroup key={family} label={t(CLUSTER_LABEL[family] ?? family)}>
                 {list.map((p) => (
@@ -988,7 +934,8 @@ function PrescriptionModal({
           </label>
           <label className="w-field">
             <span className="w-field__label">{t('Frequency')}</span>
-            <select className="w-input" value={perWeek} onChange={(e) => setPerWeek(Number(e.target.value))}>
+            <select className="w-input" value={perWeek ?? ''} onChange={(e) => setPerWeek(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">{t('Choose…')}</option>
               {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{t('{n}× per week', { n })}</option>)}
             </select>
           </label>
@@ -1009,11 +956,11 @@ function PrescriptionModal({
         </label>
 
         <p className="w-note">
-          {t('Patient will see:')} “{t('Recommended by your therapist: {name}', { name: selected?.patientName ?? '' })}”
+          {t('Patient will see:')} “{selected?.patientName ?? '…'} · {m('SES-6', { name: t('you') })}”
         </p>
         {selected && !selected.audioReady && (
           <p className="w-warnbox">
-            {t('This protocol has no rendered audio yet. The patient will hear the placeholder bed until a mixdown is published.')}
+            {t('This content has no rendered audio yet. The patient will hear the placeholder bed until a mixdown is published.')}
           </p>
         )}
 
@@ -1021,11 +968,12 @@ function PrescriptionModal({
           <button className="w-btn w-btn--ghost" onClick={onClose}>{t('Cancel')}</button>
           <button
             className="w-btn w-btn--primary"
+            disabled={!selected || perWeek == null}
             onClick={() =>
-              onAssign({
+              selected && perWeek != null && onAssign({
                 id: `rx-${Date.now()}`,
                 patientId: patient.id,
-                protocolCode: selected?.code ?? '',
+                protocolCode: selected.code,
                 version: chosenVersion,
                 perWeek,
                 fromAt: Date.now(),
@@ -1035,7 +983,7 @@ function PrescriptionModal({
               })
             }
           >
-            {t('Assign')}
+            {t('Select')}
           </button>
         </div>
       </div>

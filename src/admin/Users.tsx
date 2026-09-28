@@ -22,6 +22,22 @@ export function Users({ actor }: { actor: string }) {
     refetch()
   }
 
+  /* ONB-02 / D-11: a person found to be under eighteen is suspended and
+     their data deleted, except what the law requires; the action is logged
+     and the safeguarding path is a matter for the team, not the console. */
+  async function minorDetected(u: AdminUser) {
+    if (!window.confirm(`Segnalare ${u.email} come minorenne?\n\nL'account viene sospeso e i dati personali cancellati, salvo quanto la legge impone di conservare. L'azione viene registrata.`)) return
+    setBusy(u.id)
+    try {
+      await dp.setUserActive(u.id, false)
+      await dp.adminDeleteProfile(u.id)
+      await dp.logAudit({ actor, action: 'user.minor_detected', target: u.email, detail: 'sospeso e cancellato (D-11)' })
+    } finally {
+      setBusy(null)
+      refetch()
+    }
+  }
+
   async function toggleActive(u: AdminUser) {
     setBusy(u.id)
     await dp.setUserActive(u.id, !u.active)
@@ -69,6 +85,11 @@ export function Users({ actor }: { actor: string }) {
                 >
                   {u.active ? 'Disattiva' : 'Attiva'}
                 </button>
+                {u.role === 'b2c_user' && (
+                  <button className="b2b-btn b2b-btn--ghost" disabled={busy === u.id} title="Minorenne rilevato: sospendi e cancella (D-11)" onClick={() => void minorDetected(u)}>
+                    Minorenne
+                  </button>
+                )}
               </div>
             </div>
           ))}

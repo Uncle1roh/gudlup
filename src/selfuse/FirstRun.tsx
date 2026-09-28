@@ -1,134 +1,99 @@
 /* ============================================================================
-   Self Use — the first-run explainer
+   Self Use — the first run: the onboarding screens the framework requires,
+   then the explainer
 
-   People were arriving in the library and not knowing what the app is. There
-   was nothing between registering and a shelf of covers: the library assumes
-   you already know what a Good Loop session IS, and if you do not, a grid of
-   pretty artwork does not tell you.
+   ONB-05 fixes the onboarding at three screens, plus one for sponsored
+   people, and nothing legal anywhere else in it. Screen 1 — age and country —
+   is the door itself (AuthScreen), because it has to precede the account.
+   The rest is here, once, before the library:
 
-   THE FIRST SCREEN IS ALWAYS THE SAME: the Terms and the Privacy Policy,
-   accepted before anything else, by everyone. It is not a card in the
-   explainer — it is the door. It cannot be skipped, the button stays inert
-   until the box is ticked, and the acceptance is recorded the moment it is
-   given rather than when the last card is reached. Someone who accepts and
-   then closes the app has accepted.
+     Screen 2  How Good Loop works — the two ways of using it (ONB-2.1), a
+               SEPARATE, logged tick that it is not for emergencies (ONB-2.2,
+               LEG-02) and where Help now lives (ONB-2.3).
+     Screen 3  Terms — an unticked box (ONB-3.1) with every incorporated
+               notice linked from the screen (D-01 drafting note), the
+               privacy line (ONB-3.2, acknowledged, not consented), and one
+               toggle per optional purpose, none pre-ticked, each with its
+               consequence (ONB-3.3, LEG-04, MN-14).
+     Screen 4  Sponsored people only — what the employer never sees
+               (ONB-4.1), the work-device line (ONB-4.2) and a personal
+               e-mail (ONB-4.3, SPN-12).
 
-   TWO WIZARDS AFTER THAT, because two people arrive here.
+   After that, the explainer cards: what the sessions are for and where they
+   come from. They promise nothing clinical. The method card describes what
+   the audio technically does — sound alternating between the ears, binaural
+   audio, structured breathing cues, guided imagery — and names no modality
+   (MN-31, Lexicon_Avoid 15/16): the professional may draw such a connection
+   in their own communication with their own client; Good Loop may not.
 
-   · With a company code — their employer bought Good Loop, so the first thing
-     to say is what they were given: one method, two ways to use it. Then what
-     it is for at work, then where it comes from. Three cards.
-   · Without one — nobody bought anything for them, and a card about a plan
-     they do not have is an advertisement in the way. Two cards: what it is
-     for, and where it comes from.
-
-   The middle and last cards are the SAME cards in both flows; the first is the
-   one the code adds. Content follows `Suggestions/onboarding-sug.html`.
-
-   Three rules it keeps:
-   · It is ONE time. Finishing it or skipping it both stamp `tutorialSeenAt`,
-     and the stamp is what the shell gates on. Profile → "How Good Loop Works"
-     is where it lives afterwards, for anyone who wants it again.
-   · It promises nothing clinical. Good Loop is a mitigation and wellbeing
-     tool; the last card of either flow says in plain language that it does not
-     replace medical or psychological care, because the first run is the honest
-     place to say so.
-   · The pictures are illustrations shipped in `public/tutorial`, one per
-     card. They are `alt=""` and `aria-hidden`: the words carry the meaning,
-     so a picture that has not loaded costs a person nothing.
+   Every acceptance is recorded the moment it is given (versioned, timestamped,
+   server-side through the legal context), not when the last card is reached.
+   Someone who accepts and then closes the app has accepted.
    ============================================================================ */
 
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from './theme'
+import { useDataProvider } from '../data/provider'
+import { useLegal } from '../legal/LegalContext'
+import { LegalSheet } from '../legal/LegalPage'
+import type { LegalDocId } from '../legal/types'
+import type { ConsentPurpose } from '../legal/records'
 
 interface Point {
   label: string
   note: string
 }
 
-interface Step {
-  title: string
-  body: string
-  /** Key into ART below; the legal card has no illustration. */
-  art?: ArtKey
-  /** The Terms + Privacy gate. Rendered differently and never skippable. */
-  legal?: boolean
-  /** Two to six short lines under the paragraph — what the card lists. */
-  points?: Point[]
-  /** Six one-word techniques read better on one line each than as stacked
-      label/paragraph pairs — and they have to fit beside a quote. */
-  tight?: boolean
-  quote?: { text: string; who: string }
-}
-
-/* ------------------------------------------------------------- the art ----
-
-   One illustration per card, from `public/tutorial`: a consultation for the
-   two modes, someone listening for the working day, a desk for the method.
-   Decorative — every one is `aria-hidden` and the words carry the meaning. */
-
 type ArtKey = 'modes' | 'work' | 'method'
 
 const ART: Record<ArtKey, { src: string; wide?: boolean; small?: boolean }> = {
   modes:  { src: '/tutorial/t2.svg', wide: true },
   work:   { src: '/tutorial/t1.svg' },
-  /* The method card carries six techniques and a quote as well; of everything
-     on it, the picture is what can afford to be small. */
   method: { src: '/tutorial/t3.svg', small: true },
 }
 
-/* ------------------------------------------------------------ the words ---
-
-   English is the key, Italian is in `it-selfuse.ts`, Portuguese in `pt.ts`. */
-
-/**
- * The acceptance, from `Suggestions/onboarding-sug.html`.
- *
- * What is NOT here: a link to a hosted Terms page, because there is no URL to
- * point at yet. Inventing one would be worse than naming the documents and
- * showing what they say — when the real pages exist, they belong here.
- */
-const LEGAL_STEP: Step = {
-  title: 'Your data, your control.',
-  body:
-    'Good Loop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.',
-  legal: true,
-  points: [
-    { label: 'What we keep', note: 'Your account, the sessions you play and the check-ins you fill in — nothing else.' },
-    { label: 'Your company sees', note: 'Anonymous aggregate figures only, and only above a threshold that cannot identify anyone.' },
-    { label: 'You can stop', note: 'Withdraw a consent or export everything from Profile → Privacy & Data, at any time.' },
-  ],
+interface ExplainerStep {
+  kind: 'explainer'
+  title: string
+  body: string
+  art: ArtKey
+  points: Point[]
+  tight?: boolean
 }
+type Step =
+  | { kind: 'how' }
+  | { kind: 'terms' }
+  | { kind: 'sponsored' }
+  | ExplainerStep
 
-/** Card 1, only for someone whose company bought this. */
-function modesStep(professional: boolean): Step {
+/** Card 1 of the explainer, only for someone whose company bought this. */
+function modesStep(professional: boolean): ExplainerStep {
   return {
-    title: 'One method, two ways to use it',
+    kind: 'explainer',
+    title: 'One library, two ways to use it',
     body:
-      'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.',
+      'Most days you open Good Loop on your own. Where your plan includes it, a licensed professional can also work with you — and may use the same sessions in the care they provide.',
     art: 'modes',
     points: [
       {
         label: 'On your own',
-        note: 'Short guided audio sessions for the day you are having — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.',
+        note: 'Short audio sessions for the moment you are in — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.',
       },
       {
         label: 'With a professional',
-        /* An extended plan is the ONLY thing that opens booking, video
-           sessions and assigned sessions, so the card says which of the two a
-           person actually holds instead of promising both to everyone. */
         note: professional
-          ? 'Included in your plan: sessions with a licensed psychologist, booked and held inside the app.'
+          ? 'Included in your plan: sessions with a licensed psychologist, booked and held inside the app. They decide what is used and when.'
           : 'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.',
       },
     ],
   }
 }
 
-/** What the sessions are FOR — the card both flows open with or reach second. */
-const WORK_STEP: Step = {
+/** What the sessions are FOR. */
+const WORK_STEP: ExplainerStep = {
+  kind: 'explainer',
   title: 'Made for the working day',
   body:
     'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.',
@@ -140,40 +105,61 @@ const WORK_STEP: Step = {
   ],
 }
 
-/** Where it comes from. Content from the POs' onboarding deck. */
-const METHOD_STEP: Step = {
-  title: 'Not belief. Neuroscience.',
+/** Where it comes from: what the audio technically does, developed by our
+    clinical team. A description of the sound, not a claim about you. */
+const METHOD_STEP: ExplainerStep = {
+  kind: 'explainer',
+  title: 'Built as sound',
   body:
-    'Good Loop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.',
+    'Each session is six segments of pre-recorded audio, developed by our clinical team and designed for relaxation that works in the time you have.',
   art: 'method',
   tight: true,
   points: [
-    { label: 'EMDR', note: 'bilateral stimulation' },
-    { label: 'Polyvagal theory', note: 'nervous-system regulation' },
-    { label: 'Binaural beats', note: 'calibrated frequencies' },
-    { label: 'Guided breathing', note: 'parasympathetic activation' },
-    { label: 'Mindfulness', note: 'stress and regulation' },
-    { label: 'DBT', note: 'emotional tolerance' },
+    { label: 'Alternating audio', note: 'sound that moves between the left and right ear at a set interval' },
+    { label: 'Binaural audio', note: 'calibrated frequencies, one per ear' },
+    { label: 'Structured breathing cues', note: 'a rhythm to breathe with' },
+    { label: 'Guided imagery', note: 'a scene to picture in detail' },
+    { label: 'Ambient soundscape', note: 'the ground the voice sits on' },
+    { label: 'Voice-guided sequence', note: 'one voice, one thread' },
   ],
-  quote: {
-    text: 'The body knows how to process — when given the space.',
-    who: 'Giampiero Varetti · Clinical psychologist · Creator of the methodology · 30+ years of practice',
-  },
 }
+
+/** The optional purposes asked on screen 3, with the wording the person sees
+    — which is what the consent row records (LEG-04). */
+const PURPOSES: { purpose: ConsentPurpose; label: string; note: string }[] = [
+  { purpose: 'measurement', label: 'Wellbeing check-ins', note: 'A short weekly self-report you can see back as your own history. Never scored, never compared to anything.' },
+  { purpose: 'aggregate', label: 'Aggregate programme figures', note: 'Counted in totals for groups of 25 or more. Never shared individually.' },
+  { purpose: 'notifications', label: 'Reminders on this device', note: 'Reminders never contain health information.' },
+  { purpose: 'marketing', label: 'News from Good Loop', note: 'Occasional product news by e-mail.' },
+  { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.' },
+]
+
+/** The notices incorporated into the Terms (D-01), each one tap from the
+    acceptance screen. */
+const LINKED_NOTICES: { id: LegalDocId; label: string }[] = [
+  { id: 'terms', label: 'Terms' },
+  { id: 'D-02', label: 'Nature of the service' },
+  { id: 'D-04', label: 'Self-guided use' },
+  { id: 'D-05', label: 'Professionally guided use' },
+  { id: 'D-06', label: 'Automated features' },
+  { id: 'D-10', label: 'Confidentiality and data' },
+]
 
 export function FirstRun({
   onDone,
   onAcceptTerms,
   hasCompanyCode = false,
+  sponsorName,
   professional = false,
   needsTerms = false,
   needsTutorial = true,
 }: {
   onDone: () => void
-  /** Called the moment the box is ticked and accepted, not at the end. */
+  /** Called the moment the Terms are accepted, not at the end. */
   onAcceptTerms?: () => void
-  /** Their employer bought Good Loop: the flow opens with what they were given. */
+  /** Their employer bought Good Loop: screen 4 and the modes card apply. */
   hasCompanyCode?: boolean
+  sponsorName?: string
   /** That plan is the extended one — booking and video sessions are live. */
   professional?: boolean
   /** The Terms have never been accepted on this account. */
@@ -183,43 +169,80 @@ export function FirstRun({
 }) {
   const { t } = useI18n()
   const theme = useSuTheme()
+  const legal = useLegal()
+  const dp = useDataProvider()
   const [i, setI] = useState(0)
-  const [accepted, setAccepted] = useState(false)
+  const [crisisAck, setCrisisAck] = useState(false)
+  const [termsAck, setTermsAck] = useState(false)
+  const [consents, setConsents] = useState<Partial<Record<ConsentPurpose, boolean>>>({})
+  const [personalEmail, setPersonalEmail] = useState('')
+  const [sheet, setSheet] = useState<LegalDocId | null>(null)
+  const [busy, setBusy] = useState(false)
 
+  const legalSteps: Step[] = needsTerms
+    ? [{ kind: 'how' }, { kind: 'terms' }, ...(hasCompanyCode ? [{ kind: 'sponsored' } as Step] : [])]
+    : []
   const explainer: Step[] = hasCompanyCode
     ? [modesStep(professional), WORK_STEP, METHOD_STEP]
     : [WORK_STEP, METHOD_STEP]
-  const steps: Step[] = [
-    ...(needsTerms ? [LEGAL_STEP] : []),
-    ...(needsTutorial ? explainer : []),
-  ]
+  const steps: Step[] = [...legalSteps, ...(needsTutorial ? explainer : [])]
 
   const step = steps[i]
   const last = i === steps.length - 1
-  const onLegal = !!step.legal
-  /* The one control that decides whether this screen can be left. */
-  const blocked = onLegal && !accepted
+  const onLegal = step.kind !== 'explainer'
+  /* The one control that decides whether a legal screen can be left. */
+  const blocked =
+    (step.kind === 'how' && !crisisAck) ||
+    (step.kind === 'terms' && !termsAck)
 
-  function next() {
-    if (blocked) return
-    if (onLegal) onAcceptTerms?.()
+  async function next() {
+    if (blocked || busy) return
+    setBusy(true)
+    try {
+      if (step.kind === 'how') {
+        await legal.accept('crisis-ack')
+      }
+      if (step.kind === 'terms') {
+        await legal.accept('terms')
+        for (const p of PURPOSES) {
+          // only what was answered: an untouched toggle is "no", and no row
+          if (consents[p.purpose]) await legal.setConsent(p.purpose, true, `${t(p.label)} — ${t(p.note)}`)
+        }
+        onAcceptTerms?.()
+      }
+      if (step.kind === 'sponsored' && personalEmail.trim()) {
+        await dp.updateMyProfile({ personalEmail: personalEmail.trim() }).catch(() => undefined)
+      }
+    } finally {
+      setBusy(false)
+    }
     if (last) onDone()
     else setI(i + 1)
   }
+
+  const dots = (
+    <div
+      className="progress-dots"
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={steps.length}
+      aria-valuenow={i + 1}
+      aria-label={t('Step {n} of {total}', { n: i + 1, total: steps.length })}
+    >
+      {steps.map((_, n) => <span key={n} className={n === i ? 'is-on' : ''} />)}
+    </div>
+  )
 
   return (
     <div className="app-frame su-studio">
       <div className="screen fr">
         <div className="fr__top">
           <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
-          {/* Skipping the EXPLAINER is not a different outcome: it is seen
-              either way, and the whole thing stays in Profile. The acceptance
-              is not an explainer, so it has no Skip. */}
+          {/* The explainer can be skipped; a legal screen cannot. */}
           {!onLegal && <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>}
         </div>
 
-        {/* keyed on the step so the card fades in again on each move */}
-        {step.art && (
+        {step.kind === 'explainer' && (
           <figure
             className={`fr__art${ART[step.art].wide ? ' fr__art--wide' : ''}${ART[step.art].small ? ' fr__art--small' : ''}`}
             key={`art-${i}`}
@@ -229,67 +252,113 @@ export function FirstRun({
         )}
 
         <div className="fr__words" key={`words-${i}`}>
-          <h1 className="display fr__title">{t(step.title)}</h1>
-          <p className="lead fr__body">{t(step.body)}</p>
-
-          {step.points && (
-            <ul className={`fr__points${step.tight ? ' fr__points--tight' : ''}`}>
-              {step.points.map((p) => (
-                <li key={p.label}>
-                  <b>{t(p.label)}</b>
-                  <span>{t(p.note)}</span>
-                </li>
-              ))}
-            </ul>
+          {/* ---- screen 2: how Good Loop works ---------------------------- */}
+          {step.kind === 'how' && (
+            <>
+              <h1 className="display fr__title">{t('How Good Loop works')}</h1>
+              <p className="lead fr__body">{legal.m('ONB-2.1')}</p>
+              <label className="legal-ack fr__accept">
+                <input type="checkbox" checked={crisisAck} onChange={(e) => setCrisisAck(e.target.checked)} />
+                <span>{legal.m('ONB-2.2')}</span>
+              </label>
+              <p className="small muted">{legal.m('ONB-2.3')}</p>
+            </>
           )}
 
-          {step.quote && (
-            <figure className="fr__quote">
-              <blockquote>{t(step.quote.text)}</blockquote>
-              <figcaption>{t(step.quote.who)}</figcaption>
-            </figure>
+          {/* ---- screen 3: terms, privacy, optional consents -------------- */}
+          {step.kind === 'terms' && (
+            <>
+              <h1 className="display fr__title">{t('Your terms and your choices')}</h1>
+              <label className="legal-ack fr__accept">
+                <input type="checkbox" checked={termsAck} onChange={(e) => setTermsAck(e.target.checked)} />
+                <span>{legal.m('ONB-3.1')}</span>
+              </label>
+              <div className="legal-ack__links">
+                {LINKED_NOTICES.map((n) => (
+                  <button key={n.id} type="button" className="legal-link" onClick={() => setSheet(n.id)}>{t(n.label)}</button>
+                ))}
+              </div>
+              <p className="small fr__privacy">
+                <button type="button" className="legal-link" onClick={() => setSheet('privacy')}>{legal.m('ONB-3.2')}</button>
+              </p>
+              <ul className="fr__consents">
+                {PURPOSES.map((p) => (
+                  <li key={p.purpose} className="consent-row">
+                    <div className="consent-row__main">
+                      <div className="consent-row__text">
+                        <div className="consent-row__title">{t(p.label)}</div>
+                        <span className="legal-consent__hint">{t(p.note)}</span>
+                        <span className="legal-consent__hint">{legal.m('ONB-3.3')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`switch${consents[p.purpose] ? ' is-on' : ''}`}
+                        role="switch"
+                        aria-checked={!!consents[p.purpose]}
+                        aria-label={t(p.label)}
+                        onClick={() => setConsents((c) => ({ ...c, [p.purpose]: !c[p.purpose] }))}
+                      >
+                        <span className="switch__knob" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
-          {/* The last card of either flow carries it: a first run is the
-              honest place to say what this is not. The legal card says it too,
-              because for some people that card IS the last one. */}
-          {(last || onLegal) && (
-            <p className="fr__fine">
-              {t('Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.')}
-            </p>
+          {/* ---- screen 4: sponsored people --------------------------------- */}
+          {step.kind === 'sponsored' && (
+            <>
+              <h1 className="display fr__title">{t('What your employer will never see')}</h1>
+              <p className="lead fr__body">{legal.m('ONB-4.1', { sponsor: sponsorName ?? t('Your employer') })}</p>
+              <p className="small muted">{legal.m('ONB-4.2')}</p>
+              <label className="ob-field">
+                <span className="ob-field__label">{legal.m('ONB-4.3')}</span>
+                <input className="ob-input" type="email" autoComplete="email" value={personalEmail}
+                  onChange={(e) => setPersonalEmail(e.target.value)} placeholder={t('name@example.com')} />
+              </label>
+              <p className="small">
+                <button type="button" className="legal-link" onClick={() => setSheet('D-08')}>{t('Read the full notice')}</button>
+              </p>
+            </>
           )}
 
-          {onLegal && (
-            <label className="fr__accept">
-              <input
-                type="checkbox"
-                checked={accepted}
-                onChange={(e) => setAccepted(e.target.checked)}
-              />
-              <span>{t('I have read and accept the Terms and the Privacy Policy.')}</span>
-            </label>
+          {/* ---- the explainer ----------------------------------------------- */}
+          {step.kind === 'explainer' && (
+            <>
+              <h1 className="display fr__title">{t(step.title)}</h1>
+              <p className="lead fr__body">{t(step.body)}</p>
+              <ul className={`fr__points${step.tight ? ' fr__points--tight' : ''}`}>
+                {step.points.map((p) => (
+                  <li key={p.label}>
+                    <b>{t(p.label)}</b>
+                    <span>{t(p.note)}</span>
+                  </li>
+                ))}
+              </ul>
+              {last && (
+                <p className="fr__fine">
+                  {t('Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.')}
+                </p>
+              )}
+            </>
           )}
         </div>
 
         <div className="fr__foot">
-          <div
-            className="progress-dots"
-            role="progressbar"
-            aria-valuemin={1}
-            aria-valuemax={steps.length}
-            aria-valuenow={i + 1}
-            aria-label={t('Step {n} of {total}', { n: i + 1, total: steps.length })}
-          >
-            {steps.map((_, n) => <span key={n} className={n === i ? 'is-on' : ''} />)}
-          </div>
-          <button className="btn btn--primary" onClick={next} disabled={blocked}>
-            {onLegal ? t('Accept & continue') : last ? t('Start listening') : t('Next')}
+          {dots}
+          <button className="btn btn--primary" onClick={() => void next()} disabled={blocked || busy}>
+            {step.kind === 'terms' ? t('Accept & continue') : last ? t('Start listening') : t('Next')}
           </button>
           {i > 0 && !onLegal && (
             <button className="btn btn--quiet" onClick={() => setI(i - 1)}>{t('Back')}</button>
           )}
         </div>
       </div>
+
+      {sheet && <LegalSheet id={sheet} onClose={() => setSheet(null)} />}
     </div>
   )
 }
+

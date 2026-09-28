@@ -20,6 +20,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
+import { useLegal } from '../legal/LegalContext'
+import { LegalSheet } from '../legal/LegalPage'
+import { registrationLineId } from '../legal/messages'
+import { AUTHORITIES } from '../legal/market'
+import type { LegalDocId } from '../legal/types'
+import type { InformedConsentTemplate, PatientInformedConsent, ProfessionalCard } from '../legal/records'
+import { CONSENT_TEMPLATE_ITEMS } from '../legal/records'
 import { useDataProvider } from '../data/provider'
 import { prescriptionsFromPlan, type Plan } from '../data/plan'
 import { normalizeConnectionCode } from '../data/link'
@@ -45,7 +52,6 @@ import {
   pendingFor,
   completedFor,
   saveProgress,
-  send as sendAssessment,
   complete as completeRecord,
   minutesFor,
   SELF_USE_PATIENT_ID,
@@ -93,6 +99,22 @@ export function TherapistTab(props: TherapistTabProps) {
     void dp.getMyPlan().then((p) => { if (alive) setPlan(p) }).catch(() => undefined)
     return () => { alive = false }
   }, [dp])
+
+  /* The professional's public card (registration, verified date, consent
+     form) and what this person has already accepted — the two things the
+     consent gate compares (M2P-04). Nothing clinical. */
+  const { m } = useLegal()
+  const linkedId = therapy.link?.therapist.id ?? null
+  const [card, setCard] = useState<ProfessionalCard | null>(null)
+  const [accepted, setAccepted] = useState<PatientInformedConsent[]>([])
+  const [consentOpen, setConsentOpen] = useState(false)
+  useEffect(() => {
+    let alive = true
+    if (!linkedId) { setCard(null); return }
+    dp.getProfessionalCard(linkedId).then((c) => { if (alive) setCard(c) }).catch(() => undefined)
+    dp.listMyInformedConsents().then((c) => { if (alive) setAccepted(c) }).catch(() => undefined)
+    return () => { alive = false }
+  }, [dp, linkedId])
   const { rows, update: updateAssessments } = useAssessments()
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
@@ -188,15 +210,11 @@ export function TherapistTab(props: TherapistTabProps) {
         onStep={(s) => setView({ kind: 'onb', step: s, therapist: view.therapist })}
         onFinish={(intake) => {
           update(() => ({ request: null, link: { ...seedLink(view.therapist), intake } }))
-          /* T0 is days 1–2 of the journey, and linking IS day 1. The schedule
-             proposes it; a therapist taking someone on has confirmed it by
-             taking them on, so it arrives as a real request rather than a
-             suggestion nobody ever acts on. */
-          updateAssessments((rs) =>
-            pendingFor(rs, SELF_USE_PATIENT_ID).some((r) => r.instrumentId === 'DASS21')
-              ? rs
-              : sendAssessment(rs, SELF_USE_PATIENT_ID, 'DASS21', 'T0', view.therapist.name),
-          )
+          /* Nothing is sent on the platform's initiative. A questionnaire the
+             app used to send "at T0" the moment a link was made was a
+             clinical instrument administered by the software, not by the
+             professional (M2R-15/16, MN-27): the professional sends what they
+             decide to send, when they decide to. */
           /* No seeded welcome. This app used to write the therapist's first
              message ITSELF, attributed to the therapist, so a person could
              open a brand-new thread and read a greeting their clinician had
@@ -293,6 +311,8 @@ export function TherapistTab(props: TherapistTabProps) {
   /* The join window is computed from the REAL appointment, not from the
      link's remembered time — a rescheduled session must move the button. */
   const nextAt = props.appointment?.startsAtMs ?? link.nextSessionAt
+  const consentGate = !!card?.consentTemplate
+    && !accepted.some((c) => c.therapistId === link.therapist.id && c.templateVersion === card.consentTemplate?.version)
 
   const joinable = props.appointment ? joinWindowOpen(props.appointment, Date.now()) : false
 
@@ -335,8 +355,17 @@ export function TherapistTab(props: TherapistTabProps) {
           )}
         </div>
 
+        {/* M2P-04 — the professional's informed-consent form, accepted before
+            the first session. The join button stays shut until it is. */}
+        {consentGate && (
+          <div className="thr-consent">
+            <p className="small">{m('CNS-1', { name: link.therapist.name })}</p>
+            <button className="btn btn--ghost" onClick={() => setConsentOpen(true)}>{t('Read and accept the consent form')}</button>
+          </div>
+        )}
+
         <div className="thr-hero__acts">
-          <button className="btn btn--primary" disabled={!joinable} onClick={props.onJoinCall}>
+          <button className="btn btn--primary" disabled={!joinable || consentGate} onClick={props.onJoinCall}>
             {t('Join Session')}
           </button>
           {/* A linked person had NO way to book. The slot picker was reachable
@@ -350,7 +379,22 @@ export function TherapistTab(props: TherapistTabProps) {
             {nextAt ? t('Change the time') : t('Book a session')}
           </button>
         </div>
+        {/* SET-8 — a different professional is always a tap away (M2P-12). */}
+        <button type="button" className="legal-link" onClick={() => setView({ kind: 'list' })}>{m('SET-8')}</button>
       </article>
+
+      {consentOpen && card?.consentTemplate && (
+        <InformedConsentSheet
+          name={link.therapist.name}
+          template={card.consentTemplate}
+          onAccept={async () => {
+            await dp.acceptInformedConsent(link.therapist.id, card.consentTemplate as InformedConsentTemplate)
+            setAccepted((a) => [...a, { id: 'local', therapistId: link.therapist.id, templateVersion: card.consentTemplate?.version ?? 0, acceptedAt: Date.now() }])
+            setConsentOpen(false)
+          }}
+          onClose={() => setConsentOpen(false)}
+        />
+      )}
 
       {/* Below 1100px this is one column and the wrappers do nothing. On a
           desk they are the two columns: what is ASKED OF YOU on the left,
@@ -398,8 +442,10 @@ export function TherapistTab(props: TherapistTabProps) {
         </>
       )}
 
-      <h3 className="home__sect">{t('Prescriptions')}</h3>
-      {!prescriptions.length && <p className="small muted">{t('No prescriptions yet.')}</p>}
+      {/* SES-6 — content the professional selected; the platform never
+          suggests, orders or pre-fills a selection (M2P-10). */}
+      <h3 className="home__sect">{m('SES-6', { name: link.therapist.name })}</h3>
+      {!prescriptions.length && <p className="small muted">{t('Nothing selected yet.')}</p>}
       {prescriptions.map((rx) => {
         const s = catalog.sessions.find((x) => x.slug === rx.slug)
         if (!s) return null
@@ -464,7 +510,7 @@ export function TherapistTab(props: TherapistTabProps) {
         })}
       </ul>
 
-      <h3 className="home__sect">{t('Therapy goals')}</h3>
+      <h3 className="home__sect">{t('Goals')}</h3>
       {!link.goals.length && <p className="thr-empty">{t('Goals you agree on with your therapist appear here.')}</p>}
       <ul className="goals">
         {link.goals.map((g) => (
@@ -576,9 +622,14 @@ function TherapistProfileScreen({
   onBack: () => void
   onBooked: (t: TherapistProfile, slotMs: number) => void
 }) {
-  const { t } = useI18n()
+  const { t, d } = useI18n()
   const dp = useDataProvider()
+  const legal = useLegal()
+  const { m, market } = legal
   const [therapist, setTherapist] = useState<TherapistProfile | null>(null)
+  const [card, setCard] = useState<ProfessionalCard | null>(null)
+  const [ack, setAck] = useState(false)
+  const [sheet, setSheet] = useState<LegalDocId | null>(null)
   const [openings, setOpenings] = useState<number[] | null>(null)
   const [slot, setSlot] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -593,6 +644,7 @@ function TherapistProfileScreen({
         const listing = listings.find((l) => l.id === therapistId)
         if (!active) return
         setTherapist(profileFor(listing ?? { id: therapistId, name: therapistId }))
+        dp.getProfessionalCard(therapistId).then((c) => { if (active) setCard(c) }).catch(() => undefined)
 
         const now = Date.now()
         const [slots, booked] = await Promise.all([
@@ -616,6 +668,7 @@ function TherapistProfileScreen({
     setError(null)
     try {
       await dp.bookAppointment(therapistId, slot)
+      if (!legal.accepted('BKG-1')) await legal.accept('BKG-1').catch(() => undefined)
       onBooked(therapist, slot)
     } catch {
       // Almost always "someone took it first". Reload so the grid is honest.
@@ -646,9 +699,17 @@ function TherapistProfileScreen({
             <span className="avatar avatar--lg" aria-hidden="true">{initials(therapist.name)}</span>
             <div>
               <h1 className="display su-h1">{therapist.name}</h1>
-              <div className="small muted">
-                {t(therapist.role)}{therapist.registration ? ` · ${therapist.registration}` : ''}
-              </div>
+              {/* PRF-1 — independent, registration number, verified date; one
+                  line, linking to D-05 / D-07 and the council (M2P-01). */}
+              <button type="button" className="legal-link thr-reg" onClick={() => setSheet('D-05')}>
+                {card
+                  ? m(registrationLineId(market), {
+                      registration: card.registration || therapist.registration || '—',
+                      region: card.registryRegion ?? '',
+                      date: card.verifiedAt ? d(card.verifiedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : t('pending'),
+                    })
+                  : `${t(therapist.role)}${therapist.registration ? ` · ${therapist.registration}` : ''}`}
+              </button>
             </div>
           </div>
           {therapist.bio && <p className="lead">{t(therapist.bio)}</p>}
@@ -688,7 +749,23 @@ function TherapistProfileScreen({
       <p className="small muted">
         {t('Booking shares only your name, the slot and your company. No health data is sent.')}
       </p>
+      {/* BKG-1 — once, at the first booking ever, logged (M2P-02). */}
+      {!legal.accepted('BKG-1') && (
+        <label className="legal-ack">
+          <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+          <span>{m('BKG-1', { name: therapist?.name ?? '' })}</span>
+        </label>
+      )}
+      {/* BKG-2 — the symmetric cancellation rule, above the confirm (M2P-05). */}
+      <p className="small muted">{m('BKG-2', { hours: '24h', name: therapist?.name ?? '' })}</p>
+      {/* PRF-2 — the complaint route to the council (M2P-03). */}
+      <p className="small">
+        <a className="legal-link" href={AUTHORITIES[market].council.url} target="_blank" rel="noreferrer">
+          {m('PRF-2', { council: AUTHORITIES[market].council.short })}
+        </a>
+      </p>
       </div>
+      {sheet && <LegalSheet id={sheet} onClose={() => setSheet(null)} />}
 
       {/* The confirm used to sit below three weeks of slots: on a phone you
           tapped a time, nothing visibly happened, and the button that would
@@ -700,7 +777,7 @@ function TherapistProfileScreen({
             ? fmtDate(slot, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
             : t('Pick a time above')}
         </span>
-        <button className="btn btn--primary" disabled={slot == null || busy} onClick={() => void book()}>
+        <button className="btn btn--primary" disabled={slot == null || busy || (!legal.accepted('BKG-1') && !ack)} onClick={() => void book()}>
           {busy ? t('Requesting…') : t('Request Session')}
         </button>
       </div>
@@ -910,6 +987,58 @@ function ToggleRow({
         <button className={`switch${on ? ' is-on' : ''}`} role="switch" aria-checked={on} aria-label={title} onClick={onToggle}>
           <span className="switch__knob" />
         </button>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------- informed consent ------
+
+   The professional's own document (P3.2), shown in full and accepted by the
+   person. The platform gives the mechanism; the professional owns the
+   content. A copy of what was accepted is kept with the acceptance. */
+const CONSENT_ITEM_LABELS: Record<(typeof CONSENT_TEMPLATE_ITEMS)[number], string> = {
+  nature: 'The nature and purpose of the sessions',
+  remote: 'Working at a distance, and what that means',
+  medium: 'The limits of the medium and what happens if the connection fails',
+  confidentiality: 'Confidentiality and its limits',
+  records: 'How records are kept, where, for how long and who may access them',
+  risk: 'What happens if you are at risk',
+  fees: 'Fees and cancellation',
+  alternatives: 'The alternatives to working at a distance',
+}
+
+function InformedConsentSheet({ name, template, onAccept, onClose }: {
+  name: string
+  template: InformedConsentTemplate
+  onAccept: () => Promise<void>
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const [ticked, setTicked] = useState(false)
+  const [busy, setBusy] = useState(false)
+  return (
+    <div className="sheet-scrim legal-scrim" role="dialog" aria-modal="true" aria-label={t('Consent form')} onClick={onClose}>
+      <div className="sheet legal-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet__grip" aria-hidden="true" />
+        <div className="legal-sheet__scroll legal-text">
+          <h1 className="legal-text__title display">{t('Consent form — {name}', { name })}</h1>
+          <p className="small muted">{t('Version {v}', { v: String(template.version) })}</p>
+          {CONSENT_TEMPLATE_ITEMS.map((k) => (
+            <div key={k}>
+              <h2 className="legal-text__h">{t(CONSENT_ITEM_LABELS[k])}</h2>
+              <p>{template.items[k]}</p>
+            </div>
+          ))}
+        </div>
+        <label className="legal-ack">
+          <input type="checkbox" checked={ticked} onChange={(e) => setTicked(e.target.checked)} />
+          <span>{t('I have read this form and I accept it. It is an agreement between me and {name}.', { name })}</span>
+        </label>
+        <button className="btn btn--primary" disabled={!ticked || busy} onClick={() => { setBusy(true); void onAccept().finally(() => setBusy(false)) }}>
+          {t('Accept')}
+        </button>
+        <button type="button" className="btn btn--ghost" onClick={onClose}>{t('Close')}</button>
       </div>
     </div>
   )

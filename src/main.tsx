@@ -8,6 +8,8 @@ import './selfuse.css'
 import './selfuse-studio.css'
 import './corporate.css'
 import './workspace.css'
+// legal surfaces: Help now, the legal page, in-context notices (src/legal)
+import './legal/legal.css'
 
 /* After a redeploy, tabs opened before it still reference the previous build's
    hashed chunks; the first lazy import then 404s ("Failed to fetch dynamically

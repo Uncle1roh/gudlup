@@ -22,7 +22,6 @@ import {
   MOOD_LEVELS,
   glCheckAverage,
   trend,
-  who5Percent,
   type GlDimension,
 } from '../data/measures'
 import { streakDays, type SelfUseState } from '../data/selfUseStore'
@@ -70,7 +69,6 @@ export function buildMonthlyReportPdf({
 
   const logs = inMonth(state.logs)
   const checks = inMonth(state.glChecks)
-  const who5 = inMonth(state.who5)
   const moods = inMonth(state.moods)
   const label = monthName(month)
 
@@ -142,24 +140,8 @@ export function buildMonthlyReportPdf({
     if (avg != null) doc.keyValue('Average', `${avg} / 5`)
   }
 
-  /* ---- monthly wellbeing ---- */
-  doc.section('Monthly wellbeing (WHO-5)')
-  const latestWho = who5[who5.length - 1] ?? state.who5[state.who5.length - 1] ?? null
-  const pctNow = who5Percent(latestWho)
-  if (pctNow == null) {
-    doc.paragraph('No wellbeing snapshot recorded.', 9.5, 0.45)
-  } else {
-    const prev = state.who5[state.who5.length - 2] ?? null
-    const tr = trend(pctNow, who5Percent(prev), 1, 0)
-    doc.keyValue('Score', `${pctNow}%`)
-    if (tr) doc.keyValue('Versus previous', tr.label)
-    doc.paragraph(
-      'The WHO-5 is a short, general wellbeing questionnaire reported on a 0-100 scale. ' +
-        'Higher is better perceived wellbeing. It is descriptive and is not a diagnosis.',
-      8.5,
-      0.45,
-    )
-  }
+  /* The WHO-5 section is gone: no validated instrument is scored back to a
+     person in self-guided use (MN-05). */
 
   /* ---- mood ---- */
   doc.section('Daily mood')

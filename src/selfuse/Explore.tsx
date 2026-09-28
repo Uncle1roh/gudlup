@@ -14,6 +14,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
+import { useLegal } from '../legal/LegalContext'
+import { LibraryNotice } from '../legal/LibraryNotice'
 import { greeting, longDate } from './greeting'
 import { PathwayFinder } from './PathwayFinder'
 import { Icon, type IconName } from './icons'
@@ -42,6 +44,12 @@ interface ExploreProps {
   /** What is typed in the top bar's search field. */
   query?: string
   onQuery?: (q: string) => void
+  /** A sponsor pays for this account: the workplace note names the employer. */
+  sponsored?: boolean
+  /** Professionally guided use is offered on this plan (LIB-2 vs LIB-3). */
+  professionalOffered?: boolean
+  /** LIB-2/3 and PLY-4 lead here. */
+  onFindProfessional: () => void
 }
 
 type View =
@@ -51,8 +59,9 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional }: ExploreProps) {
   const { t } = useI18n()
+  const { m } = useLegal()
   const catalog = useCatalog()
   const dp = useDataProvider()
   const [view, setView] = useState<View>({ kind: 'list' })
@@ -144,6 +153,13 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         </h1>
       </header>
 
+      {/* The ONE legal element of this screen (MN-25): on the first visit the
+          category note (CAT-1 / CAT-2 — this library is made for the working
+          day), afterwards the one-line header (LIB-1) with the full notice
+          one tap away. Both static: the same for everyone, on the same
+          trigger (D-17). */}
+      <LibraryNotice sponsored={sponsored} />
+
       {/* No search field on this screen below the desktop breakpoint. The
           narrow layout has no top bar to hold one and an in-page copy sat in
           front of the library taking a whole row for a thing few people type
@@ -175,6 +191,14 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         query={query}
         onClearQuery={() => onQuery?.('')}
       />
+
+      {/* LIB-2 / LIB-3 — the static footer link to a professional, the same
+          for every user (M1-11). */}
+      <p className="legal-line legal-line--foot">
+        <button type="button" className="legal-link" onClick={onFindProfessional}>
+          {m(professionalOffered ? 'LIB-2' : 'LIB-3')}
+        </button>
+      </p>
 
       {/* The four intake questions, one tap from anywhere on the library.
           They used to be a gate everybody answered before seeing the app,

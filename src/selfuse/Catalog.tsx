@@ -26,6 +26,7 @@
 
 import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { useLegal } from '../legal/LegalContext'
 import {
   SELF_USE_THEMES,
   DURATIONS,
@@ -81,6 +82,7 @@ export function Catalog({
   storedRails,
 }: CatalogProps) {
   const { t } = useI18n()
+  const { m } = useLegal()
   const [dur, setDur] = useState<Duration | 'all'>('all')
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
   /* Pathways are a category, so choosing them narrows the screen the way any
@@ -248,7 +250,9 @@ export function Catalog({
             </div>
             {!filtered.length ? (
               <div className="empty">
-                <p>{q ? t('Nothing matches "{q}".', { q: query.trim() }) : t('No sessions match.')}</p>
+                {/* LIB-4 — the same empty state for every query (M1-04): a
+                    search never confirms that a condition exists. */}
+                <p>{q ? m('LIB-4') : t('No sessions match.')}</p>
                 <button
                   className="btn btn--ghost"
                   onClick={() => { setDur('all'); setTheme('all'); onClearQuery?.() }}

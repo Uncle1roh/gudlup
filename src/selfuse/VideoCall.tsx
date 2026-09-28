@@ -28,6 +28,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
+import { useLegal } from '../legal/LegalContext'
+import { useDataProvider } from '../data/provider'
 import { useI18n, fmtDate } from '../i18n'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { audioUrlFor, useCatalog } from '../data/liveCatalog'
@@ -44,7 +46,9 @@ interface VideoCallProps {
   startsAt: number | null
   /** The shared room BOTH peers join — the appointment id. */
   roomId: string | null
-  /** Testing hook — shortens the treatment. null = the protocol's real length. */
+  /** The appointment the lobby location is confirmed against (M2P-06). */
+  appointmentId?: string | null
+  /** Testing hook — shortens the audio. null = the content's real length. */
   demoSeconds?: number | null
   onLeave: () => void
 }
@@ -57,9 +61,16 @@ interface Treatment {
   duration: Duration
 }
 
-export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onLeave }: VideoCallProps) {
+export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, demoSeconds, onLeave }: VideoCallProps) {
   const { t } = useI18n()
+  const { m } = useLegal()
+  const dp = useDataProvider()
   const [stage, setStage] = useState<Stage>('waiting')
+  /* LOB-1: where the person is, so the professional can get help to them in
+     an emergency. Confirmed in the lobby, read by that professional only. */
+  const [location, setLocation] = useState('')
+  const [locationOk, setLocationOk] = useState(false)
+  const [recordedTip, setRecordedTip] = useState(false)
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [treatment, setTreatment] = useState<Treatment | null>(null)
   const [paused, setPaused] = useState(false)
@@ -134,6 +145,23 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
           )}
 
           <SelfView call={call} />
+
+          {/* LOB-1 — the join step (Tier A, each session). */}
+          <div className="call__lobby">
+            <p className="small">{m('LOB-1', { name: therapist.name })}</p>
+            {locationOk ? (
+              <p className="small muted">{t('Location confirmed')}: {location}</p>
+            ) : (
+              <div className="call__lobbyrow">
+                <input className="ob-input" value={location} onChange={(e) => setLocation(e.target.value)}
+                  placeholder={t('Where you are now (address or place)')} aria-label={t('Where you are now')} />
+                <button className="btn btn--ghost" disabled={!location.trim()} onClick={() => {
+                  setLocationOk(true)
+                  if (appointmentId) void dp.confirmSessionLocation(appointmentId, location).catch(() => undefined)
+                }}>{t('Confirm')}</button>
+              </div>
+            )}
+          </div>
 
           <div className="call__status">
             <span>{t('Mic')}: {call.micOn ? t('ON') : t('OFF')}</span>
@@ -230,6 +258,12 @@ export function PatientVideoCall({ therapist, startsAt, roomId, demoSeconds, onL
         <PeerView call={call} name={therapist.name} />
         <div className="call__name">{therapist.name}</div>
         <SelfView call={call} compact />
+
+        {/* SES-1 — persistent while in session, with SES-1b one tap away. */}
+        <button type="button" className="call__notrec" onClick={() => setRecordedTip((v) => !v)} aria-expanded={recordedTip}>
+          <span aria-hidden="true">●</span> {m('SES-1')}
+        </button>
+        {recordedTip && <p className="call__notrec-tip">{m('SES-1b')}</p>}
 
         <div className="call__bar">
           <button className="call__btn" onClick={call.toggleMic} aria-pressed={!call.micOn}>
@@ -451,8 +485,7 @@ function TreatmentMode({
 
         <div className="guided__hud">
           <div className="guided__phase">
-            {t('Phase {n}', { n: phaseIdx + 1 })}
-            {protocol?.phases[phaseIdx] ? ` · ${t(protocol.phases[phaseIdx].name)}` : ''}
+            {t('Part {n} of {total}', { n: phaseIdx + 1, total: protocol?.phases.length ?? 6 })}
           </div>
           <div className="guided__bar" aria-hidden="true">
             <span style={{ width: `${(elapsed / total) * 100}%` }} />

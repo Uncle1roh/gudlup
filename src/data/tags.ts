@@ -41,7 +41,7 @@ export interface ProtocolTag {
 }
 
 export const TAG_GROUPS: { id: TagGroup; label: string; hint: string }[] = [
-  { id: 'need', label: 'A cosa serve', hint: 'Come si sente la persona quando lo apre' },
+  { id: 'need', label: 'Il momento', hint: 'La situazione in cui serve — mai una condizione' },
   { id: 'moment', label: 'Quando', hint: 'Il momento della giornata o della settimana' },
   { id: 'delivery', label: 'Come suona', hint: 'Voce, respiro, solo suono' },
   { id: 'setting', label: 'Dove', hint: 'Cuffie, letto, scrivania, in movimento' },
@@ -50,11 +50,12 @@ export const TAG_GROUPS: { id: TagGroup; label: string; hint: string }[] = [
 /** The curated vocabulary. Ids are ASCII slugs (stable across translations);
     labels are Italian and are the only part safe to change. */
 export const PROTOCOL_TAGS: ProtocolTag[] = [
-  // --- need: the same six words the check-in uses, plus the recurring asks ---
-  { id: 'ansia', label: 'Ansia', group: 'need' },
-  { id: 'stress', label: 'Stress', group: 'need' },
-  { id: 'umore-basso', label: 'Umore basso', group: 'need' },
-  { id: 'esaurimento', label: 'Esaurimento', group: 'need' },
+  // --- need: the ids stay (they are stored on rows); the labels name the
+  //     moment, never the condition (Lexicon_Avoid 1; Lexicon_Notes 9, 10) ---
+  { id: 'ansia', label: 'Prima di qualcosa di importante', group: 'need' },
+  { id: 'stress', label: 'Giornata piena', group: 'need' },
+  { id: 'umore-basso', label: 'Quando manca la spinta', group: 'need' },
+  { id: 'esaurimento', label: 'Dopo una settimana pesante', group: 'need' },
   { id: 'resilienza', label: 'Resilienza', group: 'need' },
   { id: 'mantenimento', label: 'Sto bene', group: 'need' },
   { id: 'sonno', label: 'Sonno', group: 'need' },

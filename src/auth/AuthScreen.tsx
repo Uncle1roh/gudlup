@@ -9,10 +9,28 @@ import { useI18n } from '../i18n'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from '../selfuse/theme'
+import { useDataProvider } from '../data/provider'
+import { isValidPromoCode, normalizePromoCode } from '../data/promo'
+import { useLegal } from '../legal/LegalContext'
+import { HelpNowButton } from '../legal/HelpNow'
+import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES, marketForCountry } from '../legal/market'
+
+/** Whole years between a date of birth and today. */
+export function ageAt(birthDate: string, now = new Date()): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null
+  const b = new Date(birthDate + 'T00:00:00')
+  if (Number.isNaN(b.getTime())) return null
+  let age = now.getFullYear() - b.getFullYear()
+  const m = now.getMonth() - b.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1
+  return age
+}
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const auth = useAuth()
-  const { t } = useI18n()
+  const dp = useDataProvider()
+  const { t, locale } = useI18n()
+  const { m } = useLegal()
   // the b2c door carries the Self Use ground, so its logo follows that theme
   const theme = useSuTheme()
   const isB2b = mode === 'b2b'
@@ -38,27 +56,46 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
   const [companyCode, setCompanyCode] = useState('')
-  /* Consent is given HERE now. The seven onboarding screens are gone — a
-     person lands on the library the moment their account exists — so the two
-     answers that must precede any data being gathered are asked at
-     registration, which is the last honest moment to ask them. */
+  /* Screen 1 of the onboarding (ONB-05): age and country, asked before the
+     account exists. The 18+ gate (ONB-01, D-11) blocks an under-age person
+     with no account and no data retained; the country sets the market
+     (ONB-03/04) — crisis numbers, withdrawal period, governing annex — and an
+     unsupported one is told so honestly (ONB-1.4). The optional consents
+     that used to sit here were moved to screen 3 of the first run, where
+     nothing is pre-ticked (LEG-04, MN-14); account and session data are
+     processed on the contract and are not a consent at all. */
   const [resetSent, setResetSent] = useState(false)
-  const [consentUsage, setConsentUsage] = useState(false)
-  const [consentMeasure, setConsentMeasure] = useState(true)
+  const [birthDate, setBirthDate] = useState('')
+  const [country, setCountry] = useState('')
   const [team, setTeam] = useState('')
+  const [promo, setPromo] = useState('')
+  /* What the typed promo code is worth, asked while the person types:
+     `checking` → a number (valid) or null (unknown). */
+  const [promoPct, setPromoPct] = useState<number | null | 'checking'>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function submit() {
     setError(null); setBusy(true)
     try {
+      if (signup && offersPromo && promo.trim()) {
+        /* Asked again at submit, not trusted from the live check: an unknown
+           code must be refused BEFORE the account exists, or the person is
+           left signed in to an account with no profile. */
+        const pct = await dp.checkPromoCode(promo).catch(() => null)
+        if (pct == null) {
+          setPromoPct(null)
+          throw new Error(t('This promo code is not valid. Check it, or leave the field empty.'))
+        }
+      }
       if (signup) {
         /* Recorded BEFORE the account call, so a sign-up that succeeds can
-           never land on a library with no consent behind it. */
+           never land on a library with nothing behind it. Measurement is no
+           longer answered here: it is an optional consent on screen 3. */
         if (needsConsent) {
           stashSignupIntake({
-            usage: consentUsage,
-            measurement: consentMeasure,
+            usage: true,
+            measurement: false,
             companyCode: normalizeCode(companyCode) || null,
           })
         }
@@ -69,6 +106,10 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           // the same primary key as the one the admin console minted
           companyId: normalizeCode(companyCode) || undefined,
           team: team.trim() || undefined,
+          promoCode: offersPromo ? normalizePromoCode(promo) || undefined : undefined,
+          birthDate,
+          country,
+          locale,
         })
       } else {
         /* The role goes with it for DEMO mode only, where there is no profile
@@ -84,6 +125,30 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   }
 
   const needsConsent = signup && !asTherapist && !isAdmin && !isHr
+  /** The promo field is on the personal sign-up only — not the clinician, HR
+      or admin doors. */
+  const offersPromo = needsConsent
+
+  useEffect(() => {
+    const raw = promo.trim()
+    if (!offersPromo || !raw || !isValidPromoCode(raw)) { setPromoPct(null); return }
+    setPromoPct('checking')
+    let alive = true
+    const id = window.setTimeout(() => {
+      dp.checkPromoCode(raw)
+        .then((pct) => { if (alive) setPromoPct(pct) })
+        .catch(() => { if (alive) setPromoPct(null) })
+    }, 400)
+    return () => { alive = false; window.clearTimeout(id) }
+  }, [promo, offersPromo, dp])
+
+  const promoCheck = useMemo(() => {
+    // nothing to say about the first couple of characters
+    if (!offersPromo || promo.trim().length < 3) return null
+    if (promoPct === 'checking') return { ok: false, text: t('Checking the code…') }
+    if (typeof promoPct === 'number') return { ok: true, text: t('Promo code accepted — {pct}% off.', { pct: String(promoPct) }) }
+    return { ok: false, text: t('This promo code is not valid. Check it, or leave the field empty.') }
+  }, [offersPromo, promo, promoPct, t])
   /**
    * Forgotten password.
    *
@@ -129,12 +194,21 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     return { ok: false, text: t('We do not know this code yet. You can create your account without it and add it later.') }
   }, [companyCode, t])
 
+  /* The two gates of screen 1. An age below eighteen or a territory where
+     Good Loop is not offered blocks the button — the message says which. */
+  const age = birthDate ? ageAt(birthDate) : null
+  const underAge = signup && age != null && age < 18
+  const unsupported = signup && !!country && marketForCountry(country) == null
+  const gateOk = !signup || (age != null && age >= 18 && !!country && marketForCountry(country) != null)
+
   const canSubmit =
-    !!email && !!password &&
+    !!email && !!password && gateOk &&
     (!signup || !asTherapist || (!!name.trim() && !!crp.trim())) &&
     // an HR account with no company has no company panel to open
     (!signup || !isHr || looksLikeCompanyCode(companyCode)) &&
-    (!needsConsent || consentUsage)
+    // a code that was checked and is unknown blocks the button; one still
+    // being checked does not — submit asks again
+    (!offersPromo || !promo.trim() || promoPct !== null)
 
   return (
     /* The b2c door belongs to the Self Use surface, so it carries that
@@ -167,6 +241,28 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           {/* Which kind of account this will be. Two buttons rather than a
               second URL: a clinician who lands on the app's own door can
               register from here, and the gate takes them to the workspace. */}
+          {/* Screen 1 — age and country, for every kind of account (D-11
+              applies to everyone; a clinician has a market too). */}
+          {signup && (
+            <div className="auth__gate">
+              <label className="auth__gatefield">
+                <span>{m('ONB-1.1')}</span>
+                <input className="auth__input" type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)}
+                  autoComplete="bday" onChange={(e) => setBirthDate(e.target.value)} />
+              </label>
+              {underAge && <p className="auth__code auth__code--block" role="alert">{m('ONB-1.3')}</p>}
+              <label className="auth__gatefield">
+                <span>{m('ONB-1.2')}</span>
+                <select className="auth__input" value={country} autoComplete="country" onChange={(e) => setCountry(e.target.value)}>
+                  <option value="">{t('Choose your country')}</option>
+                  {SUPPORTED_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
+                  {OTHER_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
+                </select>
+              </label>
+              {unsupported && <p className="auth__code auth__code--block" role="alert">{m('ONB-1.4')}</p>}
+            </div>
+          )}
+
           {signup && mode === 'b2c' && (
             <div className="auth__kind" role="group" aria-label={t('What is this account for?')}>
               <button type="button" className={`auth__kindbtn${kind === 'b2c_user' ? ' is-on' : ''}`}
@@ -209,27 +305,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
               <input className="auth__input" type="text" placeholder={t('Team (optional)')}
                 value={team} onChange={(e) => setTeam(e.target.value)} />
             )}
+            {offersPromo && <>
+              <input className="auth__input" type="text" placeholder={t('Promo code (optional)')}
+                autoCapitalize="characters" spellCheck={false}
+                value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} />
+              {promoCheck && (
+                <p className={`auth__code${promoCheck.ok ? ' is-ok' : ''}`}>{promoCheck.text}</p>
+              )}
+            </>}
           </>}
         </div>
-
-        {needsConsent && (
-          <div className="auth__consents">
-            <label className="auth__consent">
-              <input type="checkbox" checked={consentUsage} onChange={() => setConsentUsage((v) => !v)} />
-              <span>
-                <b>{t('App usage & session data')}</b> <em>{t('REQUIRED')}</em>
-                <small>{t('Used to remember your preferences and suggest the right sessions.')}</small>
-              </span>
-            </label>
-            <label className="auth__consent">
-              <input type="checkbox" checked={consentMeasure} onChange={() => setConsentMeasure((v) => !v)} />
-              <span>
-                <b>{t('Wellbeing check-ins')}</b>
-                <small>{t('Lets the app measure how you are doing over time. You can turn this off later.')}</small>
-              </span>
-            </label>
-          </div>
-        )}
 
         {error && <div className="auth__error">{error}</div>}
         {resetSent && (
@@ -254,6 +339,11 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           </button>
         )}
 
+        <div className="auth__legalrow">
+          <a className="auth__hub" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
+          {/* On every screen, the door included (CRS-01). */}
+          <HelpNowButton variant="inline" />
+        </div>
         <a className="auth__hub" href="#hub">{t('All apps')} ↗</a>
 
         {demo && <p className="auth__demo">{t('Demo mode — any email & password works. Tap {action}.', { action: signup ? t('Create account') : t('Sign in') })}</p>}

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { DataRequest, Report, LegalVersion } from '../legal/records'
+import type { CrisisResource } from '../legal/market'
 import { useDataProvider } from '../data/provider'
 import type { CatalogProtocol } from '../data/catalog'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from './types'
+import type { PromoCode } from '../data/promo'
+import type { PartnerProduct } from '../data/partners'
 
 interface AsyncState<T> {
   data?: T
@@ -51,4 +55,28 @@ export function useCredentialRequests() {
 export function useAuditEvents() {
   const dp = useDataProvider()
   return useAsync<AuditEvent[]>(() => dp.listAuditEvents(), [dp])
+}
+export function usePromoCodes() {
+  const dp = useDataProvider()
+  return useAsync<PromoCode[]>(() => dp.listPromoCodes(), [dp])
+}
+export function usePartnerProducts() {
+  const dp = useDataProvider()
+  return useAsync<PartnerProduct[]>(() => dp.listPartnerProducts(), [dp])
+}
+export function useDataRequests() {
+  const dp = useDataProvider()
+  return useAsync<DataRequest[]>(() => dp.listDataRequests(), [dp])
+}
+export function useReports() {
+  const dp = useDataProvider()
+  return useAsync<Report[]>(() => dp.listReports(), [dp])
+}
+export function useLegalVersions() {
+  const dp = useDataProvider()
+  return useAsync<LegalVersion[]>(() => dp.listLegalVersions(), [dp])
+}
+export function useCrisisResources() {
+  const dp = useDataProvider()
+  return useAsync<CrisisResource[]>(() => dp.listCrisisResources(), [dp])
 }

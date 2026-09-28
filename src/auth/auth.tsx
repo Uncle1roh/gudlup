@@ -13,11 +13,23 @@
 import { useI18n } from '../i18n'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
+import { stashMockLegalProfile } from '../data/mockLegal'
 
 export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin'
 
 export interface AuthUser { id: string; email: string }
-export interface SignUpExtra { name?: string; crp?: string; companyId?: string; team?: string }
+export interface SignUpExtra {
+  name?: string; crp?: string; companyId?: string; team?: string
+  /** Sent as typed; the database looks up what it is worth (setup.sql,
+      PROMO CODES) — the client never writes the percentage. */
+  promoCode?: string
+  /** Who the person is for legal purposes (ONB-01 / ONB-03): the 18+ gate
+      and the market. Both are asked before the account exists and written
+      with it, so no account is ever created without them. */
+  birthDate?: string
+  country?: string
+  locale?: string
+}
 
 export interface AuthApi {
   /** The session AND the role are known. A gate must not decide before this. */
@@ -131,7 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ready: true, user, role, mode: 'demo',
         async signIn(email, _password, r) { enter(email, r ?? 'b2c_user') },
         async resetPassword() { /* demo mode has no mailbox to send to */ },
-        async signUp(email, _password, r) { enter(email, r) },
+        async signUp(email, _password, r, extra) {
+          stashMockLegalProfile({
+            name: extra?.name || email.split('@')[0], email: email || 'demo@goodloop.app',
+            birthDate: extra?.birthDate ?? null, country: extra?.country ?? null,
+            market: extra?.country === 'BR' ? 'BR' : extra?.country === 'IT' ? 'EU' : null,
+            locale: extra?.locale ?? null, companyId: extra?.companyId ?? null,
+          })
+          enter(email, r)
+        },
         async signOut() {
           try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
           setUser(null); setRole(null)
@@ -155,10 +175,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
           company_id: extra?.companyId?.trim() || null,
           team: extra?.team?.trim() || null,
+          promo_code: extra?.promoCode?.trim() || null,
+          birth_date: extra?.birthDate || null,
+          country: extra?.country || null,
+          locale: extra?.locale || 'it',
         })
         if (pErr) {
           if ((pErr as { code?: string }).code === '23503')
             throw new Error('Unknown company code — ask HR for the right one.')
+          if ((pErr as { hint?: string }).hint === 'PROMO_UNKNOWN')
+            throw new Error('This promo code is not valid. Check it, or leave the field empty.')
           throw pErr
         }
         if (role === 'therapist') {

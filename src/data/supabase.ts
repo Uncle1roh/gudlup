@@ -26,10 +26,75 @@ import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode } from './link'
 import { normalizeTags } from './tags'
+import { normalizePromoCode, type PromoCode } from './promo'
+import type { PartnerProduct } from './partners'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
 import { currentPeriodLabel } from '../employer/assessment'
+import type {
+  LegalProfile, Acceptance, ConsentEvent, ConsentPurpose, DataRequest, DataRequestKind, DataRequestStatus,
+  Report, ReportKind, ReportStatus, LegalVersion, ProfessionalRecord, ProfessionalCard,
+  InformedConsentTemplate, PatientInformedConsent, SponsorTotals,
+} from '../legal/records'
+import type { CrisisResource } from '../legal/market'
+import { MIN_COHORT } from '../legal/market'
+
+/* ---- legal-framework row mappers (supabase/11-legal-framework.sql) ---- */
+function mapLegalProfile(r: any): LegalProfile {
+  return {
+    id: r.id, name: r.name ?? '', email: r.email ?? '',
+    birthDate: r.birth_date ?? null, country: r.country ?? null,
+    market: r.market === 'BR' || r.market === 'EU' ? r.market : null,
+    personalEmail: r.personal_email ?? null, locale: r.locale ?? null,
+    companyId: r.company_id ?? null,
+    // a company code links the account; the sponsor supplied the code and nothing else
+    sponsorFields: r.company_id ? ['company code'] : [],
+  }
+}
+function mapAcceptance(r: any): Acceptance {
+  return { id: r.id, profileId: r.profile_id, docId: r.doc_id, version: r.version, locale: r.locale, channel: r.channel ?? 'app', acceptedAt: toMs(r.accepted_at) }
+}
+function mapConsent(r: any): ConsentEvent {
+  return { id: r.id, profileId: r.profile_id, purpose: r.purpose as ConsentPurpose, granted: !!r.granted, wording: r.wording ?? '', locale: r.locale ?? '', channel: r.channel ?? 'app', at: toMs(r.at) }
+}
+function mapDataRequest(r: any): DataRequest {
+  return {
+    id: r.id, profileId: r.profile_id,
+    requester: r.profiles ? { name: r.profiles.name ?? '', email: r.profiles.email ?? '' } : undefined,
+    kind: r.kind as DataRequestKind, market: r.market === 'BR' || r.market === 'EU' ? r.market : null,
+    status: r.status as DataRequestStatus, note: r.note ?? undefined,
+    receivedAt: toMs(r.received_at), dueAt: toMs(r.due_at),
+    verifiedAt: r.verified_at ? toMs(r.verified_at) : undefined,
+    deliveredAt: r.delivered_at ? toMs(r.delivered_at) : undefined,
+    handledBy: r.handled_by ?? undefined, outcome: r.outcome ?? undefined,
+  }
+}
+function mapReport(r: any): Report {
+  return {
+    id: r.id, kind: r.kind as ReportKind, reporterId: r.reporter_id ?? undefined, reporterEmail: r.reporter_email ?? undefined,
+    subject: r.subject ?? '', location: r.location ?? undefined, reason: r.reason ?? '', status: r.status as ReportStatus,
+    receivedAt: toMs(r.received_at), acknowledgedAt: r.acknowledged_at ? toMs(r.acknowledged_at) : undefined,
+    decidedAt: r.decided_at ? toMs(r.decided_at) : undefined, decidedBy: r.decided_by ?? undefined, decision: r.decision ?? undefined,
+  }
+}
+function mapLegalVersion(r: any): LegalVersion {
+  return { id: r.id, docId: r.doc_id, version: r.version, locale: r.locale, inForceFrom: r.in_force_from, inForceTo: r.in_force_to ?? null, changelog: r.changelog ?? undefined, createdAt: toMs(r.created_at), createdBy: r.created_by ?? undefined }
+}
+function mapCrisis(r: any): CrisisResource {
+  return { id: r.id, market: r.market, position: r.position ?? 0, label: r.label ?? '', number: r.number ?? '', hours: r.hours ?? undefined, url: r.url ?? undefined, lastVerifiedAt: r.last_verified_at ?? null, verifiedBy: r.verified_by ?? null, active: r.active !== false }
+}
+function mapProfessional(r: any): ProfessionalRecord {
+  return {
+    id: r.id, registration: r.crp ?? '', registry: r.registry === 'Ordine' ? 'Ordine' : r.registry === 'CRP' ? 'CRP' : null,
+    registryRegion: r.registry_region ?? null, status: r.status ?? 'pending',
+    verifiedAt: r.verified_at ? toMs(r.verified_at) : r.approved_at ? toMs(r.approved_at) : null,
+    practiceCountry: r.practice_country ?? null, attestedAt: r.attested_at ? toMs(r.attested_at) : null,
+    insuranceExpiresAt: r.insurance_expires_at ?? null, insuranceDoc: r.insurance_doc ?? null,
+    termsVersion: r.terms_version ?? null, termsAcceptedAt: r.terms_accepted_at ? toMs(r.terms_accepted_at) : null,
+    consentTemplate: r.consent_template ?? null,
+  }
+}
 
 const DEFAULT_AVATAR = '👩🏻‍⚕️'
 
@@ -154,6 +219,8 @@ function mapCatalog(r: any): CatalogProtocol {
     audience: r.audience === 'library' ? 'library' : 'clinical',
     library: r.library ?? undefined,
     coverUrl: r.cover_url ?? undefined,
+    tier: r.tier === 'amber' || r.tier === 'red' ? r.tier : r.tier === 'green' ? 'green' : undefined,
+    claimsGate: r.claims_gate ?? undefined,
   }
 }
 
@@ -168,6 +235,22 @@ function mapPlanItem(r: any): PlanItem {
     doneAt: r.done_at ? toMs(r.done_at) : undefined,
   }
 }
+function mapPartnerProduct(r: any): PartnerProduct {
+  return {
+    id: r.id,
+    partner: r.partner ?? '',
+    title: r.title ?? '',
+    description: r.description ?? undefined,
+    discount: r.discount ?? undefined,
+    promoCode: r.promo_code ?? undefined,
+    url: r.url ?? undefined,
+    imageUrl: r.image_url ?? undefined,
+    active: r.active !== false,
+    position: r.position ?? 0,
+    createdAt: toMs(r.created_at),
+  }
+}
+
 function mapCompany(r: any): Company {
   return { id: r.id, name: r.name, seats: r.seats ?? 0, activeUsers: r.active_users ?? 0, status: r.status === 'paused' ? 'paused' : 'active', createdAt: toMs(r.created_at) }
 }
@@ -821,6 +904,8 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         public_blurb: p.publicBlurb ?? null,
         i18n: p.i18n ?? {},
         tags: normalizeTags(p.tags),
+        tier: p.tier ?? 'green',
+        claims_gate: p.claimsGate ?? null,
       }
       const { error } = await sb.from('protocols').upsert(row, { onConflict: 'code' })
       if (error) throw error
@@ -984,6 +1069,74 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
     },
 
+    // --- Promo codes ---
+    async listPromoCodes(): Promise<PromoCode[]> {
+      const { data, error } = await sb.from('promo_codes').select('*').order('created_at', { ascending: false })
+      if (error) throw error
+      // uses: counted from the profiles that registered with each code (an
+      // admin reads every profile, and only the code column is fetched)
+      const { data: used } = await sb.from('profiles').select('promo_code').not('promo_code', 'is', null)
+      const uses = new Map<string, number>()
+      for (const r of (used ?? []) as { promo_code: string }[]) uses.set(r.promo_code, (uses.get(r.promo_code) ?? 0) + 1)
+      return (data ?? []).map((r: { code: string; discount_pct: number; created_at: string; created_by: string | null }) => ({
+        code: r.code,
+        discountPct: r.discount_pct,
+        createdAt: toMs(r.created_at),
+        createdBy: r.created_by ?? undefined,
+        uses: uses.get(r.code) ?? 0,
+      }))
+    },
+    async createPromoCode(code, discountPct, createdBy): Promise<void> {
+      const { error } = await sb.from('promo_codes').insert({ code: normalizePromoCode(code), discount_pct: discountPct, created_by: createdBy ?? null })
+      if (error) {
+        if ((error as { code?: string }).code === '23505') throw new Error(`Il codice ${normalizePromoCode(code)} esiste già.`)
+        throw error
+      }
+    },
+    async deletePromoCode(code): Promise<void> {
+      const { error } = await sb.from('promo_codes').delete().eq('code', code)
+      if (error) throw error
+    },
+    async checkPromoCode(code): Promise<number | null> {
+      const { data, error } = await sb.rpc('check_promo_code', { p_code: normalizePromoCode(code) })
+      if (error) throw error
+      return typeof data === 'number' ? data : null
+    },
+
+    // --- Partner products ---
+    async listPartnerProducts(): Promise<PartnerProduct[]> {
+      const { data, error } = await sb.from('partner_products').select('*')
+        .order('position').order('partner').order('title')
+      if (error) throw error
+      return (data ?? []).map(mapPartnerProduct)
+    },
+    async savePartnerProduct(p): Promise<string> {
+      const row = {
+        partner: p.partner.trim(),
+        title: p.title.trim(),
+        description: p.description?.trim() || null,
+        discount: p.discount?.trim() || null,
+        promo_code: p.promoCode?.trim() || null,
+        url: p.url?.trim() || null,
+        image_url: p.imageUrl?.trim() || null,
+        active: p.active,
+        position: p.position,
+        updated_at: new Date().toISOString(),
+      }
+      if (p.id) {
+        const { error } = await sb.from('partner_products').update(row).eq('id', p.id)
+        if (error) throw error
+        return p.id
+      }
+      const { data, error } = await sb.from('partner_products').insert(row).select('id').single()
+      if (error) throw error
+      return (data as { id: string }).id
+    },
+    async deletePartnerProduct(id): Promise<void> {
+      const { error } = await sb.from('partner_products').delete().eq('id', id)
+      if (error) throw error
+    },
+
     // --- Users & roles ---
     async listAdminUsers(): Promise<AdminUser[]> {
       const { data, error } = await sb.from('profiles').select('id, name, email, role, company_id, active, created_at').order('created_at', { ascending: false })
@@ -1032,6 +1185,234 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         outcomes: resp.outcomes,
       })
       if (error) throw error
+    },
+
+    /* ---- legal framework (supabase/11-legal-framework.sql) ---- */
+    async getMyLegalProfile(): Promise<LegalProfile> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('profiles')
+        .select('id, name, email, birth_date, country, market, personal_email, locale, company_id').eq('id', pid).single()
+      if (error) throw error
+      return mapLegalProfile(data)
+    },
+    async updateMyProfile(patch): Promise<void> {
+      const pid = await profileId()
+      const row: Record<string, unknown> = {}
+      if (patch.name !== undefined) row.name = patch.name.trim()
+      if (patch.personalEmail !== undefined) row.personal_email = patch.personalEmail?.trim() || null
+      if (patch.country !== undefined) row.country = patch.country
+      if (patch.birthDate !== undefined) row.birth_date = patch.birthDate
+      if (patch.locale !== undefined) row.locale = patch.locale
+      const { error } = await sb.from('profiles').update(row).eq('id', pid)
+      if (error) throw error
+    },
+    async recordAcceptance(a): Promise<void> {
+      const pid = await profileId()
+      const { error } = await sb.from('legal_acceptances').insert({
+        profile_id: pid, doc_id: a.docId, version: a.version, locale: a.locale, channel: a.channel ?? 'app',
+        user_agent: typeof navigator === 'undefined' ? null : navigator.userAgent.slice(0, 200),
+      })
+      if (error) throw error
+    },
+    async listMyAcceptances(): Promise<Acceptance[]> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('legal_acceptances').select('*').eq('profile_id', pid).order('accepted_at')
+      if (error) throw error
+      return (data ?? []).map(mapAcceptance)
+    },
+    async recordConsent(c): Promise<void> {
+      const pid = await profileId()
+      const { error } = await sb.from('consent_events').insert({
+        profile_id: pid, purpose: c.purpose, granted: c.granted, wording: c.wording, locale: c.locale, channel: c.channel ?? 'app',
+      })
+      if (error) throw error
+    },
+    async listMyConsents(): Promise<ConsentEvent[]> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('consent_events').select('*').eq('profile_id', pid).order('at')
+      if (error) throw error
+      return (data ?? []).map(mapConsent)
+    },
+    async createDataRequest(kind, note): Promise<DataRequest> {
+      const pid = await profileId()
+      const { data: prof } = await sb.from('profiles').select('market').eq('id', pid).single()
+      const { data, error } = await sb.from('data_requests')
+        .insert({ profile_id: pid, kind, note: note ?? null, market: (prof as { market?: string } | null)?.market ?? null })
+        .select('*').single()
+      if (error) throw error
+      return mapDataRequest(data)
+    },
+    async listMyDataRequests(): Promise<DataRequest[]> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('data_requests').select('*').eq('profile_id', pid).order('received_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []).map(mapDataRequest)
+    },
+    async deleteMyAccount(): Promise<void> {
+      const { error } = await sb.rpc('delete_my_account')
+      if (error) throw error
+      cachedProfileId = null
+    },
+    async createReport(r): Promise<Report> {
+      const pid = await profileId().catch(() => null)
+      const { data: auth } = await sb.auth.getUser()
+      const { data, error } = await sb.from('content_reports').insert({
+        kind: r.kind, reporter_id: pid, reporter_email: auth.user?.email ?? null,
+        subject: r.subject, location: r.location ?? null, reason: r.reason,
+      }).select('*').single()
+      if (error) throw error
+      return mapReport(data)
+    },
+    async listCrisisResources(): Promise<CrisisResource[]> {
+      const { data, error } = await sb.from('crisis_resources').select('*').order('market').order('position')
+      if (error) throw error
+      return (data ?? []).map(mapCrisis)
+    },
+    async listLegalVersions(): Promise<LegalVersion[]> {
+      const { data, error } = await sb.from('legal_versions').select('*').order('in_force_from', { ascending: false })
+      if (error) throw error
+      return (data ?? []).map(mapLegalVersion)
+    },
+
+    // admin
+    async listDataRequests(): Promise<DataRequest[]> {
+      const { data, error } = await sb.from('data_requests').select('*, profiles(name, email)').order('due_at')
+      if (error) throw error
+      return (data ?? []).map(mapDataRequest)
+    },
+    async updateDataRequest(id, patch): Promise<void> {
+      const row: Record<string, unknown> = {}
+      if (patch.status) row.status = patch.status
+      if (patch.verifiedAt !== undefined) row.verified_at = patch.verifiedAt ? toIso(patch.verifiedAt) : null
+      if (patch.deliveredAt !== undefined) row.delivered_at = patch.deliveredAt ? toIso(patch.deliveredAt) : null
+      if (patch.handledBy !== undefined) row.handled_by = patch.handledBy
+      if (patch.outcome !== undefined) row.outcome = patch.outcome
+      const { error } = await sb.from('data_requests').update(row).eq('id', id)
+      if (error) throw error
+    },
+    async listReports(): Promise<Report[]> {
+      const { data, error } = await sb.from('content_reports').select('*').order('received_at')
+      if (error) throw error
+      return (data ?? []).map(mapReport)
+    },
+    async updateReport(id, patch): Promise<void> {
+      const row: Record<string, unknown> = {}
+      if (patch.status) row.status = patch.status
+      if (patch.acknowledgedAt !== undefined) row.acknowledged_at = patch.acknowledgedAt ? toIso(patch.acknowledgedAt) : null
+      if (patch.decidedAt !== undefined) row.decided_at = patch.decidedAt ? toIso(patch.decidedAt) : null
+      if (patch.decidedBy !== undefined) row.decided_by = patch.decidedBy
+      if (patch.decision !== undefined) row.decision = patch.decision
+      const { error } = await sb.from('content_reports').update(row).eq('id', id)
+      if (error) throw error
+    },
+    async saveLegalVersion(v): Promise<void> {
+      // the previous in-force version of the same document closes on the new date
+      await sb.from('legal_versions').update({ in_force_to: v.inForceFrom })
+        .eq('doc_id', v.docId).eq('locale', v.locale).is('in_force_to', null)
+      const { error } = await sb.from('legal_versions').insert({
+        doc_id: v.docId, version: v.version, locale: v.locale, in_force_from: v.inForceFrom,
+        in_force_to: v.inForceTo, changelog: v.changelog ?? null, created_by: v.createdBy ?? null,
+      })
+      if (error) throw error
+    },
+    async saveCrisisResource(r): Promise<void> {
+      const { error } = await sb.from('crisis_resources').upsert({
+        id: r.id, market: r.market, position: r.position, label: r.label, number: r.number,
+        hours: r.hours ?? null, url: r.url ?? null, last_verified_at: r.lastVerifiedAt, verified_by: r.verifiedBy,
+        active: r.active, updated_at: new Date().toISOString(),
+      })
+      if (error) throw error
+    },
+    async deleteCrisisResource(id): Promise<void> {
+      const { error } = await sb.from('crisis_resources').delete().eq('id', id)
+      if (error) throw error
+    },
+    async listUserLegalRecords(profileIdArg): Promise<{ acceptances: Acceptance[]; consents: ConsentEvent[] }> {
+      const [a, c] = await Promise.all([
+        sb.from('legal_acceptances').select('*').eq('profile_id', profileIdArg).order('accepted_at'),
+        sb.from('consent_events').select('*').eq('profile_id', profileIdArg).order('at'),
+      ])
+      if (a.error) throw a.error
+      if (c.error) throw c.error
+      return { acceptances: (a.data ?? []).map(mapAcceptance), consents: (c.data ?? []).map(mapConsent) }
+    },
+    async adminDeleteProfile(profileIdArg): Promise<void> {
+      const { error } = await sb.rpc('admin_delete_profile', { p_profile: profileIdArg })
+      if (error) throw error
+    },
+
+    // the professional
+    async getMyProfessionalRecord(): Promise<ProfessionalRecord> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('therapists').select('*').eq('id', pid).single()
+      if (error) throw error
+      return mapProfessional(data)
+    },
+    async updateMyProfessionalRecord(patch): Promise<void> {
+      const pid = await profileId()
+      const row: Record<string, unknown> = {}
+      if (patch.registry !== undefined) row.registry = patch.registry
+      if (patch.registryRegion !== undefined) row.registry_region = patch.registryRegion
+      if (patch.practiceCountry !== undefined) row.practice_country = patch.practiceCountry
+      if (patch.attestedAt !== undefined) row.attested_at = toIso(patch.attestedAt)
+      if (patch.insuranceExpiresAt !== undefined) row.insurance_expires_at = patch.insuranceExpiresAt
+      if (patch.insuranceDoc !== undefined) row.insurance_doc = patch.insuranceDoc
+      if (patch.termsVersion !== undefined) row.terms_version = patch.termsVersion
+      if (patch.termsAcceptedAt !== undefined) row.terms_accepted_at = toIso(patch.termsAcceptedAt)
+      if (patch.consentTemplate !== undefined) {
+        row.consent_template = patch.consentTemplate
+        row.consent_template_version = patch.consentTemplate.version
+      }
+      const { error } = await sb.from('therapists').update(row).eq('id', pid)
+      if (error) throw error
+    },
+    async getProfessionalCard(therapistId): Promise<ProfessionalCard | null> {
+      const { data, error } = await sb.rpc('professional_card', { p_therapist: therapistId })
+      if (error) throw error
+      const r = Array.isArray(data) ? data[0] : data
+      if (!r) return null
+      return {
+        id: r.id, name: r.name ?? '', registration: r.registration ?? '',
+        registry: r.registry === 'Ordine' ? 'Ordine' : r.registry === 'CRP' ? 'CRP' : null,
+        registryRegion: r.registry_region ?? null, verifiedAt: r.verified_at ? toMs(r.verified_at) : null,
+        consentTemplate: (r.consent_template as InformedConsentTemplate | null) ?? null,
+      }
+    },
+    async acceptInformedConsent(therapistId, template): Promise<void> {
+      const pid = await profileId()
+      const { error } = await sb.from('patient_informed_consents').upsert({
+        profile_id: pid, therapist_id: therapistId, template_version: template.version, template_copy: template,
+      }, { onConflict: 'profile_id,therapist_id,template_version' })
+      if (error) throw error
+    },
+    async listMyInformedConsents(): Promise<PatientInformedConsent[]> {
+      const pid = await profileId()
+      const { data, error } = await sb.from('patient_informed_consents').select('*').eq('profile_id', pid)
+      if (error) throw error
+      return (data ?? []).map((r: any) => ({ id: r.id, therapistId: r.therapist_id, templateVersion: r.template_version, acceptedAt: toMs(r.accepted_at) }))
+    },
+    async confirmSessionLocation(appointmentId, location): Promise<void> {
+      const { error } = await sb.from('appointments')
+        .update({ patient_location: location.trim().slice(0, 300), location_confirmed_at: new Date().toISOString() })
+        .eq('id', appointmentId)
+      if (error) throw error
+    },
+
+    // the sponsor
+    async getSponsorTotals(): Promise<SponsorTotals> {
+      const pid = await profileId()
+      const { data: prof, error: pErr } = await sb.from('profiles').select('company_id').eq('id', pid).single()
+      if (pErr) throw pErr
+      const companyId = (prof as { company_id: string | null }).company_id
+      if (!companyId) throw new Error('No company on this account')
+      const { data: co } = await sb.from('companies').select('seats, active_users, min_cohort').eq('id', companyId).single()
+      const c = (co as { seats?: number; active_users?: number; min_cohort?: number } | null) ?? {}
+      const k = c.min_cohort ?? MIN_COHORT
+      const suppress = (n: number | null | undefined) => (n == null || n < k ? null : n)
+      /* Only what the company row already carries: seats and active users.
+         Sessions are not counted here because the sponsor role has no grant
+         on the sessions table — and that is the point. */
+      return { companyId, minCohort: k, eligible: c.seats ?? 0, registered: suppress(c.active_users), active30d: null, sessions30d: null }
     },
   }
 }

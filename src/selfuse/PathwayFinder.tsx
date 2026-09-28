@@ -60,7 +60,7 @@ export function PathwayFinder({
       <div className="su-page finder">
         <button className="su-back" onClick={onClose}>‹ {t('Back')}</button>
         <div className="finder__result">
-          <span className="eyebrow">{t('Recommended for you')}</span>
+          <span className="eyebrow">{t('Matches what you chose')}</span>
           <h1 className="display su-h1">{t(pathway.name)}</h1>
           <p className="lead">
             {t(pathway.about)} {t('{len}, {per} sessions per week.', { len: t(pathway.lengthLabel), per: pathway.perWeekLabel })}

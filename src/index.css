@@ -1481,6 +1481,16 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-table--companies .adm-tr__right { flex-wrap: wrap; gap: 6px; }
 .adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
+.adm-table--promo .adm-tr { grid-template-columns: minmax(170px, 1.2fr) 96px 96px 1.4fr 220px; }
+.adm-table--promo .adm-tr__right { flex-wrap: wrap; gap: 6px; }
+.adm-addrow__pct { max-width: 110px; }
+.adm-table--partners .adm-tr { grid-template-columns: 1fr 1.6fr 1fr 130px 100px 200px; }
+.adm-table--partners .adm-tr__right { flex-wrap: wrap; gap: 6px; }
+.adm-partner__link { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-partner-form { margin-bottom: 18px; }
+.adm-partner-form__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-bottom: 16px; }
+.adm-partner-form__wide { grid-column: 1 / -1; }
+.adm-partner-form__check { display: flex; align-items: center; gap: 8px; align-self: end; padding-bottom: 10px; font-size: 14px; }
 
 .adm-mono { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
 .adm-muted { color: var(--slate); font-size: 13px; }

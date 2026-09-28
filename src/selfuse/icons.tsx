@@ -23,6 +23,7 @@ export type IconName =
   | 'therapist'
   | 'progress'
   | 'profile'
+  | 'partners'   // a tag — partner offers
   | 'play'
   | 'pause'
   | 'back10'
@@ -87,6 +88,13 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <circle cx="12" cy="8" r="3.75" />
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+    </>
+  ),
+  /* sell — a price tag: offers from partners, not a session. */
+  partners: (
+    <>
+      <path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7a1 1 0 0 1 .7.3l7.8 7.8a1 1 0 0 1 0 1.4l-7.7 7.7a1 1 0 0 1-1.4 0l-7.8-7.8a1 1 0 0 1-.3-.7Z" />
+      <circle cx="8.2" cy="8.2" r="1.5" />
     </>
   ),
   play: <path d="M8 5.2v13.6l11-6.8z" fill="currentColor" stroke="none" />,

@@ -41,6 +41,8 @@ import {
 import type { CatalogProtocol } from '../data/catalog'
 import type { ProtocolI18n, ProtocolText, TextLocale } from '../types/domain'
 import { uploadProtocolCover } from './assets'
+import { lintFields } from '../legal/lexicon'
+import { emptyGate, gateComplete, GATE_QUESTIONS, TIERS, type ClaimsGate, type ContentTier } from '../legal/claims'
 
 export interface ProtocolCardDraft {
   code: string
@@ -53,6 +55,9 @@ export interface ProtocolCardDraft {
   tags: string[]
   /** A real cover image. Empty = the generated artwork stands. */
   coverUrl: string
+  /** The application tier and the four-question sign-off (ADM-02/03). */
+  tier: ContentTier
+  claimsGate: ClaimsGate
 }
 
 /* ---- the languages this card can write ---------------------------------
@@ -76,6 +81,8 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     i18n: p.i18n ?? {},
     coverUrl: p.coverUrl ?? '',
     tags: tagsOf(p),
+    tier: p.tier ?? 'green',
+    claimsGate: p.claimsGate ?? emptyGate(),
   }
 }
 
@@ -98,6 +105,8 @@ export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtoc
     i18n: cleanI18n(draft.i18n),
     coverUrl: draft.coverUrl.trim() || undefined,
     tags: normalizeTags(draft.tags),
+    tier: draft.tier,
+    claimsGate: draft.claimsGate,
     updatedAt: Date.now(),
   }
 }
@@ -126,6 +135,21 @@ function cleanI18n(src: ProtocolI18n): ProtocolI18n | undefined {
 export function cardDraftError(draft: ProtocolCardDraft): string | null {
   if (!draft.title.trim()) return 'Il titolo clinico non può restare vuoto.'
   return null
+}
+
+/** What the lexicon finds in the fields a person reads, as they are typed —
+    shown live so a prohibited word is caught while it is being written, not
+    when the row is enabled (ADM-01). */
+export function cardLexiconHits(draft: ProtocolCardDraft) {
+  return lintFields({
+    'nome pubblico': draft.publicTitle,
+    'descrizione pubblica': draft.publicBlurb,
+    tag: draft.tags.map((id) => PROTOCOL_TAGS.find((t) => t.id === id)?.label ?? id),
+    ...Object.fromEntries(Object.entries(draft.i18n).flatMap(([loc, txt]) => [
+      [`nome pubblico (${loc})`, txt?.publicTitle],
+      [`descrizione pubblica (${loc})`, txt?.publicBlurb],
+    ])),
+  })
 }
 
 interface Props {
@@ -184,6 +208,7 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
 
   const full = draft.tags.length >= MAX_TAGS
   const invalid = cardDraftError(draft)
+  const lexHits = cardLexiconHits(draft)
 
   function toggle(id: string) {
     if (draft.tags.includes(id)) set({ tags: draft.tags.filter((x) => x !== id) })
@@ -294,6 +319,61 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
           </div>
         )
       })()}
+
+      {/* ---- the lexicon, live ---------------------------------------------
+          A condition name in a public label is a claim about the person
+          (Lexicon_Avoid). Said here, while typing, in the language it was
+          typed in — not at publish time. */}
+      {lexHits.length > 0 && (
+        <div className="adm-issues adm-issues--err">
+          <b>Lessico non ammesso</b>
+          <ul>
+            {lexHits.map((h) => <li key={h.field}>{h.field}: {h.hits.map((x) => `“${x.term}”`).join(', ')}</li>)}
+          </ul>
+          <span className="pe-hint">Nomina il momento, non la condizione: “Venti minuti prima dell’imbarco”, non “Paura di volare”.</span>
+        </div>
+      )}
+
+      {/* ---- the tier and the four-question sign-off ---------------------
+          Recorded on the row (ADM-02, ADM-03). The row cannot be enabled
+          without every answer “no”, a name and a date; red never reaches the
+          self-guided library. */}
+      <div className="pe-field">
+        <span className="pe-label">Livello di applicazione <em>quanto la situazione è vicina a una diagnosi o a un percorso di cura</em></span>
+        <div className="pe-row">
+          {TIERS.map((tier) => (
+            <label key={tier.id} className="pe-consent">
+              <input type="radio" name="tier" checked={draft.tier === tier.id} onChange={() => set({ tier: tier.id })} />
+              <span><b>{tier.label}</b> — {tier.hint}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="pe-field">
+        <span className="pe-label">Revisione delle affermazioni <em>le quattro domande; ogni “sì” significa riformulare, spostare ai professionisti o non pubblicare</em></span>
+        <div className="pe-consents">
+          {GATE_QUESTIONS.map((q) => (
+            <div key={q.id} className="pe-consent">
+              <span><b>{q.label}.</b> {q.text}</span>
+              <span className="pe-row">
+                <label><input type="radio" name={`gate-${q.id}`} checked={draft.claimsGate.answers[q.id] === 'no'} onChange={() => set({ claimsGate: { ...draft.claimsGate, answers: { ...draft.claimsGate.answers, [q.id]: 'no' } } })} /> No</label>
+                <label><input type="radio" name={`gate-${q.id}`} checked={draft.claimsGate.answers[q.id] === 'yes'} onChange={() => set({ claimsGate: { ...draft.claimsGate, answers: { ...draft.claimsGate.answers, [q.id]: 'yes' } } })} /> Sì</label>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="pe-row">
+          <input className="b2b-input" placeholder="Approvato da (nome di chi ha l’autorità di fermare una pubblicazione)" value={draft.claimsGate.approvedBy}
+            onChange={(e) => set({ claimsGate: { ...draft.claimsGate, approvedBy: e.target.value, approvedAt: e.target.value.trim() ? (draft.claimsGate.approvedAt ?? Date.now()) : null } })} />
+          <input className="b2b-input" placeholder="Riferimento al fascicolo di sostegno, se si afferma un’efficienza" value={draft.claimsGate.substantiation ?? ''}
+            onChange={(e) => set({ claimsGate: { ...draft.claimsGate, substantiation: e.target.value } })} />
+        </div>
+        <span className="pe-hint">
+          {gateComplete(draft.claimsGate)
+            ? `Firmata da ${draft.claimsGate.approvedBy} il ${new Date(draft.claimsGate.approvedAt ?? 0).toLocaleDateString('it-IT')}.`
+            : 'Non ancora firmata: la riga non può essere pubblicata.'}
+        </span>
+      </div>
 
       {/* ---- the cover -------------------------------------------------
           The card art a person sees while browsing. Without one the app draws

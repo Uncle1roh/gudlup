@@ -29,11 +29,20 @@ export type RedeemResult =
   | { ok: true; companyId: string }
   | { ok: false; reason: 'unknown' | 'revoked' | 'already-used' | 'not-a-therapist' }
 import type { Plan, PlanItem } from './plan'
+import type { PromoCode } from './promo'
+import type { PartnerProduct } from './partners'
 import type { TherapistLink, TherapistCode } from './link'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecision, AuditEvent } from '../admin/types'
 import type { CredentialDoc } from '../b2b/credentials'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
+import type {
+  LegalProfile, ProfilePatch, Acceptance, AcceptanceDoc, ConsentEvent, ConsentPurpose,
+  DataRequest, DataRequestKind, Report, ReportKind, LegalVersion,
+  ProfessionalRecord, ProfessionalPatch, ProfessionalCard, InformedConsentTemplate,
+  PatientInformedConsent, SponsorTotals,
+} from '../legal/records'
+import type { CrisisResource } from '../legal/market'
 import { createMockProvider } from './mock'
 import { previewing } from '../admin/preview'
 import { registerProtocols } from './protocols'
@@ -169,6 +178,24 @@ export interface DataProvider {
   listCompanies(): Promise<Company[]>
   saveCompany(company: Company): Promise<void>
 
+  // --- Admin: promo codes ---
+  listPromoCodes(): Promise<PromoCode[]>
+  /** Rejects when the code already exists. */
+  createPromoCode(code: string, discountPct: number, createdBy?: string): Promise<void>
+  /** Accounts already registered with it keep their discount. */
+  deletePromoCode(code: string): Promise<void>
+  /** What a code is worth (percent), or null when unknown. Works signed out:
+      the registration form asks it before the account exists. */
+  checkPromoCode(code: string): Promise<number | null>
+
+  // --- Partner products (admin-managed catalogue, shown on the Partner tab) ---
+  /** Every offer the caller may read: all of them for an admin, the active
+      ones for anyone else. */
+  listPartnerProducts(): Promise<PartnerProduct[]>
+  /** Upsert. An empty id creates a new offer; returns the stored id. */
+  savePartnerProduct(p: PartnerProduct): Promise<string>
+  deletePartnerProduct(id: string): Promise<void>
+
   // --- Scheduling (patient ↔ therapist) ---
   /** Approved therapists the signed-in employee can book (same company
       first; falls back to all approved in the pilot). */
@@ -213,6 +240,62 @@ export interface DataProvider {
   getPsychosocialAggregates(): Promise<Nr1Report>
   /** Record one employee's periodic psychosocial assessment (feeds the aggregates). */
   submitPsychosocialAssessment(response: PsychosocialResponse): Promise<void>
+
+  // --- Legal framework (src/legal) ---------------------------------------
+  //     Who the person is for legal purposes, what they accepted, what they
+  //     consented to, what they asked us for. See supabase/11-legal-framework.sql.
+  /** The signed-in person's legal profile. Rejects when nobody is signed in. */
+  getMyLegalProfile(): Promise<LegalProfile>
+  /** Rectification (DAT-07): name, personal e-mail, country, locale. */
+  updateMyProfile(patch: ProfilePatch): Promise<void>
+  /** One affirmative act, versioned and timestamped (LEG-01). Append-only. */
+  recordAcceptance(a: { docId: AcceptanceDoc | string; version: string; locale: string; channel?: string }): Promise<void>
+  listMyAcceptances(): Promise<Acceptance[]>
+  /** One grant or withdrawal, with the wording the person saw (LEG-04). */
+  recordConsent(c: { purpose: ConsentPurpose; granted: boolean; wording: string; locale: string; channel?: string }): Promise<void>
+  /** The full history, oldest first. */
+  listMyConsents(): Promise<ConsentEvent[]>
+  /** Files a data-subject request; the 15-day clock starts now (DAT-01). */
+  createDataRequest(kind: DataRequestKind, note?: string): Promise<DataRequest>
+  listMyDataRequests(): Promise<DataRequest[]>
+  /** Deletes the person's own rows and login; retains only what the law
+      requires (DAT-06). The caller signs out afterwards. */
+  deleteMyAccount(): Promise<void>
+  /** Files a content report or a complaint (Terms cl. 9 / cl. 19). */
+  createReport(r: { kind: ReportKind; subject: string; location?: string; reason: string }): Promise<Report>
+  /** Crisis numbers for a market, as configured (CRS-03). Works signed out. */
+  listCrisisResources(): Promise<CrisisResource[]>
+  /** The version register (ADM-06 / LEG-07). Works signed out. */
+  listLegalVersions(): Promise<LegalVersion[]>
+
+  // --- Legal framework: admin ---
+  listDataRequests(): Promise<DataRequest[]>
+  updateDataRequest(id: string, patch: Partial<Pick<DataRequest, 'status' | 'verifiedAt' | 'deliveredAt' | 'handledBy' | 'outcome'>>): Promise<void>
+  listReports(): Promise<Report[]>
+  updateReport(id: string, patch: Partial<Pick<Report, 'status' | 'acknowledgedAt' | 'decidedAt' | 'decidedBy' | 'decision'>>): Promise<void>
+  saveLegalVersion(v: Omit<LegalVersion, 'id' | 'createdAt'>): Promise<void>
+  saveCrisisResource(r: CrisisResource): Promise<void>
+  deleteCrisisResource(id: string): Promise<void>
+  /** ADM-07: one person's acceptance and consent history. */
+  listUserLegalRecords(profileId: string): Promise<{ acceptances: Acceptance[]; consents: ConsentEvent[] }>
+  /** ONB-02 / D-11: suspend and delete a person found to be under 18. */
+  adminDeleteProfile(profileId: string): Promise<void>
+
+  // --- Legal framework: the professional ---
+  getMyProfessionalRecord(): Promise<ProfessionalRecord>
+  updateMyProfessionalRecord(patch: ProfessionalPatch): Promise<void>
+  /** The card a patient reads about a professional (PRF-1). */
+  getProfessionalCard(therapistId: string): Promise<ProfessionalCard | null>
+  /** M2P-04: accept the professional's informed-consent form, by version. */
+  acceptInformedConsent(therapistId: string, template: InformedConsentTemplate): Promise<void>
+  listMyInformedConsents(): Promise<PatientInformedConsent[]>
+  /** M2P-06: where the person is, confirmed in the lobby. */
+  confirmSessionLocation(appointmentId: string, location: string): Promise<void>
+
+  // --- Legal framework: the sponsor ---
+  /** The only figures a sponsor receives: totals, suppressed below the cohort
+      threshold, no categories, no professionally-guided split (SPN-01..04). */
+  getSponsorTotals(): Promise<SponsorTotals>
 }
 
 const DataCtx = createContext<DataProvider | null>(null)
@@ -258,7 +341,13 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
       .then(({ createSupabaseProvider }) => {
         if (!active) return
         const live = createSupabaseProvider(SB_URL as string, SB_KEY as string)
-        setProvider((p) => (p ? { ...p, listProtocols: () => live.listProtocols(), listExploreRails: () => live.listExploreRails() } : p))
+        setProvider((p) => (p ? {
+          ...p,
+          listProtocols: () => live.listProtocols(),
+          listExploreRails: () => live.listExploreRails(),
+          // partner offers are catalogue too: the Partner tab shows the real ones
+          listPartnerProducts: () => live.listPartnerProducts(),
+        } : p))
         setCatalogLive(true)
       })
       .catch(() => {

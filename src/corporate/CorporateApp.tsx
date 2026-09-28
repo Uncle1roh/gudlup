@@ -31,6 +31,8 @@ import { Settings } from './Settings'
 import { buildAggregates, useCorporateState } from './data'
 import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
 import { BrandLogo } from '../components/Brand'
+import { useLegal } from '../legal/LegalContext'
+import { HelpNowButton } from '../legal/HelpNow'
 
 type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 'management' | 'settings'
 
@@ -75,6 +77,37 @@ export function CorporateApp() {
 
   const adminName = state.profile.contactName || displayName(user?.email)
 
+  /* SPN-07 — before anything else, once, logged: this service supports
+     wellbeing and neither assesses workplace risk nor meets any legal
+     obligation for the sponsor (D-09). Nothing in this console uses the
+     statutory vocabulary that would let a buyer file it as a control. */
+  const legal = useLegal()
+  const [ack, setAck] = useState(false)
+  const [ackBusy, setAckBusy] = useState(false)
+  if (legal.loaded && legal.profile && !legal.accepted('D-09')) {
+    return (
+      <div className="c-setup">
+        <div className="c-setup__card">
+          <div className="c-brand"><BrandLogo /></div>
+          <h1 className="c-h1">{t('Before you begin')}</h1>
+          <p className="c-lead">{legal.m('SPC-1')}</p>
+          <label className="c-checks legal-ack">
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+            <span>{t('I understand, on behalf of {company}.', { company: state.profile.name })}</span>
+          </label>
+          <p className="c-small">
+            <a className="c-link" href="#legal/D-09" target="_blank" rel="noreferrer">{t('Read the full notice')}</a>
+          </p>
+          <div className="c-actions">
+            <button className="c-btn c-btn--primary" disabled={!ack || ackBusy} onClick={() => { setAckBusy(true); void legal.accept('D-09').finally(() => setAckBusy(false)) }}>
+              {t('Continue')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!state.setupDoneAt) {
     return (
       <SetupWizard
@@ -104,6 +137,7 @@ export function CorporateApp() {
         <div className="c-topbar__left">
           <span className="c-brand"><BrandLogo /></span>
           <span className="c-topbar__company">{state.profile.name}</span>
+          <HelpNowButton variant="inline" />
         </div>
 
         <nav className="c-nav" role="tablist">

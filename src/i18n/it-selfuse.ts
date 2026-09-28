@@ -69,12 +69,12 @@ export const IT_SELF_USE: Record<string, string> = {
   'Being more productive': 'Essere più produttivo',
   'Recovering my energy': 'Recuperare energia',
   'Finding balance': 'Ritrovare equilibrio',
-  'Recommended for you': 'Consigliato per te',
+  'Matches what you chose': 'In base a ciò che hai scelto',
   '{len}, {per} sessions per week.': '{len}, {per} sessioni a settimana.',
   '~{n} min per session': '~{n} min per sessione',
   "We've suggested this as a great starting point. You can explore other pathways anytime.":
     'Te lo proponiamo come un ottimo punto di partenza. Puoi esplorare gli altri percorsi quando vuoi.',
-  'Start this pathway': 'Inizia questo percorso',
+  'Start this pathway': 'Inizia questa serie',
   'See all pathways': 'Vedi tutti i percorsi',
   'Ready for your first session?': 'Pronto per la tua prima sessione?',
   "Your first session is just 6 minutes. Find a quiet place, put on your headphones, and let's begin.":
@@ -109,7 +109,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Good morning': 'Buongiorno',
   'Good afternoon': 'Buon pomeriggio',
   'Good evening': 'Buonasera',
-  'Your pathway': 'Il tuo percorso',
+  'Your pathway': 'La tua serie',
   'Week {n} of {total}': 'Settimana {n} di {total}',
   "Today's session": 'La sessione di oggi',
   "Start Today's Session": 'Inizia la sessione di oggi',
@@ -117,14 +117,14 @@ export const IT_SELF_USE: Record<string, string> = {
   'Completed': 'Completata',
   'Great job today.': 'Bel lavoro oggi.',
   'Do an extra session?': 'Vuoi fare una sessione in più?',
-  'Choose your pathway': 'Scegli il tuo percorso',
+  'Choose your pathway': 'Scegli la tua serie',
   'Start a structured journey tailored to what you need most.':
-    'Inizia un percorso strutturato su ciò di cui hai più bisogno.',
+    'Inizia una serie di sessioni pensata per il momento che stai vivendo.',
   'Explore pathways': 'Esplora i percorsi',
   "You've completed {name}!": 'Hai completato {name}!',
   'That is a real piece of work. What comes next is up to you.':
     'È un risultato vero. Il prossimo passo lo scegli tu.',
-  'Start a new pathway': 'Inizia un nuovo percorso',
+  'Start a new pathway': 'Inizia una nuova serie',
   'Continue with free sessions': 'Continua con le sessioni libere',
   'Quick session': 'Sessione rapida',
   'How are you feeling right now?': 'Come ti senti adesso?',
@@ -157,7 +157,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'All Sessions': 'Tutte le sessioni',
   'ACTIVE': 'IN CORSO',
   'COMPLETED': 'COMPLETATO',
-  'Start Pathway': 'Inizia il percorso',
+  'Start Pathway': 'Inizia la serie',
   'Week by week': 'Settimana per settimana',
   'Continue': 'Continua',
   'Restart': 'Ricomincia',
@@ -173,7 +173,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'No sessions match.': 'Nessuna sessione corrisponde.',
   'Clear filters': 'Azzera i filtri',
   'Part of:': 'Fa parte di:',
-  'Part of pathway:': 'Fa parte del percorso:',
+  'Part of pathway:': 'Fa parte della serie:',
   'Week {n}': 'Settimana {n}',
   '{n} sessions': '{n} sessioni',
   'This week': 'Questa settimana',
@@ -212,9 +212,9 @@ export const IT_SELF_USE: Record<string, string> = {
   'Right': 'Destro',
   'Play the tone again': 'Riproduci di nuovo il suono',
   'Play the tone': 'Riproduci il suono',
-  'See pathway': 'Vedi il percorso',
+  'See pathway': 'Vedi la serie',
   'Help me choose': 'Aiutami a scegliere',
-  'Book a session': 'Prenota una seduta',
+  'Book a session': 'Prenota una sessione',
   'Change the time': 'Cambia orario',
   'Forgot your password?': 'Password dimenticata?',
   'Enter your email address first.': 'Inserisci prima il tuo indirizzo email.',
@@ -222,12 +222,12 @@ export const IT_SELF_USE: Record<string, string> = {
     'Non siamo riusciti a inviare il link. Riprova tra poco.',
   'If that address has an account, a reset link is on its way. Check your inbox.':
     'Se a quell’indirizzo corrisponde un account, il link è in arrivo. Controlla la posta.',
-  'See this pathway': 'Vedi questo percorso',
+  'See this pathway': 'Vedi questa serie',
   'Change my answers': 'Cambia le risposte',
-  'Show me a pathway': 'Mostrami un percorso',
+  'Show me a pathway': 'Mostrami una serie',
   'Just suggest something': 'Suggerisci tu',
   'Four questions, and we will point you at a pathway. Skip any of them.':
-    'Quattro domande e ti indichiamo un percorso. Puoi saltarne quante vuoi.',
+    'Quattro domande e ti mostriamo la serie che corrisponde a ciò che hai scelto. Puoi saltarne quante vuoi.',
   'Choose a length to begin': 'Scegli una durata per iniziare',
   'Several weeks, one theme': 'Più settimane, un tema',
   'Categories': 'Categorie',
@@ -236,9 +236,9 @@ export const IT_SELF_USE: Record<string, string> = {
     'Permette all’app di misurare come stai nel tempo. Puoi disattivarlo più tardi.',
   'This session is not available': 'Questa sessione non è disponibile',
   'It is no longer in the catalog. If your therapist prescribed it, they can prescribe it again.':
-    'Non è più nel catalogo. Se te l’ha prescritta la tua terapeuta, può prescriverla di nuovo.',
+    'Non è più nel catalogo. Se l’ha scelta per te il tuo professionista, può sceglierla di nuovo.',
   'The protocol behind it is no longer in the catalog. Your therapist can prescribe it again once it is republished.':
-    'Il protocollo che la genera non è più nel catalogo. La tua terapeuta potrà prescriverla di nuovo quando sarà ripubblicato.',
+    'Il contenuto che la genera non è più nel catalogo. Il tuo professionista potrà sceglierla di nuovo quando sarà ripubblicato.',
   'Put your headphones on. We will play a short tone in one ear.':
     'Indossa le cuffie. Riprodurremo un breve suono in un orecchio solo.',
   'We recommend wired stereo headphones. Continue anyway?':
@@ -333,9 +333,9 @@ export const IT_SELF_USE: Record<string, string> = {
   'minutes total': 'minuti in tutto',
   'sessions completed': 'sessioni completate',
   'Start a new session.': 'Inizia una nuova sessione.',
-  'Pathway progress': 'Avanzamento del percorso',
+  'Pathway progress': 'Avanzamento della serie',
   '{n} sessions done': '{n} sessioni fatte',
-  'No active pathway.': 'Nessun percorso attivo.',
+  'No active pathway.': 'Nessuna serie attiva.',
   'Monthly report': 'Report mensile',
   'A summary of your sessions and check-ins for this month.':
     'Un riepilogo delle tue sessioni e dei check-in di questo mese.',
@@ -347,29 +347,29 @@ export const IT_SELF_USE: Record<string, string> = {
   'Connect with a therapist to see your guided session progress here.':
     'Collegati a un terapeuta per vedere qui i progressi delle sessioni guidate.',
   'Go to Therapist tab': 'Vai alla scheda Terapeuta',
-  'Therapy overview': 'Quadro della terapia',
-  'weeks in therapy': 'settimane di terapia',
-  'next session': 'prossima seduta',
-  'Session chronology': 'Cronologia delle sedute',
-  'Video session': 'Seduta in video',
+  'Therapy overview': 'Le sessioni con il professionista',
+  'weeks in therapy': 'settimane con il professionista',
+  'next session': 'prossima sessione',
+  'Session chronology': 'Cronologia delle sessioni',
+  'Video session': 'Sessione in video',
   'notes shared': 'note condivise',
-    'Clinical assessment trends': 'Andamento delle valutazioni cliniche',
+    'Clinical assessment trends': 'Questionari inviati',
   'Latest VAS': 'Ultimo VAS',
   'Clinical scales are used in Therapist Guided only, administered under therapist supervision.':
-    'Le scale cliniche si usano solo nel percorso con il terapeuta, sotto la sua supervisione.',
-  'Prescription adherence': 'Aderenza alle sessioni assegnate',
-  'Therapy goals': 'Obiettivi della terapia',
+    'I questionari si usano solo nel lavoro con il professionista, sotto la sua responsabilità, e non mostrano un punteggio.',
+  'Prescription adherence': 'Ascolti delle sessioni scelte',
+  'Therapy goals': 'Obiettivi',
   'Goals are set with your therapist and are read-only here.':
     'Gli obiettivi si definiscono con il terapeuta e qui sono in sola lettura.',
-  'Export therapy report': 'Esporta il report della terapia',
-  'sessions': 'sedute',
+  'Export therapy report': 'Esporta il report delle sessioni guidate',
+  'sessions': 'sessioni',
   'In progress': 'In corso',
   'Achieved': 'Raggiunto',
 
   /* ---- therapist tab ---- */
   'Professional support': 'Supporto professionale',
   "Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.":
-    'Good Loop offre anche sedute guidate con professionisti abilitati, disponibili con il piano esteso della tua azienda.',
+    'Good Loop offre anche sessioni guidate con professionisti abilitati, disponibili con il piano esteso della tua azienda.',
   'In the meantime, your Self Use sessions are always here for you.':
     'Nel frattempo, le sessioni in autonomia restano sempre a tua disposizione.',
   'Go to Self Use': 'Vai alle sessioni in autonomia',
@@ -377,7 +377,7 @@ export const IT_SELF_USE: Record<string, string> = {
     'Domande? Scrivi al tuo ufficio HR o alla nostra assistenza.',
   'Professional support, when you need it': 'Supporto professionale, quando ti serve',
   'Connect with a licensed professional for guided sessions tailored to your needs.':
-    'Collegati a un professionista abilitato per sedute guidate su misura per te.',
+    'Collegati a un professionista abilitato per sessioni guidate, dove il tuo piano lo prevede.',
   'Find a therapist': 'Trova un terapeuta',
   'or': 'oppure',
   'Have a connection code?': 'Hai un codice di collegamento?',
@@ -397,7 +397,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Languages:': 'Lingue:',
   'Available slots': 'Orari disponibili',
   'Pick a time above': 'Scegli un orario qui sopra',
-  'Request Session': 'Richiedi una seduta',
+  'Request Session': 'Richiedi una sessione',
   'Booking shares only your name, the slot and your company. No health data is sent.':
     'La prenotazione condivide solo il tuo nome, l’orario e la tua azienda. Nessun dato sanitario viene inviato.',
   'Enter your connection code': 'Inserisci il codice di collegamento',
@@ -417,26 +417,26 @@ export const IT_SELF_USE: Record<string, string> = {
   'Current medications': 'Farmaci in corso',
   'Consent': 'Consensi',
   'Clinical data processing': 'Trattamento dei dati clinici',
-  'Session notes': 'Note delle sedute',
+  'Session notes': 'Note delle sessioni',
   'Share Self Use history with therapist': 'Condividi con il terapeuta la cronologia in autonomia',
   'Share your Self Use history and check-ins. You can revoke this at any time.':
     'Condividi la cronologia delle sessioni in autonomia e i check-in. Puoi revocarlo quando vuoi.',
   'OPTIONAL · DEFAULT OFF': 'FACOLTATIVO · PREDEFINITO DISATTIVO',
   "You're all set.": 'È tutto pronto.',
   'Connected with {name}.': 'Collegato con {name}.',
-  'First session: To be scheduled': 'Prima seduta: da fissare',
-  'Next session:': 'Prossima seduta:',
-  'Join Session': 'Entra nella seduta',
-  'Opens 15 minutes before your session starts.': 'Si attiva 15 minuti prima dell’inizio della seduta.',
-  'Prescriptions': 'Sessioni assegnate',
+  'First session: To be scheduled': 'Prima sessione: da fissare',
+  'Next session:': 'Prossima sessione:',
+  'Join Session': 'Entra nella sessione',
+  'Opens 15 minutes before your session starts.': 'Si attiva 15 minuti prima dell’inizio della sessione.',
+  'Prescriptions': 'Sessioni scelte per te',
   'No prescriptions yet.': 'Nessuna sessione assegnata.',
   '{n}× {name} this week': '{n}× {name} questa settimana',
   '{done} of {total} done': '{done} di {total} fatte',
-  'Session history': 'Cronologia delle sedute',
+  'Session history': 'Cronologia delle sessioni',
   'Send': 'Invia',
 
   /* ---- videocall (patient side) ---- */
-  'Your session with': 'La tua seduta con',
+  'Your session with': 'La tua sessione con',
   'starts at {time}': 'inizia alle {time}',
   'Self-view camera preview': 'Anteprima della tua videocamera',
   'Mic': 'Microfono',
@@ -447,24 +447,24 @@ export const IT_SELF_USE: Record<string, string> = {
   'Unmute': 'Attiva microfono',
   'Camera off': 'Spegni la videocamera',
   'Camera on': 'Accendi la videocamera',
-  'Stereo headphones are required for this session': 'Per questa seduta servono cuffie stereo',
+  'Stereo headphones are required for this session': 'Per questa sessione servono cuffie stereo',
   'Active when your therapist opens the room': 'Si attiva quando il terapeuta apre la stanza',
   'Leave': 'Esci',
   'Therapist video feed': 'Video del terapeuta',
   'Self view': 'La tua immagine',
   'End': 'Termina',
-  'Therapist starts the Good Loop protocol': 'Il terapeuta avvia il protocollo Good Loop',
+  'Therapist starts the Good Loop protocol': 'Il professionista avvia l’audio Good Loop',
   'Debrief with your therapist': 'Debriefing con il tuo terapeuta',
   'Leave the session? This ends the call with your therapist.':
-    'Vuoi uscire dalla seduta? La chiamata con il tuo terapeuta si chiuderà.',
+    'Vuoi uscire dalla sessione? La chiamata con il tuo professionista si chiuderà.',
   'Stay': 'Resta',
-  'Your therapist is starting your session': 'Il tuo terapeuta sta avviando la seduta',
+  'Your therapist is starting your session': 'Il tuo professionista sta avviando la sessione',
   'Put on your headphones, close your eyes, and get comfortable.':
     'Metti le cuffie, chiudi gli occhi e mettiti comodo.',
   'Starting in': 'Si comincia tra',
   'Leaving now ends your session with your therapist. Are you sure?':
-    'Uscendo adesso chiudi la seduta con il tuo terapeuta. Vuoi davvero uscire?',
-  'Session ended': 'Seduta terminata',
+    'Uscendo adesso chiudi la sessione con il tuo professionista. Vuoi davvero uscire?',
+  'Session ended': 'Sessione terminata',
 
   /* ---- safety gateway ---- */
   "We're here to help you find support": 'Siamo qui per aiutarti a trovare supporto',
@@ -508,6 +508,23 @@ export const IT_SELF_USE: Record<string, string> = {
     'Un codice aziendale ha questa forma: ACME-2026-K7. Verificalo con chi te l’ha dato.',
   'We do not know this code yet. You can create your account without it and add it later.':
     'Questo codice non ci risulta ancora. Puoi creare l’account senza e aggiungerlo più avanti.',
+
+  /* ---- the promo code, at registration ---- */
+  'Promo code (optional)': 'Codice promozionale (facoltativo)',
+  'Checking the code…': 'Verifica del codice…',
+  'Promo code accepted — {pct}% off.': 'Codice valido — sconto del {pct}%.',
+  'This promo code is not valid. Check it, or leave the field empty.':
+    'Questo codice promozionale non è valido. Controllalo, oppure lascia vuoto il campo.',
+
+  /* ---- Partner (admin accounts only for now) ---- */
+  'Partners': 'Partner',
+  'Offers and discounts from Good Loop partners.': 'Offerte e sconti dei partner di Good Loop.',
+  'No partner offers yet.': 'Ancora nessuna offerta dei partner.',
+  'The offers could not be loaded just now. Try again in a moment.': 'Non è stato possibile caricare le offerte. Riprova tra poco.',
+  'Copy the code': 'Copia il codice',
+  'Copied': 'Copiato',
+  'Code': 'Codice',
+  'Go to the offer': 'Vai all’offerta',
   /* The plan a registered code opens, printed under the field. 'Self Use' on
      its own is already translated above as the way you work, in autonomia. */
   'Self Use + Professional Support': 'Self Use + Supporto professionale',
@@ -531,7 +548,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'I have read and accept the Terms and the Privacy Policy.':
     'Ho letto e accetto i Termini e l’Informativa sulla privacy.',
   'Accept & continue': 'Accetta e continua',
-  'Your sessions together will be listed here.': 'Le sedute che farete insieme compariranno qui.',
+  'Your sessions together will be listed here.': 'Le sessioni che farete insieme compariranno qui.',
   'Goals you agree on with your therapist appear here.': 'Gli obiettivi che concordi con il tuo terapeuta compaiono qui.',
   'One method, two ways to use it': 'Un metodo, due modi di usarlo',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
@@ -541,9 +558,9 @@ export const IT_SELF_USE: Record<string, string> = {
     'Brevi sessioni audio guidate per la giornata che hai — 6, 12 o 24 minuti, quando vuoi, senza chiedere niente a nessuno.',
   'With a professional': 'Con un professionista',
   'Included in your plan: sessions with a licensed psychologist, booked and held inside the app.':
-    'Incluso nel tuo piano: sedute con uno psicologo abilitato, prenotate e svolte dentro l’app.',
+    'Incluso nel tuo piano: sessioni con uno psicologo abilitato, prenotate e svolte dentro l’app.',
   'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.':
-    'Disponibile con il piano esteso della tua azienda: sedute con uno psicologo abilitato, prenotate e svolte dentro l’app.',
+    'Disponibile con il piano esteso della tua azienda: sessioni con uno psicologo abilitato, prenotate e svolte dentro l’app.',
 
   'Made for the working day': 'Fatto per la giornata di lavoro',
   'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
@@ -598,7 +615,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Weekly check-in reminder': 'Promemoria del check-in settimanale',
   'Monthly wellbeing reminder': 'Promemoria del benessere mensile',
   'Motivational nudges': 'Piccoli incoraggiamenti',
-  'Therapist session reminders': 'Promemoria delle sedute',
+  'Therapist session reminders': 'Promemoria delle sessioni con il professionista',
   'Prescription reminders': 'Promemoria delle sessioni assegnate',
   'Each setting is independent. Reminders never contain health information.':
     'Ogni impostazione è indipendente. I promemoria non contengono mai informazioni sulla salute.',
@@ -628,7 +645,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'The screen goes dark by design. Close your eyes, listen, and let the audio do the work.':
     'Lo schermo si oscura di proposito. Chiudi gli occhi, ascolta e lascia lavorare l’audio.',
   'A pathway is a multi-week journey — the sessions build on each other. No pressure: go at your own speed.':
-    'Un percorso dura più settimane e le sessioni si costruiscono una sull’altra. Nessuna fretta: vai al tuo ritmo.',
+    'Una serie dura più settimane e le sessioni si costruiscono una sull’altra. Nessuna fretta: vai al tuo ritmo.',
   'Check-ins': 'Check-in',
   'Weekly and monthly check-ins live in the Progress tab. Less than a minute, and completely optional.':
     'I check-in settimanali e mensili sono nella scheda Progressi. Meno di un minuto, e del tutto facoltativi.',
@@ -641,7 +658,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Good Loop combines guided voice, stereo sound design and structured session phases into short audio practices you can fit into a working day.':
     'Good Loop unisce voce guidata, progettazione sonora stereo e fasi strutturate in pratiche audio brevi, da inserire in una giornata di lavoro.',
   /* --- Therapist tab: scheduling, questionnaires, messages --------------- */
-  'No session is scheduled yet.': 'Nessuna seduta in programma.',
+  'No session is scheduled yet.': 'Nessuna sessione fissata.',
   'Your therapist will propose a time.': 'Sarà il tuo terapeuta a proporti un orario.',
   'Notes shared': 'Note condivise',
   'Questionnaires': 'Questionari',
@@ -653,7 +670,7 @@ export const IT_SELF_USE: Record<string, string> = {
   /* --- Assessment runner ------------------------------------------------- */
   'Close': 'Chiudi',
   'This measure is recorded by your therapist during your session.':
-    'Questa misura viene registrata dal tuo terapeuta durante la seduta.',
+    'Questa misura viene registrata dal tuo professionista durante la sessione.',
   'Your answers have been sent to {name}.': 'Le tue risposte sono state inviate a {name}.',
   'Your answers have been sent to your therapist.': 'Le tue risposte sono state inviate al tuo terapeuta.',
   'Questionnaires like this one are read alongside everything else your therapist knows about you. You will go through the results together.':
@@ -795,7 +812,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Grounding first': 'Prima radicarsi',
   'Practising give rather than brace': 'Allenare la cedevolezza, non la rigidità',
   'A steady, mobile close': 'Una chiusura stabile e mobile',
-  'Overcoming Challenges': 'Superare le sfide',
+  'Facing a Challenge': 'Davanti a una sfida',
   'Meet a hard thing with more than dread.': 'Affronta una cosa difficile con qualcosa in più del timore.',
   'It takes something difficult that is coming and rehearses meeting it — not avoiding it, and not pretending it is small.':
     'Prende una cosa difficile che sta arrivando e ne prova l’incontro: senza evitarla e senza far finta che sia piccola.',
@@ -832,11 +849,11 @@ export const IT_SELF_USE: Record<string, string> = {
   'No pressure at the end': 'Nessuna pressione alla fine',
   'Focus & Performance': 'Focus e prestazione',
   'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.':
-    'Per chi deve rendere sotto pressione: mente affollata, difficoltà a concentrarsi, ansia da prestazione, rimandare mentre la scadenza si avvicina.',
-  'Stress Management': 'Gestione dello stress',
+    'Per chi deve rendere sotto pressione: mente affollata, difficoltà a concentrarsi, i nervi prima di andare in scena, rimandare mentre la scadenza si avvicina.',
+  'The Working Day': 'La giornata di lavoro',
   'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.':
-    'Un percorso progressivo per gestire in modo strutturato lo stress lavorativo di ogni giorno: prima si ritrova la calma, poi si riordinano le richieste, poi si proteggono i confini e infine si consolida la fiducia.',
-  'Energy & Recovery': 'Energia e recupero',
+    'Una serie progressiva per i momenti della giornata di lavoro: prima si ritrova la calma, poi si riordinano le richieste, poi si proteggono i confini e infine si consolida la fiducia.',
+  'Energy & Rest': 'Energia e riposo',
   'For anyone who feels emptied out, exhausted, chronically in energy debt. Progressive regeneration: from allowing yourself to stop, through to a deeper recharge.':
     'Per chi si sente svuotato, esausto, cronicamente in debito di energia. Una rigenerazione progressiva: dal permettersi di fermarsi fino a una ricarica più profonda.',
   'Balance & Boundaries': 'Equilibrio e confini',
@@ -844,7 +861,7 @@ export const IT_SELF_USE: Record<string, string> = {
     'Per chi fatica a staccare dal lavoro, per chi ha visto sfumare la linea tra vita professionale e personale, per chi è iperconnesso e sovraccarico nelle relazioni.',
   'Growth & Resilience': 'Crescita e resilienza',
   'The longest and deepest journey, oriented towards personal and professional development. For anyone looking for growth, flexibility and a longer view.':
-    'Il percorso più lungo e più profondo, orientato allo sviluppo personale e professionale. Per chi cerca crescita, flessibilità e uno sguardo più lungo.',
+    'La serie più lunga e più profonda, orientata allo sviluppo personale e professionale. Per chi cerca crescita, flessibilità e uno sguardo più lungo.',
   'Focus & Management': 'Focus e gestione',
   'Calm & Presence': 'Calma e presenza',
   'Standalone': 'Singole',
@@ -865,7 +882,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Regain calm, reorganize demands, and build healthy boundaries.':
     'Ritrovare la calma, riordinare le richieste, costruire confini sani.',
   'From exhaustion to renewed vitality. Permission to pause, then rebuild.':
-    'Dall’esaurimento a una vitalità nuova. Prima il permesso di fermarti, poi la ricostruzione.',
+    'Da una settimana pesante a una vitalità nuova. Prima il permesso di fermarti, poi il riposo.',
   'Protect your time, set limits, reconnect with what matters.':
     'Proteggere il tuo tempo, mettere limiti, ricollegarti a ciò che conta.',
   'Long-term development: flexibility, strength, vision.':
@@ -896,7 +913,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Name': 'Nome',
   'No camera': 'Nessuna fotocamera',
   'No camera available. A session needs a secure connection and a working camera.':
-    'Nessuna fotocamera disponibile. Per una seduta servono una connessione sicura e una fotocamera che funzioni.',
+    'Nessuna fotocamera disponibile. Per una sessione servono una connessione sicura e una fotocamera che funzioni.',
   'No recorded voice is published for this session yet — it plays an ambient bed.':
     'Per questa sessione non è ancora pubblicata una voce registrata: senti un tappeto sonoro.',
   'Not available to play yet — your therapist has been told.':
@@ -914,7 +931,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Stay on this screen — the call opens on its own.':
     'Resta su questa schermata: la videochiamata si apre da sola.',
   'The library is being prepared.': 'La libreria è in preparazione.',
-  'Today in your pathway': 'Oggi nel tuo percorso',
+  'Today in your pathway': 'Oggi nella tua serie',
   'Waiting for your therapist to open the room…': 'Aspettiamo che il tuo terapeuta apra la stanza…',
   'We could not connect you just now. Check your connection and try again.':
     'Non è stato possibile connetterti in questo momento. Controlla la connessione e riprova.',
@@ -924,14 +941,14 @@ export const IT_SELF_USE: Record<string, string> = {
     'Il tuo check-in e il calendario dell’umore compaiono qui appena inizi a compilarli.',
   'Your own mix': 'La tua scelta',
   'Your therapist is here. The session will open by itself.':
-    'Il tuo terapeuta è arrivato. La seduta si apre da sola.',
+    'Il tuo professionista è arrivato. La sessione si apre da sola.',
   'Your therapist is speaking': 'Il tuo terapeuta sta parlando',
   'Your therapist will start the session when you are both ready.':
-    'Il tuo terapeuta avvierà la seduta quando sarete pronti entrambi.',
+    'Il tuo professionista avvierà la sessione quando sarete pronti entrambi.',
   'demo {n}s': 'demo {n}s',
   'full length': 'durata intera',
   '{done} of {total} this week': '{done} di {total} questa settimana',
   '{n} of 4': '{n} di 4',
   '{n} week(s) of this pathway are not available right now, so it is shorter than usual.':
-    '{n} settimane di questo percorso non sono disponibili al momento, quindi è più corto del solito.',
+    '{n} settimane di questa serie non sono disponibili al momento, quindi è più corta del solito.',
 }

@@ -7,8 +7,13 @@ import type { ExploreRail } from './rails'
 import { repositioned, type Plan, type PlanItem } from './plan'
 import { generateConnectionCode, type TherapistLink, type TherapistCode } from './link'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from '../admin/types'
+import { normalizePromoCode, type PromoCode } from './promo'
+import { sortPartnerProducts, type PartnerProduct } from './partners'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
+import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
+import { MIN_COHORT } from '../legal/market'
+import type { DataRequest, Report } from '../legal/records'
 
 /* Tiny simulated latency so loading states are exercised exactly as they will be
    against a real backend. Set to 0 to disable. */
@@ -128,6 +133,19 @@ const adminUsers: AdminUser[] = [
   { id: 'u3', name: 'Camila Rocha', email: 'camila@aurora.co', role: 'hr_admin', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 88 * DAY },
   { id: 'u4', name: 'Mariana Alves', email: 'mariana@aurora.co', role: 'b2c_user', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 30 * DAY },
   { id: 'u5', name: 'Admin (you)', email: 'admin@goodloop.app', role: 'admin', active: true, createdAt: nowMs - 200 * DAY },
+]
+
+let promoCodes: PromoCode[] = [
+  { code: 'BENVENUTO10', discountPct: 10, createdAt: nowMs - 12 * DAY, createdBy: 'admin@goodloop.app', uses: 3 },
+  { code: 'LANCIO2026', discountPct: 25, createdAt: nowMs - 3 * DAY, createdBy: 'admin@goodloop.app', uses: 0 },
+]
+
+/* Demo offers — invented brands, so a walkthrough on fixtures is never
+   mistaken for a real partnership. */
+let partnerProducts: PartnerProduct[] = [
+  { id: 'pp-1', partner: 'Studio Respiro', title: 'Abbonamento yoga mensile', description: 'Lezioni illimitate di hatha e yin yoga in tutte le sedi.', discount: '-20%', promoCode: 'GOODLOOP20', url: 'https://example.com/yoga', active: true, position: 0, createdAt: nowMs - 10 * DAY },
+  { id: 'pp-2', partner: 'Tisaneria Quiete', title: 'Box tisane della sera', description: 'Sei miscele senza teina, spedizione inclusa.', discount: '1 box in omaggio', url: 'https://example.com/tisane', active: true, position: 1, createdAt: nowMs - 5 * DAY },
+  { id: 'pp-3', partner: 'Cuffie Nove', title: 'Cuffie over-ear', description: 'In preparazione — non ancora visibile.', discount: '-15%', active: false, position: 2, createdAt: nowMs - 1 * DAY },
 ]
 
 let credentialRequests: CredentialRequest[] = [
@@ -548,6 +566,40 @@ export function createMockProvider(): DataProvider {
       await wait()
     },
 
+    // --- Promo codes ---
+    listPromoCodes: () => delay(promoCodes.map((c) => ({ ...c }))),
+    createPromoCode: async (code, discountPct, createdBy) => {
+      await wait()
+      const c = normalizePromoCode(code)
+      if (promoCodes.some((p) => p.code === c)) throw new Error(`Il codice ${c} esiste già.`)
+      promoCodes = [{ code: c, discountPct, createdAt: Date.now(), createdBy, uses: 0 }, ...promoCodes]
+    },
+    deletePromoCode: async (code) => {
+      await wait()
+      promoCodes = promoCodes.filter((p) => p.code !== code)
+    },
+    checkPromoCode: async (code) => {
+      await wait()
+      return promoCodes.find((p) => p.code === normalizePromoCode(code))?.discountPct ?? null
+    },
+
+    // --- Partner products ---
+    listPartnerProducts: () => delay(sortPartnerProducts(partnerProducts).map((p) => ({ ...p }))),
+    savePartnerProduct: async (p) => {
+      await wait()
+      if (p.id && partnerProducts.some((x) => x.id === p.id)) {
+        partnerProducts = partnerProducts.map((x) => (x.id === p.id ? { ...p } : x))
+        return p.id
+      }
+      const id = nextId('pp')
+      partnerProducts = [...partnerProducts, { ...p, id, createdAt: Date.now() }]
+      return id
+    },
+    deletePartnerProduct: async (id) => {
+      await wait()
+      partnerProducts = partnerProducts.filter((x) => x.id !== id)
+    },
+
     // --- Users & roles ---
     listAdminUsers: () => delay(adminUsers.map((u) => ({ ...u }))),
     setUserRole: async (id, role) => {
@@ -574,6 +626,185 @@ export function createMockProvider(): DataProvider {
       // stamp to the current cycle; team defaults to the demo employee's team
       psychosocialResponses = [...psychosocialResponses, { ...resp, period: resp.period || NR1_CURRENT_PERIOD }]
       await wait()
+    },
+
+    /* ---- legal framework (localStorage-backed, see mockLegal.ts) ---- */
+    getMyLegalProfile: async () => {
+      await wait(40)
+      return { ...loadMockLegal().profile }
+    },
+    updateMyProfile: async (patch) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        const p = { ...s.profile }
+        if (patch.name !== undefined) p.name = patch.name
+        if (patch.personalEmail !== undefined) p.personalEmail = patch.personalEmail
+        if (patch.birthDate !== undefined) p.birthDate = patch.birthDate
+        if (patch.locale !== undefined) p.locale = patch.locale
+        if (patch.country !== undefined) {
+          p.country = patch.country
+          p.market = patch.country === 'BR' ? 'BR' : patch.country === 'IT' ? 'EU' : p.market
+        }
+        s.profile = p
+      })
+    },
+    recordAcceptance: async (a) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        s.acceptances = [...s.acceptances, {
+          id: nextMockLegalId('acc'), profileId: s.profile.id, docId: a.docId, version: a.version,
+          locale: a.locale, channel: a.channel ?? 'app', acceptedAt: Date.now(),
+        }]
+      })
+    },
+    listMyAcceptances: async () => {
+      await wait(40)
+      return [...loadMockLegal().acceptances]
+    },
+    recordConsent: async (c) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        s.consents = [...s.consents, {
+          id: nextMockLegalId('cns'), profileId: s.profile.id, purpose: c.purpose, granted: c.granted,
+          wording: c.wording, locale: c.locale, channel: c.channel ?? 'app', at: Date.now(),
+        }]
+      })
+    },
+    listMyConsents: async () => {
+      await wait(40)
+      return [...loadMockLegal().consents].sort((a, b) => a.at - b.at)
+    },
+    createDataRequest: async (kind, note) => {
+      await wait()
+      const now = Date.now()
+      let created: DataRequest | null = null
+      mutateMockLegal((s) => {
+        created = {
+          id: nextMockLegalId('dsr'), profileId: s.profile.id,
+          requester: { name: s.profile.name, email: s.profile.email },
+          kind, market: s.profile.market, status: 'open', note, receivedAt: now, dueAt: dueAtFrom(now),
+        }
+        s.dataRequests = [...s.dataRequests, created]
+      })
+      return created as unknown as DataRequest
+    },
+    listMyDataRequests: async () => {
+      await wait(40)
+      const s = loadMockLegal()
+      return s.dataRequests.filter((r) => r.profileId === s.profile.id)
+    },
+    deleteMyAccount: async () => {
+      await wait()
+      wipeMockLegalPerson()
+    },
+    createReport: async (r) => {
+      await wait()
+      let created: Report | null = null
+      mutateMockLegal((s) => {
+        created = {
+          id: nextMockLegalId('rep'), kind: r.kind, reporterId: s.profile.id, reporterEmail: s.profile.email,
+          subject: r.subject, location: r.location, reason: r.reason, status: 'received', receivedAt: Date.now(),
+        }
+        s.reports = [...s.reports, created]
+      })
+      return created as unknown as Report
+    },
+    listCrisisResources: async () => [...loadMockLegal().crisis],
+    listLegalVersions: async () => [...loadMockLegal().versions],
+
+    // admin
+    listDataRequests: async () => {
+      await wait(40)
+      return [...loadMockLegal().dataRequests].sort((a, b) => a.dueAt - b.dueAt)
+    },
+    updateDataRequest: async (id, patch) => {
+      await wait(40)
+      mutateMockLegal((s) => { s.dataRequests = s.dataRequests.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
+    },
+    listReports: async () => {
+      await wait(40)
+      return [...loadMockLegal().reports].sort((a, b) => a.receivedAt - b.receivedAt)
+    },
+    updateReport: async (id, patch) => {
+      await wait(40)
+      mutateMockLegal((s) => { s.reports = s.reports.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
+    },
+    saveLegalVersion: async (v) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        s.versions = [
+          ...s.versions.map((x) => (x.docId === v.docId && x.locale === v.locale && !x.inForceTo ? { ...x, inForceTo: v.inForceFrom } : x)),
+          { ...v, id: nextMockLegalId('ver'), createdAt: Date.now() },
+        ]
+      })
+    },
+    saveCrisisResource: async (r) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        const exists = s.crisis.some((c) => c.id === r.id)
+        s.crisis = exists ? s.crisis.map((c) => (c.id === r.id ? { ...r } : c)) : [...s.crisis, { ...r }]
+      })
+    },
+    deleteCrisisResource: async (id) => {
+      await wait(40)
+      mutateMockLegal((s) => { s.crisis = s.crisis.filter((c) => c.id !== id) })
+    },
+    listUserLegalRecords: async (profileId) => {
+      await wait(40)
+      const s = loadMockLegal()
+      if (profileId !== s.profile.id) return { acceptances: [], consents: [] }
+      return { acceptances: [...s.acceptances], consents: [...s.consents] }
+    },
+    adminDeleteProfile: async (profileId) => {
+      await wait()
+      const u = adminUsers.find((x) => x.id === profileId)
+      if (u) u.active = false
+      adminUsers.splice(adminUsers.findIndex((x) => x.id === profileId), 1)
+    },
+
+    // the professional
+    getMyProfessionalRecord: async () => {
+      await wait(40)
+      return { ...loadMockLegal().professional }
+    },
+    updateMyProfessionalRecord: async (patch) => {
+      await wait(40)
+      mutateMockLegal((s) => { s.professional = { ...s.professional, ...patch } })
+    },
+    getProfessionalCard: async (therapistId) => {
+      await wait(40)
+      const p = loadMockLegal().professional
+      const name = therapistId === 'th-demo-2' ? 'Dr. Rafael Lima' : 'Dra. Ana Fontes'
+      return {
+        id: therapistId, name, registration: p.registration, registry: p.registry, registryRegion: p.registryRegion,
+        verifiedAt: p.verifiedAt, consentTemplate: p.consentTemplate,
+      }
+    },
+    acceptInformedConsent: async (therapistId, template) => {
+      await wait(40)
+      mutateMockLegal((s) => {
+        s.informedConsents = [...s.informedConsents.filter((c) => !(c.therapistId === therapistId && c.templateVersion === template.version)), {
+          id: nextMockLegalId('ic'), therapistId, templateVersion: template.version, acceptedAt: Date.now(),
+        }]
+      })
+    },
+    listMyInformedConsents: async () => {
+      await wait(40)
+      return [...loadMockLegal().informedConsents]
+    },
+    confirmSessionLocation: async (appointmentId, location) => {
+      await wait(40)
+      mutateMockLegal((s) => { s.locations = { ...s.locations, [appointmentId]: location } })
+    },
+
+    // the sponsor
+    getSponsorTotals: async () => {
+      await wait(40)
+      /* Demo totals for a population comfortably above the threshold; a
+         value below it would be null, and that is what the screen prints. */
+      const eligible = 150
+      const suppress = (n: number) => (n < MIN_COHORT ? null : n)
+      return { companyId: 'AURORA-2026-Z5', minCohort: MIN_COHORT, eligible, registered: suppress(112), active30d: suppress(64), sessions30d: suppress(418) }
     },
   }
 }
