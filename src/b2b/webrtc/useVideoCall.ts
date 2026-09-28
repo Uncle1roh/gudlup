@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { currentLocale } from '../../i18n'
+import { wt } from '../../workspace/i18n'
 import {
   createLoopbackPair,
   createRealtimeSignaling,
@@ -70,9 +72,9 @@ function makeCanvasStream(rafRef: { current: number | null }): MediaStream {
       ctx.fillStyle = '#7ac69b'; ctx.fill()
       ctx.fillStyle = '#eaf3ec'; ctx.textAlign = 'center'
       ctx.font = '600 24px system-ui, sans-serif'
-      ctx.fillText('Paziente — feed simulato', 320, 322)
+      ctx.fillText(wt('Patient — simulated feed'), 320, 322)
       ctx.font = '15px system-ui, sans-serif'; ctx.fillStyle = '#9fbfae'
-      ctx.fillText(new Date().toLocaleTimeString(), 320, 350)
+      ctx.fillText(new Date().toLocaleTimeString(currentLocale()), 320, 350)
     }
     rafRef.current = requestAnimationFrame(draw)
   }

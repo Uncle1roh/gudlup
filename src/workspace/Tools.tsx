@@ -26,6 +26,7 @@ import { useDataProvider } from '../data/provider'
 import { CONSENT_TEMPLATE_ITEMS, consentTemplateComplete, type InformedConsentTemplate, type ProfessionalRecord } from '../legal/records'
 import { REVERIFY_MONTHS } from '../legal/market'
 import { useI18n } from '../i18n'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { fmtDate, initials, versionShort } from './Patients'
 import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
 import {
@@ -184,7 +185,7 @@ export function ReportsArchive({ state, onOpen }: { state: WorkspaceState; onOpe
           <thead>
             <tr>
               <th />
-              <th>{t('Date')}</th><th>{t('Patient')}</th><th>{t('Type')}</th><th>{t('Protocol')}</th><th>{t('Status')}</th><th>{t('Actions')}</th>
+              <th>{t('Date')}</th><th>{t('Patient')}</th><th>{t('Type')}</th><th>{t('Content')}</th><th>{t('Status')}</th><th>{t('Actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -308,7 +309,10 @@ export function WorkspaceSettings({
 }) {
   const { t } = useI18n()
   const [section, setSection] = useState<SettingsSection>('profile')
-  const [bio, setBio] = useState(state.account.bio)
+  /* The demo caseload's seeded bio is an English fixture; shown in the
+     interface language like the rest of the demo. A bio the therapist wrote
+     is not a dictionary key and passes through unchanged. */
+  const [bio, setBio] = useState(t(state.account.bio))
   const [email, setEmail] = useState(state.account.email)
 
   function setSpec(s: string) {
@@ -339,6 +343,12 @@ export function WorkspaceSettings({
           {section === 'profile' && (
             <>
               <h2 className="w-h2">{t('Profile')}</h2>
+              {/* The interface language is the person's choice, made here for
+                  the workspace and kept app-wide (gl.locale). */}
+              <div className="w-langrow">
+                <LanguagePicker className="w-input w-input--sm" />
+                <span className="w-small">{t('The workspace, your reports and their PDFs use this language.')}</span>
+              </div>
               <CompanyActivation />
               <div className="w-form">
                 <label className="w-field">
@@ -439,7 +449,7 @@ export function WorkspaceSettings({
 
               <div className="w-field__label">{t('Active sessions')}</div>
               <ul className="w-reflist">
-                <li><span>{t('This device')} · {navigator.platform || 'Desktop'}</span><em className="w-small">{t('current')}</em></li>
+                <li><span>{t('This device')} · {navigator.platform || t('Desktop')}</span><em className="w-small">{t('current')}</em></li>
               </ul>
 
               <div className="w-actions w-actions--left">

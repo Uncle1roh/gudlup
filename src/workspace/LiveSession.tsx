@@ -42,6 +42,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLegal } from '../legal/LegalContext'
 import { RiskButton } from '../legal/RiskButton'
+import { HelpNowButton } from '../legal/HelpNow'
 import { useI18n, fmtDate } from '../i18n'
 import { useVideoCall, type VideoCall } from '../b2b/webrtc/useVideoCall'
 import { PeerVideo, SelfVideo } from './Video'
@@ -50,7 +51,7 @@ import { useCatalog, audioUrlFor, type ClinicalEntry } from '../data/liveCatalog
 import { SessionPlayer } from '../lib/audio'
 import { CLUSTER_LABEL, nextSessionNumber, rxTarget, vasPairs, type SessionRow, type WorkspacePatient } from './data'
 import { initials, versionShort } from './Patients'
-import type { Duration } from '../types/domain'
+import { protocolTitle, type Duration } from '../types/domain'
 import { BrandIcon } from '../components/Brand'
 
 type Tab = 'notes' | 'goodloop' | 'reference'
@@ -76,7 +77,7 @@ interface LiveSessionProps {
   onExit: () => void
 }
 
-const PHASES = ['Open', 'Breath', 'Imagery', 'Altern.', 'Settle', 'Close']
+const PHASES = ['Opening', 'Breath', 'Imagery', 'Altern.', 'Settle', 'Closing']
 
 export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEnd, onExit }: LiveSessionProps) {
   const { t } = useI18n()
@@ -142,7 +143,12 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
   if (!joined) {
     return (
       <div className={`w-call${sandbox ? ' w-call--sandbox' : ''}`}>
-        {sandbox && <SandboxBanner onExit={onExit} />}
+        {sandbox ? <SandboxBanner onExit={onExit} /> : (
+          <div className="w-call__helpbar">
+            {/* On every screen, the waiting room included (CRS-01). */}
+            <HelpNowButton variant="inline" />
+          </div>
+        )}
         <div className="w-call__wait">
           <div className="w-call__waitmain">
             <div className="w-avatar w-avatar--xl" aria-hidden="true">{initials(patient.name)}</div>
@@ -216,19 +222,19 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
                 {patient.sessions[0].protocolCode && (
                   <p className="w-mono w-small">{patient.sessions[0].protocolCode} · {versionShort(patient.sessions[0].version)}</p>
                 )}
-                <p className="w-small">{patient.sessions[0].note}</p>
+                <p className="w-small">{t(patient.sessions[0].note)}</p>
               </div>
             )}
 
             <div className="w-prepblock">
               <div className="w-field__label">{t('VAS you recorded · pre → post')}</div>
-              <p className="w-small">{vasPairs(patient).map((v) => `${v.pre}→${v.post}`).join(' · ') || t('Not recorded')}</p>
+              <p className="w-small">{vasPairs(patient).map((v) => `${v.pre}→${v.post}`).join(' · ') || t('None recorded')}</p>
             </div>
 
             <div className="w-prepblock">
               <div className="w-field__label">{t('Active goals')}</div>
               <ul className="w-small">
-                {patient.goals.filter((g) => g.status === 'in-progress').map((g) => <li key={g.id}>• {g.text}</li>)}
+                {patient.goals.filter((g) => g.status === 'in-progress').map((g) => <li key={g.id}>• {t(g.text)}</li>)}
                 {!patient.goals.some((g) => g.status === 'in-progress') && <li>{t('None set.')}</li>}
               </ul>
             </div>
@@ -285,9 +291,13 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
           <span className="w-small"> — {t('Session #{n}', { n: sessionNumber })}</span>
         </div>
         <span className="w-call__timer">{fmtClock(elapsed)}</span>
-        <button className="w-link" onClick={() => setCollapsed((v) => !v)}>
-          {collapsed ? t('Expand panel') : t('Collapse panel')}
-        </button>
+        <div className="w-call__topright">
+          {/* On every screen, the full-screen call included (CRS-01). */}
+          {!sandbox && <HelpNowButton variant="inline" />}
+          <button className="w-link" onClick={() => setCollapsed((v) => !v)}>
+            {collapsed ? t('Expand panel') : t('Collapse panel')}
+          </button>
+        </div>
       </header>
 
       <div className={`w-call__body${collapsed ? ' is-collapsed' : ''}`}>
@@ -393,7 +403,12 @@ function SandboxBanner({ onExit }: { onExit: () => void }) {
   return (
     <div className="w-sandboxbar">
       <span>⚠ {t('Sandbox Mode — practice environment. No real data is recorded.')}</span>
-      <button className="w-link" onClick={onExit}>{t('Exit Sandbox')}</button>
+      <span className="w-sandboxbar__right">
+        {/* The practice room is still a screen someone can be on in a bad
+            moment: Help now stays in reach here too (CRS-01). */}
+        <HelpNowButton variant="inline" />
+        <button className="w-link" onClick={onExit}>{t('Exit Sandbox')}</button>
+      </span>
     </div>
   )
 }
@@ -478,7 +493,7 @@ function NotesTab({
       {previous && (
         <details className="w-prev">
           <summary>{t('Previous session notes')}</summary>
-          <p className="w-small">{previous.note}</p>
+          <p className="w-small">{t(previous.note)}</p>
         </details>
       )}
 
@@ -628,7 +643,7 @@ function GoodLoopTab({
     <div className="w-panel__body">
       <h3 className="w-h3">{t('Audio completed')} ✓</h3>
       <dl className="w-summary">
-        <div><dt>{t('Protocol')}</dt><dd className="w-mono">{state.summary.code} {versionShort(state.summary.version)}</dd></div>
+        <div><dt>{t('Content')}</dt><dd className="w-mono">{state.summary.code} {versionShort(state.summary.version)}</dd></div>
         <div><dt>{t('Duration played')}</dt><dd>{fmtClock(state.summary.played)}</dd></div>
         <div><dt>{t('Phases completed')}</dt><dd>{state.summary.phases} / 6</dd></div>
         <div><dt>{t('Pauses')}</dt><dd>{state.summary.pauses}</dd></div>
@@ -700,7 +715,7 @@ function ProtocolWizard({
                 onClick={() => { setCode(p.code); setVersion(null) }}
               >
                 <span className="w-mono">{p.code}</span>
-                <span>{p.title}</span>
+                <span>{t(p.title)}</span>
                 {p.clinicalOnly && <span className="w-tag w-tag--warn">{t('Clinical only')}</span>}
                 {!p.audioReady && <span className="w-tag">{t('No audio yet')}</span>}
                 {code === p.code && <span aria-hidden="true">✓</span>}
@@ -781,10 +796,10 @@ function PreLaunchCheck({
       <div className="w-selected">
         <div>
           <div className="w-mono">{code}</div>
-          <div className="w-small">{entry?.title ?? protocol?.title}</div>
+          <div className="w-small">{t(entry?.title ?? protocol?.title ?? '')}</div>
           <div className="w-small">{t(version === 6 ? 'Quick' : version === 12 ? 'Standard' : 'Deep')} ({version} min)</div>
         </div>
-        <button className="w-link" onClick={onChange}>{t('Change')}</button>
+        <button className="w-link" onClick={onChange}>{t('Change content')}</button>
       </div>
 
       <ul className="w-checks">
@@ -942,19 +957,19 @@ function TreatmentMonitor({
       intervening: on,
       interventions: on ? state.interventions + 1 : state.interventions,
     })
-    addQuickNote(on ? 'Intervention started' : 'Audio resumed', phaseIdx + 1)
-  }, [state, setState, addQuickNote, phaseIdx, call])
+    addQuickNote(on ? t('Intervention started') : t('Audio resumed'), phaseIdx + 1)
+  }, [state, setState, addQuickNote, phaseIdx, call, t])
 
   return (
     <div className="w-panel__body">
       <h3 className="w-h3">
-        <span className="w-mono">{state.code}</span> — {protocol?.title}
+        <span className="w-mono">{state.code}</span> — {t(entry ? protocolTitle(entry, locale) : protocol?.title ?? '')}
       </h3>
       <p className="w-small">
         {t(state.version === 6 ? 'Quick' : state.version === 12 ? 'Standard' : 'Deep')} — {fmtClock(state.total)}
       </p>
 
-      <div className="w-phase">{t('Phase {n} of 6', { n: phaseIdx + 1 })} — {protocol?.phases[phaseIdx]?.name}</div>
+      <div className="w-phase">{t('Phase {n} of 6', { n: phaseIdx + 1 })} — {t(protocol?.phases[phaseIdx]?.name ?? '')}</div>
       <div className="w-ticks">
         {PHASES.map((p, i) => (
           <span key={p} className={i < phaseIdx ? 'is-done' : i === phaseIdx ? 'is-now' : ''}>{t(p)}</span>
@@ -966,8 +981,8 @@ function TreatmentMonitor({
       <div className="w-params">
         <div className="w-field__label">{t('Active parameters')} <em>· {t('read-only')}</em></div>
         <dl>
-          <div><dt>{t('Binaural')}</dt><dd>{binauralFor(state.code)}</dd></div>
-          <div><dt>{t('Voice archetype')}</dt><dd>{voiceFor(state.code)}</dd></div>
+          <div><dt>{t('Binaural')}</dt><dd>{t(binauralFor(state.code))}</dd></div>
+          <div><dt>{t('Voice archetype')}</dt><dd>{t(voiceFor(state.code))}</dd></div>
           <div><dt>{t('Active patterns')}</dt><dd>PAT-01, 02, 08</dd></div>
         </dl>
       </div>
@@ -1090,7 +1105,7 @@ function ReferenceTab({
 
       <div className="w-field__label">{t('VAS you recorded · pre → post')}</div>
       <p className="w-small">
-        {series.length ? series.map((v) => `${v.pre}→${v.post}`).join(' · ') : t('Not recorded')}
+        {series.length ? series.map((v) => `${v.pre}→${v.post}`).join(' · ') : t('None recorded')}
         {vasPre != null && vasPost != null && <> · {t('this session')} {vasPre}→{vasPost}</>}
       </p>
 
@@ -1108,7 +1123,7 @@ function ReferenceTab({
       <div className="w-field__label">{t('Goals')}</div>
       <ul className="w-reflist">
         {patient.goals.filter((g) => g.status === 'in-progress').map((g) => (
-          <li key={g.id}><span>{g.text}</span><em className="w-small">{t('In progress')}</em></li>
+          <li key={g.id}><span>{t(g.text)}</span><em className="w-small">{t('In progress')}</em></li>
         ))}
       </ul>
 

@@ -165,11 +165,11 @@ const PAN: Record<'C' | 'L' | 'R', number> = { C: 0, L: -1, R: 1 }  // doc: L(�
 
 export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions, onProgress?: RenderProgress): Promise<SpecRenderResult> {
   const v = spec.versions.find((x) => x.duration === opts.duration)
-  if (!v) throw new Error(`This spec has no ${opts.duration}-minute version.`)
+  if (!v) throw new Error(`Questa specifica non ha una versione da ${opts.duration} minuti.`)
   const notes: string[] = []
   const fullSec = opts.duration * 60
   const totalSec = Math.max(10, Math.min(fullSec, opts.capSeconds ?? fullSec))
-  if (totalSec < fullSec) notes.push(`Preview render — first ${totalSec}s of ${fullSec}s.`)
+  if (totalSec < fullSec) notes.push(`Render di anteprima: primi ${totalSec}s di ${fullSec}s.`)
 
   // ---- 1. synthesize the voice lines (before opening the offline graph) ----
   const allLines = voiceLinesForVersion(spec, opts.duration).filter((l) => l.timeSec < totalSec - 1)
@@ -178,7 +178,7 @@ export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions,
   if (opts.withVoice && allLines.length) {
     const tts = getTtsProvider()
     if (!tts.canRender) {
-      notes.push(`No render-capable TTS configured (${tts.label} is preview-only) — rendered the bed without voice.`)
+      notes.push(`Nessun TTS abilitato al render (${tts.label} è solo anteprima): letto sonoro renderizzato senza voce.`)
     } else {
       const decoder = new AudioContext({ sampleRate: SAMPLE_RATE })
       const cache = new Map<string, AudioBuffer>()
@@ -196,7 +196,7 @@ export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions,
             voiceBuffers.push({ timeSec, buffer: buf, pan: PAN[line.channel], whisper: line.whisper, gainDb: line.gainDb, delaySec: line.delaySec, loop: line.loop })
             voiceRendered++
           } catch (e) {
-            notes.push(`Voice line at ${Math.floor(timeSec / 60)}:${String(Math.floor(timeSec % 60)).padStart(2, '0')} failed: ${(e as Error).message}`)
+            notes.push(`Battuta vocale a ${Math.floor(timeSec / 60)}:${String(Math.floor(timeSec % 60)).padStart(2, '0')} non riuscita: ${(e as Error).message}`)
           }
         }
       } finally {
@@ -205,7 +205,7 @@ export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions,
       onProgress?.('voice', allLines.length, allLines.length)
     }
   } else if (!opts.withVoice && allLines.length) {
-    notes.push(`Bed-only render — ${allLines.length} spoken lines were not synthesized.`)
+    notes.push(`Render del solo letto sonoro: ${allLines.length} battute parlate non sintetizzate.`)
   }
 
   // ---- 2. pre-render the synth beds ----
@@ -238,8 +238,8 @@ export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions,
   limiter.attack.value = 0.003
   limiter.release.value = 0.25
   master.connect(limiter).connect(ctx.destination)
-  notes.push('Mix law: voice 80% reference; soundscape −20 dB; echo −8 dB (+2 s); whisper −6 dB; bilateral 6%; cycle 2 −3 dB (per protocol doc §1/§7).')
-  notes.push('Binaural bed at −16 dB and musical pad at −18 dB vs voice — the doc gives no figure for these two; adjust here if the PO specifies one.')
+  notes.push('Legge di mix: voce 80% di riferimento; soundscape −20 dB; eco −8 dB (+2 s); sussurro −6 dB; bilaterale 6%; ciclo 2 −3 dB (documento del protocollo §1/§7).')
+  notes.push('Letto binaurale a −16 dB e pad musicale a −18 dB rispetto alla voce: il documento non indica valori per questi due; da regolare qui se i PO li specificano.')
 
   // soundscape — −20 dB vs voice (doc §7.2), fade-in 5 s (doc §3 t=0:00),
   // fade-out with the session end

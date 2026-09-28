@@ -21,9 +21,9 @@
 
 import { fmtDate as localeDate } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
+import { resolveCompanyCode, type Convention, type ConventionType, type EapContact } from '../data/convention'
 import {
   cell,
-  generateCompanyCode,
   pct,
   type Alert,
   type CorporateState,
@@ -39,26 +39,103 @@ const KEY = 'gl.corporate'
 
 const DAY = 86_400_000
 
-export function defaultState(companyName = 'Acme Corporation'): CorporateState {
+/* ------------------------------------------------------------- tenant ----
+
+   WHICH company this dashboard is for. It used to be nobody's: the state was
+   one localStorage slot seeded with "Acme Corporation" and a code minted from
+   that name (ACME-2026-9C) that no registry knew, so an HR admin who signed up
+   with AURORA-2026-Z5 was shown Acme and a code that opened nothing.
+
+   The tenant now comes from the signed-in account's company code, resolved
+   through the same registry the employee door uses (`resolveCompanyCode`), so
+   the company, its code, its convention type, its licences and its EAP are the
+   ones that code actually opens. Each tenant keeps its own configuration slot.
+   A code that is on the account but not in the registry still names the
+   tenant — by the admin console's company list when that can be read, by the
+   code itself otherwise — and never borrows another company's identity. Only
+   an account with NO code falls back, to ACME-2026, the demo tenant the mock
+   layer hands to every account that typed none. */
+
+export interface Tenant {
+  companyId: string
+  name: string
+  code: string
+  conventionType: ConventionType
+  licences: number
+  eap: EapContact | null
+  startsAt: number
+  endsAt: number
+}
+
+export function tenantFromConvention(c: Convention): Tenant {
+  return {
+    companyId: c.companyId,
+    name: c.companyName,
+    code: c.code,
+    conventionType: c.type,
+    licences: c.licences,
+    eap: c.eap,
+    startsAt: c.startsAt,
+    endsAt: c.endsAt,
+  }
+}
+
+/** The tenant an account with no company code sees in the demo. */
+export const FALLBACK_TENANT: Tenant = (() => {
+  const acme = resolveCompanyCode('ACME-2026')
+  if (acme) return tenantFromConvention(acme)
   const now = Date.now()
   return {
+    companyId: 'acme', name: 'Acme Corporation', code: 'ACME-2026', conventionType: 'self-use-plus',
+    licences: 250, eap: null, startsAt: now - 328 * DAY, endsAt: now + 37 * DAY,
+  }
+})()
+
+/** A code on the account that the registry does not (yet) know. */
+export function tenantFromCode(code: string, known?: { name: string; seats: number } | null): Tenant {
+  const now = Date.now()
+  return {
+    companyId: code,
+    name: known?.name || code,
+    code,
+    conventionType: 'self-use',
+    licences: known?.seats ?? 0,
+    eap: null,
+    startsAt: now,
+    endsAt: now + 365 * DAY,
+  }
+}
+
+/* Demo profile details for the built-in tenants. Country is an ISO region
+   code, printed in the reader's language (Intl.DisplayNames). */
+const DEMO_PROFILE: Record<string, { country: string; industry: string; size: string }> = {
+  acme: { country: 'US', industry: 'Technology', size: '201–500' },
+  aurora: { country: 'BR', industry: 'Technology', size: '201–500' },
+  meridian: { country: 'BR', industry: 'Healthcare', size: '51–200' },
+  nova: { country: 'IT', industry: 'Manufacturing', size: '51–200' },
+  'goodloop-demo': { country: 'IT', industry: 'Technology', size: '1–50' },
+}
+
+export function defaultState(tenant: Tenant = FALLBACK_TENANT): CorporateState {
+  const p = DEMO_PROFILE[tenant.companyId]
+  return {
     setupDoneAt: null,
-    companyId: 'acme',
+    companyId: tenant.companyId,
     profile: {
-      name: companyName,
-      country: 'United States',
-      industry: 'Technology',
-      size: '201–500',
+      name: tenant.name,
+      country: p?.country ?? '',
+      industry: p?.industry ?? 'Other',
+      size: p?.size ?? '1–50',
       contactName: '',
       contactEmail: '',
       contactPhone: '',
     },
-    conventionType: 'self-use-plus',
-    licences: 250,
-    companyCode: generateCompanyCode(companyName),
-    eap: null,
-    conventionStart: now - 328 * DAY,
-    conventionEnd: now + 37 * DAY,
+    conventionType: tenant.conventionType,
+    licences: tenant.licences,
+    companyCode: tenant.code,
+    eap: tenant.eap,
+    conventionStart: tenant.startsAt,
+    conventionEnd: tenant.endsAt,
     therapists: [],
     admins: [],
     reports: [],
@@ -69,35 +146,62 @@ export function defaultState(companyName = 'Acme Corporation'): CorporateState {
       licenceAlert: true,
       therapistStatus: true,
     },
-    consented: 189,
+    consented: Math.round(tenant.licences * 0.756),
   }
 }
 
-export function loadCorporate(): CorporateState {
+function slotKey(tenant: Tenant): string {
+  return `${KEY}.${tenant.code}`
+}
+
+/** The tenant's saved configuration. What the CONTRACT fixes — name, code,
+    convention type, licences, dates — always comes from the tenant, so a stale
+    slot can never show another company or a code that opens nothing. */
+export function loadCorporate(tenant: Tenant = FALLBACK_TENANT): CorporateState {
+  const base = defaultState(tenant)
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return defaultState()
-    return { ...defaultState(), ...(JSON.parse(raw) as Partial<CorporateState>) }
+    const raw = localStorage.getItem(slotKey(tenant))
+    if (!raw) return base
+    const saved = JSON.parse(raw) as Partial<CorporateState>
+    return {
+      ...base,
+      ...saved,
+      companyId: base.companyId,
+      companyCode: base.companyCode,
+      conventionType: base.conventionType,
+      licences: base.licences,
+      conventionStart: base.conventionStart,
+      conventionEnd: base.conventionEnd,
+      profile: { ...base.profile, ...(saved.profile ?? {}), name: base.profile.name },
+    }
   } catch {
-    return defaultState()
+    return base
   }
 }
 
-export function saveCorporate(s: CorporateState): void {
-  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* private mode */ }
+export function saveCorporate(tenant: Tenant, s: CorporateState): void {
+  try { localStorage.setItem(slotKey(tenant), JSON.stringify(s)) } catch { /* private mode */ }
 }
 
-export function useCorporateState() {
-  const [state, setState] = useState<CorporateState>(() => loadCorporate())
+export function useCorporateState(tenant: Tenant) {
+  const [slot, setSlot] = useState(() => ({ code: tenant.code, state: loadCorporate(tenant) }))
+  /* A different tenant (the account's code arrived, or changed) is a
+     different dashboard: swap the slot during render rather than showing one
+     frame of the previous company. */
+  let current = slot
+  if (slot.code !== tenant.code) {
+    current = { code: tenant.code, state: loadCorporate(tenant) }
+    setSlot(current)
+  }
   const update = useCallback((fn: (s: CorporateState) => CorporateState) => {
-    setState((prev) => {
-      const next = fn(prev)
-      saveCorporate(next)
-      return next
+    setSlot((prev) => {
+      const next = fn(prev.state)
+      saveCorporate(tenant, next)
+      return { code: prev.code, state: next }
     })
-  }, [])
-  useEffect(() => { saveCorporate(state) }, [state])
-  return { state, update }
+  }, [tenant])
+  useEffect(() => { saveCorporate(tenant, slot.state) }, [tenant, slot.state])
+  return { state: current.state, update }
 }
 
 /* --------------------------------------------------------- aggregates ---- */
@@ -263,14 +367,15 @@ export function buildAggregates(state: CorporateState, respondents = state.conse
   const alerts: Alert[] = []
   const latest = state.reports.find((r) => !r.viewed)
   if (latest) {
-    alerts.push({ id: `a-${latest.id}`, kind: 'report', text: `${latest.name} is ready for download`, at: latest.generatedAt, action: 'Download' })
+    alerts.push({ id: `a-${latest.id}`, kind: 'report', text: '{name} is ready for download', vars: { name: latest.name }, at: latest.generatedAt, action: 'Download' })
   }
   const days = Math.ceil((state.conventionEnd - now) / DAY)
   if (days <= 60) {
     alerts.push({
       id: 'a-renewal',
       kind: 'renewal',
-      text: `Your convention expires on ${localeDate(state.conventionEnd, { month: 'short', day: 'numeric', year: 'numeric' })} — ${days} days remaining`,
+      text: 'Your convention expires on {date} — {n} days remaining',
+      vars: { date: localeDate(state.conventionEnd, { month: 'short', day: 'numeric', year: 'numeric' }), n: days },
       at: now - DAY,
       action: 'View',
     })
@@ -279,13 +384,14 @@ export function buildAggregates(state: CorporateState, respondents = state.conse
     alerts.push({
       id: 'a-lic',
       kind: 'licences',
-      text: `${pct(registered, licences)}% of licenses are in use — consider expanding`,
+      text: '{n}% of licenses are in use — consider expanding',
+      vars: { n: pct(registered, licences) },
       at: now - 2 * DAY,
       action: 'View',
     })
   }
   for (const th of state.therapists.filter((x) => x.status === 'active')) {
-    alerts.push({ id: `a-th-${th.id}`, kind: 'therapist', text: `${th.name} accepted your invitation`, at: now - 3 * DAY, action: 'View' })
+    alerts.push({ id: `a-th-${th.id}`, kind: 'therapist', text: '{name} accepted your invitation', vars: { name: th.name }, at: now - 3 * DAY, action: 'View' })
   }
 
   return {

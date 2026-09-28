@@ -50,6 +50,79 @@
 /* the player and a video call are full-screen and dark: keep it visible */
 .su-dark .helpnow--floating, .call .helpnow--floating { --hn-bg: #2a170b; --hn-fg: #f6e6d4; }
 
+/* ---- Help now in the person's app: a compact pill, in the flow ----------
+
+   It floated over the Self Use surface and covered whatever primary button
+   sat under it (and a tap there opened the crisis sheet instead). Now the
+   surface is a column: a slim strip holding the pill, then the frame, which
+   takes the height the strip does not. Nothing is drawn over anything, so
+   there is no bottom padding to reserve and no screen that can lose a
+   button to it. On a desk, in the tabbed app, the top bar is already there
+   and carries the pill at its right end; the strip steps aside. */
+
+.su-shell {
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--su-void, #070d0c);
+}
+.pvw-shell .su-shell { height: calc(100dvh - var(--pvw-h, 44px)); }
+/* The frame was sized to the viewport; inside the shell it takes the rest. */
+.su-shell > .app-frame.su-studio,
+.pvw-shell .su-shell > .app-frame.su-studio {
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.su-shell__bar.su-studio {
+  flex: none;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left));
+  box-shadow: none;
+  z-index: 2;
+}
+.su-shell__bar.su-studio::before { display: none; }
+@media (min-width: 760px) {
+  .su-shell__bar.su-studio { max-width: none; padding-right: max(24px, env(safe-area-inset-right)); }
+}
+html[data-su-theme='light'] .su-shell { background: #eceee6; }
+
+.helpnow--bar {
+  gap: 7px;
+  padding: 7px 12px;
+  min-height: 36px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.helpnow--bar .helpnow__ring { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--hn-ring); }
+
+/* The session, the stereo check and a call are night whatever the theme,
+   so the strip above them is too. */
+.su-shell:has(> .su-dark) > .su-shell__bar,
+.su-shell:has(> .call) > .su-shell__bar {
+  background: #0a1211;
+}
+.su-shell:has(> .su-dark) > .su-shell__bar .helpnow,
+.su-shell:has(> .call) > .su-shell__bar .helpnow { --hn-bg: #2a170b; --hn-fg: #f6e6d4; }
+
+/* The desk's top bar carries its own copy; below the desk layout it hides. */
+.su-studio .tabbar .tabbar__help { display: none; }
+@media (min-width: 1100px) {
+  .su-shell:has(> .app-frame--tabs) > .su-shell__bar { display: none; }
+  .su-studio .tabbar .tabbar__help { display: inline-flex; margin-left: auto; flex: none; }
+  /* A blurred bar is the containing block of anything fixed inside it, which
+     would have shut the crisis sheet inside the top bar. At this width
+     nothing scrolls under the bar, so the blur had nothing to do anyway. */
+  .su-studio.app-frame--tabs .tabbar { backdrop-filter: none; }
+}
+
 /* ---- the crisis sheet (action-first: numbers, one line, link) ---------- */
 
 .helpnow-scrim { z-index: 70; }
@@ -185,8 +258,17 @@
 
 .call__lobby { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px; }
 .call__lobby p { margin: 0; }
-.call__lobbyrow { display: flex; gap: 8px; }
-.call__lobbyrow .ob-input { flex: 1; min-width: 0; }
+/* The place field is the thing being asked for, so it gets the width: a
+   full-width `.btn` beside it squeezed it to about 30px and hid its
+   placeholder. The button keeps its own size and drops below when the line
+   is too short for both. */
+.call__lobbyrow { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+.call__lobbyrow .ob-input { flex: 1 1 220px; min-width: 0; width: auto; text-align: left; }
+.call__lobbyrow .btn { flex: 0 0 auto; width: auto; min-width: 120px; }
+@media (max-width: 420px) {
+  .call__lobbyrow .ob-input { flex-basis: 100%; }
+  .call__lobbyrow .btn { flex: 1 1 100%; }
+}
 .call__notrec {
   position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; z-index: 5;
   display: inline-flex; align-items: center; gap: 8px;
@@ -232,3 +314,16 @@
 /* ---- sponsor console: the acknowledgement ------------------------------ */
 
 .c-setup .legal-ack { margin: 12px 0; }
+
+/* The Self Use page zeroes the side padding of its direct children so every
+   block starts on one edge (`.su-studio .su-page > *`). Boxes with a ground
+   and a hairline are the exception: without their inset the words sat on
+   the border. */
+.su-studio .su-page > .legal-note,
+.su-studio .cat > .legal-note,
+.su-studio .cat__body > .legal-note,
+.su-studio .su-page > .consent-row,
+.su-studio .su-page > .profile__sponsor {
+  padding-left: 18px;
+  padding-right: 18px;
+}

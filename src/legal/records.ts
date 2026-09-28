@@ -173,6 +173,22 @@ export const CONSENT_TEMPLATE_ITEMS = [
 ] as const
 export type ConsentTemplateItem = typeof CONSENT_TEMPLATE_ITEMS[number]
 
+/** The heading of each item, as the PERSON reads it on the consent sheet.
+    English source keys: render through `t()` — the Italian and Portuguese
+    are in i18n/selfuse-extra.ts. Keep these strings stable; the therapist
+    workspace's editor uses the same wording (with "the person" for "you"
+    in `risk`), and both are keyed on the English. */
+export const CONSENT_TEMPLATE_ITEM_LABELS: Record<ConsentTemplateItem, string> = {
+  nature: 'The nature and purpose of the sessions',
+  remote: 'Working at a distance, and what that means',
+  medium: 'The limits of the medium and what happens if the connection fails',
+  confidentiality: 'Confidentiality and its limits',
+  records: 'How records are kept, where, for how long and who may access them',
+  risk: 'What happens if you are at risk',
+  fees: 'Fees and cancellation',
+  alternatives: 'The alternatives to working at a distance',
+}
+
 export interface InformedConsentTemplate {
   version: number
   items: Record<ConsentTemplateItem, string>

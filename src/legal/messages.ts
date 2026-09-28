@@ -361,10 +361,14 @@ export const LEGAL_MESSAGES = {
     it: 'I dati di gruppi con meno di 25 persone sono nascosti.' },
 
   /* ---- professional dashboard ------------------------------------------ */
+  /* PRO-1's register string read "Risk protocol" / "Protocolo de risco" /
+     "Protocollo di rischio", but the Path A taxonomy bans "protocol" as a noun
+     on professional screens. "Procedure" is a working substitute: COUNSEL TO
+     CONFIRM the wording before release. */
   'PRO-1': { tier: 'B',
-    en: 'Risk protocol',
-    'pt-BR': 'Protocolo de risco',
-    it: 'Protocollo di rischio' },
+    en: 'Risk procedure',
+    'pt-BR': 'Procedimento de risco',
+    it: 'Procedura di rischio' },
   'PRO-2': { tier: 'D',
     en: '{patient} asked for their record. Please respond by {date}.',
     'pt-BR': '{patient} solicitou o seu prontuário. Responda até {date}.',

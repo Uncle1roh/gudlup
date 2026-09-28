@@ -34,7 +34,7 @@ function estimateSpeechSec(text: string): number {
 
 export function specToStudioTracks(spec: ProtocolSpec, duration: Duration): { tracks: SeedTrack[]; name: string; totalSec: number } {
   const v = spec.versions.find((x) => x.duration === duration)
-  if (!v) throw new Error(`This spec has no ${duration}-minute version.`)
+  if (!v) throw new Error(`Questa specifica non ha una versione da ${duration} minuti.`)
   const totalSec = duration * 60
 
   const tracks: SeedTrack[] = []

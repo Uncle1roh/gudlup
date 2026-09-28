@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useProtocols } from './hooks'
@@ -107,6 +108,8 @@ function emptyTimeline(p: CatalogProtocol): PlainTimeline {
 
 export function CatalogAdmin({ actor }: { actor: string }) {
   const dp = useDataProvider()
+  /* the console is pinned to Italian: family names are shown in Italian */
+  const { t: tr } = useI18n()
   const { data, loading, refetch } = useProtocols()
   const [opened, setOpened] = useState<CatalogProtocol | null>(null)
   /* which TIME SIGNATURE the workscreen should land on (a duration pill was
@@ -550,7 +553,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               <div>
                 {shelf === 'library'
                   ? (LIBRARY_CATEGORIES.find((c) => c.id === p.library?.category)?.label ?? '—')
-                  : FAMILY_LABEL[p.family]}
+                  : tr(FAMILY_LABEL[p.family])}
               </div>
               {/* One pill per TIME SIGNATURE, and ALWAYS all three. Grey = no
                   Excel imported for it, red = saved but not on the air, green =

@@ -15,6 +15,43 @@ import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, d
 import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
 
+/* ---- what an admin edits survives a reload, in DEMO mode only -----------
+
+   An admin opens a preview with a full page load (see admin/preview.ts), and a
+   full load rebuilds this module — so an offer edited in the console was gone
+   by the time the preview's Partner tab asked for it. With no backend at all
+   the admin-edited stores are therefore mirrored to localStorage and read back
+   here. With Supabase configured nothing is stored: the console writes to the
+   live database, and a preview is meant to die with the tab. */
+const DEMO_PERSIST = (() => {
+  // read through the object: this module can be imported outside Vite
+  const env = import.meta.env as ImportMetaEnv | undefined
+  return !(env?.VITE_SUPABASE_URL && env?.VITE_SUPABASE_ANON_KEY)
+})()
+const PERSIST_PREFIX = 'gl.mock.admin.'
+function restored<T>(name: string, fallback: T): T {
+  if (!DEMO_PERSIST) return fallback
+  try {
+    const raw = localStorage.getItem(PERSIST_PREFIX + name)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as unknown
+    // a store is always a list or a map here; anything else is not ours
+    return parsed && typeof parsed === 'object' ? (parsed as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+function persist(name: string, value: unknown): void {
+  if (!DEMO_PERSIST) return
+  try {
+    localStorage.setItem(PERSIST_PREFIX + name, JSON.stringify(value))
+  } catch {
+    /* private mode or full storage: the edit still holds until the reload */
+  }
+}
+/** An id that stays unique across reloads (the counter restarts at each load). */
+const durableId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+
 /* Tiny simulated latency so loading states are exercised exactly as they will be
    against a real backend. Set to 0 to disable. */
 const wait = (ms = 130) => new Promise<void>((r) => setTimeout(r, ms))
@@ -84,7 +121,7 @@ let therapistCodes: TherapistCode[] = [
 ]
 /* No rails stored: the app's built-in shelf is what a demo shows, which is
    also what a fresh database gives a real tenant. */
-let exploreRails: ExploreRail[] = []
+let exploreRails: ExploreRail[] = restored<ExploreRail[]>('rails', [])
 
 /* A company's therapist list, in memory. The demo company is the one the
    corporate dashboard signs in as. */
@@ -110,7 +147,13 @@ const patients: Patient[] = DEMO_PATIENTS.map((p) => ({
 const DAY = 86_400_000
 const nowMs = Date.now()
 
+/* The catalogue itself is too large, and too tied to the build, to mirror
+   whole. What the console changes on a seeded protocol from the list — on air
+   or not, removed or not — is kept as overrides on top of the seed. */
+const catalogOverrides = restored<{ enabled: Record<string, boolean>; deleted: string[] }>('catalog', { enabled: {}, deleted: [] })
 let catalog: CatalogProtocol[] = seedCatalog()
+  .filter((p) => !catalogOverrides.deleted.includes(p.code))
+  .map((p) => (p.code in catalogOverrides.enabled ? { ...p, enabled: catalogOverrides.enabled[p.code] } : p))
 
 /* The id IS the company code: it identifies the row, it is what an HR admin
    registers with to open the company panel, and it is what an employee types
@@ -132,17 +175,17 @@ const adminUsers: AdminUser[] = [
   { id: 'u2', name: 'Dr. Rafael Lima', email: 'rafael@clinic.demo', role: 'therapist', active: true, createdAt: nowMs - 60 * DAY },
   { id: 'u3', name: 'Camila Rocha', email: 'camila@aurora.co', role: 'hr_admin', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 88 * DAY },
   { id: 'u4', name: 'Mariana Alves', email: 'mariana@aurora.co', role: 'b2c_user', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 30 * DAY },
-  { id: 'u5', name: 'Admin (you)', email: 'admin@goodloop.app', role: 'admin', active: true, createdAt: nowMs - 200 * DAY },
+  { id: 'u5', name: 'Amministratore (tu)', email: 'admin@goodloop.app', role: 'admin', active: true, createdAt: nowMs - 200 * DAY },
 ]
 
-let promoCodes: PromoCode[] = [
+let promoCodes: PromoCode[] = restored<PromoCode[] | null>('promo', null) ?? [
   { code: 'BENVENUTO10', discountPct: 10, createdAt: nowMs - 12 * DAY, createdBy: 'admin@goodloop.app', uses: 3 },
   { code: 'LANCIO2026', discountPct: 25, createdAt: nowMs - 3 * DAY, createdBy: 'admin@goodloop.app', uses: 0 },
 ]
 
 /* Demo offers — invented brands, so a walkthrough on fixtures is never
    mistaken for a real partnership. */
-let partnerProducts: PartnerProduct[] = [
+let partnerProducts: PartnerProduct[] = restored<PartnerProduct[] | null>('partners', null) ?? [
   { id: 'pp-1', partner: 'Studio Respiro', title: 'Abbonamento yoga mensile', description: 'Lezioni illimitate di hatha e yin yoga in tutte le sedi.', discount: '-20%', promoCode: 'GOODLOOP20', url: 'https://example.com/yoga', active: true, position: 0, createdAt: nowMs - 10 * DAY },
   { id: 'pp-2', partner: 'Tisaneria Quiete', title: 'Box tisane della sera', description: 'Sei miscele senza teina, spedizione inclusa.', discount: '1 box in omaggio', url: 'https://example.com/tisane', active: true, position: 1, createdAt: nowMs - 5 * DAY },
   { id: 'pp-3', partner: 'Cuffie Nove', title: 'Cuffie over-ear', description: 'In preparazione — non ancora visibile.', discount: '-15%', active: false, position: 2, createdAt: nowMs - 1 * DAY },
@@ -228,6 +271,21 @@ let psychosocialResponses: PsychosocialResponse[] = buildPopulation()
 let sessionRequests: SessionRequest[] = [
   { id: 'sr1', requesterName: 'Mariana Alves', requesterEmail: 'mariana@aurora.co', company: 'Aurora Tech', note: 'Ansiedade no trabalho', status: 'open', createdAt: nowMs - 2 * 3_600_000 },
 ]
+/* The name a booking stores is the name of the therapist it was made with.
+   It used to be 'Dr. Rafael Lima' for anyone who was not th-demo, so a
+   booking with Dr. Ana Silva (the Self Use app's th-silva) came back under
+   somebody else's name. */
+const MOCK_THERAPIST_NAMES: Record<string, string> = {
+  'th-demo': 'Dra. Ana Fontes',
+  'th-demo-2': 'Dr. Rafael Lima',
+  // the Self Use app's bookable therapist (selfuse/therapyStore DEMO_THERAPISTS)
+  'th-silva': 'Dr. Ana Silva',
+}
+function mockTherapistName(therapistId: string): string {
+  return MOCK_THERAPIST_NAMES[therapistId]
+    ?? (therapistId === link.therapistId ? link.therapistName : therapistId)
+}
+
 const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 
 export function createMockProvider(): DataProvider {
@@ -255,7 +313,7 @@ export function createMockProvider(): DataProvider {
       try { booked = JSON.parse(localStorage.getItem(key) ?? '[]') } catch { /* fine */ }
       if (booked.includes(startsAtMs)) throw new Error('That time was just taken — pick another slot.')
       booked.push(startsAtMs)
-      const appt = { id: `ap-${Date.now()}`, therapistId, therapistName: therapistId === 'th-demo' ? 'Dra. Ana Fontes' : 'Dr. Rafael Lima', patientName: 'You', profileId: 'me', startsAtMs, durationMin: 50, status: 'booked' as const }
+      const appt = { id: `ap-${Date.now()}`, therapistId, therapistName: mockTherapistName(therapistId), patientName: 'You', profileId: 'me', startsAtMs, durationMin: 50, status: 'booked' as const }
       try {
         localStorage.setItem(key, JSON.stringify(booked))
         localStorage.setItem('gl.mock.myappt', JSON.stringify(appt))
@@ -467,14 +525,24 @@ export function createMockProvider(): DataProvider {
       const i = catalog.findIndex((x) => x.code === p.code)
       const next = { ...p, updatedAt: Date.now() }
       catalog = i >= 0 ? catalog.map((x, j) => (j === i ? next : x)) : [...catalog, next]
+      if (p.code in catalogOverrides.enabled || catalogOverrides.deleted.includes(p.code)) {
+        catalogOverrides.enabled[p.code] = next.enabled
+        catalogOverrides.deleted = catalogOverrides.deleted.filter((c) => c !== p.code)
+        persist('catalog', catalogOverrides)
+      }
       await wait()
     },
     setProtocolEnabled: async (code, enabled) => {
       catalog = catalog.map((p) => (p.code === code ? { ...p, enabled, updatedAt: Date.now() } : p))
+      catalogOverrides.enabled[code] = enabled
+      persist('catalog', catalogOverrides)
       await wait()
     },
     deleteProtocol: async (code) => {
       catalog = catalog.filter((p) => p.code !== code)
+      if (!catalogOverrides.deleted.includes(code)) catalogOverrides.deleted.push(code)
+      delete catalogOverrides.enabled[code]
+      persist('catalog', catalogOverrides)
       await wait()
     },
 
@@ -534,6 +602,7 @@ export function createMockProvider(): DataProvider {
     saveExploreRails: async (rails) => {
       await wait()
       exploreRails = rails.map((r) => ({ ...r, slugs: [...r.slugs] }))
+      persist('rails', exploreRails)
     },
 
     decideCredential: async (id, decision, reason, decidedBy) => {
@@ -573,10 +642,12 @@ export function createMockProvider(): DataProvider {
       const c = normalizePromoCode(code)
       if (promoCodes.some((p) => p.code === c)) throw new Error(`Il codice ${c} esiste già.`)
       promoCodes = [{ code: c, discountPct, createdAt: Date.now(), createdBy, uses: 0 }, ...promoCodes]
+      persist('promo', promoCodes)
     },
     deletePromoCode: async (code) => {
       await wait()
       promoCodes = promoCodes.filter((p) => p.code !== code)
+      persist('promo', promoCodes)
     },
     checkPromoCode: async (code) => {
       await wait()
@@ -589,15 +660,18 @@ export function createMockProvider(): DataProvider {
       await wait()
       if (p.id && partnerProducts.some((x) => x.id === p.id)) {
         partnerProducts = partnerProducts.map((x) => (x.id === p.id ? { ...p } : x))
+        persist('partners', partnerProducts)
         return p.id
       }
-      const id = nextId('pp')
+      const id = durableId('pp')
       partnerProducts = [...partnerProducts, { ...p, id, createdAt: Date.now() }]
+      persist('partners', partnerProducts)
       return id
     },
     deletePartnerProduct: async (id) => {
       await wait()
       partnerProducts = partnerProducts.filter((x) => x.id !== id)
+      persist('partners', partnerProducts)
     },
 
     // --- Users & roles ---

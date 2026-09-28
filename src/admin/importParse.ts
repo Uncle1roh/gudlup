@@ -57,10 +57,10 @@ function parseDurations(raw: string | undefined): { durations: Duration[]; issue
   for (const p of parts) {
     const n = Number(p)
     if (DURATIONS.includes(n as Duration)) out.push(n as Duration)
-    else issues.push(`ignored duration "${p}" (allowed: 6, 12, 24)`)
+    else issues.push(`durata "${p}" ignorata (ammesse: 6, 12, 24)`)
   }
   if (out.length === 0) {
-    issues.push('no valid durations — defaulted to 6/12/24')
+    issues.push('nessuna durata valida: impostate 6/12/24')
     return { durations: [...DURATIONS], issues }
   }
   return { durations: [...new Set(out)].sort((a, b) => a - b) as Duration[], issues }
@@ -77,26 +77,26 @@ function buildDraft(
   const title = (fields.title ?? '').trim()
   const familyRaw = (fields.family ?? '').trim()
 
-  if (!code) issues.push('ERROR: missing code')
-  if (!title) issues.push('ERROR: missing title')
+  if (!code) issues.push('ERROR: codice mancante')
+  if (!title) issues.push('ERROR: titolo mancante')
   const family = normalizeFamily(familyRaw)
-  if (!family) issues.push(`ERROR: unknown family "${familyRaw}" (use GL-ANX/GL-DEP/GL-BURN/GL-STRESS/GL-RESIL or Anxiety/Depression/Burnout/Stress/Resilience)`)
+  if (!family) issues.push(`ERROR: famiglia "${familyRaw}" sconosciuta (usa GL-ANX/GL-DEP/GL-BURN/GL-STRESS/GL-RESIL o Anxiety/Depression/Burnout/Stress/Resilience)`)
 
   const { durations, issues: dIssues } = parseDurations(fields.durations)
   issues.push(...dIssues)
 
   // phase sanity (fixed 6-phase model; warn if fractions drift)
   const sum = phases.reduce((a, p) => a + p.fraction, 0)
-  if (Math.abs(sum - 1) > 0.02) issues.push(`phase fractions sum to ${sum.toFixed(2)} (expected ~1.00)`)
+  if (Math.abs(sum - 1) > 0.02) issues.push(`le frazioni delle fasi sommano a ${sum.toFixed(2)} (atteso ~1,00)`)
 
   const compose: Partial<ComposeSettings> = {}
   if (fields.affirmation?.trim()) compose.affirmation = fields.affirmation.trim()
   const wave = (fields.brainwave ?? '').trim().toLowerCase()
   if (wave === 'delta' || wave === 'theta' || wave === 'alpha' || wave === 'smr') compose.brainwave = wave
-  else if (wave) issues.push(`ignored brainwave "${fields.brainwave}" (allowed: delta/theta/alpha/smr)`)
+  else if (wave) issues.push(`brainwave "${fields.brainwave}" ignorata (ammesse: delta/theta/alpha/smr)`)
   const scape = (fields.soundscape ?? '').trim().toLowerCase()
   if (scape === 'lake' || scape === 'air' || scape === 'deep') compose.soundscape = scape
-  else if (scape) issues.push(`ignored soundscape "${fields.soundscape}" (allowed: lake/air/deep)`)
+  else if (scape) issues.push(`soundscape "${fields.soundscape}" ignorato (ammessi: lake/air/deep)`)
 
   const protocol: CatalogProtocol = {
     code: code || `IMPORT-${sourceRow ?? 0}`,
@@ -158,11 +158,11 @@ const HEADER_ALIASES: Record<string, string> = {
 
 function parseCsv(text: string, delim: string): ParseResult {
   const grid = splitDelimited(text, delim)
-  if (grid.length < 2) return { drafts: [], error: 'The file needs a header row and at least one protocol row.' }
+  if (grid.length < 2) return { drafts: [], error: 'Il file deve avere una riga di intestazione e almeno una riga di protocollo.' }
   const header = grid[0].map((h) => HEADER_ALIASES[h.trim().toLowerCase()] ?? h.trim().toLowerCase())
   const idx = (key: string) => header.indexOf(key)
   if (idx('code') === -1 || idx('family') === -1 || idx('title') === -1) {
-    return { drafts: [], error: 'CSV needs at least "code", "family" and "title" columns.' }
+    return { drafts: [], error: 'Il CSV deve avere almeno le colonne "code", "family" e "title".' }
   }
   const cell = (r: string[], key: string) => { const i = idx(key); return i === -1 ? undefined : r[i] }
   const drafts = grid.slice(1).map((r, n) =>
@@ -197,9 +197,9 @@ function coercePhases(raw: unknown): SessionPhase[] {
 
 function parseJson(text: string): ParseResult {
   let data: unknown
-  try { data = JSON.parse(text) } catch { return { drafts: [], error: 'That JSON did not parse. Check for a trailing comma or missing quote.' } }
+  try { data = JSON.parse(text) } catch { return { drafts: [], error: 'JSON non valido. Controlla virgole finali o virgolette mancanti.' } }
   const list = Array.isArray(data) ? data : [data]
-  if (list.length === 0) return { drafts: [], error: 'The JSON contained no protocols.' }
+  if (list.length === 0) return { drafts: [], error: 'Il JSON non contiene protocolli.' }
   const drafts = list.map((raw, n) => {
     const o = (raw ?? {}) as Record<string, unknown>
     const phases = coercePhases(o.phases)
@@ -226,7 +226,7 @@ export function parseImport(filename: string, text: string): ParseResult {
   if (ext === 'tsv') return parseCsv(text, '\t')
   if (ext === 'csv') return parseCsv(text, ',')
   // Unknown/binary (pdf, xlsx): can't parse structure here.
-  return { drafts: [], error: `Can't read a "${ext || 'binary'}" file for structure. Attach it as the source document, and upload a CSV or JSON to import.` }
+  return { drafts: [], error: `Impossibile leggere la struttura di un file "${ext || 'binario'}". Allegalo come documento sorgente e carica un CSV o JSON per importare.` }
 }
 
 /** True when the file type carries structured data we can parse. */

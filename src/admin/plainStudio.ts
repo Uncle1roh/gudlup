@@ -156,21 +156,21 @@ function resolveBilateralFromRow(c: PlainClip): { sound: BilateralSound; why: st
 /** How a row's rate came about, for the import notes. */
 function speedWhy(c: PlainClip, speed: number | undefined): string | null {
   if (speed === undefined) return null
-  if (c.velocitaWpm !== undefined) return `velocità ${c.velocitaWpm} wpm → ×${speed.toFixed(2)} (${SPOKEN_WPM} wpm baseline)`
-  return `sussurrato senza velocita_wpm → ×${speed.toFixed(2)} (${WHISPER_WPM} wpm whisper baseline)`
+  if (c.velocitaWpm !== undefined) return `velocità ${c.velocitaWpm} wpm → ×${speed.toFixed(2)} (base ${SPOKEN_WPM} wpm)`
+  return `sussurrato senza velocita_wpm → ×${speed.toFixed(2)} (base sussurro ${WHISPER_WPM} wpm)`
 }
 
 /** Dec. 6 (developer's mapping): archetype+modalità → catalog voice.
     sussurrato prefers a Whisper voice of the same gender as the archetype. */
 export function resolvePlainVoice(archetipo: string | undefined, modalita: 'normale' | 'sussurrato' | undefined): { voice: CatalogVoice; why: string } {
   const base = matchVoiceFromText(archetipo) ?? defaultPrimary()
-  const baseWhy = matchVoiceFromText(archetipo) ? `archetipo "${archetipo}"` : archetipo ? `archetipo "${archetipo}" not in catalog → default` : 'no archetipo → default'
+  const baseWhy = matchVoiceFromText(archetipo) ? `archetipo "${archetipo}"` : archetipo ? `archetipo "${archetipo}" non in catalogo → predefinita` : 'nessun archetipo → predefinita'
   if (modalita !== 'sussurrato') return { voice: base, why: baseWhy }
-  if (base.archetype === 'whisper') return { voice: base, why: `${baseWhy} (already Whisper)` }
+  if (base.archetype === 'whisper') return { voice: base, why: `${baseWhy} (già Whisper)` }
   const whispers = voicesByArchetype('whisper')
   const sameGender = whispers.find((v) => v.gender === base.gender)
   const chosen = sameGender ?? whispers[0]
-  if (!chosen) return { voice: base, why: `${baseWhy} · sussurrato but no Whisper voices in catalog` }
+  if (!chosen) return { voice: base, why: `${baseWhy} · sussurrato ma nessuna voce Whisper in catalogo` }
   return { voice: chosen, why: `${baseWhy} + sussurrato → Whisper [${chosen.gender}]` }
 }
 
@@ -311,7 +311,7 @@ export function plainToStudioTracks(
     const noteKey = `${c.traccia}|${c.archetipo ?? ''}|${c.modalita ?? ''}`
     if (!voiceNoteEmitted.has(noteKey)) {
       voiceNoteEmitted.add(noteKey)
-      notes.push(`Voice "${c.traccia}"${c.modalita === 'sussurrato' ? ' (sussurrato)' : ''} → ${voiceLabel(voice)} — ${why}.`)
+      notes.push(`Voce "${c.traccia}"${c.modalita === 'sussurrato' ? ' (sussurrato)' : ''} → ${voiceLabel(voice)}: ${why}.`)
     }
     return voice
   }
@@ -391,11 +391,11 @@ export function plainToStudioTracks(
           if (drawn) {
             url = drawn.asset.publicUrl
             label = `${drawn.asset.name} · tag "${c.ambiente}"`
-            notes.push(`${c.clipId} (${c.traccia}): drew "${drawn.asset.name}" — ${drawn.how}.`)
+            notes.push(`${c.clipId} (${c.traccia}): sorteggiato "${drawn.asset.name}": ${drawn.how}.`)
           } else {
-            const pending = isHeartbeat ? ' (PO heartbeat file pending)' : isBowl ? ' (PO singing-bowl file pending)' : ''
+            const pending = isHeartbeat ? ' (file del battito dei PO in attesa)' : isBowl ? ' (file della campana tibetana dei PO in attesa)' : ''
             label = `tag "${c.ambiente ?? '?'}" — nessun file nel pool`
-            notes.push(`${c.clipId} (${c.traccia}): NO file for tag "${c.ambiente}" — clip stays silent${pending}.`)
+            notes.push(`${c.clipId} (${c.traccia}): NESSUN file per il tag "${c.ambiente}": la clip resta muta${pending}.`)
           }
         } else {
           const drawn = drawMusicPlaylist(pools, c.faseFrom ?? 1, clipDur, MAX_SAMPLE_SLOTS, rnd, ledger)
@@ -404,7 +404,7 @@ export function plainToStudioTracks(
             slots = picked
             url = picked[0].url
             label = `${drawn.assets.map((a) => a.name).join(' → ')} · F${c.faseFrom} pool`
-            notes.push(`${c.clipId} (${c.traccia}): ${drawn.assets.length === 1 ? 'drew' : 'playlist'} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.`)
+            notes.push(`${c.clipId} (${c.traccia}): ${drawn.assets.length === 1 ? 'sorteggiato' : 'playlist'} "${drawn.assets.map((a) => a.name).join('" → "')}": ${drawn.how}.`)
             if (drawn.short) {
               /* What actually happens depends on how many songs were drawn: a
                  playlist cycles, a single song does not (it would loop audibly).
@@ -417,7 +417,7 @@ export function plainToStudioTracks(
             }
           } else {
             label = `F${c.faseFrom ?? '?'} — nessun brano nel pool`
-            notes.push(`${c.clipId} (${c.traccia}): NO file for phase pool F${c.faseFrom} — clip stays silent.`)
+            notes.push(`${c.clipId} (${c.traccia}): NESSUN file nel pool di fase F${c.faseFrom}: la clip resta muta.`)
           }
         }
       }
@@ -586,7 +586,7 @@ export function plainToStudioTracks(
             }
             if (done || c.startS + (cy + 1) * cycleLen >= c.endS) break
           }
-          notes.push(`Whisper-ostinato ${c.clipId} (${ids[0]}): ${placedW} fragment clips ("${fragments.join(' / ')}") — ${SPACING}s cadence + ${BREATH}s breath = ${cycleLen}s cycle, offset from the affirmation interval; spoken at ×${baseSpeed.toFixed(2)} (${speedWhy(c, baseSpeed)}); the last ~90 s slows to ×${tailSpeed.toFixed(2)} and drops −2.5 dB into the ${secToMmss(c.endS)} fade; ducks −2.5 dB under the main voice (never masks the −16 LUFS anchor).`)
+          notes.push(`Ostinato sussurrato ${c.clipId} (${ids[0]}): ${placedW} clip di frammenti ("${fragments.join(' / ')}"): cadenza ${SPACING}s + respiro ${BREATH}s = ciclo di ${cycleLen}s, sfasato rispetto all’intervallo delle affermazioni; pronunciate a ×${baseSpeed.toFixed(2)} (${speedWhy(c, baseSpeed)}); gli ultimi ~90 s rallentano a ×${tailSpeed.toFixed(2)} e scendono di −2,5 dB nella dissolvenza di ${secToMmss(c.endS)}; ducking di −2,5 dB sotto la voce principale (non copre mai il riferimento a −16 LUFS).`)
           continue
         }
       }
@@ -618,7 +618,7 @@ export function plainToStudioTracks(
           placed++
         }
       }
-      notes.push(`Loop ${c.clipId} (${c.setAffermazioni}): ${placed} affirmation clips on "${l.track.name}" — every ${interval}s × ${cycles} cycle${cycles === 1 ? '' : 's'}${cycles > 1 ? ` (${att} dB per cycle)` : ''}, 1s/2s default envelope${loopSpeed !== undefined ? `, ${speedWhy(c, loopSpeed)}` : ''}${c.eco ? `, Emotional Echo +${c.ecoRitardoS ?? 2}s ${c.ecoVolumeDb ?? -8}dB` : ''}${skipped ? ` · ${skipped} skipped (window ends ${secToMmss(c.endS)})` : ''}.`)
+      notes.push(`Loop ${c.clipId} (${c.setAffermazioni}): ${placed} clip di affermazioni su "${l.track.name}": ogni ${interval}s × ${cycles} ${cycles === 1 ? 'ciclo' : 'cicli'}${cycles > 1 ? ` (${att} dB per ciclo)` : ''}, inviluppo predefinito 1s/2s${loopSpeed !== undefined ? `, ${speedWhy(c, loopSpeed)}` : ''}${c.eco ? `, Emotional Echo +${c.ecoRitardoS ?? 2}s ${c.ecoVolumeDb ?? -8}dB` : ''}${skipped ? ` · ${skipped} saltate (la finestra finisce a ${secToMmss(c.endS)})` : ''}.`)
       continue
     }
 
@@ -634,7 +634,7 @@ export function plainToStudioTracks(
       clips: [],
     }), c)
     if (hasEco && l.track.clips.length === 0) {
-      notes.push(`"${c.traccia}": clips with eco=on ride the companion track "${l.track.name}" (Emotional Echo pre-enabled) — echo is a track effect.`)
+      notes.push(`"${c.traccia}": le clip con eco=on vanno sulla traccia gemella "${l.track.name}" (Emotional Echo già attivo): l’eco è un effetto di traccia.`)
     }
     if (c.riverberoPct !== undefined && c.riverberoPct > 0) {
       l.track.effects = withReverb(l.track.effects, c.riverberoPct)
@@ -669,7 +669,7 @@ export function plainToStudioTracks(
       const hi = Math.max(...l.clipDbs)
       const lo = Math.min(...l.clipDbs)
       l.track.baseLufs = +(ANCHOR_LUFS + hi).toFixed(1) // fader reads/edits LUFS
-      notes.push(`"${l.track.name}": clips input-normalized to ${hi === lo ? levelLabel(hi, 'lufs') : `${levelLabel(hi, 'lufs')}…${levelLabel(lo, 'lufs')}`} (from the Excel); fader neutral.`)
+      notes.push(`"${l.track.name}": clip normalizzate in ingresso a ${hi === lo ? levelLabel(hi, 'lufs') : `${levelLabel(hi, 'lufs')}…${levelLabel(lo, 'lufs')}`} (dall’Excel); fader neutro.`)
     } else {
       const base = Math.min(12, Math.max(-60, Math.max(...l.clipDbs)))
       l.track.volume = +Math.pow(10, base / 20).toFixed(4)
@@ -681,7 +681,7 @@ export function plainToStudioTracks(
       // at anchor (clips normalized to dB−base, fader carries base)
       l.track.baseLufs = ANCHOR_LUFS
       const lo = Math.min(...l.clipDbs)
-      notes.push(`"${l.track.name}": fader at ${(ANCHOR_LUFS + base).toFixed(0)} LUFS (the Excel's ${base} dB vs voice); clips input-normalized${lo < base ? `, quieter ones down to ${(lo - base).toFixed(0)} dB vs the fader` : ''}.`)
+      notes.push(`"${l.track.name}": fader a ${(ANCHOR_LUFS + base).toFixed(0)} LUFS (i ${base} dB dell’Excel rispetto alla voce); clip normalizzate in ingresso${lo < base ? `, le più basse fino a ${(lo - base).toFixed(0)} dB sotto il fader` : ''}.`)
     }
   }
 
@@ -705,7 +705,7 @@ export function plainToStudioTracks(
       if (prev) prev.fadeOutSec = Math.max(prev.fadeOutSec ?? 0, xf)
       applied++
     }
-    if (applied) notes.push(`"${l.track.name}": ${applied} crossfade${applied === 1 ? '' : 's'} (crossfade_prec_s) applied as real equal-power overlaps.`)
+    if (applied) notes.push(`"${l.track.name}": ${applied} crossfade (crossfade_prec_s) ${applied === 1 ? 'applicato' : 'applicati'} come vere sovrapposizioni a potenza costante.`)
   }
 
   /* Every fade this file decided rather than read. It is worth saying: the
@@ -736,7 +736,7 @@ export function plainToStudioTracks(
   /* Reverb note (once per reverb'd lane). */
   for (const l of lanes) {
     const rv = l.track.effects?.find((e) => e.kind === 'reverb' && e.enabled)
-    if (rv) notes.push(`"${l.track.name}": Reverb ${Math.round((rv.params.mix ?? 0) * 100)}% (riverbero_pct — track-level effect).`)
+    if (rv) notes.push(`"${l.track.name}": Reverb ${Math.round((rv.params.mix ?? 0) * 100)}% (riverbero_pct: effetto di traccia).`)
   }
 
   const code = timeline.code ?? 'PLAIN'

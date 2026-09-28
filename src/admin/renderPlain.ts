@@ -107,16 +107,16 @@ export async function renderPlainWav(
   opts: RenderPlainOptions = {},
 ): Promise<RenderPlainResult> {
   const progress = opts.onProgress ?? (() => undefined)
-  progress('Seeding the Studio project…')
+  progress('Preparazione del progetto Studio…')
   const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed })
   const notes = [...seed.notes]
   const lengthSec = seed.totalSec
-  if (!opts.pools) notes.push('No asset pools available (Supabase env absent or library empty) — Music/Soundscape lanes are silent.')
+  if (!opts.pools) notes.push('Nessun pool di asset disponibile (Supabase non configurato o libreria vuota): le lane Music/Soundscape restano mute.')
 
   const tts = getTtsProvider()
   const wantVoice = opts.withVoice !== false
   const canVoice = wantVoice && tts.canRender
-  if (wantVoice && !tts.canRender) notes.push(`No render-capable TTS configured (${tts.label} is preview-only) — rendered without voice.`)
+  if (wantVoice && !tts.canRender) notes.push(`Nessun TTS abilitato al render (${tts.label} è solo anteprima): renderizzato senza voce.`)
 
   /* One decoder AudioContext for the TTS bytes (same pattern as Renderer v3). */
   const decoder = canVoice ? new AudioContext({ sampleRate: SAMPLE_RATE }) : null
@@ -153,7 +153,7 @@ export async function renderPlainWav(
           const key = `${voiceId}|${text}`
           let decoded = ttsCache.get(key)
           if (!decoded) {
-            progress(`Voice ${voiceClips + 1}: "${text.slice(0, 42)}${text.length > 42 ? '…' : ''}" (${voiceById(voiceId)?.name ?? 'default'})`)
+            progress(`Voce ${voiceClips + 1}: "${text.slice(0, 42)}${text.length > 42 ? '…' : ''}" (${voiceById(voiceId)?.name ?? 'predefinita'})`)
             const bytes = await tts.render(text, { lang: 'it', voiceId })
             decoded = await decoder.decodeAudioData(bytes.slice(0))
             ttsCache.set(key, decoded)
@@ -184,7 +184,7 @@ export async function renderPlainWav(
         } else {
           const sp = t.type === 'sample' ? (c.params as SampleParams) : null
           if (sp && !sp.url) continue // undrawn lane — silent by design
-          progress(`Rendering ${t.name} @ ${secToMmss(c.startSec)}…`)
+          progress(`Render di ${t.name} @ ${secToMmss(c.startSec)}…`)
           let buf = await renderClipBuffer(t.type, c.params, dur)
           buf = shapeClipBuffer(buf, c)
           buffer = buf
@@ -217,7 +217,7 @@ export async function renderPlainWav(
     }
 
     if (overran) {
-      notes.push(`${overran} voice clip${overran === 1 ? '' : 's'} speak${overran === 1 ? 's' : ''} past the window written in the Excel — rendered in full (the window is a placement hint; shortening the line or widening the window in the sheet removes the overlap).`)
+      notes.push(`${overran === 1 ? '1 clip vocale parla' : `${overran} clip vocali parlano`} oltre la finestra scritta nell’Excel: renderizzate per intero (la finestra è un’indicazione di posizione; accorciare la frase o allargare la finestra nel foglio elimina la sovrapposizione).`)
     }
 
     if (overLevel) {
@@ -239,19 +239,19 @@ export async function renderPlainWav(
         }
       })
       const ducked = seed.tracks.filter((t) => t.duck === 'music' || t.duck === 'soundscape' || t.duck === 'whisper')
-      if (ducked.length) notes.push(`Ducking (§8.3 + whisper sidechain): ${ducked.map((t) => `"${t.name}" ${DUCK_DB[t.duck as 'music' | 'soundscape' | 'whisper']} dB`).join(', ')} under ${mergeWindows(voiceWindows).length} voice windows (200/500 ms).`)
+      if (ducked.length) notes.push(`Ducking (§8.3 + sidechain del sussurro): ${ducked.map((t) => `"${t.name}" ${DUCK_DB[t.duck as 'music' | 'soundscape' | 'whisper']} dB`).join(', ')} sotto ${mergeWindows(voiceWindows).length} finestre vocali (200/500 ms).`)
     }
 
-    progress('Mixing down…')
+    progress('Missaggio…')
     const buffer = await renderMixdownBuffer(mix, lengthSec, 0.85)
-    progress('Mastering (§9): loudness + true-peak…')
+    progress('Mastering (§9): loudness + true peak…')
     const m = masterizeBuffer(buffer)
     notes.push(
-      `Mastering (§9): measured ${Number.isFinite(m.preLufs) ? m.preLufs.toFixed(1) : '−∞'} LUFS → ` +
-      `${m.gainDb >= 0 ? '+' : ''}${m.gainDb.toFixed(1)} dB to the ${SESSION_TARGET_LUFS} LUFS session target · ` +
-      `final ${Number.isFinite(m.postLufs) ? m.postLufs.toFixed(1) : '−∞'} LUFS, true peak ${m.truePeakDb.toFixed(1)} dBTP (ceiling ${SESSION_CEILING_DBTP} dBTP` +
-      `${m.limiterDb < -0.1 ? `, limiter up to ${m.limiterDb.toFixed(1)} dB` : ', limiter untouched'}). ` +
-      `The <70 dB SPL ceiling depends on the listener's device volume — at this normalization a normal phone/headset setting sits under it.`,
+      `Mastering (§9): misurati ${Number.isFinite(m.preLufs) ? m.preLufs.toFixed(1) : '−∞'} LUFS → ` +
+      `${m.gainDb >= 0 ? '+' : ''}${m.gainDb.toFixed(1)} dB verso il target di sessione ${SESSION_TARGET_LUFS} LUFS · ` +
+      `finale ${Number.isFinite(m.postLufs) ? m.postLufs.toFixed(1) : '−∞'} LUFS, true peak ${m.truePeakDb.toFixed(1)} dBTP (tetto ${SESSION_CEILING_DBTP} dBTP` +
+      `${m.limiterDb < -0.1 ? `, limiter fino a ${m.limiterDb.toFixed(1)} dB` : ', limiter non intervenuto'}). ` +
+      `Il tetto di 70 dB SPL dipende dal volume del dispositivo di chi ascolta: con questa normalizzazione un’impostazione normale di telefono/cuffie resta al di sotto.`,
     )
     const blob = audioBufferToWav(buffer)
     return { blob, buffer, seconds: lengthSec, voiceClips, notes }

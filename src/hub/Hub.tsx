@@ -7,6 +7,7 @@
 
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
+import { LanguagePicker } from '../components/LanguagePicker'
 
 interface Surface {
   href: string
@@ -33,12 +34,12 @@ const SURFACES: Surface[] = [
   },
   {
     href: '#admin', icon: '🛠', title: 'Admin console',
-    blurb: 'Content catalogue, companies, users, therapist credential approvals, data requests, reports and legal texts.',
+    blurb: 'Content catalogue, companies, users, therapist credential approvals, data requests, reports and legal texts. Always in Italian.',
     loginHint: 'admin@goodloop.app',
   },
   {
     href: '#studio', icon: '🎚', title: 'Sound Studio',
-    blurb: 'Internal audio-authoring tool (in English).',
+    blurb: 'Internal audio-authoring tool for the team and clinicians. Desktop only.',
   },
   {
     href: '#legal', icon: '§', title: 'Legal information',
@@ -55,6 +56,7 @@ export function Hub() {
           <div className="auth__brand"><BrandLogo /></div>
           <h1 className="hub__title">{t('One platform, every surface')}</h1>
           <p className="hub__sub">{t('Pick a surface to test. Each one has its own login.')}</p>
+          <div className="hub__lang"><LanguagePicker /></div>
         </header>
 
         <div className="hub__grid">

@@ -18,7 +18,7 @@
 
 import { useId } from 'react'
 import { useI18n } from '../i18n'
-import type { SeriesPoint } from './metrics'
+import { MIN_CELL, type SeriesPoint } from './metrics'
 
 const W = 640
 const H = 220
@@ -33,7 +33,7 @@ export function NotEnoughData({ note }: { note?: string }) {
   return (
     <div className="c-nodata">
       <strong>{t('Not enough data yet')}</strong>
-      <span className="small">{note ?? t('Metrics require at least 5 participants.')}</span>
+      <span className="small">{note ?? t('Metrics require at least {n} participants.', { n: MIN_CELL })}</span>
     </div>
   )
 }

@@ -28,7 +28,7 @@ export async function attachRenderedAudio(
   kbps: number = SESSION_MP3_KBPS,
 ): Promise<AttachResult> {
   if (!hasSupabaseEnv()) {
-    throw new Error('Attaching needs the Supabase env (mock mode is download-only).')
+    throw new Error('Per collegare l’audio serve la configurazione Supabase (in modalità demo è solo scaricabile).')
   }
   const url = import.meta.env.VITE_SUPABASE_URL as string
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -36,9 +36,9 @@ export async function attachRenderedAudio(
 
   const protocols = await dp.listProtocols()
   const proto = protocols.find((p) => p.code === code)
-  if (!proto) throw new Error(`Protocol ${code} is not in the catalog.`)
+  if (!proto) throw new Error(`Il protocollo ${code} non è nel catalogo.`)
   if (!proto.versions.some((v) => v.duration === duration)) {
-    throw new Error(`${code} has no ${duration}-minute version to attach to.`)
+    throw new Error(`${code} non ha una versione da ${duration} minuti a cui collegarlo.`)
   }
 
   const mp3 = audioBufferToMp3(buffer, kbps)

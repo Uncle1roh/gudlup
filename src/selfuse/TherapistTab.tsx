@@ -26,7 +26,7 @@ import { registrationLineId } from '../legal/messages'
 import { AUTHORITIES } from '../legal/market'
 import type { LegalDocId } from '../legal/types'
 import type { InformedConsentTemplate, PatientInformedConsent, ProfessionalCard } from '../legal/records'
-import { CONSENT_TEMPLATE_ITEMS } from '../legal/records'
+import { CONSENT_TEMPLATE_ITEMS, CONSENT_TEMPLATE_ITEM_LABELS } from '../legal/records'
 import { useDataProvider } from '../data/provider'
 import { prescriptionsFromPlan, type Plan } from '../data/plan'
 import { normalizeConnectionCode } from '../data/link'
@@ -997,16 +997,6 @@ function ToggleRow({
    The professional's own document (P3.2), shown in full and accepted by the
    person. The platform gives the mechanism; the professional owns the
    content. A copy of what was accepted is kept with the acceptance. */
-const CONSENT_ITEM_LABELS: Record<(typeof CONSENT_TEMPLATE_ITEMS)[number], string> = {
-  nature: 'The nature and purpose of the sessions',
-  remote: 'Working at a distance, and what that means',
-  medium: 'The limits of the medium and what happens if the connection fails',
-  confidentiality: 'Confidentiality and its limits',
-  records: 'How records are kept, where, for how long and who may access them',
-  risk: 'What happens if you are at risk',
-  fees: 'Fees and cancellation',
-  alternatives: 'The alternatives to working at a distance',
-}
 
 function InformedConsentSheet({ name, template, onAccept, onClose }: {
   name: string
@@ -1026,7 +1016,7 @@ function InformedConsentSheet({ name, template, onAccept, onClose }: {
           <p className="small muted">{t('Version {v}', { v: String(template.version) })}</p>
           {CONSENT_TEMPLATE_ITEMS.map((k) => (
             <div key={k}>
-              <h2 className="legal-text__h">{t(CONSENT_ITEM_LABELS[k])}</h2>
+              <h2 className="legal-text__h">{t(CONSENT_TEMPLATE_ITEM_LABELS[k])}</h2>
               <p>{template.items[k]}</p>
             </div>
           ))}

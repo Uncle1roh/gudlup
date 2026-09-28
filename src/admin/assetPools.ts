@@ -212,7 +212,7 @@ function pickFresh(
 }
 
 function poolNote(n: number, reused: boolean): string {
-  return `${n} file${n === 1 ? '' : 's'}${reused ? ' — pool exhausted, file reused' : ''}`
+  return `${n} file${reused ? ': pool esaurito, file riutilizzato' : ''}`
 }
 
 export interface DrawResult { asset: AudioAsset; how: string }
@@ -248,7 +248,7 @@ export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => n
     const cands = specialCandidates(pools, tag)
     if (!cands.length) return null
     const d = pickFresh(cands, rnd, ledger, `ss:${tag}`)
-    return { asset: d.asset, how: `${tag} pool (${poolNote(cands.length, d.reused)})` }
+    return { asset: d.asset, how: `pool ${tag} (${poolNote(cands.length, d.reused)})` }
   }
   /* score every soundscape by tag overlap — specials excluded, we are past the
      only branch that may serve them */
@@ -267,7 +267,7 @@ export function drawSoundscape(pools: AssetPools, ambiente: string, rnd: () => n
   }
   if (pools.soundscapes.length) {
     const d = pickFresh(pools.soundscapes, rnd, ledger, 'ss:*')
-    return { asset: d.asset, how: `no tag match for "${ambiente}" — drawn from ALL soundscapes (${poolNote(pools.soundscapes.length, d.reused)})` }
+    return { asset: d.asset, how: `nessun tag corrisponde a "${ambiente}": sorteggiato fra TUTTI i soundscape (${poolNote(pools.soundscapes.length, d.reused)})` }
   }
   return null
 }
@@ -279,7 +279,7 @@ export function drawMusic(pools: AssetPools, fase: number, rnd: () => number, le
   const pool = pools.musicByPhase[key] ?? []
   if (!pool.length) return null
   const d = pickFresh(pool, rnd, ledger, `music:${key}`)
-  return { asset: d.asset, how: `phase pool ${key} (${poolNote(pool.length, d.reused)})` }
+  return { asset: d.asset, how: `pool di fase ${key} (${poolNote(pool.length, d.reused)})` }
 }
 
 /* ---- how long a file plays, without decoding it -------------------------
@@ -361,7 +361,7 @@ export function drawMusicPlaylist(
   const short = covered < seconds
   return {
     assets,
-    how: `phase pool ${key} (${pool.length} file${pool.length === 1 ? '' : 's'}) — ${assets.length} brano/i per ~${Math.round(seconds)}s${short ? `, stimati solo ~${Math.round(covered)}s` : ''}`,
+    how: `pool di fase ${key} (${pool.length} file): ${assets.length} brano/i per ~${Math.round(seconds)}s${short ? `, stimati solo ~${Math.round(covered)}s` : ''}`,
     estimatedSec: covered,
     short,
   }
@@ -370,7 +370,7 @@ export function drawMusicPlaylist(
 /* ------------------------------------------------ asset_meta (Supabase) */
 
 function client(): SupabaseClient {
-  if (!hasSupabaseEnv()) throw new Error('Asset tags need the Supabase env.')
+  if (!hasSupabaseEnv()) throw new Error('I tag degli asset richiedono la configurazione Supabase.')
   return getSupabaseClient(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_ANON_KEY as string)
 }
 
@@ -388,12 +388,12 @@ export async function loadAssetMeta(): Promise<AssetMetaRow[]> {
 
 export async function saveAssetTags(path: string, tags: string[]): Promise<void> {
   const { error } = await client().from('asset_meta').upsert({ path, tags }, { onConflict: 'path' })
-  if (error) throw new Error(`Could not save tags: ${error.message}`)
+  if (error) throw new Error(`Impossibile salvare i tag: ${error.message}`)
 }
 
 /** Drop a file's tag row. Called when the file itself is deleted, so the table
     does not accumulate rows for paths that no longer exist. */
 export async function deleteAssetMeta(path: string): Promise<void> {
   const { error } = await client().from('asset_meta').delete().eq('path', path)
-  if (error) throw new Error(`Could not remove tags: ${error.message}`)
+  if (error) throw new Error(`Impossibile rimuovere i tag: ${error.message}`)
 }

@@ -16,8 +16,9 @@
    ============================================================================ */
 
 import { fmtDate as localeDate } from '../i18n'
-import { PdfDoc } from '../lib/pdf'
+import { PdfDoc, textWidth } from '../lib/pdf'
 import { versionShort } from './Patients'
+import { wt } from './i18n'
 import type { SessionRow, TherapistAccount, WorkspacePatient } from './data'
 
 function fmtDateTime(ms: number): string {
@@ -31,7 +32,7 @@ function fmtDate(ms: number): string {
 }
 
 function goalStatusLabel(s: SessionRow['goalStatus']): string {
-  return s === 'partial' ? 'Partially addressed' : s === 'deferred' ? 'Deferred' : 'Addressed'
+  return wt(s === 'partial' ? 'Partially addressed' : s === 'deferred' ? 'Deferred' : 'Addressed')
 }
 
 interface Options {
@@ -45,16 +46,16 @@ interface Options {
 /** One report per session, in date order, each starting on its own page. */
 export function buildSessionReportPdf({ patient, account, rows, batchTitle }: Options): PdfDoc {
   const doc = new PdfDoc({
-    title: batchTitle ?? `Session report — ${patient.name}`,
+    title: batchTitle ?? `${wt('Session report')} — ${patient.name}`,
     author: account.fullName,
-    subject: 'Good Loop session report',
+    subject: wt('Good Loop session report'),
     footer: (page, total) =>
-      `Confidential clinical record  ·  ${patient.name}  ·  ${account.fullName} (${account.licenceNumber})  ·  page ${page} of ${total}`,
+      `${wt('Confidential clinical record')}  ·  ${patient.name}  ·  ${account.fullName} (${account.licenceNumber})  ·  ${wt('page {page} of {total}', { page, total })}`,
     header: (d) => {
       d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
       d.drawText(
-        'Session report',
-        d.width - d.margin - 62,
+        wt('Session report'),
+        d.width - d.margin - textWidth(wt('Session report'), 8.5),
         d.height - 30,
         8.5,
         'regular',
@@ -81,11 +82,11 @@ export function buildBatchReportPdf(
 ): PdfDoc {
   const total = groups.reduce((n, g) => n + g.rows.length, 0)
   const doc = new PdfDoc({
-    title: `Session reports — ${account.fullName}`,
+    title: `${wt('Session reports')} — ${account.fullName}`,
     author: account.fullName,
-    subject: 'Good Loop session reports',
+    subject: wt('Good Loop session reports'),
     footer: (page, pages) =>
-      `Confidential clinical records  ·  ${account.fullName} (${account.licenceNumber})  ·  page ${page} of ${pages}`,
+      `${wt('Confidential clinical records')}  ·  ${account.fullName} (${account.licenceNumber})  ·  ${wt('page {page} of {total}', { page, total: pages })}`,
     header: (d) => {
       d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
       d.drawLine(d.margin, d.height - 38, d.width - d.margin, d.height - 38, 0.85)
@@ -93,16 +94,20 @@ export function buildBatchReportPdf(
     },
   })
 
-  doc.heading('Session reports', 18)
-  doc.paragraph(`${total} report${total === 1 ? '' : 's'} · exported ${fmtDateTime(Date.now())}`, 9.5, 0.45)
-  doc.section('Contents')
+  doc.heading(wt('Session reports'), 18)
+  doc.paragraph(
+    `${total === 1 ? wt('1 report') : wt('{n} reports', { n: total })} · ${wt('exported {date}', { date: fmtDateTime(Date.now()) })}`,
+    9.5,
+    0.45,
+  )
+  doc.section(wt('Contents'))
   doc.table(
     [
-      { header: 'Date', width: 1.1 },
-      { header: 'Patient', width: 1.6 },
-      { header: 'Type', width: 1.1 },
-      { header: 'Content', width: 1.6 },
-      { header: 'Status', width: 1 },
+      { header: wt('Date'), width: 1.1 },
+      { header: wt('Patient'), width: 1.6 },
+      { header: wt('Type'), width: 1.1 },
+      { header: wt('Content'), width: 1.6 },
+      { header: wt('Status'), width: 1 },
     ],
     groups.flatMap((g) =>
       [...g.rows]
@@ -110,15 +115,14 @@ export function buildBatchReportPdf(
         .map((r) => [
           fmtDate(r.at),
           g.patient.name,
-          r.kind === 'gl-video' ? 'GL + Video' : 'Video only',
+          r.kind === 'gl-video' ? wt('GL + Video') : wt('Video only'),
           r.protocolCode ? `${r.protocolCode} ${versionShort(r.version)}` : '—',
-          r.signedAt ? 'Signed' : 'Draft',
+          r.signedAt ? wt('Signed') : wt('Draft'),
         ]),
     ),
   )
   doc.note(
-    'Confidential. These are clinical records and are subject to professional confidentiality. ' +
-      'They are not visible to any administrator or corporate client.',
+    wt('Confidential. These are clinical records and are subject to professional confidentiality. They are not visible to any administrator or corporate client.'),
   )
 
   /* Each report is written into the SHARED document rather than generated
@@ -142,56 +146,56 @@ function appendReport(
   row: SessionRow,
 ): void {
   if (!row.signedAt) {
-    doc.note('DRAFT — NOT SIGNED. This report has not been confirmed and is not a completed clinical record.')
+    doc.note(wt('DRAFT — NOT SIGNED. This report has not been confirmed and is not a completed clinical record.'))
   }
-  doc.heading(`${patient.name} · Session #${row.noteNumber}`, 16)
+  doc.heading(`${patient.name} · ${wt('Session #{n}', { n: row.noteNumber })}`, 16)
   doc.paragraph(fmtDateTime(row.at), 9.5, 0.45)
 
-  doc.section('Session')
-  doc.keyValue('Date & time', fmtDateTime(row.at))
-  doc.keyValue('Call duration', `${row.minutes} min`)
-  doc.keyValue('Good Loop audio', row.kind === 'gl-video' ? 'Yes' : 'No')
+  doc.section(wt('Session'))
+  doc.keyValue(wt('Date & time'), fmtDateTime(row.at))
+  doc.keyValue(wt('Call duration'), `${row.minutes} min`)
+  doc.keyValue(wt('Good Loop audio'), row.kind === 'gl-video' ? wt('Yes') : wt('No'))
   if (row.kind === 'gl-video') {
-    if (row.protocolCode) doc.keyValue('Content', row.protocolCode)
-    if (row.version) doc.keyValue('Version', `${versionShort(row.version)} (${row.version} min)`)
-    doc.keyValue('Phases completed', `${row.phasesCompleted ?? 0} / 6`)
-    doc.keyValue('Pauses', String(row.pauses ?? 0))
-    doc.keyValue('Interventions', String(row.interventions ?? 0))
+    if (row.protocolCode) doc.keyValue(wt('Content'), row.protocolCode)
+    if (row.version) doc.keyValue(wt('Version'), `${versionShort(row.version)} (${row.version} min)`)
+    doc.keyValue(wt('Phases completed'), `${row.phasesCompleted ?? 0} / 6`)
+    doc.keyValue(wt('Pauses'), String(row.pauses ?? 0))
+    doc.keyValue(wt('Interventions'), String(row.interventions ?? 0))
   }
 
   doc.section('VAS')
   if (row.vasPre != null || row.vasPost != null) {
-    doc.keyValue('Pre-session', row.vasPre != null ? String(row.vasPre) : 'Not recorded')
-    doc.keyValue('Post-session', row.vasPost != null ? String(row.vasPost) : 'Not recorded')
+    doc.keyValue(wt('Pre-session'), row.vasPre != null ? String(row.vasPre) : wt('None recorded'))
+    doc.keyValue(wt('Post-session'), row.vasPost != null ? String(row.vasPost) : wt('None recorded'))
     if (row.vasPre != null && row.vasPost != null) {
       const delta = row.vasPost - row.vasPre
-      doc.keyValue('Delta', `${delta > 0 ? '+' : ''}${delta}`)
+      doc.keyValue(wt('Difference'), `${delta > 0 ? '+' : ''}${delta}`)
     }
   } else {
-    doc.paragraph('Not recorded.', 9.5, 0.45)
+    doc.paragraph(wt('Not recorded.'), 9.5, 0.45)
   }
 
   if (row.goal || row.nextGoal) {
-    doc.section('Goals')
+    doc.section(wt('Goals'))
     if (row.goal) {
-      doc.keyValue('Session goal', row.goal)
-      doc.keyValue('Status', goalStatusLabel(row.goalStatus))
+      doc.keyValue(wt('Session goal'), row.goal)
+      doc.keyValue(wt('Status'), goalStatusLabel(row.goalStatus))
     }
-    if (row.nextGoal) doc.keyValue('Goal for next session', row.nextGoal)
+    if (row.nextGoal) doc.keyValue(wt('Goal for next session'), row.nextGoal)
   }
 
-  doc.section('Clinical note')
-  doc.paragraph(row.note?.trim() || 'No note recorded.', 9.5, 0.15)
+  doc.section(wt('Clinical note'))
+  doc.paragraph(row.note?.trim() ? wt(row.note.trim()) : wt('No note recorded.'), 9.5, 0.15)
 
-  doc.section('Signature')
+  doc.section(wt('Signature'))
   if (row.signedAt) {
     doc.paragraph(account.fullName, 10, 0.1, 'bold')
     doc.paragraph(
-      `${account.licenceNumber}  ·  signed ${fmtDateTime(row.signedAt)}  ·  version ${row.signatureVersion}`,
+      `${account.licenceNumber}  ·  ${wt('signed {date}', { date: fmtDateTime(row.signedAt) })}  ·  ${wt('version {n}', { n: row.signatureVersion })}`,
       9,
       0.4,
     )
   } else {
-    doc.paragraph('Not signed.', 9.5, 0.45)
+    doc.paragraph(wt('Not signed.'), 9.5, 0.45)
   }
 }

@@ -19,6 +19,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { BrandIcon } from './Brand'
+import { useI18n } from '../i18n'
 
 interface Props {
   children: ReactNode
@@ -62,29 +63,38 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children
     if (this.props.fallback) return this.props.fallback(error, this.reset)
 
-    return (
-      <div className="eb">
-        <div className="eb__card">
-          <BrandIcon className="eb__mark" />
-          <h1 className="eb__title">Qualcosa si è interrotto</h1>
-          <p className="eb__body">
-            Questa schermata non è riuscita a caricarsi. Nessun dato è andato perso:
-            puoi riprovare, e se non funziona ricarica la pagina.
-          </p>
-          <div className="eb__actions">
-            <button className="eb__btn eb__btn--go" onClick={this.reset}>Riprova</button>
-            <button className="eb__btn" onClick={() => window.location.reload()}>Ricarica</button>
-            <button
-              className="eb__btn"
-              onClick={() => { window.location.hash = ''; this.reset() }}
-            >Torna all’inizio</button>
-          </div>
-          <details className="eb__det">
-            <summary>Dettagli tecnici</summary>
-            <pre className="eb__pre">{error.message}{this.state.info ? `\n${this.state.info}` : ''}</pre>
-          </details>
-        </div>
-      </div>
-    )
+    return <ErrorPanel error={error} info={this.state.info} onReset={this.reset} />
   }
+}
+
+/* The panel is a function component so it can read the interface language:
+   it used to be written in Italian, and showed Italian to a person who had
+   set the app to English or Portuguese. The boundary sits inside the i18n
+   provider (App.tsx), so t() is available here. */
+function ErrorPanel({ error, info, onReset }: { error: Error; info: string; onReset: () => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="eb">
+      <div className="eb__card">
+        <BrandIcon className="eb__mark" />
+        <h1 className="eb__title">{t('Something was interrupted')}</h1>
+        <p className="eb__body">
+          {t('This screen could not load. No data has been lost: you can try again, and if that does not work, reload the page.')}
+        </p>
+        <div className="eb__actions">
+          <button className="eb__btn eb__btn--go" onClick={onReset}>{t('Try again')}</button>
+          <button className="eb__btn" onClick={() => window.location.reload()}>{t('Reload')}</button>
+          <button
+            className="eb__btn"
+            onClick={() => { window.location.hash = ''; onReset() }}
+          >{t('Back to the start')}</button>
+        </div>
+        <details className="eb__det">
+          <summary>{t('Technical details')}</summary>
+          <pre className="eb__pre">{error.message}{info ? `
+${info}` : ''}</pre>
+        </details>
+      </div>
+    </div>
+  )
 }

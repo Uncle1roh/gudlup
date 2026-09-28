@@ -101,7 +101,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
       return
     }
     el.src = a.publicUrl
-    void el.play().catch((e) => setError(`Playback failed: ${(e as Error).message}`))
+    void el.play().catch((e) => setError(`Riproduzione non riuscita: ${(e as Error).message}`))
     setPlaying(a.path)
   }
 
@@ -305,11 +305,11 @@ export function AssetLibrary({ actor }: { actor: string }) {
           <h1 className="b2b-h1">Libreria audio</h1>
           <p className="b2b-sub">L’audio prodotto in <code>protocol-audio/assets</code> — ascolta qualsiasi file, poi assegna quale asset serve ciascuna fase del protocollo. Il renderer v3 miscela esattamente questa mappatura.</p>
         </div>
-        <button className="b2b-btn" onClick={() => void refresh()} disabled={assets === null}>↻ Refresh</button>
+        <button className="b2b-btn" onClick={() => void refresh()} disabled={assets === null}>↻ Aggiorna</button>
       </header>
 
       {error && <div className="adm-note adm-note--warn">{error}</div>}
-      {tagErr && <div className="adm-note adm-note--warn">Tags: {tagErr} — run the updated supabase/setup.sql (adds asset_meta) if the table is missing.</div>}
+      {tagErr && <div className="adm-note adm-note--warn">Tag: {tagErr}. Se la tabella manca, esegui il supabase/setup.sql aggiornato (aggiunge asset_meta).</div>}
       {assets === null && <div className="adm-note">Lettura del bucket…</div>}
 
       {assets !== null && (
@@ -323,9 +323,9 @@ export function AssetLibrary({ actor }: { actor: string }) {
           />
 
           <div className="adm-spec__chips" style={{ marginBottom: 12 }}>
-            <button className={`b2b-btn${tab === 'music' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('music')}>♪ Music by phase ({music.length})</button>
-            <button className={`b2b-btn${tab === 'soundscape' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('soundscape')}>🌊 Soundscapes ({(assets ?? []).filter((a) => a.kind === 'soundscape').length})</button>
-            <button className={`b2b-btn${tab === 'special' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('special')}>♥ Heartbeat & bowl ({special.length})</button>
+            <button className={`b2b-btn${tab === 'music' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('music')}>♪ Musica per fase ({music.length})</button>
+            <button className={`b2b-btn${tab === 'soundscape' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('soundscape')}>🌊 Paesaggi sonori ({(assets ?? []).filter((a) => a.kind === 'soundscape').length})</button>
+            <button className={`b2b-btn${tab === 'special' ? ' b2b-btn--primary' : ''}`} onClick={() => setTab('special')}>♥ Battito e campana ({special.length})</button>
           </div>
 
           {tab === 'music' && (
@@ -335,7 +335,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 return (
                   <div key={k} className="adm-asset__group">
                     <div className="adm-asset__ghead">{PHASE_LABEL[k]} <span className="adm-asset__count">{list.length}</span></div>
-                    {list.length === 0 && <div className="adm-asset__empty">No tracks in assets/music/{k} (or flat files named {k}_*.mp3).</div>}
+                    {list.length === 0 && <div className="adm-asset__empty">Nessuna traccia in assets/music/{k} (né file con nome {k}_*.mp3).</div>}
                     {list.map(assetRow)}
                   </div>
                 )
@@ -368,8 +368,8 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 <div className="adm-asset__ghead">Battito cardiaco e campana tibetana</div>
                 {special.length === 0 && (
                   <div className="adm-asset__empty">
-                    Nothing under assets/heartbeat or assets/bowl yet — these are PO deliverables. Until a file is mapped,
-                    Renderer v3 uses the synth provisional (60 BPM lub-dub · inharmonic bowl strike).
+                    Ancora nulla in assets/heartbeat o assets/bowl: sono consegne dei PO. Finché un file non è mappato,
+                    il renderer v3 usa il suono sintetico provvisorio (battito 60 BPM · colpo di campana inarmonico).
                   </div>
                 )}
                 {special.map(assetRow)}
@@ -389,7 +389,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
                   <select className="b2b-input adm-asset__sel" value={selCode} onChange={(e) => setSelCode(e.target.value)}>
                     {protocols.map((p) => <option key={p.code} value={p.code}>{p.code} — {p.title}</option>)}
                   </select>
-                  <span className="adm-asset__meta">music {cov.music}/6 · soundscape {cov.soundscape}/6</span>
+                  <span className="adm-asset__meta">musica {cov.music}/6 · soundscape {cov.soundscape}/6</span>
                 </div>
 
                 <div className="adm-asset__grid">
@@ -414,14 +414,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
                 <div className="adm-spec__row" style={{ marginTop: 8 }}>
                   <span className="adm-spec__lbl">File battito cardiaco</span>
                   <select className="b2b-input adm-asset__sel" value={draft.heartbeat ?? ''} onChange={(e) => setSpecial('heartbeat', e.target.value)}>
-                    <option value="">— synth provisional (60 BPM) —</option>
+                    <option value="">— sintetico provvisorio (60 BPM) —</option>
                     {assets.filter((a) => a.kind === 'heartbeat').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
                   </select>
                 </div>
                 <div className="adm-spec__row">
                   <span className="adm-spec__lbl">File campana tibetana</span>
                   <select className="b2b-input adm-asset__sel" value={draft.bowl ?? ''} onChange={(e) => setSpecial('bowl', e.target.value)}>
-                    <option value="">— synth provisional strike —</option>
+                    <option value="">— colpo sintetico provvisorio —</option>
                     {assets.filter((a) => a.kind === 'bowl').map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
                   </select>
                 </div>
@@ -430,7 +430,7 @@ export function AssetLibrary({ actor }: { actor: string }) {
                   <button className="b2b-btn b2b-btn--primary" disabled={!dirty || saving || !selected} onClick={() => void save()}>
                     {saving ? 'Salvataggio…' : `Salva la mappatura per ${selCode}`}
                   </button>
-                  {saved && <span className="adm-asset__meta">✓ Saved — the next render of {selCode} uses these assets.</span>}
+                  {saved && <span className="adm-asset__meta">✓ Salvato: il prossimo render di {selCode} usa questi asset.</span>}
                 </div>
               </>
             )}
@@ -622,20 +622,20 @@ function PhaseMapRow(props: {
     <>
       <div className="adm-asset__gridlbl">{label}</div>
       <select className="b2b-input adm-asset__sel" value={musicValue} onChange={(e) => onMusic(e.target.value)}>
-        <option value="">— synth pad fallback —</option>
+        <option value="">— pad sintetico di riserva —</option>
         {music.length > 0 && (
-          <optgroup label="This phase's folder">
+          <optgroup label="Cartella di questa fase">
             {music.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
           </optgroup>
         )}
         {others.length > 0 && (
-          <optgroup label="Other phases">
+          <optgroup label="Altre fasi">
             {others.map((a) => <option key={a.path} value={a.path}>{a.phase?.toUpperCase()} · {a.name}</option>)}
           </optgroup>
         )}
       </select>
       <select className="b2b-input adm-asset__sel" value={scapeValue} onChange={(e) => onScape(e.target.value)}>
-        <option value="">— synth texture fallback —</option>
+        <option value="">— texture sintetica di riserva —</option>
         {scapes.map((a) => <option key={a.path} value={a.path}>{a.texture} · {a.name}</option>)}
       </select>
     </>

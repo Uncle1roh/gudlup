@@ -14,6 +14,10 @@ import { IT } from './it'
 import { IT_SELF_USE } from './it-selfuse'
 import { PT } from './pt'
 import { IT_LEGAL, PT_LEGAL } from './legal'
+import { IT_WORKSPACE, PT_WORKSPACE } from './workspace'
+import { IT_CORPORATE, PT_CORPORATE } from './corporate'
+import { IT_SELFUSE_EXTRA, PT_SELFUSE_EXTRA } from './selfuse-extra'
+import { IT_STUDIO, PT_STUDIO } from './studio'
 
 export type Locale = 'en' | 'it' | 'pt-BR'
 
@@ -23,7 +27,12 @@ const STORAGE_KEY = 'gl.locale'
    its own spec and reviewed as a unit. */
 /* The legal framework's strings are merged LAST (src/i18n/legal.ts): its
    wording of an existing key is the reviewed one. */
-const DICTS: Partial<Record<Locale, Record<string, string>>> = { it: { ...IT, ...IT_SELF_USE, ...IT_LEGAL }, 'pt-BR': { ...PT, ...PT_LEGAL } }
+/* One dictionary per surface after that, so each surface's copy can be
+   written and reviewed on its own without editing a shared file. */
+const DICTS: Partial<Record<Locale, Record<string, string>>> = {
+  it: { ...IT, ...IT_SELF_USE, ...IT_LEGAL, ...IT_WORKSPACE, ...IT_CORPORATE, ...IT_SELFUSE_EXTRA, ...IT_STUDIO },
+  'pt-BR': { ...PT, ...PT_LEGAL, ...PT_WORKSPACE, ...PT_CORPORATE, ...PT_SELFUSE_EXTRA, ...PT_STUDIO },
+}
 
 /** Options shown in Profile → Language. */
 export const LOCALES: { code: Locale; label: string }[] = [
@@ -150,6 +159,28 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     d: (ms, opts) => formatDate(locale, ms, opts),
   }), [locale])
 
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+}
+
+/**
+ * Pins everything below it to one language, whatever the person chose.
+ *
+ * The admin console is Italian, always: it is the team's working tool, and a
+ * console that switched to Portuguese because the last surface previewed was
+ * set to Portuguese would be a console nobody on the team can read. The
+ * person's own choice is left untouched in storage, so the other surfaces
+ * keep it.
+ */
+export function FixedLocale({ locale, children }: { locale: Locale; children: ReactNode }) {
+  const value = useMemo<I18n>(() => ({
+    locale,
+    setLocale: () => { /* pinned */ },
+    t: (key, vars) => {
+      const dict = DICTS[locale]
+      return interpolate((dict && dict[key]) ?? key, vars)
+    },
+    d: (ms, opts) => formatDate(locale, ms, opts),
+  }), [locale])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

@@ -17,6 +17,7 @@ import { useDataProvider } from '../data/provider'
 import { slotsFromAvailability } from './data'
 import { useI18n, fmtDate } from '../i18n'
 import { fmtWhen, initials } from './Patients'
+import { VideoIcon } from './icons'
 import type { AvailabilityDay, WorkspaceState } from './data'
 
 const HOUR = 3_600_000
@@ -26,6 +27,12 @@ const END_HOUR = 21
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKDAY_INDEX = [1, 2, 3, 4, 5, 6, 0] // grid order → JS getDay()
+
+/** A weekday's name in the interface language, from the calendar itself
+    rather than a word list: 5 Jan 2026 is a Monday. */
+function weekdayName(weekday: number, width: 'short' | 'long'): string {
+  return fmtDate(new Date(2026, 0, 5 + ((weekday + 6) % 7)).getTime(), { weekday: width })
+}
 
 interface CalendarProps {
   state: WorkspaceState
@@ -102,7 +109,7 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
             <span />
             {days.map((d) => (
               <span key={d.label} className={d.date.toDateString() === new Date().toDateString() ? 'is-today' : ''}>
-                <strong>{t(d.label)}</strong>
+                <strong>{weekdayName(d.date.getDay(), 'short')}</strong>
                 <em>{d.date.getDate()}</em>
               </span>
             ))}
@@ -148,8 +155,14 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
                       <strong>{u.name}</strong>
                       <em className="w-small">{fmtWhen(u.at)}</em>
                     </span>
-                    <button className="w-btn w-btn--sm" disabled={!joinable} onClick={() => onCall(u.patientId)} aria-label={t('Start call')}>
-                      📹
+                    <button
+                      className="w-btn w-btn--sm w-iconbtn"
+                      disabled={!joinable}
+                      onClick={() => onCall(u.patientId)}
+                      aria-label={t('Start video call with {name}', { name: u.name })}
+                      title={joinable ? t('Start call') : t('Opens 15 minutes before the session')}
+                    >
+                      <VideoIcon />
                     </button>
                   </li>
                 )
@@ -264,7 +277,7 @@ export function AvailabilityModal({
         <p className="w-lead">{t('Patients can request sessions during your available hours.')}</p>
 
         <ul className="w-availlist">
-          {WEEKDAY_INDEX.map((weekday, i) => {
+          {WEEKDAY_INDEX.map((weekday) => {
             const d = days.find((x) => x.weekday === weekday)
             if (!d) return null
             return (
@@ -275,7 +288,7 @@ export function AvailabilityModal({
                     checked={d.enabled}
                     onChange={() => patchDay(weekday, (x) => ({ ...x, enabled: !x.enabled, ranges: x.enabled ? [] : [{ from: '09:00', to: '17:00' }] }))}
                   />
-                  {t(WEEKDAYS[i])}
+                  {weekdayName(weekday, 'long')}
                 </label>
                 {!d.enabled ? (
                   <span className="w-small w-muted">{t('Unavailable')}</span>

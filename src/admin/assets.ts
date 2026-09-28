@@ -65,7 +65,7 @@ export function assetMapCoverage(map: AssetMap | undefined): { music: number; so
 /* ------------------------------------------------------------- listing */
 
 function client(): SupabaseClient {
-  if (!hasSupabaseEnv()) throw new Error('The asset library needs the Supabase env (VITE_SUPABASE_URL / _ANON_KEY).')
+  if (!hasSupabaseEnv()) throw new Error('La libreria audio richiede la configurazione Supabase (VITE_SUPABASE_URL / _ANON_KEY).')
   return getSupabaseClient(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_ANON_KEY as string)
 }
 
@@ -75,7 +75,7 @@ interface Entry { name: string; id: string | null; metadata?: { size?: number } 
 
 async function listDir(sb: SupabaseClient, prefix: string): Promise<Entry[]> {
   const { data, error } = await sb.storage.from(ASSET_BUCKET).list(prefix, { limit: 500, sortBy: { column: 'name', order: 'asc' } })
-  if (error) throw new Error(`Could not list ${prefix}: ${error.message}`)
+  if (error) throw new Error(`Impossibile elencare ${prefix}: ${error.message}`)
   return (data ?? []) as Entry[]
 }
 
@@ -267,7 +267,7 @@ export function libraryGroups(assets: AudioAsset[]): LibraryGroup[] {
     if (items.length) out.push({ label: `Music · ${phase.toUpperCase()}`, items })
   }
   const unphased = assets.filter((a) => a.kind === 'music' && !a.phase)
-  if (unphased.length) out.push({ label: 'Music · no phase prefix', items: unphased })
+  if (unphased.length) out.push({ label: 'Music · senza prefisso di fase', items: unphased })
 
   for (const [texture, items] of groupSoundscapes(assets)) {
     out.push({ label: `Soundscape · ${texture}`, items })

@@ -41,7 +41,7 @@ export function Overview({ onGo }: { onGo: (s: Section) => void }) {
       </div>
 
       <div className="adm-note">
-        <b>Prossimo passo:</b> la pipeline di importazione dei contenuti vive dentro Catalogo protocolli — importa una specifica PDF/Excel,
+        <b>Prossimo passo:</b> la pipeline di importazione dei contenuti vive dentro Catalogo contenuti — importa una specifica PDF/Excel,
         genera l’audio e pubblica una volta sola, così ogni azienda può usarlo.
       </div>
     </div>

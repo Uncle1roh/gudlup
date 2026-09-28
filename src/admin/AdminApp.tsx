@@ -37,6 +37,16 @@ export function AdminApp() {
   const { user } = useAuth()
   const actor = user?.email ?? 'admin@goodloop.app'
   const [section, setSection] = useState<Section>('overview')
+  /* On a phone the sidebar folds into a bar at the top: the menu opens over
+     the page and closes again once a section is picked. On a desktop the
+     toggle is hidden and the sidebar is always open. */
+  const [navOpen, setNavOpen] = useState(false)
+  const current = NAV.find((n) => n.id === section)
+  function pick(id: Section) {
+    setSection(id)
+    setNavOpen(false)
+    window.scrollTo({ top: 0 })
+  }
 
   /* Pull the shared ElevenLabs key the moment the console opens.
      The Voice engine panel does this too, but it only MOUNTS when someone
@@ -48,17 +58,28 @@ export function AdminApp() {
 
   return (
     <div className="adm">
-      <aside className="adm-side">
+      <aside className={`adm-side${navOpen ? ' is-open' : ''}`}>
         <div className="adm-brand">
           <BrandLogo variant="cream" />
           <span className="adm-brand__sub">admin</span>
+          <button
+            className="adm-menu"
+            aria-expanded={navOpen}
+            aria-controls="adm-drawer"
+            onClick={() => setNavOpen((v) => !v)}
+          >
+            <span className="adm-menu__label">{current?.label ?? 'Menu'}</span>
+            <span aria-hidden="true">{navOpen ? '✕' : '☰'}</span>
+          </button>
         </div>
-        <nav className="adm-nav">
+        <div className="adm-drawer" id="adm-drawer">
+        <nav className="adm-nav" aria-label="Sezioni della console">
           {NAV.map((n) => (
             <button
               key={n.id}
               className={`adm-nav__item ${section === n.id ? 'is-active' : ''}`}
-              onClick={() => setSection(n.id)}
+              aria-current={section === n.id ? 'page' : undefined}
+              onClick={() => pick(n.id)}
             >
               <span className="adm-nav__icon" aria-hidden="true">{n.icon}</span>
               {n.label}
@@ -94,10 +115,12 @@ export function AdminApp() {
           </div>
           <SignOutButton className="b2b-btn b2b-btn--signout" />
         </div>
+        </div>
       </aside>
 
       <main className="adm-main">
-        {section === 'overview' && <Overview onGo={setSection} />}
+        <p className="adm-small-note">La console è pensata per lo schermo di un computer: qui funziona tutto, ma le tabelle scorrono di lato.</p>
+        {section === 'overview' && <Overview onGo={pick} />}
         {section === 'catalog' && <CatalogAdmin actor={actor} />}
         {section === 'rails' && <ExploreRails actor={actor} />}
         {section === 'assets' && <AssetLibrary actor={actor} />}

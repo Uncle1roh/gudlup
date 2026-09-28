@@ -255,7 +255,7 @@ function parseInvariants(lines: string[], issues: string[]): SpecInvariants {
     const carrier = Number(m[3])
     const beat = Number(m[2])
     const derived = Number(m[4]) - carrier
-    if (derived > 0 && Math.abs(derived - beat) > 0.51) issues.push(`${label}: beat ${beat} Hz disagrees with carriers ${m[3]}/${m[4]} — using ${beat} Hz.`)
+    if (derived > 0 && Math.abs(derived - beat) > 0.51) issues.push(`${label}: battimento ${beat} Hz incoerente con le portanti ${m[3]}/${m[4]}; uso ${beat} Hz.`)
     return { band: m[1], beatHz: beat, carrierHz: carrier }
   }
   inv.binauralPrimary = bin('Primary binaural')
@@ -289,11 +289,11 @@ export function parseProtocolDoc(text: string): SpecParseResult {
   const lines = t.split('\n')
 
   const codeM = /\bGL-([A-Z]+)\s?(\d+\.\d+)\b/.exec(t)
-  if (!codeM) return { error: 'No protocol code (like "GL-ANX 1.1") found — this doesn\'t look like a protocol document.' }
+  if (!codeM) return { error: 'Nessun codice protocollo (tipo "GL-ANX 1.1"): non sembra un documento di protocollo.' }
   const code = `GL-${codeM[1]} ${codeM[2]}`
   const famGuess = `GL-${codeM[1]}` as ProtocolFamily
   const family: ProtocolFamily = FAMILIES.includes(famGuess) ? famGuess : 'GL-ANX'
-  if (!FAMILIES.includes(famGuess)) issues.push(`Unknown family "${famGuess}" — filed under GL-ANX; adjust in the catalog if needed.`)
+  if (!FAMILIES.includes(famGuess)) issues.push(`Famiglia "${famGuess}" sconosciuta: archiviato sotto GL-ANX; correggi nel catalogo se serve.`)
 
   // Title: first non-empty line after the code line that isn't boilerplate.
   let title = ''
@@ -305,7 +305,7 @@ export function parseProtocolDoc(text: string): SpecParseResult {
     title = l
     break
   }
-  if (!title) { title = code; issues.push('No title line found — using the code as the title.') }
+  if (!title) { title = code; issues.push('Nessuna riga del titolo: uso il codice come titolo.') }
 
   const invariants = parseInvariants(lines, issues)
 
@@ -327,7 +327,7 @@ export function parseProtocolDoc(text: string): SpecParseResult {
       const d = Number(vm[1])
       const lbl = /\(([^)]+)\)/.exec(l)?.[1] ?? ''
       if (!VALID_DURATIONS.includes(d as Duration)) {
-        issues.push(`Timeline for ${d} min ignored — supported versions are 6/12/24 min.`)
+        issues.push(`Timeline da ${d} min ignorata: le versioni supportate sono 6/12/24 min.`)
         cur = null
       } else {
         cur = { duration: d as Duration, label: lbl, phases: [], events: [] }
@@ -393,14 +393,14 @@ export function parseProtocolDoc(text: string): SpecParseResult {
     }
   }
 
-  if (!versions.length) return { error: `Found protocol ${code} but no timeline sections — nothing to import.` }
+  if (!versions.length) return { error: `Trovato il protocollo ${code} ma nessuna sezione di timeline: niente da importare.` }
   for (const v of versions) {
-    if (!v.phases.length) issues.push(`${v.duration}-min version has no phases parsed.`)
+    if (!v.phases.length) issues.push(`La versione da ${v.duration} min non ha fasi lette.`)
     const expected = v.duration * 60
     const last = v.phases[v.phases.length - 1]
-    if (last && Math.abs(last.endSec - expected) > 60) issues.push(`${v.duration}-min version: last phase ends at ${Math.round(last.endSec / 60)} min — check the timeline.`)
+    if (last && Math.abs(last.endSec - expected) > 60) issues.push(`Versione da ${v.duration} min: l’ultima fase finisce a ${Math.round(last.endSec / 60)} min; controlla la timeline.`)
   }
-  if (!affirmations.length) issues.push('No CSI affirmations database found — affirmation loops will be silent unless texts are added.')
+  if (!affirmations.length) issues.push('Nessun database di affermazioni CSI: i loop di affermazioni resteranno muti finché non si aggiungono i testi.')
 
   return { spec: { code, family, title, invariants, versions, affirmations, issues } }
 }

@@ -384,12 +384,12 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
     }
   }
   if (hdrRow < 0) {
-    issues.push({ level: 'warning', sheet: 'Affermazioni', message: 'Affermazioni sheet found but no ID/testo header row — sheet skipped.' })
+    issues.push({ level: 'warning', sheet: 'Affermazioni', message: 'Foglio Affermazioni trovato ma senza riga di intestazione ID/testo: foglio ignorato.' })
     return out
   }
   const extraCols = ['ordine_loop', 'bilaterale_lato', 'eco_keyword'].filter((k) => k in col)
   if (extraCols.length) {
-    issues.push({ level: 'info', sheet: 'Affermazioni', message: `Columns beyond the Rules doc kept as agreed (flagged to POs): ${extraCols.join(', ')}.` })
+    issues.push({ level: 'info', sheet: 'Affermazioni', message: `Colonne oltre il documento delle regole mantenute come concordato (segnalate ai PO): ${extraCols.join(', ')}.` })
   }
   for (let r = hdrRow + 1; r <= range.e.r; r++) {
     const id = str(cellAt(ws, r, col['id'], X))
@@ -534,7 +534,7 @@ function parseClipSheet(
     const startS = num(get(r, 'start_s'))
     const endS = num(get(r, 'end_s'))
     if (startS === null || endS === null) {
-      issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Row ${r + 1}: missing numeric start_s/end_s — clip skipped (m:ss columns are human-readable only).` })
+      issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Riga ${r + 1}: start_s/end_s numerici mancanti, clip ignorata (le colonne m:ss sono solo per la lettura).` })
       continue
     }
     if (endS <= startS) {
@@ -588,40 +588,40 @@ function parseClipSheet(
 
     if (tipo === 'soundscape') {
       clip.ambiente = str(get(r, 'ambiente')) || undefined
-      if (!clip.ambiente) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Soundscape clip without "ambiente" tag — the app cannot draw a file for it.` })
+      if (!clip.ambiente) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Clip Soundscape senza tag "ambiente": l’app non può sorteggiarne il file.` })
     }
     if (tipo === 'music') {
-      if (faseFrom === null) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Music clip without "fase" — the phase pool to draw from must be explicit (Rules §7.2).` })
+      if (faseFrom === null) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Clip Music senza "fase": il pool di fase da cui sorteggiare va indicato esplicitamente (Regole §7.2).` })
     }
     if (tipo === 'binaural') {
       clip.carrierLHz = num(get(r, 'carrier_l_hz')) ?? undefined
       clip.carrierRHz = num(get(r, 'carrier_r_hz')) ?? undefined
       if (clip.carrierLHz === undefined || clip.carrierRHz === undefined) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Binaural clip missing carrier_L_hz/carrier_R_hz.` })
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Clip Binaural senza carrier_L_hz/carrier_R_hz.` })
       } else {
         clip.beatHz = Math.round((clip.carrierRHz - clip.carrierLHz) * 100) / 100
-        if (clip.beatHz === 0) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Binaural carriers are equal — beat is 0 Hz (did you mean a Solfeggio clip?).` })
+        if (clip.beatHz === 0) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Le portanti Binaural sono uguali: il battimento è 0 Hz (intendevi una clip Solfeggio?).` })
       }
     }
     if (tipo === 'solfeggio') {
       clip.frequenzaHz = num(get(r, 'frequenza_hz')) ?? undefined
-      if (clip.frequenzaHz === undefined) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Solfeggio clip missing frequenza_hz.` })
+      if (clip.frequenzaHz === undefined) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Clip Solfeggio senza frequenza_hz.` })
     }
     if (tipo === 'bilateral') {
       clip.intervalloAlternanzaS = num(get(r, 'intervallo_alternanza_s')) ?? undefined
       clip.frequenzaBlipHz = num(get(r, 'frequenza_blip_hz')) ?? undefined
       clip.panAmpiezza = num(get(r, 'pan_ampiezza')) ?? undefined
       clip.timbro = str(get(r, 'timbro')) || str(get(r, 'suono')) || undefined
-      if (clip.intervalloAlternanzaS === undefined) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Bilateral clip missing intervallo_alternanza_s (the central clinical dial).` })
-      if (clip.frequenzaBlipHz === undefined && clip.timbro === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Bilateral clip without timbro/frequenza_blip_hz — the app's default pulse sound will be used.` })
-      if (clip.panAmpiezza === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Bilateral clip without pan_ampiezza — app default (100) will be used.` })
+      if (clip.intervalloAlternanzaS === undefined) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Clip Bilateral senza intervallo_alternanza_s (il parametro clinico centrale).` })
+      if (clip.frequenzaBlipHz === undefined && clip.timbro === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Clip Bilateral senza timbro/frequenza_blip_hz: verrà usato il suono a impulso predefinito dell’app.` })
+      if (clip.panAmpiezza === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Clip Bilateral senza pan_ampiezza: verrà usato il valore predefinito (100).` })
     }
     if (tipo === 'voice') {
       clip.archetipo = str(get(r, 'archetipo')) || undefined
       clip.pan = num(get(r, 'pan')) ?? undefined
       clip.riverberoPct = num(get(r, 'riverbero_pct')) ?? undefined
       clip.modalita = modalitaRaw === 'sussurrato' ? 'sussurrato' : modalitaRaw === 'normale' ? 'normale' : undefined
-      if (modalitaRaw && !clip.modalita) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Unknown modalita "${modalitaRaw}" — treated as "normale".` })
+      if (modalitaRaw && !clip.modalita) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `modalita "${modalitaRaw}" sconosciuta: trattata come "normale".` })
       clip.velocitaWpm = num(get(r, 'velocita_wpm')) ?? undefined
       clip.tipoContenuto = contRaw === 'loop' ? 'loop' : contRaw === 'linea' ? 'linea' : undefined
       clip.testo = str(get(r, 'testo')) || undefined
@@ -635,35 +635,35 @@ function parseClipSheet(
       clip.ecoRitardoS = num(get(r, 'eco_ritardo_s')) ?? undefined
       clip.ecoVolumeDb = num(get(r, 'eco_volume_db')) ?? undefined
 
-      if (!clip.archetipo) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Voice clip without archetipo — engine default voice will be used.` })
-      if (clip.pan !== undefined && (clip.pan < -100 || clip.pan > 100)) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `pan ${clip.pan} out of range −100..+100.` })
+      if (!clip.archetipo) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Clip Voice senza archetipo: verrà usata la voce predefinita del motore.` })
+      if (clip.pan !== undefined && (clip.pan < -100 || clip.pan > 100)) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `pan ${clip.pan} fuori intervallo −100..+100.` })
       if (!clip.tipoContenuto) {
         issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Voice clip without tipo_contenuto (linea/loop).` })
       } else if (clip.tipoContenuto === 'linea' && !clip.testo) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea but "testo" is empty.` })
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea ma "testo" è vuoto.` })
       } else if (clip.tipoContenuto === 'loop' && !clip.setAffermazioni && !clip.sequenza) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=loop but neither set_affermazioni nor sequenza is filled.` })
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=loop ma né set_affermazioni né sequenza sono compilati.` })
       }
-      if (clip.eco && clip.ecoRitardoS === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `eco=on without eco_ritardo_s — app default (+2 s) will be used.` })
-      if (clip.eco && clip.ecoVolumeDb === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `eco=on without eco_volume_db — app default (−8 dB) will be used.` })
+      if (clip.eco && clip.ecoRitardoS === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `eco=on senza eco_ritardo_s: verrà usato il valore predefinito (+2 s).` })
+      if (clip.eco && clip.ecoVolumeDb === undefined) issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `eco=on senza eco_volume_db: verrà usato il valore predefinito (−8 dB).` })
     }
 
     if (levelMode === 'lufs' && clip.volumeLufs !== null) {
       if (clip.volumeLufs > 0) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is positive — LUFS targets live below 0 (voice anchor −16). Clip level ignored.` })
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} è positivo: i target LUFS stanno sotto 0 (riferimento voce −16). Livello della clip ignorato.` })
         clip.volumeLufs = null
       } else if (clip.volumeLufs > -6) {
-        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is extremely hot (voice anchor is −16 LUFS).` })
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} è molto alto (il riferimento voce è −16 LUFS).` })
       } else if (clip.volumeLufs < -60) {
-        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} is near-inaudible.` })
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `volume_lufs ${clip.volumeLufs} è quasi impercettibile.` })
       }
     }
     if (clip.crossfadePrecS !== null && tipo !== 'soundscape' && tipo !== 'music') {
-      issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `crossfade_prec_s is only defined for Soundscape/Music (Rules §7) — ignored on ${PLAIN_TIPO_LABEL[tipo]}; use fade_out/fade_in.` })
+      issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `crossfade_prec_s vale solo per Soundscape/Music (Regole §7): ignorato su ${PLAIN_TIPO_LABEL[tipo]}; usa fade_out/fade_in.` })
       clip.crossfadePrecS = null
     }
     if (clip.volumeDb === null && clip.volumeLufs === null && tipo !== 'voice') {
-      issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `No ${levelMode === 'lufs' ? 'volume_lufs' : 'volume_db'} — the default level for ${PLAIN_TIPO_LABEL[tipo]} will be used.` })
+      issues.push({ level: 'info', sheet: sheetName, clipId: rawId, message: `Nessun ${levelMode === 'lufs' ? 'volume_lufs' : 'volume_db'}: verrà usato il livello predefinito per ${PLAIN_TIPO_LABEL[tipo]}.` })
     }
 
     clips.push(clip)
@@ -687,14 +687,14 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
   }
   if (v.declaredDurationS !== null) {
     const maxEnd = Math.max(0, ...v.clips.map((c) => c.endS))
-    if (maxEnd > v.declaredDurationS) issues.push({ level: 'warning', sheet: S, message: `Clips run to ${secToMmss(maxEnd)} but declared session length is ${secToMmss(v.declaredDurationS)}.` })
+    if (maxEnd > v.declaredDurationS) issues.push({ level: 'warning', sheet: S, message: `Le clip arrivano a ${secToMmss(maxEnd)} ma la durata dichiarata della sessione è ${secToMmss(v.declaredDurationS)}.` })
   }
 
   // one traccia = one tipo
   const trackTipo = new Map<string, PlainTipo>()
   for (const c of v.clips) {
     const prev = trackTipo.get(c.traccia)
-    if (prev && prev !== c.tipo) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Track "${c.traccia}" mixes tipo ${PLAIN_TIPO_LABEL[prev]} and ${PLAIN_TIPO_LABEL[c.tipo]} — one track must have one type.` })
+    if (prev && prev !== c.tipo) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `La traccia "${c.traccia}" mescola i tipi ${PLAIN_TIPO_LABEL[prev]} e ${PLAIN_TIPO_LABEL[c.tipo]}: una traccia deve avere un solo tipo.` })
     else trackTipo.set(c.traccia, c.tipo)
   }
 
@@ -732,8 +732,8 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
           sheet: S,
           clipId: sorted[i].clipId,
           message: tone
-            ? `${PLAIN_TIPO_LABEL[sorted[i].tipo]} ${sorted[i].clipId} overlaps ${sorted[i - 1].clipId} by ${ov.toFixed(1)} s on track "${name}". Overlapping carriers beat against each other in the same ear instead of producing the intended rate, so the render butt-joins them: ${sorted[i - 1].clipId} is cut short at ${secToMmss(sorted[i].startS)}. Tidy the Excel to make that explicit (crossfade is Soundscape/Music only, §7).`
-            : `Overlaps ${sorted[i - 1].clipId} by ${ov.toFixed(1)} s on track "${name}" beyond its crossfade (${xf} s).`,
+            ? `${PLAIN_TIPO_LABEL[sorted[i].tipo]} ${sorted[i].clipId} si sovrappone a ${sorted[i - 1].clipId} per ${ov.toFixed(1)} s sulla traccia "${name}". Portanti sovrapposte battono tra loro nello stesso orecchio invece di produrre la frequenza voluta, quindi il render le accosta: ${sorted[i - 1].clipId} viene troncata a ${secToMmss(sorted[i].startS)}. Sistema l’Excel per renderlo esplicito (il crossfade vale solo per Soundscape/Music, §7).`
+            : `Si sovrappone a ${sorted[i - 1].clipId} per ${ov.toFixed(1)} s sulla traccia "${name}", oltre il suo crossfade (${xf} s).`,
         })
       }
     }
@@ -744,7 +744,7 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
   const solfeggi = v.clips.filter((c) => c.tipo === 'solfeggio')
   for (const b of binaurals) for (const s of solfeggi) {
     const ov = overlap(b, s)
-    if (ov > 0) issues.push({ level: 'error', sheet: S, clipId: b.clipId, message: `Binaural ${b.clipId} and Solfeggio ${s.clipId} overlap by ${ov.toFixed(1)} s — Binaural XOR Solfeggio is binding (§8.5 rule 5).` })
+    if (ov > 0) issues.push({ level: 'error', sheet: S, clipId: b.clipId, message: `Binaural ${b.clipId} e Solfeggio ${s.clipId} si sovrappongono per ${ov.toFixed(1)} s: Binaural XOR Solfeggio è vincolante (§8.5 regola 5).` })
   }
 
   // §8.0 phase windows (warnings — the map is binding but POs may derogate
@@ -758,16 +758,16 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
       const pFrom = phaseAt(c.startS)
       const pTo = phaseAt(Math.max(c.startS, c.endS - 1))
       for (let p = pFrom ?? 0; p <= (pTo ?? 0); p++) {
-        if (p === 3 || p === 4) { issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Binaural active in phase ${p} — §8.0 prescribes phases 1–2 (+ optional return 5–6), absent in 3–4.` }); break }
+        if (p === 3 || p === 4) { issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Binaural attivo nella fase ${p}: il §8.0 prevede le fasi 1–2 (+ ritorno facoltativo 5–6), assente in 3–4.` }); break }
       }
     }
     for (const c of solfeggi) {
       const pFrom = phaseAt(c.startS)
-      if (pFrom !== null && pFrom === 4) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Solfeggio active in phase 4 — §8.0 prescribes phases 5–6, absent in 4.` })
+      if (pFrom !== null && pFrom === 4) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Solfeggio attivo nella fase 4: il §8.0 prevede le fasi 5–6, assente in 4.` })
     }
     for (const c of v.clips.filter((x) => x.tipo === 'bilateral')) {
       const pFrom = phaseAt(c.startS)
-      if (pFrom !== null && pFrom !== 4) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Bilateral starts in phase ${pFrom} — §8.0 places it in phase 4 (core).` })
+      if (pFrom !== null && pFrom !== 4) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Bilateral inizia nella fase ${pFrom}: il §8.0 lo colloca nella fase 4 (nucleo).` })
     }
   }
 
@@ -801,7 +801,7 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
     }
     const rng = parseSetRange(c.setAffermazioni)
     if (!rng) {
-      issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Cannot parse set_affermazioni "${c.setAffermazioni}" (expected a range "CSI-01..12" or a single ID "CSI-05" / "REF-01").` })
+      issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `Impossibile leggere set_affermazioni "${c.setAffermazioni}" (atteso un intervallo "CSI-01..12" o un ID singolo "CSI-05" / "REF-01").` })
       continue
     }
     const ids: string[] = []
@@ -818,16 +818,16 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
       return oa - ob || a.localeCompare(b)
     })
     c.setRange = { ...rng, ids }
-    if (missing.length) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `set_affermazioni ${c.setAffermazioni}: missing in the Affermazioni sheet: ${missing.join(', ')}.` })
+    if (missing.length) issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `set_affermazioni ${c.setAffermazioni}: mancanti nel foglio Affermazioni: ${missing.join(', ')}.` })
     const isOstinato = c.modalita === 'sussurrato' && rng.from === rng.to
-    if (c.intervalloS === undefined && !isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Loop clip without intervallo_s — app default will be used.` })
-    if (isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Whisper-ostinato (${c.setAffermazioni}): app cadence ~29 s cycle, deliberately offset from the affirmation interval.` })
+    if (c.intervalloS === undefined && !isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Clip loop senza intervallo_s: verrà usato il valore predefinito dell’app.` })
+    if (isOstinato) issues.push({ level: 'info', sheet: S, clipId: c.clipId, message: `Ostinato sussurrato (${c.setAffermazioni}): ciclo dell’app di ~29 s, volutamente sfasato rispetto all’intervallo delle affermazioni.` })
     // does the loop fit its window?
     if (c.intervalloS && ids.length) {
       const cycles = c.cicli ?? 1
       const needed = ids.length * c.intervalloS * cycles
       const window = c.endS - c.startS
-      if (needed > window + 0.01) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Loop needs ~${Math.round(needed)} s (${ids.length} × ${c.intervalloS} s × ${cycles} cicli) but the clip window is ${window} s.` })
+      if (needed > window + 0.01) issues.push({ level: 'warning', sheet: S, clipId: c.clipId, message: `Il loop richiede ~${Math.round(needed)} s (${ids.length} × ${c.intervalloS} s × ${cycles} cicli) ma la finestra della clip è ${window} s.` })
     }
     if (!ids.length && !c.sequenzaSteps?.length) {
       issues.push({ level: 'error', sheet: S, clipId: c.clipId, message: `set_affermazioni "${c.setAffermazioni}" non risolve nessuna affermazione — la traccia "${c.traccia}" resterebbe muta.` })
@@ -837,7 +837,7 @@ function validateVersion(v: PlainVersion, affirmations: PlainAffirmation[], issu
   // retired concepts guard: nothing to do — Breathing/synth beds simply don't
   // exist in the 6-type vocabulary; heartbeat arrives as a Soundscape clip.
   const heartbeat = v.clips.find((c) => c.tipo === 'soundscape' && /heartbeat|battito/i.test(c.ambiente ?? ''))
-  if (heartbeat) issues.push({ level: 'info', sheet: S, clipId: heartbeat.clipId, message: `Heartbeat modeled as Soundscape (Dec. H) — will draw from the "heartbeat" tag pool.` })
+  if (heartbeat) issues.push({ level: 'info', sheet: S, clipId: heartbeat.clipId, message: `Battito modellato come Soundscape (Dec. H): verrà sorteggiato dal pool con tag "heartbeat".` })
 }
 
 function derivePhases(clips: PlainClip[]): PlainPhase[] {
@@ -863,14 +863,14 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
   try {
     wb = X.read(bytes, { type: 'array' })
   } catch (err) {
-    return { error: `Not a readable workbook: ${(err as Error).message}` }
+    return { error: `Cartella di lavoro illeggibile: ${(err as Error).message}` }
   }
-  if (!looksLikePlainTimeline(wb, X)) return { error: 'No sheet with a clip grid (clip_id / traccia / tipo / start_s / end_s) found — not a PLAIN Timeline workbook.' }
+  if (!looksLikePlainTimeline(wb, X)) return { error: 'Nessun foglio con griglia di clip (clip_id / traccia / tipo / start_s / end_s): non è un PLAIN Timeline.' }
 
   const issues: PlainIssue[] = []
   const readmeName = wb.SheetNames.find((n) => /readme|leggimi/i.test(n))
   const meta = parseReadme(readmeName ? wb.Sheets[readmeName] : undefined, X)
-  if (!readmeName) issues.push({ level: 'info', message: 'No README sheet — code/title/phase map inferred from the clip sheets.' })
+  if (!readmeName) issues.push({ level: 'info', message: 'Nessun foglio README: codice, titolo e mappa delle fasi ricavati dai fogli delle clip.' })
 
   const affName = findAffirmationSheet(wb)
   const affirmations = affName ? parseAffirmations(wb.Sheets[affName], X, issues) : []
@@ -883,13 +883,13 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     const parsed = parseClipSheet(name, ws, X, issues)
     if (!parsed) continue
     const { clips, declaredTotal, declaredDurationS, levelMode } = parsed
-    if (!clips.length) { issues.push({ level: 'warning', sheet: name, message: 'Clip grid header found but no valid clip rows.' }); continue }
+    if (!clips.length) { issues.push({ level: 'warning', sheet: name, message: 'Intestazione della griglia trovata ma nessuna riga di clip valida.' }); continue }
 
     const maxEnd = Math.max(...clips.map((c) => c.endS))
     const durationS = declaredDurationS ?? maxEnd
     const phasesFromReadme = meta.phases.length === 6 && Math.abs((meta.phases[5]?.endS ?? 0) - durationS) <= 90
     const phases = phasesFromReadme ? meta.phases : derivePhases(clips)
-    if (!phasesFromReadme && meta.phases.length) issues.push({ level: 'info', sheet: name, message: 'README phase map does not match this sheet\'s length — phases derived from the fase column instead.' })
+    if (!phasesFromReadme && meta.phases.length) issues.push({ level: 'info', sheet: name, message: 'La mappa delle fasi del README non corrisponde alla durata di questo foglio: fasi ricavate dalla colonna fase.' })
 
     const trackOrder: string[] = []
     const trackMap = new Map<string, PlainTrack>()
@@ -914,9 +914,9 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     versions.push(v)
   }
 
-  if (!versions.length) return { error: 'No usable version sheet found in the workbook.' }
+  if (!versions.length) return { error: 'Nessun foglio di versione utilizzabile nella cartella di lavoro.' }
   if (!affirmations.length && versions.some((v) => v.clips.some((c) => c.tipoContenuto === 'loop'))) {
-    issues.push({ level: 'error', message: 'Loop clips reference affirmation sets but no Affermazioni sheet was found.' })
+    issues.push({ level: 'error', message: 'Le clip loop richiamano set di affermazioni ma manca il foglio Affermazioni.' })
   }
 
   // subset sanity 8 ⊂ 12 ⊂ 20 (informative — the file may carry only one version)
@@ -925,8 +925,8 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     const q = clinical.filter((a) => a.inQuick).length
     const s = clinical.filter((a) => a.inStandard).length
     const d = clinical.filter((a) => a.inDeep).length
-    if (q && s && q > s) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Quick set (${q}) is larger than Standard (${s}) — expected 8 ⊂ 12 ⊂ 20.` })
-    if (s && d && s > d) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Standard set (${s}) is larger than Deep (${d}) — expected 8 ⊂ 12 ⊂ 20.` })
+    if (q && s && q > s) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Il set Quick (${q}) è più grande dello Standard (${s}): atteso 8 ⊂ 12 ⊂ 20.` })
+    if (s && d && s > d) issues.push({ level: 'warning', sheet: 'Affermazioni', message: `Il set Standard (${s}) è più grande del Deep (${d}): atteso 8 ⊂ 12 ⊂ 20.` })
   }
 
   return {

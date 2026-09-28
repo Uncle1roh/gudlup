@@ -113,11 +113,19 @@ export function movement(current: number | null, previous: number | null, epsilo
     : { label: 'Trending down', delta, direction: 'down' }
 }
 
-export function movementText(m: Movement | null, unit = '', period = 'last month'): string {
+type Translate = (key: string, vars?: Record<string, string | number>) => string
+
+/** `t` is the screen's translator; without one the English source is used. */
+export function movementText(
+  m: Movement | null,
+  unit = '',
+  period = 'last month',
+  t: Translate = (k, v) => Object.entries(v ?? {}).reduce((s, [a, b]) => s.split(`{${a}}`).join(String(b)), k),
+): string {
   if (!m) return '—'
-  if (m.direction === 'flat') return `Stable vs ${period}`
+  if (m.direction === 'flat') return t('Stable vs {period}', { period })
   const sign = m.delta > 0 ? '+' : '−'
-  return `${m.label} · ${sign}${Math.abs(m.delta)}${unit} vs ${period}`
+  return t('{trend} · {delta} vs {period}', { trend: t(m.label), delta: `${sign}${Math.abs(m.delta)}${unit}`, period })
 }
 
 /* -------------------------------------------------------------- report ---- */
@@ -192,7 +200,9 @@ export interface ProfessionalSupport {
 export interface Alert {
   id: string
   kind: 'report' | 'renewal' | 'licences' | 'therapist'
+  /** An English source string (an i18n key); `vars` fill its placeholders. */
   text: string
+  vars?: Record<string, string | number>
   at: number
   action?: string
 }

@@ -17,9 +17,11 @@ import { useLegal } from './LegalContext'
 import { crisisNoticeId } from './types'
 import { legalDoc, blocksFor } from './corpus'
 
-/** Where the Help now button sits: over the tab bar in the person's app,
-    inline in a top bar elsewhere. */
-export function HelpNowButton({ variant = 'floating', className = '' }: { variant?: 'floating' | 'inline'; className?: string }) {
+/** Where the Help now button sits: inline in a top bar on most surfaces;
+    `bar` is the compact pill of the person's app, in the strip above the
+    Self Use frame (or in its top bar on a desk). `floating` is kept for any
+    surface that has nowhere in the flow to put it. */
+export function HelpNowButton({ variant = 'floating', className = '' }: { variant?: 'floating' | 'inline' | 'bar'; className?: string }) {
   const { m } = useLegal()
   const [open, setOpen] = useState(false)
 
@@ -64,11 +66,13 @@ export function CrisisSheet({ onClose }: { onClose: () => void }) {
         <ul className="helpnow-sheet__numbers">
           {crisis.map((r) => (
             <li key={r.id}>
-              <a className="helpnow-sheet__call" href={`tel:${r.number}`} aria-label={`${r.label} ${r.number}`}>
+              <a className="helpnow-sheet__call" href={`tel:${r.number}`} aria-label={`${t(r.label)} ${r.number}`}>
                 <span className="helpnow-sheet__num">{r.number}</span>
                 <span className="helpnow-sheet__who">
-                  {r.label}
-                  {r.hours ? <span className="helpnow-sheet__hours"> · {r.hours}</span> : null}
+                  {/* The seed rows' labels are translated; a configured row
+                      has no key and reads as typed. */}
+                  {t(r.label)}
+                  {r.hours ? <span className="helpnow-sheet__hours"> · {t(r.hours)}</span> : null}
                 </span>
               </a>
             </li>

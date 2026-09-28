@@ -54,7 +54,26 @@ function fresh(): MockLegalState {
     professional: {
       id: 'th-demo', registration: 'CRP 04/45821', registry: 'CRP', registryRegion: '04', status: 'approved',
       verifiedAt: Date.now() - 40 * DAY, practiceCountry: null, attestedAt: null, insuranceExpiresAt: null,
-      insuranceDoc: null, termsVersion: null, termsAcceptedAt: null, consentTemplate: null,
+      insuranceDoc: null, termsVersion: null, termsAcceptedAt: null,
+      /* The demo clinician has already written their informed-consent form,
+         so the consent gate before a video call can be demonstrated from the
+         patient's side. It is the professional's own text, in their language
+         — a real account starts with none and cannot open a call until one is
+         published. */
+      consentTemplate: {
+        version: 1,
+        updatedAt: Date.now(),
+        items: {
+          nature: 'Colloqui di supporto psicologico a distanza, per lavorare sugli obiettivi che definiamo insieme nel primo incontro.',
+          remote: 'Ci vediamo in videochiamata: tu scegli un luogo tranquillo e riservato, io faccio lo stesso dal mio studio.',
+          medium: 'Se la connessione cade, ti richiamo entro cinque minuti; se non riusciamo a riprendere, recuperiamo il tempo perso in un altro appuntamento.',
+          confidentiality: 'Quello che ci diciamo resta riservato. Le eccezioni sono quelle previste dalla legge e dal codice deontologico, e te le spiego se si presentano.',
+          records: 'Tengo note cliniche essenziali nell’area riservata di Good Loop per la durata prevista dalla legge; le vedo solo io, e puoi chiederne una copia.',
+          risk: 'Se ti trovi in pericolo, ti chiedo dove sei all’inizio di ogni seduta per poter attivare i soccorsi della tua zona, e ti indico i numeri di emergenza.',
+          fees: 'Il costo della seduta è concordato prima di iniziare. Puoi disdire gratuitamente fino a 24 ore prima.',
+          alternatives: 'Se il lavoro a distanza non fa per te, possiamo valutare incontri in presenza o indirizzarti a un altro professionista.',
+        },
+      },
     },
     informedConsents: [],
     locations: {},

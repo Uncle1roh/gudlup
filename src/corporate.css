@@ -472,3 +472,40 @@
 .c-details { margin-top: 8px; }
 .c-details summary { cursor: pointer; }
 .c-right { text-align: right; }
+
+/* ---- language: Settings → Language, and the account menu ---- */
+.c-langfield { max-width: 320px; margin-top: 14px; }
+.c-app .lang-picker { display: flex; flex-direction: column; gap: 6px; }
+.c-app .lang-picker__label { font-size: 12px; font-weight: 700; color: var(--c-muted); }
+.c-usermenu__lang { padding: 10px 14px 12px; border-top: 1px solid var(--c-line); }
+.c-usermenu__lang .c-input--sm { width: 100%; min-width: 0; }
+.c-usermenu .c-usermenu__row + .c-usermenu__lang + .c-usermenu__row { border-top: 1px solid var(--c-line); }
+.c-usermenu { min-width: 210px; }
+
+/* ---- the top bar on a phone ----
+   One row: [logo over company] · Help now · account, then the nav on its own
+   row. The company name sits under the logo so it gets the full width of the
+   column (it is the one thing HR checks is right); the account button
+   collapses to its avatar and Help now to a compact pill that never wraps. */
+.helpnow.helpnow--inline { white-space: nowrap; flex: none; }
+.c-topbar .helpnow--inline { font-size: 13px; padding: 7px 11px; }
+@media (max-width: 720px) {
+  .c-topbar { column-gap: 10px; }
+  .c-topbar__left {
+    flex: 1 1 0; display: grid; align-items: center; column-gap: 10px; row-gap: 2px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'brand help' 'company help';
+  }
+  .c-topbar__left > .c-brand { grid-area: brand; }
+  .c-topbar__left > .helpnow { grid-area: help; }
+  .c-topbar__company {
+    grid-area: company; min-width: 0; font-size: 14px; font-weight: 600; color: var(--c-ink);
+    white-space: normal; overflow-wrap: anywhere; line-height: 1.25;
+  }
+  .c-brand .gl-logo { height: 22px; }
+  .c-topbar__right { margin-left: 0; flex: none; }
+  .c-user { padding: 4px; }
+  .c-user__name, .c-user__caret { display: none; }
+  .c-topbar .helpnow--inline { font-size: 12.5px; padding: 6px 10px; gap: 6px; }
+  .c-topbar .helpnow__ring { width: 8px; height: 8px; }
+}

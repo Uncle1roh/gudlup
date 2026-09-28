@@ -1195,6 +1195,7 @@
    of needing a second set of rules to be made dark afterwards. */
 
 .fr {
+  padding-bottom: 0;
   width: min(560px, 100%);
   margin: 0 auto;
   align-items: center;
@@ -1269,6 +1270,10 @@
 
 /* What a card LISTS: the two modes, the three moments, the six techniques.
    One column, label first — at six entries this is a glance, not a read. */
+/* The consent cards are a list for the screen reader, not for the eye: the
+   default disc sat outside each card as a stray dot. */
+.fr__consents { list-style: none; margin: 0; padding: 0; }
+.fr__consents > li { list-style: none; }
 .fr__points { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
 .fr__points li { display: flex; flex-direction: column; gap: 1px; }
 .fr__points b { font-size: 16px; font-weight: 600; color: var(--ink); }
@@ -1304,13 +1309,27 @@
 
 .fr__foot {
   width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px;
-  margin-top: 4px;
+  /* room for the fade above it, so at the end of the scroll the last line
+     of the card sits clear of it */
+  margin-top: 28px;
   position: sticky;
   bottom: 0;
-  padding: 10px 0 max(6px, env(safe-area-inset-bottom));
-  /* the ground fading up, so text scrolling under the buttons does not
-     collide with them */
-  background: linear-gradient(to top, var(--mist) 62%, transparent);
+  /* The screen's own bottom padding moved in here: a sticky footer sticks
+     to the scrollport INSIDE that padding, and the strip under it showed the
+     card text scrolling past below the button. */
+  padding: 10px 0 max(26px, env(safe-area-inset-bottom));
+  /* OPAQUE, with the fade above it rather than through it. A gradient here
+     let the card text scrolling underneath read through the progress bar and
+     the (translucent, while disabled) button: two layers of type at the one
+     place a person is deciding whether to accept. */
+  background: var(--mist);
+  z-index: 2;
+}
+.fr__foot::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 100%; height: 28px;
+  background: linear-gradient(to top, var(--mist), transparent);
+  pointer-events: none;
 }
 .fr__foot .btn { width: 100%; }
 

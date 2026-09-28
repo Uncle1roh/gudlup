@@ -64,6 +64,80 @@ import { useDataProvider } from '../data/provider'
 import type { SeedTrack, StudioPhase } from '../compose/types'
 import { planVoiceOverlaps, VOICE_GAP, type VoicePlan } from './voiceOverlap'
 import { BrandLogo } from '../components/Brand'
+import { useI18n } from '../i18n'
+import { LanguagePicker } from '../components/LanguagePicker'
+import './studio-lang.css'
+
+/* ---- interface language ----
+   The Studio's words go through t() (English source keys, translations in
+   i18n/studio-editor.ts). The translator is named `lt` everywhere in this
+   file because `t` is already the conventional name for a track. The data
+   modules (multitrack.ts, voiceCatalog.ts) keep their Italian labels — other
+   code stores them as track names — so the Studio carries the English source
+   of each label here and translates that at render time. */
+type Lt = (key: string, vars?: Record<string, string | number>) => string
+
+const TRACK_TEXT: Record<TrackType, { label: string; blurb: string }> = {
+  soundscape: { label: 'Soundscape', blurb: 'Ambient bed' },
+  binaural: { label: 'Binaural', blurb: 'L/R carrier beat' },
+  breath: { label: 'Breathing', blurb: 'Paced pulsing tone' },
+  voice: { label: 'Voice', blurb: 'Guided affirmation (TTS or placeholder)' },
+  music: { label: 'Music', blurb: 'Warm harmonic pad' },
+  bilateral: { label: 'Bilateral', blurb: 'Alternating L/R pulses (PAT-05)' },
+  sample: { label: 'Audio file', blurb: 'Real library assets — up to 5 tracks in sequence; soundscapes loop, music does not' },
+}
+function trackText(type: TrackType): { label: string; blurb: string } {
+  return TRACK_TEXT[type] ?? { label: TRACK_META[type].label, blurb: TRACK_META[type].blurb }
+}
+
+const BILATERAL_FAMILY_TEXT: Record<string, string> = {
+  tone: 'Zen tones',
+  bell: 'Gongs and bells',
+  whoosh: 'Air passes',
+}
+const BILATERAL_TEXT: Record<string, { label: string; blurb: string }> = {
+  'zen-deep': { label: 'Deep zen tone', blurb: 'Pure, warm tone — the most discreet bilateral cue' },
+  'zen-mid': { label: 'Mid zen tone', blurb: 'Central zen tone, a good balance of presence and softness' },
+  'zen-high': { label: 'Mid-high zen tone', blurb: 'Brighter zen tone — stands out better over a dense bed' },
+  gong: { label: 'Gong', blurb: 'Gong hit with a metallic tail — the POs’ original request' },
+  'temple-bell': { label: 'Temple bell', blurb: 'Deep toll, sharp attack and long resonance' },
+  bong: { label: 'Bong', blurb: 'Short pitched percussion — the driest of the group' },
+  'bowl-gong': { label: 'Singing bowl', blurb: 'Struck singing bowl, crystalline timbre' },
+  'bowl-low': { label: 'Deep singing bowl', blurb: 'Large, full bowl — very long tail, best with wide intervals' },
+  'whoosh-1': { label: 'Whoosh 1', blurb: 'Rush of air — a pitchless cue that does not interfere with the binaural' },
+  'whoosh-2': { label: 'Whoosh 2', blurb: 'Rush of air, slightly darker timbre' },
+  swoosh: { label: 'Short swoosh', blurb: 'Short, quick breath — the most discreet of the air passes' },
+  'deep-swoosh': { label: 'Deep swoosh', blurb: 'Low, wide breath, good for slow phases' },
+}
+function bilateralFamilyLabel(lt: Lt, fam: keyof typeof BILATERAL_FAMILY_LABEL): string {
+  const en = BILATERAL_FAMILY_TEXT[fam]
+  return en ? lt(en) : BILATERAL_FAMILY_LABEL[fam]
+}
+function bilateralText(lt: Lt, s: { id: string; label: string; blurb: string }): { label: string; blurb: string } {
+  const en = BILATERAL_TEXT[s.id]
+  return en ? { label: lt(en.label), blurb: lt(en.blurb) } : { label: s.label, blurb: s.blurb }
+}
+
+const ARCHETYPE_TEXT: Record<string, string> = {
+  maternal: 'Maternal',
+  paternal: 'Paternal',
+  wise: 'Wise / Mentor',
+  neutral: 'Neutral / Descriptive',
+  warrior: 'Warrior',
+  shadow: 'Shadow',
+  ritual: 'Ritual / Ceremonial',
+  child: 'Inner child',
+  whisper: 'Intimate / Whispered',
+}
+function archetypeLabel(lt: Lt, a: { id: string; label: string }): string {
+  const en = ARCHETYPE_TEXT[a.id]
+  return en ? lt(en) : a.label
+}
+
+/** A translated sentence whose {placeholders} render in bold. */
+function withBold(text: string, vars: Record<string, string | number>) {
+  return text.split(/\{(\w+)\}/).map((part, i) => (i % 2 === 1 ? <b key={i}>{vars[part] ?? `{${part}}`}</b> : part))
+}
 
 /* ---- layout constants ---- */
 const LANE_H = 104
@@ -252,32 +326,42 @@ function makeSeed(): Track[] {
 }
 
 /* ============================ desktop gate ============================ */
-export function SoundStudio() {
+export function SoundStudio({ languagePicker = false }: { languagePicker?: boolean } = {}) {
   const [wide, setWide] = useState(() => window.innerWidth >= 1024)
   useEffect(() => {
     const f = () => setWide(window.innerWidth >= 1024)
     window.addEventListener('resize', f)
     return () => window.removeEventListener('resize', f)
   }, [])
-  if (!wide) return <StudioTooSmall />
-  return <StudioDesktop />
+  if (!wide) return <StudioTooSmall languagePicker={languagePicker} />
+  return <StudioDesktop languagePicker={languagePicker} />
 }
 
-function StudioTooSmall() {
+function StudioTooSmall({ languagePicker }: { languagePicker: boolean }) {
+  const { t: lt } = useI18n()
   return (
     <div className="mt-gate">
       <div className="mt-gate__card">
         <div className="mt-gate__icon">🎛️</div>
-        <h1>Il Sound Studio è solo per desktop</h1>
-        <p>L’editor multitraccia richiede uno schermo più ampio. Apri Good Loop su laptop o desktop per comporre e renderizzare le sessioni.</p>
-        <a className="mt-gate__back" href="#">← Back to the app</a>
+        <h1>{lt('The Sound Studio is desktop only')}</h1>
+        <p>{lt('The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.')}</p>
+        {languagePicker && (
+          <div className="mt-gate__lang"><LanguagePicker label={false} className="mt-lang mt-lang--gate" /></div>
+        )}
+        <a className="mt-gate__back" href="#">{lt('← Back to the app')}</a>
       </div>
     </div>
   )
 }
 
 /* ============================ main editor ============================ */
-function StudioDesktop() {
+function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
+  /* Stable across renders so the memoized callbacks below always speak the
+     CURRENT language, not the one they were created in. */
+  const { t: ltNow } = useI18n()
+  const ltRef = useRef<Lt>(ltNow)
+  ltRef.current = ltNow
+  const lt = useCallback<Lt>((key, vars) => ltRef.current(key, vars), [])
   const handoff = useMemo(() => {
     const h = peekStudioSeed()
     if (!h) return null
@@ -364,7 +448,7 @@ function StudioDesktop() {
   function askTarget(): StudioAttachTarget | null {
     const found = deriveTarget()
     if (found) return found
-    const code = window.prompt('Codice del protocollo da creare o aggiornare (es. GL-ANX 1.1)')?.trim()
+    const code = window.prompt(lt('Code of the protocol to create or update (e.g. GL-ANX 1.1)'))?.trim()
     if (!code) return null
     const t: StudioAttachTarget = { code: code.toUpperCase(), duration: nearestDuration(lengthSec) }
     setTargetOverride(t)
@@ -411,21 +495,21 @@ function StudioDesktop() {
       const stored = await saveToProtocol(target)
       const draft = !stored.enabled
       setAttachMsg(
-        `Salvato in ${target.code} · ${target.duration} min — riaprendolo ritrovi esattamente questa sessione.` +
+        lt('Saved to {code} · {min} min — reopen it to find exactly this session.', { code: target.code, min: target.duration }) +
         (draft
-          ? ' È nel catalogo come BOZZA: non è attivo finché non pubblichi la durata dalla schermata del protocollo.'
+          ? ' ' + lt('It is in the catalogue as a DRAFT: it is not live until you publish the duration from the protocol screen.')
           : '') +
         (persistenceNote() ?? ''),
       )
     } catch (e) {
-      setAttachMsg(`Salvataggio non riuscito: ${(e as Error).message}`)
+      setAttachMsg(lt('Save failed: {error}', { error: (e as Error).message }))
     } finally {
       setSaving(false)
     }
   }
 
   function goBack() {
-    if (dirty && attachTarget && !window.confirm('Ci sono modifiche non salvate nel protocollo. Uscire comunque?')) return
+    if (dirty && attachTarget && !window.confirm(lt('There are unsaved changes to the protocol. Leave anyway?'))) return
     /* The hand-off is released HERE and nowhere else. Reading it no longer
        consumes it, so the session survives a resize, a re-render or a reload;
        leaving the Studio on purpose is the one thing that ends it. */
@@ -596,19 +680,19 @@ function StudioDesktop() {
       if (p.drawTag !== undefined) {
         const drawn = drawSoundscape(pools, p.drawTag, rnd, ledger)
         if (!drawn) {
-          setDrawMsg(`No library file matches the tag "${p.drawTag}" — upload one in the Asset Library (or add the tag to an existing file there).`)
+          setDrawMsg(lt('No library file matches the tag "{tag}" — upload one in the Asset Library (or add the tag to an existing file there).', { tag: p.drawTag }))
           return
         }
         patchClipParams(trackId, clipId, { url: drawn.asset.publicUrl, label: `${drawn.asset.name} · tag "${p.drawTag}"`, slots: undefined })
         setDrawMsg(drawn.asset.publicUrl === p.url
-          ? `"${drawn.asset.name}" is the ONLY file in the pool for the tag "${p.drawTag}" — nothing else to draw. Upload another, or tag one in the Asset Library.`
-          : `Drew "${drawn.asset.name}" — ${drawn.how}.`)
+          ? lt('"{name}" is the ONLY file in the pool for the tag "{tag}" — nothing else to draw. Upload another, or tag one in the Asset Library.', { name: drawn.asset.name, tag: p.drawTag })
+          : lt('Drew "{name}" — {how}.', { name: drawn.asset.name, how: drawn.how }))
         return
       }
       // music: draw a PLAYLIST long enough for the window, not one song to loop
       const drawn = drawMusicPlaylist(pools, p.drawPhase ?? 1, cl.durationSec, MAX_SAMPLE_SLOTS, rnd, ledger)
       if (!drawn || !drawn.assets.length) {
-        setDrawMsg(`The F${p.drawPhase} music pool is empty — upload files to assets/music/f${p.drawPhase} in the Asset Library.`)
+        setDrawMsg(lt('The F{phase} music pool is empty — upload files to assets/music/f{phase} in the Asset Library.', { phase: p.drawPhase ?? 1 }))
         return
       }
       const picked: SampleSlot[] = drawn.assets.map((a) => ({ url: a.publicUrl, label: a.name }))
@@ -619,10 +703,13 @@ function StudioDesktop() {
         slots: picked,
       })
       setDrawMsg(picked.map((s) => s.url).join('|') === before
-        ? `The F${p.drawPhase} pool has nothing this clip is not already playing — add files to assets/music/f${p.drawPhase} to get a different draw.`
-        : `${picked.length === 1 ? 'Drew' : `Drew ${picked.length} brani`} "${drawn.assets.map((a) => a.name).join('" → "')}" — ${drawn.how}.${drawn.short ? ' La sequenza è più corta della clip: aggiungi un brano.' : ''}`)
+        ? lt('The F{phase} pool has nothing this clip is not already playing — add files to assets/music/f{phase} to get a different draw.', { phase: p.drawPhase ?? 1 })
+        : (picked.length === 1
+          ? lt('Drew "{name}" — {how}.', { name: drawn.assets.map((a) => a.name).join('" → "'), how: drawn.how })
+          : lt('Drew {n} tracks "{names}" — {how}.', { n: picked.length, names: drawn.assets.map((a) => a.name).join('" → "'), how: drawn.how }))
+          + (drawn.short ? ' ' + lt('The sequence is shorter than the clip: add a track.') : ''))
     } catch (e) {
-      setDrawMsg(`Library unreachable: ${(e as Error).message}`)
+      setDrawMsg(lt('Library unreachable: {error}', { error: (e as Error).message }))
     } finally {
       setDrawBusy(false)
     }
@@ -662,9 +749,13 @@ function StudioDesktop() {
           filled++
         }
       }
-      setDrawMsg(`Drew files for ${filled} clip${filled === 1 ? '' : 's'}${empty ? ` · ${empty} still empty (their pools have no files — check the Asset Library folders/tags)` : ''}.`)
+      setDrawMsg(
+        (filled === 1 ? lt('Drew files for 1 clip') : lt('Drew files for {n} clips', { n: filled }))
+        + (empty ? ' · ' + lt('{n} still empty (their pools have no files — check the Asset Library folders/tags)', { n: empty }) : '')
+        + '.',
+      )
     } catch (e) {
-      setDrawMsg(`Library unreachable: ${(e as Error).message}`)
+      setDrawMsg(lt('Library unreachable: {error}', { error: (e as Error).message }))
     } finally {
       setDrawBusy(false)
     }
@@ -751,7 +842,7 @@ function StudioDesktop() {
     const player = playerRef.current
     if (!tr || !cl || !player) return
     const text = (cl.text ?? '').trim()
-    if (!text) { setTtsError('Scrivi prima un’affermazione.'); return }
+    if (!text) { setTtsError(lt('Write an affirmation first.')); return }
     setTtsError(null); setTtsBusy(clipId)
     // claim the clip for the whole round-trip, and take a render token so a
     // parameter edit that lands mid-flight supersedes us instead of racing
@@ -821,7 +912,7 @@ function StudioDesktop() {
     const player = playerRef.current
     if (!player) return
     const provider = getTtsProvider()
-    if (!provider.canRender) { setTtsError(`${provider.label} is preview-only — set ElevenLabs keys (🎙) first.`); return }
+    if (!provider.canRender) { setTtsError(lt('{engine} is preview-only — set ElevenLabs keys (🎙) first.', { engine: provider.label })); return }
     const jobs: VoiceJob[] = []
     for (const t of tracksRef.current) {
       if (t.type !== 'voice') continue
@@ -831,7 +922,7 @@ function StudioDesktop() {
         if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, ...voiceContext(tracksRef.current, c.id), shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
       }
     }
-    if (!jobs.length) { setTtsError('Nessuna clip vocale con testo da sintetizzare.'); return }
+    if (!jobs.length) { setTtsError(lt('No voice clip with text to synthesize.')); return }
     setTtsError(null)
     const lang = ttsLanguage()
     const cache = new Map<string, AudioBuffer>()
@@ -870,7 +961,7 @@ function StudioDesktop() {
              tried guessed, including turbo/flash with an explicit
              language_code. Inside a sentence the same model is correct every
              time. See TtsProvider.renderJoined. */
-          setSynthAll(`Sintesi del blocco (${group.length} frasi) ${done + 1}/${total}…`)
+          setSynthAll(lt('Synthesizing block ({n} lines) {i}/{total}…', { n: group.length, i: done + 1, total }))
           const texts = group.map((j) => j.text)
           const key = `BLOCK|${group[0].voiceId ?? ''}|${lang}|${texts.join('')}`
           let block = blockCache.get(key)
@@ -887,7 +978,7 @@ function StudioDesktop() {
           }
         } else {
           const j = group[0]
-          setSynthAll(`Sintesi delle voci ${done + 1}/${total}…`)
+          setSynthAll(lt('Synthesizing voices {i}/{total}…', { i: done + 1, total }))
           /* The single-line cache bills one render per repeated line. It keys on
              the WHOLE request: the same words with different neighbours are a
              different generation now that the neighbours condition the result.
@@ -904,7 +995,7 @@ function StudioDesktop() {
         }
       } catch (e) {
         failed += group.length
-        setTtsError(`Voce a ${fmtTime(group[0].startSec)}: ${(e as Error).message}`)
+        setTtsError(lt('Voice at {time}: {error}', { time: fmtTime(group[0].startSec), error: (e as Error).message }))
       } finally {
         for (const j of group) ttsInFlight.current.delete(j.clipId)
       }
@@ -1121,13 +1212,13 @@ function StudioDesktop() {
       Slicing the rendered buffer (instead of re-rendering halves) keeps
       periodic layers phase-continuous and keeps synthesized voices intact. */
   function cutAtPlayhead() {
-    if (!selected) { setEditMsg('Seleziona prima una clip, porta il cursore al suo interno, poi Taglia.'); return }
+    if (!selected) { setEditMsg(lt('Select a clip first, move the cursor inside it, then Cut.')); return }
     const tr = tracksRef.current.find((t) => t.id === selected.trackId)
     const cl = tr?.clips.find((c) => c.id === selected.clipId)
     if (!tr || !cl) return
     const t0 = cl.startSec, t1 = cl.startSec + cl.durationSec
-    if (playhead < t0 + 0.2 || playhead > t1 - 0.2) { setEditMsg('Porta il cursore DENTRO la clip selezionata (non sul bordo), poi Taglia.'); return }
-    if (!cl.buffer) { setEditMsg('Questa clip è ancora in render — aspetta la forma d’onda, poi Taglia.'); return }
+    if (playhead < t0 + 0.2 || playhead > t1 - 0.2) { setEditMsg(lt('Move the cursor INSIDE the selected clip (not on its edge), then Cut.')); return }
+    if (!cl.buffer) { setEditMsg(lt('This clip is still rendering — wait for the waveform, then Cut.')); return }
     const cutAt = playhead - t0
     const bufA = sliceBuffer(cl.buffer, 0, cutAt)
     const bufB = sliceBuffer(cl.buffer, cutAt, cl.durationSec)
@@ -1150,17 +1241,17 @@ function StudioDesktop() {
   /** Merge the selected clip with the NEXT clip on the same track into one
       frozen clip; any gap between them becomes silence inside the clip. */
   function glueWithNext() {
-    if (!selected) { setEditMsg('Seleziona la clip di sinistra della coppia da unire.'); return }
+    if (!selected) { setEditMsg(lt('Select the left clip of the pair to join.')); return }
     const tr = tracksRef.current.find((t) => t.id === selected.trackId)
     if (!tr) return
     const sorted = [...tr.clips].sort((x, y) => x.startSec - y.startSec)
     const i = sorted.findIndex((c) => c.id === selected.clipId)
     const cl = sorted[i]
     const nx = sorted[i + 1]
-    if (!cl || !nx) { setEditMsg('Nessuna clip dopo quella selezionata su questa traccia — niente da unire.'); return }
-    if (!cl.buffer || !nx.buffer) { setEditMsg('Entrambe le clip devono avere l’audio renderizzato prima di unirle (aspetta le forme d’onda).'); return }
+    if (!cl || !nx) { setEditMsg(lt('No clip after the selected one on this track — nothing to join.')); return }
+    if (!cl.buffer || !nx.buffer) { setEditMsg(lt('Both clips need rendered audio before they can be joined (wait for the waveforms).')); return }
     const gap = Math.max(0, nx.startSec - (cl.startSec + cl.durationSec))
-    if (gap > 60) { setEditMsg('Queste clip distano più di 60 s — avvicinale prima di unirle.'); return }
+    if (gap > 60) { setEditMsg(lt('These clips are more than 60 s apart — move them closer before joining.')); return }
     const bufA = sliceBuffer(cl.buffer, 0, cl.durationSec)
     const bufB = sliceBuffer(nx.buffer, 0, nx.durationSec)
     const buf = concatBuffers(bufA, bufB, gap)
@@ -1241,10 +1332,12 @@ function StudioDesktop() {
         }
       }
       const bits: string[] = []
-      if (p.panned) bits.push(`${p.panned} nel campo stereo (1ª a destra, 2ª a sinistra)`)
-      if (p.moved) bits.push(`${p.moved} nella fase 6 distanziata${p.moved === 1 ? '' : 'e'} di ${VOICE_GAP}s, al centro`)
-      if (p.longer) bits.push('musica della fase 6 prolungata fino all\u2019ultima voce')
-      setEditMsg(`Voci sovrapposte risolte: ${bits.join(' \u00b7 ')}.`)
+      if (p.panned) bits.push(lt('{n} in the stereo field (1st right, 2nd left)', { n: p.panned }))
+      if (p.moved) bits.push(p.moved === 1
+        ? lt('1 in phase 6 spaced {gap}s apart, centred', { gap: VOICE_GAP })
+        : lt('{n} in phase 6 spaced {gap}s apart, centred', { n: p.moved, gap: VOICE_GAP }))
+      if (p.longer) bits.push(lt('phase 6 music extended to the last voice'))
+      setEditMsg(lt('Overlapping voices resolved: {list}.', { list: bits.join(' \u00b7 ') }))
     }, 0)
   }
 
@@ -1264,7 +1357,7 @@ function StudioDesktop() {
     if (!track) return
     const targets = track.clips.filter((c) => !c.frozen)
     if (!targets.length) {
-      setEditMsg('Tutte le clip di questa traccia hanno l’audio congelato (pezzi tagliati) — i parametri non si applicano.')
+      setEditMsg(lt('Every clip on this track has frozen audio (cut pieces) — the parameters do not apply.'))
       return
     }
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
@@ -1274,7 +1367,9 @@ function StudioDesktop() {
     for (const c of targets) scheduleRender(trackId, c.id)
     const frozen = track.clips.length - targets.length
     setEditMsg(frozen > 0
-      ? `Applicato a ${targets.length} clip · ${frozen} pezzo${frozen === 1 ? '' : 'i'} tagliato${frozen === 1 ? '' : 'i'} salta${frozen === 1 ? '' : 'no'} (audio congelato).`
+      ? (frozen === 1
+        ? lt('Applied to {n} clips · 1 cut piece skipped (frozen audio).', { n: targets.length })
+        : lt('Applied to {n} clips · {k} cut pieces skipped (frozen audio).', { n: targets.length, k: frozen }))
       : null)
   }
   /** Per-clip volume trim, in dB RELATIVE to the track fader. It is baked into
@@ -1284,7 +1379,7 @@ function StudioDesktop() {
   function patchClipGain(trackId: string, clipId: string, gainDb: number) {
     const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
     if (cl?.frozen) {
-      setEditMsg('I pezzi tagliati hanno l’audio congelato — il volume si cambia prima di tagliare, oppure riunendo le parti.')
+      setEditMsg(lt('Cut pieces have frozen audio — change the volume before cutting, or by joining the parts again.'))
       return
     }
     const v = Math.max(-24, Math.min(12, Math.round(gainDb * 2) / 2))
@@ -1317,7 +1412,7 @@ function StudioDesktop() {
   function patchClipTiming(trackId: string, clipId: string, patch: { startSec?: number; durationSec?: number }) {
     const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
     if (cl?.frozen && patch.durationSec != null && Math.abs(patch.durationSec - cl.durationSec) > 0.01) {
-      setEditMsg('Cut pieces have frozen audio — move them freely, or cut again / glue to change their length.')
+      setEditMsg(lt('Cut pieces have frozen audio — move them freely, or cut again / join to change their length.'))
       return
     }
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, ...patch })) })))
@@ -1424,12 +1519,12 @@ function StudioDesktop() {
         <div className="mt-brand"><BrandLogo variant="cream" /><span className="mt-brand__sub">studio</span></div>
         <input className="mt-name" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
         <div className="mt-transport">
-          <button className="mt-tbtn" onClick={stopT} title="Stop / torna all’inizio">⏹</button>
-          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? 'Pausa' : 'Riproduci'}>{playing ? '⏸' : '▶'}</button>
+          <button className="mt-tbtn" onClick={stopT} title={lt('Stop / back to the start')}>⏹</button>
+          <button className="mt-tbtn mt-tbtn--play" onClick={playing ? pause : play} title={playing ? lt('Pause') : lt('Start playback')}>{playing ? '⏸' : '▶'}</button>
           <span className="mt-time">
             <EditableValue
               display={fmtTime(playhead)}
-              title="Clicca per digitare un tempo (es. 3:45 o 225)"
+              title={lt('Click to type a time (e.g. 3:45 or 225)')}
               commit={(raw) => {
                 const t = raw.trim()
                 const mm = /^(\d{1,3}):(\d{1,2})$/.exec(t)
@@ -1440,19 +1535,19 @@ function StudioDesktop() {
             {' '}<span className="mt-time__sep">/</span> {fmtTime(lengthSec)}
           </span>
         </div>
-        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title="Motore vocale (chiavi TTS)">
+        <button className={`mt-tbtn${voiceSetupOpen ? ' is-on' : ''}`} onClick={() => setVoiceSetupOpen((v) => !v)} title={lt('Voice engine (TTS keys)')}>
           {ttsInfo.canRender ? '🎙' : '🎙!'}
         </button>
         <button
           className="mt-tbtn mt-tbtn--wide"
           onClick={() => void synthesizeAllVoices()}
           disabled={!!synthAll}
-          title="Sintetizza ogni clip vocale che ha testo e non è ancora stata renderizzata (un render TTS per battuta unica)"
+          title={lt('Synthesize every voice clip that has text and has not been rendered yet (one TTS render per unique line)')}
         >
-          {synthAll ?? '♪ Tutte le voci'}
+          {synthAll ?? lt('♪ All voices')}
         </button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title="Taglia in due la clip selezionata al cursore">✂ Taglia</button>
-        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title="Unisce la clip selezionata alla successiva sulla stessa traccia (lo spazio diventa silenzio)">🩹 Unisci</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={cutAtPlayhead} disabled={!selected} title={lt('Split the selected clip in two at the cursor')}>{lt('✂ Cut')}</button>
+        <button className="mt-tbtn mt-tbtn--wide" onClick={glueWithNext} disabled={!selected} title={lt('Join the selected clip to the next one on the same track (the gap becomes silence)')}>{lt('🩹 Join')}</button>
         <div className="mt-master">
           <span className="mt-master__lbl">Master</span>
           <input type="range" min={0} max={1} step={0.01} value={masterGain} onChange={(e) => setMasterGain(+e.target.value)} />
@@ -1463,29 +1558,29 @@ function StudioDesktop() {
           <button onClick={() => setPxPerSec((v) => clamp(+(v * 1.25).toFixed(2), 2, 60))}>+</button>
         </div>
         <div className="mt-len">
-          <span>durata</span>
+          <span>{lt('length')}</span>
           <input type="number" min={10} max={1800} value={lengthSec} onChange={(e) => setLengthSec(clamp(Math.round(+e.target.value || 10), 10, 1800))} />
           <span>s</span>
         </div>
         <div className="mt-addwrap">
-          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>＋ Traccia ▾</button>
+          <button className="mt-add" onClick={() => setAddOpen((v) => !v)}>{lt('＋ Track ▾')}</button>
           {addOpen && (
             <div className="mt-addmenu">
               {(Object.keys(TRACK_META) as TrackType[]).map((tp) => (
-                <button key={tp} onClick={() => addTrack(tp)}><span>{TRACK_META[tp].icon}</span> {TRACK_META[tp].label}<em>{TRACK_META[tp].blurb}</em></button>
+                <button key={tp} onClick={() => addTrack(tp)}><span>{TRACK_META[tp].icon}</span> {lt(trackText(tp).label)}<em>{lt(trackText(tp).blurb)}</em></button>
               ))}
             </div>
           )}
         </div>
-        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? 'Render in corso…' : '⬇ Esporta WAV'}</button>
+        <button className="mt-export" onClick={exportWav} disabled={exporting}>{exporting ? lt('Rendering…') : lt('⬇ Export WAV')}</button>
         {
           <button
             className={`mt-export${dirty ? ' is-dirty' : ''}`}
             onClick={() => void onSave()}
             disabled={saving}
-            title="Salva tutte le modifiche dentro il protocollo — riaprendolo ritrovi questa sessione"
+            title={lt('Save every change into the protocol — reopen it to find this session again')}
           >
-            {saving ? 'Salvataggio…' : dirty ? '💾 Salva •' : '💾 Salva'}
+            {saving ? lt('Saving…') : dirty ? lt('💾 Save •') : lt('💾 Save')}
           </button>
         }
         {/* Pubblica and Solo audio used to live here. Publishing is one act
@@ -1493,8 +1588,9 @@ function StudioDesktop() {
             into it from the Studio meant two code paths that could disagree
             about what a published protocol looks like. The Studio saves; the
             workscreen publishes. */}
-        <button className="mt-back" onClick={goBack} title={returnTo ? 'Torna alla schermata precedente' : 'Esci dallo studio'}>
-          ← Indietro
+        {languagePicker && <LanguagePicker label={false} className="mt-lang" />}
+        <button className="mt-back" onClick={goBack} title={returnTo ? lt('Back to the previous screen') : lt('Leave the studio')}>
+          {lt('← Back')}
         </button>
       </header>
 
@@ -1505,7 +1601,7 @@ function StudioDesktop() {
       )}
       {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
 
-      <div className="mt-hint">🎧 Use headphones — the binaural beat lives in the L/R difference.</div>
+      <div className="mt-hint">{lt('🎧 Use headphones — the binaural beat lives in the L/R difference.')}</div>
       {/* The voices were authored against one ElevenLabs account; the key can
           now point at another. Every clip keeps the id it was saved with and
           is served by the same archetype here, but that is worth saying once,
@@ -1513,12 +1609,19 @@ function StudioDesktop() {
       {(voiceAccount.remapped > 0 || voiceAccount.stale > 0) && (
         <div className="mt-hint mt-hint--warn">
           {voiceAccount.remapped > 0 && (
-            <>🎙 {voiceAccount.remapped} clip {voiceAccount.remapped === 1 ? 'usa una voce' : 'usano voci'} di un altro account ElevenLabs: {voiceAccount.examples.join(' · ')}{voiceAccount.examples.length < voiceAccount.remapped ? ' …' : ''}. Le sintetizza lo stesso archetipo di questo account. </>
+            <>{lt(voiceAccount.remapped === 1
+              ? '🎙 {n} clip uses a voice from another ElevenLabs account: {examples}. The same archetype on this account synthesizes it.'
+              : '🎙 {n} clips use voices from another ElevenLabs account: {examples}. The same archetype on this account synthesizes them.', {
+              n: voiceAccount.remapped,
+              examples: voiceAccount.examples.join(' · ') + (voiceAccount.examples.length < voiceAccount.remapped ? ' …' : ''),
+            })}{' '}</>
           )}
           {voiceAccount.stale > 0 && (
-            <>⚠ {voiceAccount.stale} clip {voiceAccount.stale === 1 ? 'ha' : 'hanno'} una voce che questo account non può sostituire: scegline una nell’ispettore prima di sintetizzare. </>
+            <>{lt(voiceAccount.stale === 1
+              ? '⚠ {n} clip has a voice this account cannot replace: pick one in the inspector before synthesizing.'
+              : '⚠ {n} clips have a voice this account cannot replace: pick one in the inspector before synthesizing.', { n: voiceAccount.stale })}{' '}</>
           )}
-          Cambiando di nuovo chiave, tornano le voci di prima.
+          {lt('Switching back to the previous key brings the previous voices back.')}
         </div>
       )}
 
@@ -1568,7 +1671,7 @@ function StudioDesktop() {
               onParams={() => setParamTrackId((v) => (v === t.id ? null : t.id))}
             />
           ))}
-          {tracks.length === 0 && <div className="mt-empty">Nessuna traccia. Usa ＋ Traccia.</div>}
+          {tracks.length === 0 && <div className="mt-empty">{lt('No tracks. Use ＋ Track.')}</div>}
           </div>
 
           <div className="mt-content" ref={lanesRef} style={{ width: contentWidth, height: contentHeight }}>
@@ -1631,6 +1734,7 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
   paramsOpen: boolean
   onParams: () => void
 }) {
+  const { t: lt } = useI18n()
   const meta = TRACK_META[track.type]
   const ch = track.channel ?? 'C'
   const fxOn = (track.effects ?? []).filter((e) => e.enabled).length
@@ -1638,16 +1742,16 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
     <div className="mt-head" style={{ height: LANE_H, borderLeftColor: meta.color }}>
       <div className="mt-head__top">
         <span className="mt-head__icon">{meta.icon}</span>
-        <span className="mt-head__name">{track.name}</span>
-        <button className={`mt-fxbtn${fxOn ? ' is-on' : ''}`} onClick={onFx} title="Effetti della traccia (armonizzatore · eco · riverbero · saturazione · filtro)">
+        <span className="mt-head__name" title={track.name}>{lt(track.name)}</span>
+        <button className={`mt-fxbtn${fxOn ? ' is-on' : ''}`} onClick={onFx} title={lt('Track effects (harmonizer · echo · reverb · saturation · filter)')}>
           FX{fxOn ? ` ${fxOn}` : ''}
         </button>
-        <button className="mt-x" onClick={onDelete} title="Rimuovi la traccia">✕</button>
+        <button className="mt-x" onClick={onDelete} title={lt('Remove the track')}>✕</button>
       </div>
       <div className="mt-head__row">
-        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title="Muto">M</button>
+        <button className={`mt-mini${track.muted ? ' is-m' : ''}`} onClick={onToggleMute} title={lt('Mute track')}>M</button>
         <button className={`mt-mini${track.soloed ? ' is-s' : ''}`} onClick={onToggleSolo} title="Solo">S</button>
-        <span className="mt-chan" title="Canale della traccia — l’intera traccia suona a sinistra / centro / destra (in ascolto e nell’export)">
+        <span className="mt-chan" title={lt('Track channel — the whole track plays left / centre / right (when listening and in the export)')}>
           {(['L', 'C', 'R'] as TrackChannel[]).map((c) => (
             <button key={c} className={`mt-chan__b${ch === c ? ' is-on' : ''}`} onClick={() => onChannel(c)}>{c}</button>
           ))}
@@ -1655,15 +1759,15 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
         <button
           className={`mt-mini mt-mini--p${paramsOpen ? ' is-p' : ''}`}
           onClick={onParams}
-          title="Parametri della traccia — cambia un valore una volta sola per tutte le clip"
+          title={lt('Track parameters — change a value once for every clip')}
         >
           P
         </button>
         <span style={{ flex: 1 }} />
-        <button className="mt-addclip" onClick={onAddClip} title="Aggiungi una clip al cursore">＋</button>
+        <button className="mt-addclip" onClick={onAddClip} title={lt('Add a clip at the cursor')}>＋</button>
       </div>
       {track.baseLufs !== undefined ? (
-        <div className="mt-head__vol" title="Loudness target della traccia in LUFS (il linguaggio di mix del protocollo) — scorri per ±0,5 LU">
+        <div className="mt-head__vol" title={lt('Track loudness target in LUFS (the protocol’s mix language) — scroll for ±0.5 LU')}>
           <input
             className="mt-vol"
             type="range" min={0} max={1} step={0.002}
@@ -1683,12 +1787,12 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
                 const v = parseTyped(raw, FADER_MIN_LUFS, FADER_MAX_LUFS)
                 if (v != null) onVolume(lufsToGain(track.baseLufs!, v))
               }}
-              title="Clicca per digitare il target in LUFS (es. -22)"
+              title={lt('Click to type the target in LUFS (e.g. -22)')}
             />
           </span>
         </div>
       ) : (
-        <div className="mt-head__vol" title="Livello della traccia in dB rispetto al mix — scorri per passi fini di ±0,5 dB">
+        <div className="mt-head__vol" title={lt('Track level in dB relative to the mix — scroll for fine ±0.5 dB steps')}>
           <input
             className="mt-vol"
             type="range" min={0} max={1} step={0.002}
@@ -1708,7 +1812,7 @@ function TrackHeader({ track, onVolume, onToggleMute, onToggleSolo, onDelete, on
                 const v = parseTyped(raw, FADER_MIN_DB, FADER_MAX_DB)
                 if (v != null) onVolume(Math.pow(10, v / 20))
               }}
-              title="Clicca per digitare il livello in dB (es. -12)"
+              title={lt('Click to type the level in dB (e.g. -12)')}
             />
           </span>
         </div>
@@ -1810,6 +1914,7 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
   onSelect: () => void
   onBeginDrag: (mode: 'move' | 'trim-l' | 'trim-r', e: ReactPointerEvent) => void
 }) {
+  const { t: lt } = useI18n()
   const meta = TRACK_META[track.type]
   const left = clip.startSec * pxPerSec
   const width = Math.max(10, clip.durationSec * pxPerSec)
@@ -1823,7 +1928,7 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
       onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('move', e) }}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      <div className="mt-clip__label" style={{ color: meta.color }}>{meta.icon} {meta.label}{clip.peaks ? '' : ' …'}</div>
+      <div className="mt-clip__label" style={{ color: meta.color }}>{meta.icon} {lt(trackText(track.type).label)}{clip.peaks ? '' : ' …'}</div>
       <canvas ref={canvasRef} className="mt-clip__wave" />
       <div className="mt-clip__h mt-clip__h--l" onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('trim-l', e) }} />
       <div className="mt-clip__h mt-clip__h--r" onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('trim-r', e) }} />
@@ -1835,13 +1940,14 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
 /** Click/double-click the shown value → type the exact number → Enter/blur.
     Accepts "83", "0.83", "83%", "3:45", "-6 dB", commas as decimals. */
 function EditableValue({ display, commit, title }: { display: string; commit: (raw: string) => void; title?: string }) {
+  const { t: lt } = useI18n()
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
   if (!editing) {
     return (
       <b
         className="mt-editable"
-        title={title ?? 'Click to type the exact value'}
+        title={title ?? lt('Click to type the exact value')}
         onClick={() => { setText(display); setEditing(true) }}
       >{display}</b>
     )
@@ -1902,6 +2008,7 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
   const eq = clip.eq ?? defaultClipEq()
   const active = clip.eq !== undefined && !eqIsTransparent(clip.eq)
   const [open, setOpen] = useState(active)
+  const { t: lt } = useI18n()
 
   function patchBand(i: number, patch: Partial<EqBand>) {
     onEq({ ...eq, bands: eq.bands.map((b, k) => (k === i ? { ...b, ...patch } : b)) })
@@ -1911,15 +2018,15 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
     <div className="mt-eq">
       <div className="mt-eq__head">
         <button className="mt-eq__toggle" onClick={() => setOpen((o) => !o)}>
-          {open ? '▾' : '▸'} Equalizer{active ? ' · on' : ''}
+          {open ? '▾' : '▸'} {active ? lt('Equalizer · on') : lt('Equalizer')}
         </button>
         {clip.eq && (
           <button
             className="mt-eq__reset"
-            title="Azzera tutte le bande"
+            title={lt('Reset all bands')}
             onClick={() => onEq(defaultClipEq())}
           >
-            Reset
+            {lt('Reset EQ')}
           </button>
         )}
       </div>
@@ -1930,12 +2037,12 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
             <div key={i} className={`mt-eq__band${b.enabled ? '' : ' is-off'}`}>
               <button
                 className={`mt-eq__on${b.enabled ? ' is-on' : ''}`}
-                title={b.enabled ? 'Band on — click to bypass' : 'Band off — click to enable'}
+                title={b.enabled ? lt('Band on — click to bypass') : lt('Band off — click to enable')}
                 onClick={() => patchBand(i, { enabled: !b.enabled })}
               >
-                {EQ_BAND_LABEL[b.type]}
+                {lt(EQ_BAND_LABEL[b.type])}
               </button>
-              <label className="mt-eq__f" title="Frequenza (clicca il numero per digitarlo)">
+              <label className="mt-eq__f" title={lt('Frequency (click the number to type it)')}>
                 <input
                   type="range" min={0} max={1} step={0.002}
                   value={Math.log10(b.freqHz / 20) / 3}
@@ -1950,11 +2057,11 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                     const hz = /k/.test(t) ? n * 1000 : n
                     patchBand(i, { freqHz: Math.round(Math.min(20000, Math.max(20, hz))) })
                   }}
-                  title="Frequenza in Hz (es. 250 o 2.5k)"
+                  title={lt('Frequency in Hz (e.g. 250 or 2.5k)')}
                 />
               </label>
               {b.type !== 'highpass' && b.type !== 'lowpass' && (
-                <label className="mt-eq__g" title="Guadagno (clicca il numero per digitarlo)">
+                <label className="mt-eq__g" title={lt('Gain (click the number to type it)')}>
                   <input
                     type="range" min={-18} max={18} step={0.5}
                     value={b.gainDb}
@@ -1963,12 +2070,12 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                   <EditableValue
                     display={`${b.gainDb > 0 ? '+' : ''}${b.gainDb.toFixed(1)}`}
                     commit={(raw) => { const v = parseTyped(raw, -18, 18); if (v != null) patchBand(i, { gainDb: v }) }}
-                    title="Guadagno in dB"
+                    title={lt('Gain in dB')}
                   />
                 </label>
               )}
               {b.type === 'peaking' && (
-                <label className="mt-eq__q" title="Q — larghezza della campana (più alto = più stretta)">
+                <label className="mt-eq__q" title={lt('Q — bell width (higher = narrower)')}>
                   <input
                     type="range" min={0.3} max={8} step={0.1}
                     value={b.q}
@@ -1977,15 +2084,14 @@ function ClipEqPanel({ clip, onEq }: { clip: Clip; onEq: (eq: ClipEq) => void })
                   <EditableValue
                     display={`Q${b.q.toFixed(1)}`}
                     commit={(raw) => { const v = parseTyped(raw, 0.3, 8); if (v != null) patchBand(i, { q: v }) }}
-                    title="Q (0,3–8)"
+                    title={lt('Q (0.3–8)')}
                   />
                 </label>
               )}
             </div>
           ))}
           <div className="mt-note" style={{ marginTop: 4 }}>
-            EQ is baked into the clip before its loudness calibration — shaping the tone never moves the clip off its
-            protocol layer level, and playback, waveform and the WAV export all hear it.
+            {lt('EQ is baked into the clip before its loudness calibration — shaping the tone never moves the clip off its protocol layer level, and playback, waveform and the WAV export all hear it.')}
           </div>
         </>
       )}
@@ -2044,10 +2150,11 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   drawBusy: boolean
   drawMsg: string | null
 }) {
+  const { t: lt } = useI18n()
   if (!track || !clip) {
     return (
       <div className="mt-inspector mt-inspector--empty">
-        <span>Seleziona una clip per modificarne il suono · doppio clic su una corsia per aggiungerne una · trascina i bordi per accorciarla · trascina su/giù per spostarla su un’altra traccia dello stesso tipo</span>
+        <span>{lt('Select a clip to edit its sound · double-click a lane to add one · drag the edges to shorten it · drag up/down to move it to another track of the same type')}</span>
       </div>
     )
   }
@@ -2055,64 +2162,63 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   return (
     <div className="mt-inspector">
       <div className="mt-insp__head">
-        <span className="mt-insp__title" style={{ color: meta.color }}>{meta.icon} {meta.label}</span>
-        <span className="mt-insp__sub">{meta.blurb}</span>
-        <button className="mt-insp__del" onClick={onDelete}>Elimina la clip</button>
+        <span className="mt-insp__title" style={{ color: meta.color }}>{meta.icon} {lt(trackText(track.type).label)}</span>
+        <span className="mt-insp__sub">{lt(trackText(track.type).blurb)}</span>
+        <button className="mt-insp__del" onClick={onDelete}>{lt('Delete the clip')}</button>
       </div>
       <div className="mt-insp__grid">
-        <Slider label="Start" value={clip.startSec} min={0} max={1800} step={0.25} onChange={(v) => onTiming({ startSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
-        <Slider label="Length" value={clip.durationSec} min={MIN_CLIP} max={600} step={0.25} onChange={(v) => onTiming({ durationSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
+        <Slider label={lt('Clip start')} value={clip.startSec} min={0} max={1800} step={0.25} onChange={(v) => onTiming({ startSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
+        <Slider label={lt('Clip length')} value={clip.durationSec} min={MIN_CLIP} max={600} step={0.25} onChange={(v) => onTiming({ durationSec: v })} fmt={(v) => `${v.toFixed(2)}s`} />
         {!clip.frozen && (
           <>
             <Slider
-              label="Volume clip"
+              label={lt('Clip volume')}
               value={clip.gainDb ?? 0}
               min={-24} max={12} step={0.5}
               onChange={onGain}
               fmt={(v) => (v === 0 ? '0 dB' : `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`)}
             />
             <div className="mt-note">
-              Relativo al fader della traccia: la traccia resta il livello del layer nel mix, la clip sale o scende
-              rispetto a quello. 0 dB = esattamente il livello della traccia.
-              {clip.calibrateDb !== undefined && ' Si applica DOPO la calibrazione LUFS del protocollo.'}
+              {lt('Relative to the track fader: the track stays the layer’s level in the mix, the clip rises or falls relative to it. 0 dB = exactly the track level.')}
+              {clip.calibrateDb !== undefined && ' ' + lt('It applies AFTER the protocol’s LUFS calibration.')}
             </div>
           </>
         )}
         {clip.frozen && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            ✂ Cut piece — its audio is frozen: move it freely, cut it again, or glue it with its neighbor.
-            Parameter and length edits don't apply to frozen pieces.
+            {lt('✂ Cut piece — its audio is frozen: move it freely, cut it again, or join it with its neighbour. Parameter and length edits don’t apply to frozen pieces.')}
           </div>
         )}
         {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
-            📄 Dall’Excel del protocollo: {clip.calibrateDb !== undefined ? `normalizzata a ${(ANCHOR_LUFS + clip.calibrateDb).toFixed(1)} LUFS · ` : ''}
-            dissolvenze {clip.fadeInSec ?? 0}s / {clip.fadeOutSec ?? 0}s — impresse nell’audio della clip.
+            {lt('📄 From the protocol Excel:')}{' '}
+            {clip.calibrateDb !== undefined ? lt('normalized to {lufs} LUFS', { lufs: (ANCHOR_LUFS + clip.calibrateDb).toFixed(1) }) + ' · ' : ''}
+            {lt('fades {in}s / {out}s — baked into the clip audio.', { in: clip.fadeInSec ?? 0, out: clip.fadeOutSec ?? 0 })}
           </div>
         )}
         {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}
         {clip.frozen && clip.eq && (
-          <div className="mt-note" style={{ marginTop: 6 }}>L’EQ è bloccato sui frammenti tagliati — l’audio è congelato.</div>
+          <div className="mt-note" style={{ marginTop: 6 }}>{lt('EQ is locked on cut pieces — the audio is frozen.')}</div>
         )}
 
         {track.type === 'binaural' && (() => { const p = clip.params as BinauralParams; return <>
-          <Slider label="Carrier" value={p.carrierHz} min={60} max={520} step={1} onChange={(v) => onParam({ carrierHz: v })} fmt={(v) => `${v} Hz`} />
-          <Slider label="Beat" value={p.beatHz} min={0.5} max={16} step={0.1} onChange={(v) => onParam({ beatHz: v })} fmt={(v) => `${v.toFixed(1)} Hz`} />
+          <Slider label={lt('Carrier')} value={p.carrierHz} min={60} max={520} step={1} onChange={(v) => onParam({ carrierHz: v })} fmt={(v) => `${v} Hz`} />
+          <Slider label={lt('Beat')} value={p.beatHz} min={0.5} max={16} step={0.1} onChange={(v) => onParam({ beatHz: v })} fmt={(v) => `${v.toFixed(1)} Hz`} />
           <div className="mt-note">L {Math.round(p.carrierHz - p.beatHz / 2)} Hz · R {Math.round(p.carrierHz + p.beatHz / 2)} Hz</div>
         </> })()}
 
         {track.type === 'soundscape' && (() => { const p = clip.params as SoundscapeParams; return <>
           <div className="mt-seg">
             {(['lake', 'air', 'deep'] as Texture[]).map((tx) => (
-              <button key={tx} className={p.texture === tx ? 'is-on' : ''} onClick={() => onParam({ texture: tx })}>{tx}</button>
+              <button key={tx} className={p.texture === tx ? 'is-on' : ''} onClick={() => onParam({ texture: tx })}>{lt(tx)}</button>
             ))}
           </div>
-          <Slider label="Warmth" value={p.warmth} min={200} max={2000} step={10} onChange={(v) => onParam({ warmth: v })} fmt={(v) => `${v} Hz`} />
+          <Slider label={lt('Warmth')} value={p.warmth} min={200} max={2000} step={10} onChange={(v) => onParam({ warmth: v })} fmt={(v) => `${v} Hz`} />
         </> })()}
 
         {track.type === 'breath' && (() => { const p = clip.params as BreathParams; return <>
-          <Slider label="Breaths / min" value={p.breathsPerMin} min={3} max={10} step={0.1} onChange={(v) => onParam({ breathsPerMin: v })} fmt={(v) => v.toFixed(1)} />
-          <Slider label="Tone" value={p.toneHz} min={120} max={520} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
+          <Slider label={lt('Breaths / min')} value={p.breathsPerMin} min={3} max={10} step={0.1} onChange={(v) => onParam({ breathsPerMin: v })} fmt={(v) => v.toFixed(1)} />
+          <Slider label={lt('Tone')} value={p.toneHz} min={120} max={520} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
         </> })()}
 
         {track.type === 'music' && (() => { const p = clip.params as MusicParams; return <>
@@ -2121,7 +2227,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
               <button key={ch} className={p.chord === ch ? 'is-on' : ''} onClick={() => onParam({ chord: ch })}>{ch.toUpperCase()}</button>
             ))}
           </div>
-          <div className="mt-note">Pad in triade calda — i cambi di tonalità seguono le transizioni musicali del protocollo.</div>
+          <div className="mt-note">{lt('Warm triad pad — key changes follow the protocol’s musical transitions.')}</div>
         </> })()}
 
         {track.type === 'bilateral' && (() => {
@@ -2131,41 +2237,41 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           const hold = p.holdSec ?? Math.min(snd.naturalSec, every * 0.9)
           return <>
             <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
-              <span className="mt-tts__lbl">Suono</span>
+              <span className="mt-tts__lbl">{lt('Sound')}</span>
               <select className="mt-tts__sel" value={snd.id} onChange={(e) => onParam({ sound: e.target.value as BilateralSoundId })}>
                 {(['tone', 'bell', 'whoosh'] as const).map((fam) => (
-                  <optgroup key={fam} label={BILATERAL_FAMILY_LABEL[fam]}>
+                  <optgroup key={fam} label={bilateralFamilyLabel(lt, fam)}>
                     {BILATERAL_SOUNDS.filter((s) => s.family === fam).map((s) => (
-                      <option key={s.id} value={s.id}>{s.label}</option>
+                      <option key={s.id} value={s.id}>{bilateralText(lt, s).label}</option>
                     ))}
                   </optgroup>
                 ))}
               </select>
-              <button className="mt-tts__btn" onClick={() => void auditionBilateral(snd.id)} title="Ascolta il file per intero">▶</button>
+              <button className="mt-tts__btn" onClick={() => void auditionBilateral(snd.id)} title={lt('Listen to the whole file')}>▶</button>
             </div>
-            <div className="mt-note">{snd.blurb} · file da {snd.naturalSec.toFixed(1)} s</div>
-            <Slider label="Ogni" value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
-            <Slider label="Durata colpo" value={hold} min={0.2} max={12} step={0.1} onChange={(v) => onParam({ holdSec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
-            <Slider label="Ampiezza pan" value={p.panAmp ?? 0.8} min={0.1} max={1} step={0.05} onChange={(v) => onParam({ panAmp: v })} fmt={(v) => `±${Math.round(v * 100)}`} />
-            {hold > every && <div className="mt-note">⚠ Il colpo dura più dell’intervallo: i lati si sovrappongono. Accorcia la durata o allarga “Ogni”.</div>}
+            <div className="mt-note">{lt('{blurb} · {sec} s file', { blurb: bilateralText(lt, snd).blurb, sec: snd.naturalSec.toFixed(1) })}</div>
+            <Slider label={lt('Every')} value={p.everySec} min={1} max={10} step={0.5} onChange={(v) => onParam({ everySec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
+            <Slider label={lt('Hit length')} value={hold} min={0.2} max={12} step={0.1} onChange={(v) => onParam({ holdSec: v })} fmt={(v) => `${v.toFixed(1)} s`} />
+            <Slider label={lt('Pan width')} value={p.panAmp ?? 0.8} min={0.1} max={1} step={0.05} onChange={(v) => onParam({ panAmp: v })} fmt={(v) => `±${Math.round(v * 100)}`} />
+            {hold > every && <div className="mt-note">{lt('⚠ The hit lasts longer than the interval: the sides overlap. Shorten the length or widen “Every”.')}</div>}
             <div className="mt-note">
-              Alternanza L/R a ±{Math.round((p.panAmp ?? 0.8) * 100)} — la stimolazione PAT-05 del protocollo.
-              Il file viene tagliato a “Durata colpo” con una breve dissolvenza, così anche una campana lunga non invade il colpo successivo.
+              {lt('L/R alternation at ±{amp} — the protocol’s PAT-05 stimulation.', { amp: Math.round((p.panAmp ?? 0.8) * 100) })}{' '}
+              {lt('The file is cut to “Hit length” with a short fade, so even a long bell does not spill into the next hit.')}
             </div>
           </>
         })()}
 
         {track.type === 'sample' && (() => { const p = clip.params as SampleParams; return <>
           <div className="mt-note" style={{ marginBottom: 6 }}>
-            <b>File di libreria:</b> {p.label || '— none —'}
+            <b>{lt('Library file:')}</b> {p.label || lt('— none —')}
           </div>
           {(p.drawTag !== undefined || p.drawPhase !== undefined) && (
             <div className="mt-tts__row" style={{ margin: '4px 0' }}>
-              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawClip} title="Sorteggio casuale dal pool di questa clip (tag / fase)">
-                🎲 {p.url ? 'Redraw from pool' : 'Draw from pool'}
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawClip} title={lt('Random draw from this clip’s pool (tag / phase)')}>
+                🎲 {p.url ? lt('Redraw from pool') : lt('Draw from pool')}
               </button>
-              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawAllMissing} title="Riempi dal suo pool ogni clip campione muta di questo progetto">
-                Draw ALL missing
+              <button className="mt-tts__btn" disabled={drawBusy} onClick={onDrawAllMissing} title={lt('Fill every silent sample clip in this project from its pool')}>
+                {lt('Draw ALL missing')}
               </button>
             </div>
           )}
@@ -2173,26 +2279,26 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
           <SampleQueue params={p} clipDurationSec={clip.durationSec} />
           <SampleFilePicker
             value={p.label}
-            label={sampleLoops(p) ? undefined : 'Sostituisci con un solo brano…'}
+            label={sampleLoops(p) ? undefined : lt('Replace with a single track…')}
             onPick={(url, label) => onParam({ url, label, slots: undefined })}
           />
           <div className="mt-note">
             {sampleLoops(p)
-              ? 'Paesaggio sonoro: il file va in loop sulla durata della clip con crossfade sulle giunzioni — è una texture, la ripetizione è voluta.'
-              : 'Musica: i brani sono sorteggiati automaticamente per coprire la clip e suonano IN SEQUENZA, con crossfade fra l’uno e l’altro; l’ultimo viene tagliato alla fine. Un brano non si ripete mai — si sentirebbe ricominciare a metà clip. Scegliendo un file qui la sequenza viene sostituita da quel solo brano.'}
-            {' '}Il livello è il fader della traccia a sinistra. Scegliere un file qui cambia SOLO questa clip — la mappatura predefinita per fase resta nella Libreria audio dell’amministrazione.
+              ? lt('Soundscape: the file loops over the clip length with crossfades at the joins — it is a texture, the repetition is intended.')
+              : lt('Music: tracks are drawn automatically to cover the clip and play IN SEQUENCE, crossfading from one to the next; the last one is cut at the end. A track never repeats — you would hear it restart mid-clip. Picking a file here replaces the sequence with that single track.')}
+            {' '}{lt('The level is the track fader on the left. Picking a file here changes ONLY this clip — the default per-phase mapping stays in the admin Audio library.')}
           </div>
         </> })()}
 
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const txt = (clip.text ?? '').trim(); const staleText = !!clip.ttsSource && clip.ttsText !== txt; const rendered = !!clip.ttsSource && !staleText; const hasText = !!txt; const voice = effectiveVoice(p); const stale = staleVoiceId(p); const remap = remappedVoice(p); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
-              <span className="mt-tts__lbl">Affermazione</span>
-              <span className="mt-tts__eng">{rendered ? 'voce renderizzata ✓' : staleText ? 'testo modificato — da risintetizzare' : `voce: ${ttsLabel}`}</span>
+              <span className="mt-tts__lbl">{lt('Affirmation')}</span>
+              <span className="mt-tts__eng">{rendered ? lt('voice rendered ✓') : staleText ? lt('text changed — needs re-synthesis') : lt('voice: {engine}', { engine: ttsLabel })}</span>
             </div>
             <textarea
               className="mt-tts__text"
-              placeholder={'Scrivi la battuta parlata, es. "Você está em segurança. Respire fundo."'}
+              placeholder={lt('Write the spoken line, e.g. "Você está em segurança. Respire fundo."')}
               value={clip.text ?? ''}
               onChange={(e) => onVoiceText(e.target.value)}
               rows={2}
@@ -2202,38 +2308,38 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
                 className="mt-tts__btn"
                 onClick={onVoicePreview}
                 disabled={ttsBusy || previewBusy || !hasText || !ttsCanRender}
-                title={ttsCanRender ? `Ascolta questa battuta con ${voice.name} — pan e velocità della clip inclusi` : 'Senza chiave TTS l’anteprima userebbe una voce di sistema, non quella scelta'}
+                title={ttsCanRender ? lt('Listen to this line with {voice} — clip pan and speed included', { voice: voice.name }) : lt('Without a TTS key the preview would use a system voice, not the chosen one')}
               >
-                {previewBusy ? 'Anteprima…' : `▶ Anteprima — ${voice.name}`}
+                {previewBusy ? lt('Previewing…') : lt('▶ Preview — {voice}', { voice: voice.name })}
               </button>
-              <button className="mt-tts__btn mt-tts__btn--go" onClick={onVoiceSynthesize} disabled={ttsBusy || !ttsCanRender || !hasText} title={ttsCanRender ? '' : 'Set an ElevenLabs or Azure key to render real voice'}>
-                {ttsBusy ? 'Synthesizing…' : rendered ? '↻ Re-synthesize' : '✓ Synthesize into clip'}
+              <button className="mt-tts__btn mt-tts__btn--go" onClick={onVoiceSynthesize} disabled={ttsBusy || !ttsCanRender || !hasText} title={ttsCanRender ? '' : lt('Set an ElevenLabs or Azure key to render real voice')}>
+                {ttsBusy ? lt('Synthesizing…') : rendered ? lt('↻ Re-synthesize') : lt('✓ Synthesize into clip')}
               </button>
             </div>
-            {!ttsCanRender && <div className="mt-tts__hint">Nessuna chiave TTS: l’anteprima è disattivata — la voce del browser è una voce di sistema, non quella scelta qui. Aggiungi una chiave (🎙) per ascoltare e renderizzare la voce reale (docs/TTS_SETUP.md).</div>}
-            {staleText && <div className="mt-tts__hint">⚠ Il testo è cambiato dopo la sintesi: la clip contiene ancora la battuta precedente. Risintetizza per aggiornarla (l’anteprima richiederà una nuova voce).</div>}
+            {!ttsCanRender && <div className="mt-tts__hint">{lt('No TTS key: preview is off — the browser voice is a system voice, not the one chosen here. Add a key (🎙) to hear and render the real voice (docs/TTS_SETUP.md).')}</div>}
+            {staleText && <div className="mt-tts__hint">{lt('⚠ The text changed after synthesis: the clip still holds the previous line. Re-synthesize to update it (the preview will request a new voice).')}</div>}
             {stale && (
               <div className="mt-tts__hint">
-                ⚠ Questa clip è stata importata con una voce che non è più nel catalogo (<code>{stale}</code>). Verrà parlata da {voice.name}.{' '}
-                <button className="mt-tts__btn" onClick={() => onVoiceChange('')}>Usa la predefinita</button>
+                {lt('⚠ This clip was imported with a voice that is no longer in the catalogue')} (<code>{stale}</code>). {lt('It will be spoken by {voice}.', { voice: voice.name })}{' '}
+                <button className="mt-tts__btn" onClick={() => onVoiceChange('')}>{lt('Use the default')}</button>
               </div>
             )}
             {ttsError && <div className="mt-tts__err">{ttsError}</div>}
           </div>
           {remap && (
             <div className="mt-note">
-              Voce <b>{remap.name}</b> dell’account ElevenLabs precedente: qui la fa <b>{voice.name}</b>, stesso archetipo.
-              La clip conserva l’id salvato — se torni alla chiave di prima, torna la voce di prima.
-              Per fissare quella di adesso, scegli <b>{voice.name}</b> qui sotto.
+              {withBold(lt('Voice {old} from the previous ElevenLabs account: {new} speaks it here, same archetype.'), { old: remap.name, new: voice.name })}{' '}
+              {lt('The clip keeps the saved id — go back to the previous key and the previous voice comes back.')}{' '}
+              {withBold(lt('To keep the current one, pick {voice} below.'), { voice: voice.name })}
             </div>
           )}
           <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
-          <Slider label="Pan" value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
-          <Slider label="Speed" value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
-          {rendered && <div className="mt-note">Panning e velocità rielaborano subito la voce già renderizzata, senza una nuova chiamata TTS. La velocità preserva l’intonazione (time-stretch): la voce parla più veloce o più lenta senza diventare più acuta o più grave.</div>}
+          <Slider label={lt('Pan')} value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
+          <Slider label={lt('Speed')} value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
+          {rendered && <div className="mt-note">{lt('Pan and speed reprocess the rendered voice immediately, with no new TTS call. Speed preserves pitch (time-stretch): the voice speaks faster or slower without getting higher or lower.')}</div>}
           {!rendered && <>
-            <Slider label="Pulse" value={p.pulseHz} min={0.05} max={1.2} step={0.01} onChange={(v) => onParam({ pulseHz: v })} fmt={(v) => `${v.toFixed(2)} Hz`} />
-            <Slider label="Tone" value={p.toneHz} min={200} max={700} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
+            <Slider label={lt('Pulse')} value={p.pulseHz} min={0.05} max={1.2} step={0.01} onChange={(v) => onParam({ pulseHz: v })} fmt={(v) => `${v.toFixed(2)} Hz`} />
+            <Slider label={lt('Tone')} value={p.toneHz} min={200} max={700} step={1} onChange={(v) => onParam({ toneHz: v })} fmt={(v) => `${v} Hz`} />
           </>}
         </> })()}
       </div>
@@ -2398,25 +2504,26 @@ function voiceContext(tracks: Track[], clipId: string): { previousText?: string;
 /* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
 function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
   void rendered
+  const { t: lt } = useI18n()
   const res = resolveVoiceId(value)
   const known = !value || !!res.voice
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
-      <span className="mt-tts__lbl">Voce</span>
+      <span className="mt-tts__lbl">{lt('Voice')}</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Predefinita — {defaultPrimary().name} (voce del motore)</option>
+        <option value="">{lt('Default — {name} (engine voice)', { name: defaultPrimary().name })}</option>
         {/* an id that left the catalog stays visible instead of silently
             showing "Predefinita" while the clip still uses the old voice */}
-        {!known && <option value={value}>⚠ Voce fuori catalogo — {value}</option>}
+        {!known && <option value={value}>{lt('⚠ Voice outside the catalogue — {id}', { id: value })}</option>}
         {/* the saved id is another account's, and an archetype here answers
             for it: name the stand-in rather than showing a raw id */}
         {res.remappedFrom && (
-          <option value={value}>↪ {res.remappedFrom.name} (altro account) → {res.voice?.name}</option>
+          <option value={value}>{lt('↪ {old} (other account) → {new}', { old: res.remappedFrom.name, new: res.voice?.name ?? '—' })}</option>
         )}
         {ARCHETYPES.map((a) => {
           const list = voicesByArchetype(a.id)
           return list.length ? (
-            <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
+            <optgroup key={a.id} label={`${a.icon} ${archetypeLabel(lt, a)}`}>
               {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
             </optgroup>
           ) : null
@@ -2493,6 +2600,7 @@ function SampleQueue({ params, clipDurationSec }: {
   params: SampleParams
   clipDurationSec: number
 }) {
+  const { t: lt } = useI18n()
   const slots = sampleSlots(params)
   const loops = sampleLoops(params)
   const [durations, setDurations] = useState<Record<string, number>>({})
@@ -2520,9 +2628,9 @@ function SampleQueue({ params, clipDurationSec }: {
   return (
     <div style={{ margin: '6px 0 8px' }}>
       <div className="mt-tts__row" style={{ marginBottom: 4 }}>
-        <span className="mt-tts__lbl">{loops ? 'File' : `Brani in sequenza (${slots.length})`}</span>
+        <span className="mt-tts__lbl">{loops ? lt('File') : lt('Tracks in sequence ({n})', { n: slots.length })}</span>
         <span className="mt-tts__eng">
-          {allKnown ? `${fmtTime(total)} su ${fmtTime(clipDurationSec)}` : 'lettura durate…'}
+          {allKnown ? lt('{total} of {clip}', { total: fmtTime(total), clip: fmtTime(clipDurationSec) }) : lt('reading durations…')}
         </span>
       </div>
 
@@ -2539,7 +2647,7 @@ function SampleQueue({ params, clipDurationSec }: {
       ))}
 
       {!loops && (
-        <div className="mt-meter" title={`${fmtTime(total)} di musica per una clip di ${fmtTime(clipDurationSec)}`}>
+        <div className="mt-meter" title={lt('{total} of music for a {clip} clip', { total: fmtTime(total), clip: fmtTime(clipDurationSec) })}>
           <div
             className="mt-meter__fill"
             style={{ width: `${covered}%`, background: over ? '#C8A15E' : short ? '#C87F7F' : '#2FA98C' }}
@@ -2548,9 +2656,9 @@ function SampleQueue({ params, clipDurationSec }: {
       )}
       {!loops && allKnown && (
         <div className="mt-note" style={{ marginTop: 4 }}>
-          {short && <>⚠ Mancano <b>{fmtTime(clipDurationSec - total)}</b>: rilancia il sorteggio 🎲, oppure aggiungi brani al pool della fase.</>}
-          {over && <>L’ultimo brano verrà tagliato alla fine della clip.</>}
-          {!short && !over && <>La sequenza copre esattamente la clip.</>}
+          {short && <>{withBold(lt('⚠ {time} missing: redraw 🎲, or add tracks to the phase pool.'), { time: fmtTime(clipDurationSec - total) })}</>}
+          {over && <>{lt('The last track will be cut at the end of the clip.')}</>}
+          {!short && !over && <>{lt('The sequence covers the clip exactly.')}</>}
         </div>
       )}
     </div>
@@ -2558,6 +2666,7 @@ function SampleQueue({ params, clipDurationSec }: {
 }
 
 function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (url: string, label: string) => void; label?: string }) {
+  const { t: lt } = useI18n()
   const [assets, setAssets] = useState<AudioAsset[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
@@ -2565,15 +2674,15 @@ function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (ur
     if (!assetListPromise) assetListPromise = listAssets()
     assetListPromise.then(setAssets).catch((e) => { assetListPromise = null; setErr((e as Error).message); setAssets([]) })
   }, [])
-  if (err) return <div className="mt-note">{err}</div>
-  if (!assets) return <div className="mt-note">Caricamento della libreria audio…</div>
+  if (err) return <div className="mt-note">{lt(err)}</div>
+  if (!assets) return <div className="mt-note">{lt('Loading the audio library…')}</div>
   /* Every kind the library holds, in one list. The old version enumerated
      music and soundscapes by hand, so the two PO deliverables were absent from
      the dropdown even though they were sitting in Storage. */
   const groups = libraryGroups(assets)
   return (
     <div className="mt-tts__row" style={{ margin: '4px 0 8px' }}>
-      <span className="mt-tts__lbl">File</span>
+      <span className="mt-tts__lbl">{lt('File')}</span>
       <select
         className="mt-tts__sel"
         value=""
@@ -2582,7 +2691,7 @@ function SampleFilePicker({ value, onPick, label }: { value: string; onPick: (ur
           if (a) { try { onPick(assetPublicUrl(a.path), a.name) } catch (er) { setErr((er as Error).message) } }
         }}
       >
-        <option value="" disabled>{label ?? (value ? `Change file (now: ${value})…` : 'Pick a library file…')}</option>
+        <option value="" disabled>{label ?? (value ? lt('Change file (now: {file})…', { file: value }) : lt('Pick a library file…'))}</option>
         {groups.map((g) => (
           <optgroup key={g.label} label={g.label}>
             {g.items.map((a) => <option key={a.path} value={a.path}>{a.name}</option>)}
@@ -2606,6 +2715,7 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
   /** Relative dB nudge applied to every clip (0 = reset them all to the track level). */
   onTrim: (deltaDb: number) => void
 }) {
+  const { t: lt } = useI18n()
   const meta = TRACK_META[track.type]
   const live = track.clips.filter((c) => !c.frozen)
   const frozen = track.clips.length - live.length
@@ -2625,7 +2735,7 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
     const { value, mixed } = shared<number>(k, fallback)
     return (
       <Slider
-        label={mixed ? `${label} · misto` : label}
+        label={mixed ? lt('{label} · mixed', { label }) : label}
         value={value}
         min={min} max={max} step={step}
         onChange={(v) => onParam({ [k]: v } as unknown as Partial<ClipParams>)}
@@ -2644,7 +2754,7 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
             <button key={o} className={!mixed && value === o ? 'is-on' : ''} onClick={() => onParam({ [k]: o } as unknown as Partial<ClipParams>)}>{label(o)}</button>
           ))}
         </div>
-        {mixed && <div className="mt-note">Le clip usano valori diversi — sceglierne uno lo applica a tutte.</div>}
+        {mixed && <div className="mt-note">{lt('The clips use different values — picking one applies it to all of them.')}</div>}
       </>
     )
   }
@@ -2655,16 +2765,18 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
   return (
     <div className="mt-fx mt-params">
       <div className="mt-fx__head">
-        <b style={{ color: meta.color }}>{meta.icon} Parametri — {track.name}</b>
+        <b style={{ color: meta.color }}>{meta.icon} {lt('Parameters — {name}', { name: lt(track.name) })}</b>
         <span className="mt-fx__hint">
-          Vale per tutte le {live.length} clip della traccia in una volta sola.
-          {frozen > 0 && ` ${frozen} pezzo${frozen === 1 ? '' : 'i'} tagliato${frozen === 1 ? '' : 'i'} resta${frozen === 1 ? '' : 'no'} con l’audio congelato.`}
+          {lt('Applies to all {n} clips on the track at once.', { n: live.length })}
+          {frozen > 0 && ' ' + (frozen === 1
+            ? lt('1 cut piece keeps its frozen audio.')
+            : lt('{n} cut pieces keep their frozen audio.', { n: frozen }))}
         </span>
         <button className="mt-x" onClick={onClose}>✕</button>
       </div>
 
       <div className="mt-params__grid">
-        {live.length === 0 && <div className="mt-note">Nessuna clip modificabile su questa traccia.</div>}
+        {live.length === 0 && <div className="mt-note">{lt('No editable clips on this track.')}</div>}
 
         {live.length > 0 && (() => {
           const gains = live.map((c) => c.gainDb ?? 0)
@@ -2673,18 +2785,18 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
           const fmt = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}`
           return (
             <div className="mt-trim">
-              <span className="mt-trim__lbl">Volume delle clip</span>
-              <span className="mt-trim__val">{lo === hi ? `${fmt(lo)} dB` : `da ${fmt(lo)} a ${fmt(hi)} dB`}</span>
+              <span className="mt-trim__lbl">{lt('Clips volume')}</span>
+              <span className="mt-trim__val">{lo === hi ? `${fmt(lo)} dB` : lt('from {lo} to {hi} dB', { lo: fmt(lo), hi: fmt(hi) })}</span>
               <span className="mt-trim__btns">
-                <button onClick={() => onTrim(-1)} title="Abbassa ogni clip di 1 dB">−1 dB</button>
+                <button onClick={() => onTrim(-1)} title={lt('Lower every clip by 1 dB')}>−1 dB</button>
                 <button onClick={() => onTrim(-0.5)}>−0,5</button>
                 <button onClick={() => onTrim(0.5)}>+0,5</button>
-                <button onClick={() => onTrim(1)} title="Alza ogni clip di 1 dB">+1 dB</button>
-                <button onClick={() => onTrim(0)} title="Riporta ogni clip al livello della traccia">azzera</button>
+                <button onClick={() => onTrim(1)} title={lt('Raise every clip by 1 dB')}>+1 dB</button>
+                <button onClick={() => onTrim(0)} title={lt('Return every clip to the track level')}>{lt('reset')}</button>
               </span>
               <div className="mt-note">
-                Sposta tutte le clip insieme mantenendo le differenze fra loro (la scala scritta nell’Excel resta intatta).
-                Il fader della traccia continua a decidere il livello del layer nel mix; qui le clip salgono o scendono rispetto a quello.
+                {lt('Moves every clip together while keeping the differences between them (the ladder written in the Excel stays intact).')}{' '}
+                {lt('The track fader still decides the layer’s level in the mix; here the clips rise or fall relative to it.')}
               </div>
             </div>
           )
@@ -2694,76 +2806,75 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
           const carrier = shared<number>('carrierHz', 180).value
           const beat = shared<number>('beatHz', 6).value
           return <>
-            <TrackSlider label="Portante" k="carrierHz" fallback={180} min={60} max={520} step={1} fmt={(v) => `${v} Hz`} />
-            <TrackSlider label="Battimento" k="beatHz" fallback={6} min={0.5} max={16} step={0.1} fmt={(v) => `${v.toFixed(1)} Hz`} />
+            <TrackSlider label={lt('Carrier')} k="carrierHz" fallback={180} min={60} max={520} step={1} fmt={(v) => `${v} Hz`} />
+            <TrackSlider label={lt('Beat')} k="beatHz" fallback={6} min={0.5} max={16} step={0.1} fmt={(v) => `${v.toFixed(1)} Hz`} />
             <div className="mt-note">L {Math.round(carrier - beat / 2)} Hz · R {Math.round(carrier + beat / 2)} Hz</div>
           </>
         })()}
 
         {track.type === 'soundscape' && live.length > 0 && <>
-          <TrackSeg k="texture" options={['lake', 'air', 'deep'] as const} fallback={'lake' as Texture} label={(o) => o} />
-          <TrackSlider label="Calore" k="warmth" fallback={640} min={200} max={2000} step={10} fmt={(v) => `${v} Hz`} />
+          <TrackSeg k="texture" options={['lake', 'air', 'deep'] as const} fallback={'lake' as Texture} label={(o) => lt(o)} />
+          <TrackSlider label={lt('Warmth')} k="warmth" fallback={640} min={200} max={2000} step={10} fmt={(v) => `${v} Hz`} />
         </>}
 
         {track.type === 'breath' && live.length > 0 && <>
-          <TrackSlider label="Respiri / min" k="breathsPerMin" fallback={5.5} min={3} max={10} step={0.1} fmt={(v) => v.toFixed(1)} />
-          <TrackSlider label="Tono" k="toneHz" fallback={300} min={120} max={520} step={1} fmt={(v) => `${v} Hz`} />
+          <TrackSlider label={lt('Breaths / min')} k="breathsPerMin" fallback={5.5} min={3} max={10} step={0.1} fmt={(v) => v.toFixed(1)} />
+          <TrackSlider label={lt('Tone')} k="toneHz" fallback={300} min={120} max={520} step={1} fmt={(v) => `${v} Hz`} />
         </>}
 
         {track.type === 'music' && live.length > 0 && <>
           <TrackSeg k="chord" options={['c', 'g', 'am', 'f', 'dm', 'em'] as const} fallback={'c' as Chord} label={(o) => o.toUpperCase()} />
-          <div className="mt-note">Imposta lo stesso accordo su tutta la traccia — utile per riportare un pad a una tonalità unica.</div>
+          <div className="mt-note">{lt('Sets the same chord across the whole track — useful to bring a pad back to a single key.')}</div>
         </>}
 
         {track.type === 'bilateral' && live.length > 0 && <>
           <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
-            <span className="mt-tts__lbl">Suono</span>
+            <span className="mt-tts__lbl">{lt('Sound')}</span>
             <select
               className="mt-tts__sel"
               value={bilateralShared.mixed ? '' : bilateralShared.value}
               onChange={(e) => e.target.value && onParam({ sound: e.target.value as BilateralSoundId } as unknown as Partial<ClipParams>)}
             >
-              {bilateralShared.mixed && <option value="">— misto —</option>}
+              {bilateralShared.mixed && <option value="">{lt('— mixed —')}</option>}
               {(['tone', 'bell', 'whoosh'] as const).map((fam) => (
-                <optgroup key={fam} label={BILATERAL_FAMILY_LABEL[fam]}>
+                <optgroup key={fam} label={bilateralFamilyLabel(lt, fam)}>
                   {BILATERAL_SOUNDS.filter((s) => s.family === fam).map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
+                    <option key={s.id} value={s.id}>{bilateralText(lt, s).label}</option>
                   ))}
                 </optgroup>
               ))}
             </select>
           </div>
-          <TrackSlider label="Ogni" k="everySec" fallback={4} min={1} max={10} step={0.5} fmt={(v) => `${v.toFixed(1)} s`} />
-          <TrackSlider label="Durata colpo" k="holdSec" fallback={3.6} min={0.2} max={12} step={0.1} fmt={(v) => `${v.toFixed(1)} s`} />
-          <TrackSlider label="Ampiezza pan" k="panAmp" fallback={0.8} min={0.1} max={1} step={0.05} fmt={(v) => `±${Math.round(v * 100)}`} />
+          <TrackSlider label={lt('Every')} k="everySec" fallback={4} min={1} max={10} step={0.5} fmt={(v) => `${v.toFixed(1)} s`} />
+          <TrackSlider label={lt('Hit length')} k="holdSec" fallback={3.6} min={0.2} max={12} step={0.1} fmt={(v) => `${v.toFixed(1)} s`} />
+          <TrackSlider label={lt('Pan width')} k="panAmp" fallback={0.8} min={0.1} max={1} step={0.05} fmt={(v) => `±${Math.round(v * 100)}`} />
         </>}
 
         {track.type === 'voice' && live.length > 0 && <>
           <div className="mt-tts__row" style={{ margin: '2px 0 6px' }}>
-            <span className="mt-tts__lbl">Voce{voiceShared.mixed ? ' · misto' : ''}</span>
+            <span className="mt-tts__lbl">{voiceShared.mixed ? lt('{label} · mixed', { label: lt('Voice') }) : lt('Voice')}</span>
             <select
               className="mt-tts__sel"
               value={voiceShared.mixed ? '' : voiceShared.value}
               onChange={(e) => onParam({ voiceId: e.target.value || undefined } as unknown as Partial<ClipParams>)}
             >
-              <option value="">Predefinita — {defaultPrimary().name} (voce del motore)</option>
+              <option value="">{lt('Default — {name} (engine voice)', { name: defaultPrimary().name })}</option>
               {ARCHETYPES.map((a) => {
                 const list = voicesByArchetype(a.id)
                 return list.length ? (
-                  <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
+                  <optgroup key={a.id} label={`${a.icon} ${archetypeLabel(lt, a)}`}>
                     {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
                   </optgroup>
                 ) : null
               })}
             </select>
           </div>
-          <TrackSlider label="Pan" k="pan" fallback={0} min={-1} max={1} step={0.05} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
-          <TrackSlider label="Velocità" k="speed" fallback={1} min={0.7} max={1.4} step={0.05} fmt={(v) => `×${v.toFixed(2)}`} />
-          <TrackSlider label="Pulsazione" k="pulseHz" fallback={0.2} min={0.05} max={1.2} step={0.01} fmt={(v) => `${v.toFixed(2)} Hz`} />
-          <TrackSlider label="Tono" k="toneHz" fallback={420} min={200} max={700} step={1} fmt={(v) => `${v} Hz`} />
+          <TrackSlider label={lt('Pan')} k="pan" fallback={0} min={-1} max={1} step={0.05} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
+          <TrackSlider label={lt('Speed')} k="speed" fallback={1} min={0.7} max={1.4} step={0.05} fmt={(v) => `×${v.toFixed(2)}`} />
+          <TrackSlider label={lt('Pulse')} k="pulseHz" fallback={0.2} min={0.05} max={1.2} step={0.01} fmt={(v) => `${v.toFixed(2)} Hz`} />
+          <TrackSlider label={lt('Tone')} k="toneHz" fallback={420} min={200} max={700} step={1} fmt={(v) => `${v} Hz`} />
           <div className="mt-note">
-            Cambiare voce qui riguarda tutte le battute della traccia. Le clip già sintetizzate vengono
-            rigenerate alla prossima sintesi; pan e velocità si riapplicano subito, senza nuove chiamate TTS.
+            {lt('Changing the voice here affects every line on the track. Clips already synthesized are regenerated at the next synthesis; pan and speed reapply immediately, with no new TTS calls.')}
           </div>
         </>}
 
@@ -2772,12 +2883,13 @@ function TrackParamsDrawer({ track, onClose, onParam, onTrim }: {
           const phase = shared<number | undefined>('drawPhase', undefined)
           return <>
             <div className="mt-note">
-              Le clip file audio puntano a un file ciascuna: il sorteggio dal pool e la scelta del file restano
-              nell’ispettore della singola clip, così una traccia può alternare più ambienti.
+              {lt('Audio-file clips point to one file each: the pool draw and the file choice stay in each clip’s inspector, so a track can alternate several ambiences.')}
             </div>
             <div className="mt-note" style={{ marginTop: 6 }}>
-              Pool della traccia: {tag.mixed || phase.mixed ? 'misto' : tag.value ? `tag "${tag.value}"` : phase.value ? `fase ${phase.value}` : 'nessuno'} ·
-              {' '}{live.filter((c) => !(c.params as SampleParams).url).length} clip senza file.
+              {lt('Track pool: {pool} · {n} clips without a file.', {
+                pool: tag.mixed || phase.mixed ? lt('mixed') : tag.value ? `tag "${tag.value}"` : phase.value ? lt('phase {n}', { n: phase.value }) : lt('none'),
+                n: live.filter((c) => !(c.params as SampleParams).url).length,
+              })}
             </div>
           </>
         })()}
@@ -2793,13 +2905,14 @@ function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
   onToggle: (kind: TrackEffect['kind'], enabled: boolean) => void
   onParam: (kind: TrackEffect['kind'], key: string, v: number) => void
 }) {
+  const { t: lt } = useI18n()
   const effects = track.effects ?? defaultEffects()
   return (
     <div className="mt-fx">
       <div className="mt-fx__head">
-        <b>FX — {track.name}</b>
-        {busy && <span className="mt-fx__busy">elaborazione del coro…</span>}
-        <span className="mt-fx__hint">Gli effetti valgono sia in ascolto sia nell’export. L’armonizzatore elabora ogni clip (breve attesa); gli altri sono immediati.</span>
+        <b>FX — {lt(track.name)}</b>
+        {busy && <span className="mt-fx__busy">{lt('processing the chorus…')}</span>}
+        <span className="mt-fx__hint">{lt('Effects apply both when listening and in the export. The harmonizer processes each clip (a short wait); the others are immediate.')}</span>
         <button className="mt-x" onClick={onClose}>✕</button>
       </div>
       <div className="mt-fx__grid">
@@ -2809,12 +2922,12 @@ function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
             <div key={meta.kind} className={`mt-fx__card${fx.enabled ? ' is-on' : ''}`}>
               <label className="mt-fx__title">
                 <input type="checkbox" checked={fx.enabled} onChange={(e) => onToggle(meta.kind, e.target.checked)} />
-                <span>{meta.icon} {meta.label}</span>
+                <span>{meta.icon} {lt(meta.label)}</span>
               </label>
-              <div className="mt-fx__blurb">{meta.blurb}</div>
+              <div className="mt-fx__blurb">{lt(meta.blurb)}</div>
               {fx.enabled && meta.params.map((p) => (
                 <div key={p.key} className="mt-fx__param">
-                  <span className="mt-fx__plbl">{p.label}</span>
+                  <span className="mt-fx__plbl">{lt(p.label)}</span>
                   <input
                     type="range" min={p.min} max={p.max} step={p.step}
                     value={fx.params[p.key] ?? p.min}
@@ -2822,7 +2935,7 @@ function FxDrawer({ track, busy, onClose, onToggle, onParam }: {
                   />
                   <span className="mt-fx__pval">
                     <EditableValue
-                      display={p.fmt(fx.params[p.key] ?? p.min)}
+                      display={lt(p.fmt(fx.params[p.key] ?? p.min))}
                       commit={(raw) => { const v = parseTyped(raw, p.min, p.max); if (v != null) onParam(meta.kind, p.key, v) }}
                     />
                   </span>

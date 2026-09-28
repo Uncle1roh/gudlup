@@ -41,13 +41,17 @@ interface OverviewProps {
   admin: string
   agg: A
   state: CorporateState
-  onOpenReports: () => void
-  onOpenManagement: () => void
+  /** Absent when that screen is not in this build (EXTRAS): the alert then
+      shows no action rather than one that opens an empty page. */
+  onOpenReports?: () => void
+  onOpenManagement?: () => void
 }
 
 export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }: OverviewProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const k = agg.kpis
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning, {name}' : hour < 18 ? 'Good afternoon, {name}' : 'Good evening, {name}'
 
   const registered = cellValue(k.registered)
   const active = cellValue(k.active7)
@@ -58,7 +62,7 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
       <div className="c-pagehead">
         <div>
           <h1 className="c-h1">{t('Overview')}</h1>
-          <p className="c-lead">{t('Good morning, {name}', { name: admin })}</p>
+          <p className="c-lead">{t(greeting, { name: admin })}</p>
         </div>
       </div>
 
@@ -70,16 +74,16 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
           trend={registered != null ? t('+{n} this month', { n: k.registeredDelta }) : null}
         />
         <Kpi
-          label={t('Active')}
+          label={t('Active users')}
           value={active}
           sub={active != null ? t('{n}% weekly active', { n: cellValue(k.weeklyActivePct) ?? 0 }) : ''}
-          trend={movementText(movement(active, k.previous.active7, 1, 0), '', t('last month'))}
+          trend={movementText(movement(active, k.previous.active7, 1, 0), '', t('last month'), t)}
         />
         <Kpi
           label={t('Sessions')}
           value={sessions}
-          sub={t('avg {n} per user/week', { n: cellValue(k.sessionsPerUserWeek) ?? '—' })}
-          trend={movementText(movement(sessions, k.previous.sessions, 5, 0), '', t('last month'))}
+          sub={t('avg {n} per user/week', { n: cellValue(k.sessionsPerUserWeek)?.toLocaleString(locale) ?? '—' })}
+          trend={movementText(movement(sessions, k.previous.sessions, 5, 0), '', t('last month'), t)}
         />
         {/* No WHO-5 or GL-Check average here: an aggregated reading of how
             a workforce FEELS is inferential health information about that
@@ -99,8 +103,8 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
             <>
               <LineChart
                 series={[
-                  { name: 'Registered', points: agg.engagement.registrationSeries },
-                  { name: 'Active 7d', points: agg.engagement.activeSeries },
+                  { name: t('Registered'), points: agg.engagement.registrationSeries },
+                  { name: t('Active 7d'), points: agg.engagement.activeSeries },
                 ]}
                 yLabel="count"
                 xLabel="weeks"
@@ -133,7 +137,7 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
                 xLabel="weeks"
               />
               <p className="c-small">
-                {t('{n} sessions this month', { n: sessions ?? 0 })} ·{' '}
+                {t('{n} sessions this month', { n: (sessions ?? 0).toLocaleString(locale) })} ·{' '}
                 {agg.engagement.durationSplit.map((d) => `${t(d.label)} ${d.pct}%`).join(' · ')}
               </p>
             </>
@@ -154,9 +158,9 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
               <span className="c-alerts__icon" aria-hidden="true">
                 {a.kind === 'report' ? '📄' : a.kind === 'renewal' ? '📅' : a.kind === 'licences' ? '👥' : '✓'}
               </span>
-              <span className="c-alerts__text">{a.text}</span>
-              <span className="c-small">{relative(a.at)}</span>
-              {a.action && (
+              <span className="c-alerts__text">{t(a.text, a.vars)}</span>
+              <span className="c-small">{relative(a.at, locale)}</span>
+              {a.action && (a.kind === 'report' ? onOpenReports : onOpenManagement) && (
                 <button className="c-link" onClick={a.kind === 'report' ? onOpenReports : onOpenManagement}>
                   {t(a.action)}
                 </button>
@@ -179,7 +183,7 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
 }
 
 function Kpi({ label, value, sub, trend }: { label: string; value: number | null; sub: string; trend: string | null }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   return (
     <article className="c-kpi">
       <div className="c-kpi__label">{label}</div>
@@ -187,7 +191,7 @@ function Kpi({ label, value, sub, trend }: { label: string; value: number | null
         <div className="c-kpi__none">{t('Not enough data yet')}</div>
       ) : (
         <>
-          <div className="c-kpi__value">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+          <div className="c-kpi__value">{typeof value === 'number' ? value.toLocaleString(locale) : value}</div>
           <div className="c-small">{sub}</div>
           {trend && <div className="c-kpi__trend">{trend}</div>}
         </>
@@ -196,12 +200,17 @@ function Kpi({ label, value, sub, trend }: { label: string; value: number | null
   )
 }
 
-function relative(at: number): string {
-  const diff = Date.now() - at
-  const h = Math.round(diff / 3_600_000)
-  if (h < 1) return 'now'
-  if (h < 24) return `${h}h ago`
-  return `${Math.round(h / 24)}d ago`
+/** "2 days ago", in the interface language. */
+function relative(at: number, locale: string): string {
+  const h = Math.round((Date.now() - at) / 3_600_000)
+  try {
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+    if (h < 1) return rtf.format(0, 'second')
+    if (h < 24) return rtf.format(-h, 'hour')
+    return rtf.format(-Math.round(h / 24), 'day')
+  } catch {
+    return h < 24 ? `${h}h` : `${Math.round(h / 24)}d`
+  }
 }
 
 /* ---------------------------------------------------------- Engagement --- */
@@ -291,7 +300,7 @@ export function Engagement({ agg }: { agg: A }) {
           }))}
         />
         <p className="c-note">
-          {t('User-friendly pathway names only — never protocol codes. Pathways with fewer than 5 users show "Not enough data".')}
+          {t('User-friendly pathway names only — never protocol codes. Pathways with fewer than {n} users show "Not enough data".', { n: MIN_CELL })}
         </p>
       </section>
 
@@ -333,7 +342,7 @@ export function Wellbeing({ agg }: { agg: A }) {
           <span className="c-small">{t('Measured every 4 weeks · scale 0–100')}</span>
         </header>
         {who5 == null ? (
-          <NotEnoughData note={t('Not enough data — WHO-5 trends require at least 5 participants')} />
+          <NotEnoughData note={t('Not enough data — WHO-5 trends require at least {n} participants', { n: MIN_CELL })} />
         ) : (
           <>
             <div className="c-current">
@@ -650,7 +659,7 @@ function GeneratorModal({
           ))}
         </ul>
 
-        <p className="c-note">{t('Any section below N≥5 shows "Not enough data" in the export.')}</p>
+        <p className="c-note">{t('Any section below N≥{n} shows "Not enough data" in the export.', { n: MIN_CELL })}</p>
 
         <div className="c-actions">
           <button className="c-btn c-btn--ghost" onClick={onClose}>{t('Cancel')}</button>

@@ -234,6 +234,52 @@ export const BUILT_IN_CONVENTIONS: Convention[] = [
   },
 ]
 
+/* ONLY in a build with no backend (demo mode). These are fictional companies
+   with a fictional EAP number, and the Safety Gateway prints a convention's
+   EAP to a person in distress: on a real deployment a stranger typing one of
+   these codes would be handed Professional Support and a support line that
+   does not exist. DEMO-2026-GL above is the one demo tenant a live build keeps,
+   and its contact says in words that it is not a real line. */
+const DEMO_ONLY_CONVENTIONS: Convention[] = [
+  /* DEMO DATA — the tenants the mock data layer lists in Admin → Aziende
+     (src/data/mock.ts). Registered here so that the codes the demo admin
+     console shows as active also open something at the employee door and in
+     the employer dashboard; before this, AURORA-2026-Z5 was "active" in one
+     place and "unknown" in the other two. Fictional companies, fictional EAP
+     numbers, and a deployment's `VITE_COMPANY_CONVENTIONS` overrides any of
+     them. VALE-2026-JL is deliberately absent: the demo lists it as PAUSED,
+     and a paused tenant must not open anything. */
+  {
+    companyId: 'aurora',
+    companyName: 'Aurora Tech',
+    code: 'AURORA-2026-Z5',
+    type: 'self-use-plus',
+    licences: 250,
+    eap: {
+      provider: 'Aurora Bem-Estar (demo)',
+      phone: '+55 11 0000 0000',
+    },
+    startsAt: Date.UTC(2026, 0, 1),
+    endsAt: Date.UTC(2028, 11, 31),
+  },
+  {
+    companyId: 'meridian',
+    companyName: 'Meridian Saúde',
+    code: 'MERIDIAN-2026-WN',
+    type: 'self-use',
+    licences: 120,
+    eap: null,
+    startsAt: Date.UTC(2026, 0, 1),
+    endsAt: Date.UTC(2028, 11, 31),
+  },
+]
+
+function isDemoBuild(): boolean {
+  // read through the whole object: scripts outside Vite have no import.meta.env
+  const env = import.meta.env as ImportMetaEnv | undefined
+  return !(env?.VITE_SUPABASE_URL && env?.VITE_SUPABASE_ANON_KEY)
+}
+
 /**
  * Conventions registered by the DEPLOYMENT, as a JSON array in
  * `VITE_COMPANY_CONVENTIONS`.
@@ -269,7 +315,8 @@ export function allConventions(): Convention[] {
   if (!registry) {
     const env = envConventions()
     const overridden = new Set(env.map((c) => c.code))
-    registry = [...env, ...BUILT_IN_CONVENTIONS.filter((c) => !overridden.has(c.code))]
+    const builtIn = isDemoBuild() ? [...BUILT_IN_CONVENTIONS, ...DEMO_ONLY_CONVENTIONS] : BUILT_IN_CONVENTIONS
+    registry = [...env, ...builtIn.filter((c) => !overridden.has(c.code))]
   }
   return registry
 }

@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useRef, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { registerProtocol } from '../data/protocols'
@@ -24,6 +25,8 @@ function download(name: string, text: string, mime: string) {
 
 export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () => void }) {
   const dp = useDataProvider()
+  /* the console is pinned to Italian: family names are shown in Italian */
+  const { t: tr } = useI18n()
   const fileRef = useRef<HTMLInputElement>(null)
   const srcRef = useRef<HTMLInputElement>(null)
 
@@ -60,7 +63,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
         // Scheda Dati / Scheda Unica workbooks fall through unchanged.
         if (await probePlainTimeline(bytes)) {
           const pres = await parsePlainTimeline(bytes)
-          if (pres.error || !pres.timeline) { setError(pres.error ?? 'Could not parse that PLAIN Timeline workbook.'); return }
+          if (pres.error || !pres.timeline) { setError(pres.error ?? 'Impossibile leggere questo PLAIN Timeline.'); return }
           setFileName(f.name)
           setPlain(pres.timeline)
           const nClips = pres.timeline.versions.reduce((n, v) => n + v.clips.length, 0)
@@ -68,12 +71,12 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
           return
         }
         const res = await parseDatasheet(bytes)
-        if (res.error || !res.datasheet) { setError(res.error ?? 'Could not parse that workbook.'); return }
+        if (res.error || !res.datasheet) { setError(res.error ?? 'Impossibile leggere questa cartella di lavoro.'); return }
         setFileName(f.name)
         setDatasheet(res.datasheet)
         void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `datasheet · ${res.datasheet.code} · ${res.datasheet.versions.length} versions · ${res.datasheet.issues.length} notes` })
       } catch (err) {
-        setError(`Could not read that workbook: ${(err as Error).message}`)
+        setError(`Impossibile leggere la cartella di lavoro: ${(err as Error).message}`)
       } finally {
         setReading(false)
       }
@@ -93,23 +96,23 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
             ? await (await import('./pdfText')).extractPdfText(f)
             : await f.text()
         if (ext === 'pdf' && text.replace(/\s+/g, '').length < 200) {
-          setError(`"${f.name}" has little or no selectable text — it's probably a scanned/flattened PDF export. Upload the original .docx instead (now supported), or re-export the PDF with a text layer.`)
+          setError(`"${f.name}" contiene poco o nessun testo selezionabile: probabilmente è un PDF scansionato o appiattito. Carica il .docx originale (ora supportato) oppure esporta di nuovo il PDF con il livello di testo.`)
           return
         }
         if (!looksLikeProtocolDoc(text)) {
-          setError(`"${f.name}" doesn't look like a protocol document (no GL-code + timeline found). If this is a PDF export, try uploading the original .docx instead — it imports more reliably. For bulk imports use CSV/JSON.`)
+          setError(`"${f.name}" non sembra un documento di protocollo (nessun codice GL con timeline). Se è un PDF esportato, prova a caricare il .docx originale: si importa in modo più affidabile. Per importazioni in blocco usa CSV/JSON.`)
           return
         }
         const res = parseProtocolDoc(text)
-        if (res.error || !res.spec) { setError(res.error ?? 'Could not parse that document.'); return }
+        if (res.error || !res.spec) { setError(res.error ?? 'Impossibile leggere questo documento.'); return }
         setFileName(f.name)
         setSpec(res.spec)
         void dp.logAudit({ actor, action: 'protocol.import.parsed', target: f.name, detail: `spec doc · ${res.spec.code} · ${res.spec.versions.length} versions` })
       } catch (err) {
         const msg = (err as Error).message
         setError(/dynamically imported module|Failed to fetch|import/i.test(msg)
-          ? 'The app was updated since this page was opened, so part of it is stale — refresh the page (Ctrl+Shift+R) and pick the file again.'
-          : `Could not read that file: ${msg}`)
+          ? 'L’app è stata aggiornata dopo l’apertura di questa pagina e una parte non è più attuale: ricarica la pagina (Ctrl+Shift+R) e scegli di nuovo il file.'
+          : `Impossibile leggere il file: ${msg}`)
       } finally {
         setReading(false)
       }
@@ -118,11 +121,11 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
     // Structured path (.csv / .tsv / .json): one row per protocol.
     if (!isParseable(f.name)) {
-      setError(`"${f.name}" isn't a supported file. Upload a protocol PDF (the "Protocol for Developers" document), or a CSV/JSON for bulk import.`)
+      setError(`"${f.name}" non è un formato supportato. Carica il PDF del protocollo (il documento "Protocol for Developers") oppure un CSV/JSON per l’importazione in blocco.`)
       return
     }
     let text = ''
-    try { text = await f.text() } catch { setError('Could not read that file.'); return }
+    try { text = await f.text() } catch { setError('Impossibile leggere il file.'); return }
     const res = parseImport(f.name, text)
     if (res.error) { setError(res.error); return }
     setFileName(f.name)
@@ -205,19 +208,19 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
   if (step === 'done') {
     return (
       <div className="adm-page">
-        <header className="adm-page__head"><h1 className="b2b-h1">Import complete</h1></header>
+        <header className="adm-page__head"><h1 className="b2b-h1">Importazione completata</h1></header>
         <div className="adm-note adm-note--ok">
-          <b>{publishedCount} protocol{publishedCount === 1 ? '' : 's'} published</b> to the shared catalog — available to every company,
-          and now selectable in the clinician session wizard. Audio still shows as <i>placeholder</i> until rendered.
+          <b>{publishedCount === 1 ? '1 protocollo pubblicato' : `${publishedCount} protocolli pubblicati`}</b> nel catalogo condiviso: disponibili per ogni azienda
+          e già selezionabili nella procedura guidata del clinico. L’audio resta <i>provvisorio</i> finché non viene renderizzato.
         </div>
         <div className="adm-import__foot" style={{ marginTop: 16 }}>
           <div className="adm-cred__actions">
-            <button className="b2b-btn b2b-btn--primary" onClick={onBack}>View catalog</button>
-            <button className="b2b-btn" onClick={() => { window.location.hash = '#studio' }}>Open Sound Studio to render audio →</button>
+            <button className="b2b-btn b2b-btn--primary" onClick={onBack}>Vai al catalogo</button>
+            <button className="b2b-btn" onClick={() => { window.location.hash = '#studio' }}>Apri il Sound Studio per renderizzare l’audio →</button>
           </div>
           <p className="b2b-sub adm-import__hint">
-            Rendering the layered bed + pt-BR voice for each protocol is done in the Sound Studio (the audio authoring tool);
-            once exported, flip <code>audioReady</code> and the player uses it instead of the synthesized placeholder.
+            Il render del letto sonoro a strati e della voce pt-BR di ogni protocollo si fa nel Sound Studio (lo strumento di authoring audio);
+            una volta esportato, attiva <code>audioReady</code> e il player lo usa al posto del segnaposto sintetizzato.
           </p>
         </div>
       </div>
@@ -231,10 +234,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
       <div className="adm-page">
         <header className="adm-page__head adm-page__head--row">
           <div>
-            <h1 className="b2b-h1">Review import</h1>
-            <p className="b2b-sub">From <code>{fileName}</code> — {drafts.length} parsed, {drafts.filter((d) => d.ok).length} ready. Edit titles, choose what to publish.</p>
+            <h1 className="b2b-h1">Revisione importazione</h1>
+            <p className="b2b-sub">Da <code>{fileName}</code>: {drafts.length} letti, {drafts.filter((d) => d.ok).length} pronti. Modifica i titoli e scegli cosa pubblicare.</p>
           </div>
-          <button className="b2b-btn b2b-btn--ghost" onClick={() => { setStep('upload'); setDrafts([]) }}>← Choose another file</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={() => { setStep('upload'); setDrafts([]) }}>← Scegli un altro file</button>
         </header>
 
         <div className="adm-review">
@@ -249,9 +252,9 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
                 <div className="adm-draft__body">
                   <div className="adm-draft__top">
                     <span className="adm-mono">{d.protocol.code}</span>
-                    <span className="adm-tag">{FAMILY_LABEL[d.protocol.family]}</span>
+                    <span className="adm-tag">{tr(FAMILY_LABEL[d.protocol.family])}</span>
                     <span className="adm-draft__vers">{d.protocol.versions.map((v) => `${v.duration}m`).join(' · ')}</span>
-                    <span className="adm-draft__vers">{d.protocol.phases.length} phases</span>
+                    <span className="adm-draft__vers">{d.protocol.phases.length} fasi</span>
                     {d.compose.brainwave && <span className="adm-tag">{d.compose.brainwave}</span>}
                   </div>
                   <input
@@ -261,7 +264,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
                   />
                   <input
                     className="b2b-input adm-draft__blurb"
-                    placeholder="Patient-facing description"
+                    placeholder="Descrizione per la persona"
                     value={edits[i]?.blurb ?? d.protocol.blurb}
                     onChange={(e) => setEdits((m) => ({ ...m, [i]: { ...m[i], blurb: e.target.value } }))}
                   />
@@ -275,9 +278,9 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
 
         <div className="adm-review__foot">
           <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy || okCount === 0} onClick={publish}>
-            {busy ? 'Publishing…' : `Publish ${okCount} protocol${okCount === 1 ? '' : 's'} →`}
+            {busy ? 'Pubblicazione…' : okCount === 1 ? 'Pubblica 1 protocollo →' : `Pubblica ${okCount} protocolli →`}
           </button>
-          {okCount === 0 && <p className="b2b-sub">Fix the errors above (or pick a row) to publish.</p>}
+          {okCount === 0 && <p className="b2b-sub">Correggi gli errori qui sopra (o seleziona una riga) per pubblicare.</p>}
         </div>
       </div>
     )
@@ -288,10 +291,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Import protocols</h1>
-          <p className="b2b-sub">Turn a written spec into playable, publishable Good Loop protocols.</p>
+          <h1 className="b2b-h1">Importa protocolli</h1>
+          <p className="b2b-sub">Trasforma una specifica scritta in protocolli Good Loop ascoltabili e pubblicabili.</p>
         </div>
-        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Back to catalog</button>
+        <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Torna al catalogo</button>
       </header>
 
       <div className="adm-import">
@@ -299,49 +302,49 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.docx,.pdf,.txt,.md,.csv,.tsv,.json" style={{ display: 'none' }} onChange={onPick} />
           <span className="adm-drop__icon" aria-hidden="true">⇪</span>
           <span className="adm-drop__cta">
-            <b>{reading ? 'Reading file…' : 'Choose a PLAIN Timeline or Protocol Datasheet (.xlsx), or a protocol document (.docx / PDF) — or CSV/JSON for bulk import'}</b>
-            <span className="adm-drop__meta">XLSX (best): the PLAIN clip-level Timeline (recommended) or a legacy Datasheet workbook · DOCX/PDF/TXT/MD: the prose "Protocol for Developers" document · CSV/JSON: one protocol per row</span>
+            <b>{reading ? 'Lettura del file…' : 'Scegli un PLAIN Timeline o un Protocol Datasheet (.xlsx), un documento di protocollo (.docx / PDF), oppure CSV/JSON per l’importazione in blocco'}</b>
+            <span className="adm-drop__meta">XLSX (consigliato): il PLAIN Timeline a livello di clip (preferito) o una cartella Datasheet legacy · DOCX/PDF/TXT/MD: il documento descrittivo "Protocol for Developers" · CSV/JSON: un protocollo per riga</span>
           </span>
           {/* NOTE: no onClick here — this span sits inside the <label>, whose
               native activation already opens the file input; a programmatic
               .click() on top of that opened the dialog twice. */}
-          <span className="b2b-btn b2b-btn--primary adm-drop__btn">Browse…</span>
+          <span className="b2b-btn b2b-btn--primary adm-drop__btn">Sfoglia…</span>
         </label>
 
         {error && <div className="adm-issues adm-issues--err" style={{ maxWidth: 720 }}><span>{error}</span></div>}
 
         <div className="adm-formats">
-          <div className="adm-formats__title">Accepted Excel formats</div>
+          <div className="adm-formats__title">Formati Excel accettati</div>
           <div className="adm-formats__grid">
             <div className="adm-formats__card adm-formats__card--best">
-              <b>⭐ PLAIN Timeline (clip-level) — recommended</b>
-              <p>Sheets <code>README</code> · one per version (Quick/Standard/Deep) · <code>Affermazioni</code>. <b>One row = one clip</b> on a named track (<code>traccia</code>), six types: Soundscape, Music, Binaural, Bilateral, Solfeggio, Voice. Times via numeric <code>start_s</code>/<code>end_s</code>; volumes in dB relative to the guide voice (0 dB).</p>
-              <p>Voice absorbs dichotic / whisper / echo-stacking / looper through parameters (archetipo, pan, modalità, eco, set_affermazioni <code>CSI-01..12</code>). Soundscape carries only an <code>ambiente</code> tag and Music only its <code>fase</code> — the app draws the file at random from the pool. Binaural beat = carrier_R − carrier_L. Validated against the Rules doc (§8.0 windows, Binaural XOR Solfeggio).</p>
+              <b>⭐ PLAIN Timeline (a livello di clip) — consigliato</b>
+              <p>Fogli <code>README</code> · uno per versione (Quick/Standard/Deep) · <code>Affermazioni</code>. <b>Una riga = una clip</b> su una traccia con nome (<code>traccia</code>), sei tipi: Soundscape, Music, Binaural, Bilateral, Solfeggio, Voice. Tempi numerici in <code>start_s</code>/<code>end_s</code>; volumi in dB rispetto alla voce guida (0 dB).</p>
+              <p>Voice comprende dicotico / sussurro / eco a strati / looper tramite parametri (archetipo, pan, modalità, eco, set_affermazioni <code>CSI-01..12</code>). Soundscape porta solo un tag <code>ambiente</code> e Music solo la sua <code>fase</code>: l’app estrae il file a caso dal pool. Battimento binaurale = carrier_R − carrier_L. Validato sul documento delle regole (§8.0 finestre, Binaural XOR Solfeggio).</p>
             </div>
             <div className="adm-formats__card">
-              <b>Scheda Unica (single tab)</b>
-              <p>One sheet with <code>### NAME</code> sections: PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE · AFFERMAZIONI · MUSICA (+ MIX, RESPIRAZIONE, TECNICHE/NOTE). Per-row Voce/Canale/Effetto/Velocità columns. Still fully supported.</p>
+              <b>Scheda Unica (un solo foglio)</b>
+              <p>Un foglio con sezioni <code>### NOME</code>: PROTOCOLLO · PARAMETRI · VERSIONI · FASI · TIMELINE · AFFERMAZIONI · MUSICA (+ MIX, RESPIRAZIONE, TECNICHE/NOTE). Colonne Voce/Canale/Effetto/Velocità per riga. Ancora pienamente supportato.</p>
             </div>
             <div className="adm-formats__card">
-              <b>Multi-sheet workbook (legacy)</b>
-              <p>The original GL-ANX 1.3 layout — Protocollo, Invarianti, Versioni, Fasi, Timeline_6/12/24min, Affermazioni, MappaMusicale. Still fully supported; imports unchanged.</p>
+              <b>Cartella a più fogli (legacy)</b>
+              <p>Il layout originale di GL-ANX 1.3: Protocollo, Invarianti, Versioni, Fasi, Timeline_6/12/24min, Affermazioni, MappaMusicale. Ancora pienamente supportato; si importa senza modifiche.</p>
             </div>
           </div>
-          <p className="adm-formats__foot">Columns are matched by header name, so extra columns and different orders are fine. Comment rows start with <code>//</code>. Ask the dev team for <code>GL_Scheda_UNICA_TEMPLATE.xlsx</code> — it has fill-in instructions and one example per section.</p>
+          <p className="adm-formats__foot">Le colonne si riconoscono dal nome dell’intestazione: colonne in più e ordini diversi vanno bene. Le righe di commento iniziano con <code>//</code>. Chiedi al team di sviluppo <code>GL_Scheda_UNICA_TEMPLATE.xlsx</code>: contiene le istruzioni di compilazione e un esempio per sezione.</p>
         </div>
 
         <div className="adm-src">
           <input ref={srcRef} type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" style={{ display: 'none' }} onChange={onSource} />
-          <button className="b2b-btn b2b-btn--ghost" onClick={() => srcRef.current?.click()}>Attach source document (optional)</button>
-          {sourceDoc ? <span className="b2b-sub">Source of record: <b>{sourceDoc}</b></span> : <span className="b2b-sub">the original PDF/Excel, kept for reference</span>}
-          <button className="adm-link" onClick={() => download('goodloop-protocol-template.csv', csvTemplate(), 'text/csv')}>Download CSV template</button>
+          <button className="b2b-btn b2b-btn--ghost" onClick={() => srcRef.current?.click()}>Allega il documento sorgente (facoltativo)</button>
+          {sourceDoc ? <span className="b2b-sub">Documento di riferimento: <b>{sourceDoc}</b></span> : <span className="b2b-sub">il PDF/Excel originale, conservato come riferimento</span>}
+          <button className="adm-link" onClick={() => download('goodloop-protocol-template.csv', csvTemplate(), 'text/csv')}>Scarica il modello CSV</button>
         </div>
 
         <ol className="adm-pipe">
-          <li className="adm-pipe__step is-active"><span className="adm-pipe__num">1</span><span className="adm-pipe__body"><span className="adm-pipe__label">Upload spec</span><span className="adm-pipe__note">protocol PDF (full audio configuration) or CSV / JSON (bulk)</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">2</span><span className="adm-pipe__body"><span className="adm-pipe__label">Review & edit</span><span className="adm-pipe__note">validated drafts, fix titles, choose what to publish</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">3</span><span className="adm-pipe__body"><span className="adm-pipe__label">Publish</span><span className="adm-pipe__note">once → available to every company &amp; the clinician wizard</span></span></li>
-          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">4</span><span className="adm-pipe__body"><span className="adm-pipe__label">Render audio</span><span className="adm-pipe__note">WAV rendered right here from the parsed configuration (bed + pt-BR voice), or fine-tune in the Sound Studio</span></span></li>
+          <li className="adm-pipe__step is-active"><span className="adm-pipe__num">1</span><span className="adm-pipe__body"><span className="adm-pipe__label">Carica la specifica</span><span className="adm-pipe__note">PDF del protocollo (configurazione audio completa) o CSV / JSON (in blocco)</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">2</span><span className="adm-pipe__body"><span className="adm-pipe__label">Rivedi e modifica</span><span className="adm-pipe__note">bozze validate: correggi i titoli, scegli cosa pubblicare</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">3</span><span className="adm-pipe__body"><span className="adm-pipe__label">Pubblica</span><span className="adm-pipe__note">una volta → disponibile per ogni azienda e nella procedura guidata del clinico</span></span></li>
+          <li className="adm-pipe__step is-next"><span className="adm-pipe__num">4</span><span className="adm-pipe__body"><span className="adm-pipe__label">Render audio</span><span className="adm-pipe__note">WAV renderizzato qui dalla configurazione letta (letto sonoro + voce pt-BR), oppure rifinito nel Sound Studio</span></span></li>
         </ol>
       </div>
     </div>

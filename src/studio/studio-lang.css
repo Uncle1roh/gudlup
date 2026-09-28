@@ -1,0 +1,29 @@
+/* The interface-language picker in the Sound Studio (shown when the Studio is
+   opened outside the admin console). Matches the top bar's .mt-tbtn. */
+.mt-lang {
+  height: 34px;
+  padding: 0 28px 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--mt-line);
+  background-color: var(--mt-panel2);
+  color: var(--mt-text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 15px, calc(100% - 10px) 15px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.mt-lang:hover, .mt-lang:focus-visible { border-color: var(--mt-accent); outline: none; }
+.mt-lang option { color: #10201c; background: #fff; }
+
+/* the too-small gate is outside .mt-studio, so it carries its own colours */
+.mt-gate__lang { margin: 0 0 16px; display: flex; justify-content: center; }
+.mt-lang--gate {
+  --mt-line: #243430;
+  --mt-panel2: #0e1413;
+  --mt-text: #e6efe9;
+  --mt-accent: #1FBF94;
+}

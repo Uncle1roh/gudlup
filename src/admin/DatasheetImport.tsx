@@ -83,10 +83,10 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
   function explainSaveError(e: unknown): string {
     const msg = (e as Error)?.message ?? String(e)
     if (/datasheet|asset_map|PGRST204|42703|column .* does not exist|schema cache/i.test(msg)) {
-      return `${msg} — the database is missing the new catalog columns. Run the updated supabase/setup.sql in the Supabase SQL editor (it adds protocols.datasheet and protocols.asset_map, and is safe to re-run), then press Publish again.`
+      return `${msg}: nel database mancano le nuove colonne del catalogo. Esegui il supabase/setup.sql aggiornato nell’editor SQL di Supabase (aggiunge protocols.datasheet e protocols.asset_map, si può rieseguire), poi premi di nuovo Pubblica.`
     }
     if (/row-level security|RLS|permission|policy/i.test(msg)) {
-      return `${msg} — the signed-in account isn't an admin for the catalog write policy. Sign in as admin@goodloop.app and retry.`
+      return `${msg}: l’account connesso non è admin per la policy di scrittura del catalogo. Accedi come admin@goodloop.app e riprova.`
     }
     return msg
   }
@@ -148,14 +148,14 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
         ds,
         { duration: renderDur, withVoice: withVoice && tts.canRender, capSeconds: preview ? 90 : undefined, assetMap: freshMap },
         (stg, done, total) => setProgress(
-          stg === 'voice' ? `Synthesizing voice ${done}/${total}…`
-            : stg === 'assets' ? `Loading assets ${done}/${total}…`
-              : 'Mixing down…'),
+          stg === 'voice' ? `Sintesi della voce ${done}/${total}…`
+            : stg === 'assets' ? `Caricamento asset ${done}/${total}…`
+              : 'Missaggio…'),
       )
       const name = dsWavFileName(ds, renderDur, preview)
       downloadBlob(name, result.blob)
       setRenderNotes(result.notes)
-      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} rows`, stems: result.stemsUsed, blob: result.blob, buffer: result.buffer, duration: renderDur, preview })
+      setRendered({ name, seconds: result.seconds, voice: `${result.voiceRendered}/${result.voiceLines} righe`, stems: result.stemsUsed, blob: result.blob, buffer: result.buffer, duration: renderDur, preview })
       setAttached(null)
       await dp.logAudit({ actor, action: 'protocol.audio.rendered', target: ds.code, detail: `v3 · ${renderDur} min${preview ? ' (90s preview)' : ''} · voice ${result.voiceRendered}/${result.voiceLines} · stems ${result.stemsUsed}` })
     } catch (e) {
@@ -217,16 +217,16 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     return (
       <div className="adm-page">
         <header className="adm-page__head">
-          <h1 className="b2b-h1">Render audio — {ds.code}</h1>
+          <h1 className="b2b-h1">Render audio: {ds.code}</h1>
         </header>
         <div className="adm-note adm-note--ok">
-          <b>{ds.code} published</b> with its full datasheet — already selectable in the clinician wizard.
-          Renderer v3 mixes the mapped assets with the heartbeat, singing-bowl, binaural, bilateral and voice layers.
+          <b>{ds.code} pubblicato</b> con la scheda completa: già selezionabile nella procedura guidata del clinico.
+          Il renderer v3 mixa gli asset mappati con i livelli battito cardiaco, campana tibetana, binaurale, bilaterale e voce.
         </div>
 
         <div className="adm-spec__render">
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Version</span>
+            <span className="adm-spec__lbl">Versione</span>
             <div className="adm-spec__chips">
               {ds.versions.map((v) => {
                 const ready = timelineReady(ds, v.duration)
@@ -259,70 +259,70 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
             </div>
           )}
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Assets</span>
+            <span className="adm-spec__lbl">Asset</span>
             <div className="adm-spec__chips">
               <span className="adm-asset__meta">
                 {assetMap
-                  ? `music ${cov.music}/6 · soundscape ${cov.soundscape}/6${assetMap.heartbeat ? ' · heartbeat file' : ' · heartbeat synth'}${assetMap.bowl ? ' · bowl file' : ' · bowl synth'}`
-                  : 'No asset mapping yet — everything renders on synth fallbacks. Map stems in the Asset Library, then re-open this import.'}
+                  ? `musica ${cov.music}/6 · soundscape ${cov.soundscape}/6${assetMap.heartbeat ? ' · battito da file' : ' · battito sintetizzato'}${assetMap.bowl ? ' · campana da file' : ' · campana sintetizzata'}`
+                  : 'Nessuna mappatura degli asset: tutto viene renderizzato con i suoni sintetici di riserva. Mappa gli stem nella Libreria audio, poi riapri questa importazione.'}
               </span>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Length</span>
+            <span className="adm-spec__lbl">Durata</span>
             <div className="adm-spec__chips">
-              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>90 s preview</button>
-              <button className={`b2b-btn${!preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(false)}>Full session (~{Math.round(renderDur * 10.6)} MB WAV)</button>
+              <button className={`b2b-btn${preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(true)}>Anteprima 90 s</button>
+              <button className={`b2b-btn${!preview ? ' b2b-btn--primary' : ''}`} onClick={() => setPreview(false)}>Sessione completa (~{Math.round(renderDur * 10.6)} MB WAV)</button>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Voice</span>
+            <span className="adm-spec__lbl">Voce</span>
             <div className="adm-spec__chips">
               <label className="adm-spec__check">
                 <input type="checkbox" checked={withVoice && tts.canRender} disabled={!tts.canRender} onChange={(e) => setWithVoice(e.target.checked)} />
-                Synthesize spoken rows ({tts.canRender ? `${tts.label}, italiano` : `${tts.label} is preview-only — paste your ElevenLabs keys below`})
+                Sintetizza le righe parlate ({tts.canRender ? `${tts.label}, italiano` : `${tts.label} è solo anteprima: incolla qui sotto le chiavi ElevenLabs`})
               </label>
             </div>
           </div>
           <div className="adm-spec__row">
-            <span className="adm-spec__lbl">Engine</span>
+            <span className="adm-spec__lbl">Motore</span>
             <VoiceEnginePanel onChanged={() => { setTtsTick((n) => n + 1); setWithVoice(true) }} />
           </div>
 
           <div className="adm-cred__actions" style={{ marginTop: 14 }}>
             <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={runRender}>
-              {busy ? (progress ?? 'Rendering…') : '♪ Render WAV (v3)'}
+              {busy ? (progress ?? 'Render in corso…') : '♪ Render WAV (v3)'}
             </button>
-            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Sets audioReady on the catalog entry">
-              ✓ Mark audio ready & finish
+            <button className="b2b-btn" disabled={busy || !rendered} onClick={markReady} title="Imposta audioReady sulla voce del catalogo">
+              ✓ Segna l’audio come pronto e termina
             </button>
-            <button className="b2b-btn" disabled={busy} onClick={() => void editInStudio()} title="Open this version's layers as editable tracks">🎚 Edit in Studio</button>
-            <button className="b2b-btn" disabled={busy} onClick={onDone}>Finish without audio</button>
+            <button className="b2b-btn" disabled={busy} onClick={() => void editInStudio()} title="Apri i livelli di questa versione come tracce modificabili">🎚 Modifica nello Studio</button>
+            <button className="b2b-btn" disabled={busy} onClick={onDone}>Termina senza audio</button>
           </div>
 
           {rendered && (
             <div className="adm-note adm-note--ok" style={{ marginTop: 12 }}>
-              <b>{rendered.name}</b> downloaded — {fmtTime(rendered.seconds)} rendered, voice {rendered.voice}, real stems in {rendered.stems}/6 phases.
+              <b>{rendered.name}</b> scaricato: {fmtTime(rendered.seconds)} renderizzati, voce {rendered.voice}, stem reali in {rendered.stems}/6 fasi.
               {rendered.preview
-                ? ' Preview renders are for checking only — render the full session to attach it to the catalog.'
+                ? ' I render di anteprima servono solo per il controllo: renderizza la sessione completa per collegarla al catalogo.'
                 : hasSupabaseEnv()
-                  ? ' Attach it below and this exact file becomes the session audio (192 kbps MP3 streaming copy).'
-                  : ' Connect Supabase env to upload it to the catalog (mock mode keeps download-only).'}
+                  ? ' Collegalo qui sotto e questo stesso file diventa l’audio della sessione (copia in streaming MP3 a 192 kbps).'
+                  : ' Configura Supabase per caricarlo nel catalogo (in modalità demo è solo scaricabile).'}
             </div>
           )}
           {rendered && !rendered.preview && hasSupabaseEnv() && !attached && (
             <div className="adm-cred__actions" style={{ marginTop: 10 }}>
               <button className="b2b-btn b2b-btn--primary" disabled={uploading} onClick={uploadAndAttach}>
-                {uploading ? 'Encoding & uploading…' : '⬆ Upload & attach to catalog (192k MP3)'}
+                {uploading ? 'Codifica e caricamento…' : '⬆ Carica e collega al catalogo (MP3 192k)'}
               </button>
             </div>
           )}
           {attached && (
             <div className="adm-note adm-note--ok" style={{ marginTop: 10 }}>
-              <b>Attached.</b> {published?.code} · {rendered?.duration} min now streams this file for employees and clinicians.
+              <b>Collegato.</b> {published?.code} · {rendered?.duration} min ora riproduce questo file per le persone e per i clinici.
             </div>
           )}
-          {renderError && <div className="adm-note adm-note--warn" style={{ marginTop: 12 }}>Render failed: {renderError}</div>}
+          {renderError && <div className="adm-note adm-note--warn" style={{ marginTop: 12 }}>Render non riuscito: {renderError}</div>}
           {renderNotes.length > 0 && (
             <ul className="adm-spec__issues" style={{ marginTop: 10 }}>
               {renderNotes.map((n, i) => <li key={i}>{n}</li>)}
@@ -338,39 +338,39 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Review protocol datasheet</h1>
-          <p className="b2b-sub">From <code>{fileName}</code> — the canonical workbook, parsed sheet by sheet.</p>
+          <h1 className="b2b-h1">Revisione della scheda del protocollo</h1>
+          <p className="b2b-sub">Da <code>{fileName}</code>: la cartella di lavoro canonica, letta foglio per foglio.</p>
         </div>
-        <button className="b2b-btn" onClick={onCancel}>← Back</button>
+        <button className="b2b-btn" onClick={onCancel}>← Indietro</button>
       </header>
 
       <div className="adm-spec__card">
         <div className="adm-spec__id">
           <span className="adm-spec__code">{ds.code}</span>
-          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          <input className="b2b-input adm-spec__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titolo" />
         </div>
-        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder="Patient-facing one-liner (optional — a default is generated)" />
+        <input className="b2b-input" value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder="Frase per la persona (facoltativa: altrimenti viene generata)" />
 
         <div className="adm-spec__facts">
           {ds.docVersion && <span>{ds.docVersion}</span>}
-          {ds.refrain && <span>Refrain: “{ds.refrain}”</span>}
+          {ds.refrain && <span>Ritornello: “{ds.refrain}”</span>}
           {ds.versions[0] && <span>Binaural {ds.versions[0].binaural.beatHz} Hz ({ds.versions[0].binaural.carrierLowHz}/{ds.versions[0].binaural.carrierHighHz} Hz)</span>}
-          {ds.versions.some((v) => v.heartbeat) && <span>Heartbeat 60 BPM ({ds.versions.filter((v) => v.heartbeat).map((v) => `${v.duration}m ${v.heartbeat!.gainDb} dB`).join(' · ')})</span>}
+          {ds.versions.some((v) => v.heartbeat) && <span>Battito 60 BPM ({ds.versions.filter((v) => v.heartbeat).map((v) => `${v.duration}m ${v.heartbeat!.gainDb} dB`).join(' · ')})</span>}
           {ds.versions.some((v) => v.bilateral) && <span>Bilateral {ds.versions.find((v) => v.bilateral)!.bilateral!.toneHz} Hz</span>}
-          <span>{totalRows} timeline rows</span>
-          <span>{ds.affirmations.length} affirmations (REC)</span>
-          <span>{ds.musicMap.length} music-map phases</span>
-          <span>{ds.layers.length} engine layers</span>
-          {ds.defaultVoice && <span>Voices: {ds.defaultVoice}{ds.defaultVoiceM ? ` + ${ds.defaultVoiceM} [M]` : ''}</span>}
-          {ds.phases.some((p) => p.binaural) && <span>Binaural curve: {[...new Set(ds.phases.filter((p) => p.binaural).map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`))].join(' · ')}</span>}
+          <span>{totalRows} righe di timeline</span>
+          <span>{ds.affirmations.length} affermazioni (REC)</span>
+          <span>{ds.musicMap.length} fasi della mappa musicale</span>
+          <span>{ds.layers.length} livelli del motore</span>
+          {ds.defaultVoice && <span>Voci: {ds.defaultVoice}{ds.defaultVoiceM ? ` + ${ds.defaultVoiceM} [M]` : ''}</span>}
+          {ds.phases.some((p) => p.binaural) && <span>Curva binaurale: {[...new Set(ds.phases.filter((p) => p.binaural).map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`))].join(' · ')}</span>}
           {ds.mix?.solfeggioHz && <span>Solfeggio {ds.mix.solfeggioHz} Hz</span>}
-          {ds.mix?.beatType === 'isochronic' && <span>Isochronic tones</span>}
-          {ds.breathing?.length ? <span>Breathing pacer: {ds.breathing.length} row(s)</span> : null}
-          {ds.mix && <span>MIX overrides active</span>}
+          {ds.mix?.beatType === 'isochronic' && <span>Toni isocronici</span>}
+          {ds.breathing?.length ? <span>Guida al respiro: {ds.breathing.length} {ds.breathing.length === 1 ? 'riga' : 'righe'}</span> : null}
+          {ds.mix && <span>Override MIX attivi</span>}
         </div>
         {ds.docSections && (
           <div className="adm-note" style={{ marginTop: 8 }}>
-            📎 Documentary sections preserved: {Object.entries(ds.docSections).map(([k, v]) => `${k} (${v.length} rows)`).join(' · ')} — stored with the protocol for reference; not rendered as audio.
+            📎 Sezioni documentali conservate: {Object.entries(ds.docSections).map(([k, v]) => `${k} (${v.length} righe)`).join(' · ')}: salvate con il protocollo come riferimento, non renderizzate come audio.
           </div>
         )}
 
@@ -380,13 +380,13 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
           return (
             <div key={v.duration} className="adm-spec__version">
               <div className="adm-spec__vhead">
-                {v.duration} min{v.label ? ` — ${v.label}` : ''} · {ph.length} phases · loop {v.loopIntervalSec}s · fades {v.affFadeInSec}/{v.affFadeOutSec}s · REC ×{v.recSubset.length} · stacking {v.stacking}
+                {v.duration} min{v.label ? ` — ${v.label}` : ''} · {ph.length} fasi · loop {v.loopIntervalSec}s · dissolvenze {v.affFadeInSec}/{v.affFadeOutSec}s · REC ×{v.recSubset.length} · stacking {v.stacking}
                 {v.bilateral ? ` · bilat ${v.bilateral.toneHz} Hz/${v.bilateral.everySec}s` : ''}
                 {v.heartbeat ? ` · ♥ ${v.heartbeat.gainDb} dB` : ''}
                 {' · '}
                 {ready
-                  ? <b>{ds.timelines[v.duration]!.length} timeline rows ✓</b>
-                  : <b className="adm-spec__pending">timeline pending ⏳</b>}
+                  ? <b>{ds.timelines[v.duration]!.length} righe di timeline ✓</b>
+                  : <b className="adm-spec__pending">timeline in attesa ⏳</b>}
               </div>
               <div className="adm-spec__phases">
                 {ph.map((p) => (
@@ -401,7 +401,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
         {ds.musicMap.length > 0 && (
           <div className="adm-spec__version">
-            <div className="adm-spec__vhead">Music map (per phase)</div>
+            <div className="adm-spec__vhead">Mappa musicale (per fase)</div>
             <div className="adm-spec__phases">
               {ds.musicMap.map((m) => (
                 <span key={m.phase} className="adm-spec__phase" title={`${m.arrangement[24] ?? m.arrangement[12] ?? m.arrangement[6] ?? ''} · soundscape: ${m.soundscape}`}>
@@ -414,7 +414,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
         {ds.issues.length > 0 && (
           <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>
-            <b>Validation</b>
+            <b>Validazione</b>
             <ul className="adm-spec__issues">{ds.issues.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
         )}
@@ -422,10 +422,10 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
       <div className="adm-import__foot" style={{ marginTop: 14 }}>
         <button className="b2b-btn b2b-btn--primary b2b-btn--lg" disabled={busy} onClick={publish}>
-          {busy ? 'Publishing…' : `Publish ${ds.code} to catalog →`}
+          {busy ? 'Pubblicazione…' : `Pubblica ${ds.code} nel catalogo →`}
         </button>
-        {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Publish failed: {publishError}</div>}
-        <p className="b2b-sub adm-import__hint">Publishing stores the full datasheet (and a derived spec for the existing surfaces); the next step renders the audio with Renderer v3.</p>
+        {publishError && <div className="adm-note adm-note--warn" style={{ marginTop: 10 }}>Pubblicazione non riuscita: {publishError}</div>}
+        <p className="b2b-sub adm-import__hint">La pubblicazione salva la scheda completa (e una specifica derivata per le superfici esistenti); il passo successivo renderizza l’audio con il renderer v3.</p>
       </div>
     </div>
   )

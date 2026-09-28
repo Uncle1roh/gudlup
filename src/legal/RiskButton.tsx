@@ -40,7 +40,7 @@ export function RiskButton({ onRecord }: { onRecord: (text: string) => void }) {
             <ul className="w-reflist">
               {crisis.map((r) => (
                 <li key={r.id}>
-                  <span>{r.label}{r.hours ? ` · ${r.hours}` : ''}</span>
+                  <span>{t(r.label)}{r.hours ? ` · ${r.hours}` : ''}</span>
                   <strong><a href={`tel:${r.number}`}>{r.number}</a></strong>
                 </li>
               ))}

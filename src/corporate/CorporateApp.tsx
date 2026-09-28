@@ -20,15 +20,18 @@
    "exposure") is exactly what its vocabulary rules exclude.
    ============================================================================ */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useI18n } from '../i18n'
+import { useDataProvider } from '../data/provider'
+import { normalizeCode, resolveCompanyCode } from '../data/convention'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { SetupWizard } from './Setup'
 import { Overview, Engagement, Wellbeing, Reports } from './Screens'
 import { Management } from './Management'
 import { CompanyTherapists } from './CompanyTherapists'
 import { Settings } from './Settings'
-import { buildAggregates, useCorporateState } from './data'
+import { buildAggregates, useCorporateState, FALLBACK_TENANT, tenantFromCode, tenantFromConvention, type Tenant } from './data'
 import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
 import { BrandLogo } from '../components/Brand'
 import { useLegal } from '../legal/LegalContext'
@@ -64,15 +67,71 @@ const ALL_NAV: { id: Nav; label: string; extra?: boolean }[] = [
 ]
 const NAV = ALL_NAV.filter((n) => EXTRAS || !n.extra)
 
+/**
+ * The company the signed-in account belongs to, from its company code.
+ *
+ * Null while it is being read, so the dashboard never paints one frame of a
+ * company that is not the account's. In demo mode the stored profile is the
+ * last sign-up's, so it only counts when it is THIS account's; otherwise the
+ * demo user list (Admin → Utenti) says which company the address belongs to.
+ */
+function useTenant(): Tenant | null {
+  const dp = useDataProvider()
+  const { user, mode } = useAuth()
+  const email = user?.email?.toLowerCase() ?? ''
+  const [tenant, setTenant] = useState<Tenant | null>(null)
+
+  useEffect(() => {
+    let live = true
+    void (async () => {
+      let code: string | null = null
+      try {
+        const p = await dp.getMyLegalProfile()
+        if (mode !== 'demo' || (p.email ?? '').toLowerCase() === email) code = p.companyId
+      } catch { /* no profile row yet */ }
+      if (!code && mode === 'demo' && email) {
+        try {
+          const users = await dp.listAdminUsers()
+          code = users.find((u) => u.email.toLowerCase() === email)?.companyId ?? null
+        } catch { /* not readable here */ }
+      }
+      let next: Tenant = FALLBACK_TENANT
+      if (code) {
+        const norm = normalizeCode(code)
+        const conv = resolveCompanyCode(norm)
+        if (conv) next = tenantFromConvention(conv)
+        else {
+          const known = await dp.listCompanies().then(
+            (list) => list.find((c) => normalizeCode(c.id) === norm) ?? null,
+            () => null,
+          )
+          next = tenantFromCode(norm, known)
+        }
+      }
+      if (live) setTenant(next)
+    })()
+    return () => { live = false }
+  }, [dp, mode, email])
+
+  return tenant
+}
+
 export function CorporateApp() {
-  const { t } = useI18n()
+  const tenant = useTenant()
+  if (!tenant) return <div className="c-setup" aria-busy="true" />
+  return <Dashboard tenant={tenant} />
+}
+
+function Dashboard({ tenant }: { tenant: Tenant }) {
+  const { t, locale } = useI18n()
   const { user } = useAuth()
-  const { state, update } = useCorporateState()
+  const { state, update } = useCorporateState(tenant)
   const [nav, setNav] = useState<Nav>('overview')
   const [period, setPeriod] = useState<PeriodId>('month')
   const [menu, setMenu] = useState(false)
 
-  const agg = useMemo(() => buildAggregates(state), [state])
+  // locale: month labels and the renewal date are formatted inside
+  const agg = useMemo(() => buildAggregates(state), [state, locale])
   const unread = state.reports.filter((r) => !r.viewed).length
 
   const adminName = state.profile.contactName || displayName(user?.email)
@@ -150,15 +209,16 @@ export function CorporateApp() {
         </nav>
 
         <div className="c-topbar__right">
-          <button className="c-user" onClick={() => setMenu((v) => !v)} aria-expanded={menu}>
+          <button className="c-user" onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-label={t('Account menu')}>
             <span className="c-avatar" aria-hidden="true">{initials(adminName)}</span>
-            <span>{adminName}</span>
-            <span aria-hidden="true">⌄</span>
+            <span className="c-user__name">{adminName}</span>
+            <span className="c-user__caret" aria-hidden="true">⌄</span>
           </button>
           {menu && (
             <div className="c-usermenu">
               <button className="c-usermenu__row" onClick={() => { setNav('settings'); setMenu(false) }}>{t('Profile')}</button>
-              <a className="c-usermenu__row" href="mailto:support@goodloop.health">{t('Help')}</a>
+              <a className="c-usermenu__row" href="mailto:support@goodloop.health">{t('Contact support')}</a>
+              <div className="c-usermenu__lang"><LanguagePicker className="c-input c-input--sm" /></div>
               <SignOutButton className="c-usermenu__row" />
             </div>
           )}
@@ -179,8 +239,8 @@ export function CorporateApp() {
             admin={adminName.split(' ')[0]}
             agg={agg}
             state={state}
-            onOpenReports={() => setNav('reports')}
-            onOpenManagement={() => setNav('management')}
+            onOpenReports={EXTRAS ? () => setNav('reports') : undefined}
+            onOpenManagement={EXTRAS ? () => setNav('management') : undefined}
           />
         )}
         {nav === 'engagement' && <Engagement agg={agg} />}

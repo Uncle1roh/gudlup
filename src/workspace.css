@@ -97,7 +97,18 @@
 .w-crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--w-muted); }
 .w-crumbs span:last-child { color: var(--w-ink); font-weight: 600; }
 .w-crumbs__sep { color: var(--w-line); margin-right: 8px; }
-.w-topbar__right { position: relative; }
+.w-topbar__right { position: relative; display: flex; align-items: center; gap: 12px; }
+/* Help now in a 54px bar: the pill is sized to the bar, not to the phone
+   tab bar it was drawn for, and sits beside the account button rather than
+   above it (it used to stack on top and lose its upper edge to the bar). */
+.w-topbar .helpnow,
+.w-call__top .helpnow,
+.w-call__helpbar .helpnow,
+.w-sandboxbar .helpnow { font-size: 13px; padding: 7px 12px; gap: 7px; white-space: nowrap; flex-shrink: 0; }
+.w-topbar .helpnow__ring,
+.w-call__top .helpnow__ring,
+.w-call__helpbar .helpnow__ring,
+.w-sandboxbar .helpnow__ring { width: 8px; height: 8px; }
 .w-user { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; font-size: 13px; }
 .w-user:hover { background: var(--w-bg); }
 .w-usermenu {
@@ -598,7 +609,11 @@ textarea.w-input, .w-notearea { max-width: none; }
   position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 10px; color: rgba(255,255,255,0.55);
 }
-.w-video__self, .w-selfcam { overflow: hidden; position: relative; }
+.w-video__self, .w-selfcam { overflow: hidden; }
+/* The self-view floats over the patient feed; only the waiting-room preview
+   sits in the flow. (A shared `position: relative` here used to pull the
+   in-call self-view out of its corner and over the call header.) */
+.w-selfcam { position: relative; }
 
 .w-video__pill {
   position: absolute; top: 16px; left: 16px; z-index: 4;
@@ -637,8 +652,17 @@ textarea.w-input, .w-notearea { max-width: none; }
    genuinely cannot fit. */
 .w-section__body { min-width: 0; overflow-x: auto; }
 .w-table { min-width: 0; }
-.w-table td, .w-table th { overflow-wrap: anywhere; }
+/* Cells may break a long unbroken value, but a HEADER breaks only between
+   words: "DURAT/A" and "REPO/RT" were `anywhere` applied to a one-word label. */
+.w-table td { overflow-wrap: anywhere; }
+.w-table th { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.w-nowrap { white-space: nowrap; }
 .w-truncate { max-width: 100%; }
+/* A truncating cell in a table takes the space that is left and ellipsizes
+   inside it. With a plain max-width a nowrap cell sets the column to the full
+   note length and squeezes every other column, headers included. */
+.w-table td.w-truncate { max-width: 0; width: 100%; }
+.w-table--history td:not(.w-truncate) { white-space: nowrap; }
 
 /* Flex rows whose text half must shrink. */
 .w-idcell,
@@ -667,7 +691,13 @@ textarea.w-input, .w-notearea { max-width: none; }
 .w-panel { min-width: 0; }
 .w-panel__body { min-width: 0; }
 .w-proto { min-width: 0; }
-.w-proto > span { overflow-wrap: anywhere; min-width: 0; }
+.w-proto > span { min-width: 0; }
+/* The title takes the row and wraps between words; the tags keep their own
+   width and drop below it when the panel is narrow, rather than squeezing the
+   title to one word per line. */
+.w-proto { flex-wrap: wrap; row-gap: 4px; }
+.w-proto > span:nth-child(2) { flex: 1 1 150px; min-width: 150px; overflow-wrap: break-word; }
+.w-proto > .w-tag { flex: none; white-space: nowrap; }
 .w-transport { gap: 6px; }
 .w-tbtn { min-width: 0; padding: 10px 2px; font-size: 10.5px; }
 .w-tbtn span { overflow-wrap: anywhere; }
@@ -719,3 +749,49 @@ textarea.w-input, .w-notearea { max-width: none; }
 .w-activation .w-inline { margin-top: 4px; }
 .w-ok { font-size: 13px; color: #1f7a5a; }
 .w-err { font-size: 13px; color: #9b2c20; }
+
+/* ---- icons ------------------------------------------------------------- */
+.w-icon { display: block; flex-shrink: 0; }
+.w-iconbtn { padding: 6px 9px; }
+
+/* ---- Help now in the call and the sandbox ------------------------------ */
+.w-call__topright { display: flex; align-items: center; gap: 14px; }
+.w-call__helpbar { display: flex; justify-content: flex-end; padding: 10px 20px 0; }
+.w-call__top .helpnow,
+.w-call__helpbar .helpnow { --hn-bg: #2a170b; --hn-fg: #f6e6d4; }
+.w-sandboxbar__right { display: flex; align-items: center; gap: 14px; }
+
+/* ---- the interface language -------------------------------------------- */
+.w-langrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.w-app .lang-picker,
+.w-toosmall .lang-picker { display: inline-flex; align-items: center; gap: 9px; }
+.w-app .lang-picker__label,
+.w-toosmall .lang-picker__label { font-size: 11.5px; font-weight: 700; color: var(--w-muted); }
+
+/* ---- the phone screen: please use a desktop ---------------------------- */
+.w-toosmall__card {
+  width: min(420px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 28px 22px; border-radius: 16px;
+  background: var(--w-surface); border: 1px solid var(--w-line);
+  box-shadow: 0 20px 50px -26px rgba(16,30,24,0.3);
+}
+.w-toosmall__card .w-brand { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--w-accent); }
+.w-toosmall__card .w-lead { max-width: 34ch; }
+.w-toosmall__card .helpnow { font-size: 15px; }
+@media (max-width: 1023px) {
+  .w-toosmall { padding: 24px 16px; }
+}
+
+/* Help now on the first-time screens: fixed to the corner, above the card. */
+/* Absolute inside its own full-width wrapper, not fixed: an ancestor of the
+   app root establishes a containing block, and `position: fixed` measured
+   `right` from a zero-width box — the pill sat 16px off the LEFT edge. */
+.w-authwrap { position: relative; }
+.w-auth__help { position: absolute; top: 14px; right: 16px; z-index: 30; }
+.w-auth__help .helpnow { font-size: 13px; padding: 7px 12px; gap: 7px; }
+.w-auth__help .helpnow__ring { width: 8px; height: 8px; }
+
+/* "Retry" inside the camera warning: the waiting room's pale-on-dark link
+   colour disappeared on the light warning box. */
+.w-call__waitmain .w-warnbox .w-link { color: #6b5111; text-decoration: underline; }

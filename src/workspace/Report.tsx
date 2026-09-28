@@ -34,7 +34,10 @@ interface ReportProps {
 
 export function SessionReport({ patient, account, row, quickNotes = [], onSave, onBack }: ReportProps) {
   const { t } = useI18n()
-  const [draft, setDraft] = useState<SessionRow>(row)
+  /* A demo fixture's note is an English key; it opens in the interface
+     language like the rest of the demo. A note the therapist wrote passes
+     through unchanged. */
+  const [draft, setDraft] = useState<SessionRow>(() => ({ ...row, note: t(row.note) }))
   const [signed, setSigned] = useState(Boolean(row.signedAt))
   const [post, setPost] = useState(false)
 
@@ -42,7 +45,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
   const set = (patch: Partial<SessionRow>) => setDraft({ ...draft, ...patch })
 
   if (post) {
-    return <PostSession patient={patient} row={draft} onDone={onBack} />
+    return <PostSession patient={patient} account={account} row={draft} onDone={onBack} />
   }
 
 
@@ -157,7 +160,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
             <span className="w-small">
               {account.licenceNumber} ·{' '}
               {draft.signedAt
-                ? new Date(draft.signedAt).toLocaleString()
+                ? fmtDate(draft.signedAt, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : t('timestamp on signing')}
             </span>
             {draft.signatureVersion > 1 && (
@@ -166,14 +169,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
           </div>
 
           <div className="w-actions">
-            <button
-              className="w-btn w-btn--ghost"
-              onClick={() =>
-                buildSessionReportPdf({ patient, account, rows: [draft] }).save(
-                  `good-loop-session-${draft.noteNumber}-${new Date(draft.at).toISOString().slice(0, 10)}.pdf`,
-                )
-              }
-            >
+            <button className="w-btn w-btn--ghost" onClick={() => downloadReportPdf(patient, account, draft)}>
               {t('Download PDF')}
             </button>
             {signed ? (
@@ -205,13 +201,24 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
   )
 }
 
+/** The report as a file — offered on the draft AND after signing, because
+    the signed version is the one a therapist actually files. */
+function downloadReportPdf(patient: WorkspacePatient, account: TherapistAccount, row: SessionRow): void {
+  buildSessionReportPdf({ patient, account, rows: [row] }).save(
+    `good-loop-session-${row.noteNumber}-${new Date(row.at).toISOString().slice(0, 10)}.pdf`,
+  )
+}
+
 /* ---------------------------------------------------------- TH-POSTSESS -- */
 
 function PostSession({
   patient,
+  account,
+  row,
   onDone,
 }: {
   patient: WorkspacePatient
+  account: TherapistAccount
   row: SessionRow
   onDone: () => void
 }) {
@@ -232,6 +239,9 @@ function PostSession({
           <h1 className="w-h1">{t('Report signed')} ✓</h1>
           <p className="w-lead">{t("What's next for {name}?", { name: patient.name.split(' ')[0] })}</p>
         </div>
+        <button className="w-btn w-btn--ghost" onClick={() => downloadReportPdf(patient, account, row)}>
+          {t('Download PDF')}
+        </button>
       </div>
 
       <div className="w-postgrid">

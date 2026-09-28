@@ -13,6 +13,7 @@ import { useDataProvider } from '../data/provider'
 import { isValidPromoCode, normalizePromoCode } from '../data/promo'
 import { useLegal } from '../legal/LegalContext'
 import { HelpNowButton } from '../legal/HelpNow'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES, marketForCountry } from '../legal/market'
 
 /** Whole years between a date of birth and today. */
@@ -221,7 +222,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
         {/* The b2c door is the dark Self Use ground; the clinician, employer
             and admin doors are light. Same logo, the colourway its ground asks
             for. */}
-        <div className="auth__brand"><BrandLogo variant={isB2b || isAdmin || isHr || theme === 'light' ? 'green' : 'cream'} /></div>
+        <div className="auth__brand">
+          <BrandLogo variant={isB2b || isAdmin || isHr || theme === 'light' ? 'green' : 'cream'} />
+          {/* The language is the person's to choose, from the first screen.
+              Not on the admin door: the console is pinned to Italian. */}
+          {!isAdmin && <LanguagePicker className="auth__lang" label={false} />}
+        </div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
         <p className="auth__sub">{isAdmin
             ? t('Sign in to the admin console')

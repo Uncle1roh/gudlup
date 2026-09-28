@@ -210,7 +210,9 @@ const NOTIFICATIONS: { key: string; label: string }[] = [
   { key: 'booking', label: 'New booking request' },
   { key: 'reminder', label: 'Session reminder (1h before)' },
   { key: 'assessment', label: 'Assessment results received' },
-  { key: 'adherence', label: 'Prescription adherence alert' },
+  /* The key is a stored preference and stays; the label is Path A — content
+     the professional selected, and how often it was listened to. */
+  { key: 'adherence', label: 'Listening updates on selected content' },
   { key: 'inactivity', label: 'Patient inactivity alert (>7 days)' },
 ]
 
@@ -327,7 +329,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     ],
     notes: [
       { id: 'n1', at: now - 1 * DAY, tag: 'Session #8', time: '14:00', text: 'Difficult week — two anxiety spikes before team meetings. Ran GL-ANX 1.2; visible relaxation by phase 2. Debrief: patient calmer and more grounded, imagery especially helpful. VAS 6→3.' },
-      { id: 'n2', at: now - 6 * DAY, tag: 'General', text: 'Between sessions: patient emailed about medication timing. Advised to raise with prescribing physician; noted for next session.' },
+      { id: 'n2', at: now - 6 * DAY, tag: 'General', text: 'Between sessions: patient emailed about medication timing. Advised to raise it with their physician; noted for next session.' },
       { id: 'n3', at: now - 13 * DAY, tag: 'Session #7', time: '10:30', text: 'Intake. Discussed anticipatory anxiety triggers around work meetings. Established home breathing routine. Video-only session.' },
     ],
     goals: [
@@ -348,7 +350,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     nextIn: DAY + 2 * HOUR,
     lastAgo: 7 * DAY,
     sessions: [
-      { id: 's-j1', at: now - 7 * DAY, kind: 'gl-video', protocolCode: 'GL-ANX 1.1', version: 6, minutes: 46, phasesCompleted: 6, vasPre: 5, vasPost: 4, note: 'Steady progress; homework adherence good.', noteNumber: 4, signatureVersion: 0 },
+      { id: 's-j1', at: now - 7 * DAY, kind: 'gl-video', protocolCode: 'GL-ANX 1.1', version: 6, minutes: 46, phasesCompleted: 6, vasPre: 5, vasPost: 4, note: 'Steady progress; listening between sessions going well.', noteNumber: 4, signatureVersion: 0 },
     ],
     prescriptions: [],
   })

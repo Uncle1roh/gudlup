@@ -20,16 +20,18 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { EapForm } from './Setup'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { pct, type AdminRow, type CorporateState } from './metrics'
 import type { EapContact } from '../data/convention'
 
-export type SettingsSection = 'profile' | 'eap' | 'admins' | 'notifications' | 'privacy'
+export type SettingsSection = 'profile' | 'eap' | 'admins' | 'notifications' | 'language' | 'privacy'
 
 const SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: 'profile', label: 'Company Profile' },
   { id: 'eap', label: 'EAP Contact' },
   { id: 'admins', label: 'Admin Management' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'language', label: 'Language' },
   { id: 'privacy', label: 'Data & Privacy' },
 ]
 
@@ -62,6 +64,7 @@ export function Settings({ state, registered, update }: SettingsProps) {
           {section === 'eap' && <Eap state={state} update={update} />}
           {section === 'admins' && <Admins state={state} update={update} />}
           {section === 'notifications' && <Notifications state={state} update={update} />}
+          {section === 'language' && <Language />}
           {section === 'privacy' && <Privacy state={state} registered={registered} />}
         </div>
       </div>
@@ -72,7 +75,7 @@ export function Settings({ state, registered, update }: SettingsProps) {
 /* ------------------------------------------------------------- profile --- */
 
 function Profile({ state, update }: { state: CorporateState; update: SettingsProps['update'] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [form, setForm] = useState(state.profile)
   const [saved, setSaved] = useState(false)
   const set = (patch: Partial<typeof form>) => { setForm({ ...form, ...patch }); setSaved(false) }
@@ -87,7 +90,7 @@ function Profile({ state, update }: { state: CorporateState; update: SettingsPro
         </label>
         <label className="c-field">
           <span className="c-field__label">{t('Country')} <em className="c-locked">· {t('locked')}</em></span>
-          <input className="c-input" value={form.country} readOnly />
+          <input className="c-input" value={countryName(form.country, locale)} readOnly />
         </label>
         <label className="c-field">
           <span className="c-field__label">{t('Industry')}</span>
@@ -164,7 +167,7 @@ function Eap({ state, update }: { state: CorporateState; update: SettingsProps['
 /* -------------------------------------------------------------- admins --- */
 
 function Admins({ state, update }: { state: CorporateState; update: SettingsProps['update'] }) {
-  const { t } = useI18n()
+  const { t, d } = useI18n()
   const [email, setEmail] = useState('')
   const [removing, setRemoving] = useState<AdminRow | null>(null)
 
@@ -206,7 +209,7 @@ function Admins({ state, update }: { state: CorporateState; update: SettingsProp
               <td>{a.name}</td>
               <td className="c-small">{a.email}</td>
               <td>{a.role === 'owner' ? t('Owner') : t('Admin')}</td>
-              <td className="c-small">{new Date(a.addedAt).toLocaleDateString()}</td>
+              <td className="c-small">{d(a.addedAt, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
               <td>
                 {/* No control at all for the Owner — an Owner transfer is a
                     support operation, and a disabled button would suggest
@@ -295,6 +298,32 @@ function Notifications({ state, update }: { state: CorporateState; update: Setti
       <p className="c-note">{t('All via email.')}</p>
     </>
   )
+}
+
+/* ------------------------------------------------------------ language --- */
+
+/** The person's own choice — it changes this dashboard for them only. */
+function Language() {
+  const { t } = useI18n()
+  return (
+    <>
+      <h2 className="c-h2">{t('Language')}</h2>
+      <p className="c-lead">{t('The language this dashboard is shown in, for you. It does not change anything your colleagues or employees see.')}</p>
+      <div className="c-langfield">
+        <LanguagePicker className="c-input" label={false} />
+      </div>
+    </>
+  )
+}
+
+/** An ISO region code in the reader's language; any older free-text value as is. */
+function countryName(value: string, locale: string): string {
+  if (!/^[A-Z]{2}$/.test(value)) return value
+  try {
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(value) ?? value
+  } catch {
+    return value
+  }
 }
 
 /* ------------------------------------------------------------- privacy --- */

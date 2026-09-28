@@ -42,7 +42,8 @@ export function SetupWizard({ state, onDone }: SetupProps) {
   const [code] = useState(() => state.companyCode || generateCompanyCode(state.profile.name))
   const [copied, setCopied] = useState(false)
 
-  const [eap, setEap] = useState<EapContact>({ provider: '', phone: '', email: '', website: '', info: '' })
+  // the convention's EAP when it carries one, so finishing setup never blanks it
+  const [eap, setEap] = useState<EapContact>(() => state.eap ?? { provider: '', phone: '', email: '', website: '', info: '' })
   const [invites, setInvites] = useState<TherapistRow[]>([])
   const [inviteEmail, setInviteEmail] = useState('')
 
@@ -229,9 +230,10 @@ export function SetupWizard({ state, onDone }: SetupProps) {
 /* ------------------------------------------------------------------------- */
 
 function Rail({ step, plus }: { step: number; plus: boolean }) {
+  const { t } = useI18n()
   const steps = plus ? [1, 2, 3, 4, 5] : [1, 2, 3, 5]
   return (
-    <ol className="c-rail" aria-label={`Step ${step} of ${TOTAL}`}>
+    <ol className="c-rail" aria-label={t('Step {n} of {total}', { n: Math.max(1, steps.indexOf(step) + 1), total: plus ? TOTAL : TOTAL - 1 })}>
       {steps.map((n, i) => (
         <li key={n} className={n < step ? 'is-done' : n === step ? 'is-now' : ''}>
           {n < step ? '✓' : i + 1}

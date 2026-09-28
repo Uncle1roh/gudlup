@@ -26,7 +26,7 @@ function readEntries(buf: ArrayBuffer): ZipEntry[] {
   for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 22 - 65535); i--) {
     if (view.getUint32(i, true) === EOCD_SIG) { eocd = i; break }
   }
-  if (eocd < 0) throw new Error('Not a valid .docx (zip directory not found).')
+  if (eocd < 0) throw new Error('.docx non valido (directory zip non trovata).')
   const count = view.getUint16(eocd + 10, true)
   let p = view.getUint32(eocd + 16, true)
   const entries: ZipEntry[] = []
@@ -102,7 +102,7 @@ export async function extractDocxText(file: File): Promise<string> {
   const buf = await file.arrayBuffer()
   const entries = readEntries(buf)
   const doc = entries.find((e) => e.name === 'word/document.xml')
-  if (!doc) throw new Error('No word/document.xml inside this .docx.')
+  if (!doc) throw new Error('Nessun word/document.xml in questo .docx.')
   const xml = await readEntryText(buf, doc)
   return documentXmlToText(xml)
 }

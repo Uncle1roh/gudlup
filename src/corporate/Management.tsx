@@ -121,10 +121,11 @@ function UsersTab({ state, agg }: { state: CorporateState; agg: Aggregates }) {
 }
 
 function Count({ label, value, sub }: { label: string; value: number; sub: string }) {
+  const { locale } = useI18n()
   return (
     <article className="c-card c-metric">
       <div className="c-kpi__label">{label}</div>
-      <div className="c-kpi__value">{value.toLocaleString()}</div>
+      <div className="c-kpi__value">{value.toLocaleString(locale)}</div>
       <p className="c-small">{sub}</p>
     </article>
   )
@@ -158,14 +159,15 @@ function CodeTab({ state, agg, update }: ManagementProps) {
   }
 
   function shareByEmail() {
-    const subject = encodeURIComponent(`Your Good Loop access code — ${state.profile.name}`)
+    const company = state.profile.name
+    const subject = encodeURIComponent(t('Your Good Loop access code — {company}', { company }))
     const body = encodeURIComponent(
       [
-        `Good Loop is now available to you through ${state.profile.name}.`,
+        t('Good Loop is now available to you through {company}.', { company }),
         '',
-        `Company code: ${state.companyCode}`,
+        t('Company code: {code}', { code: state.companyCode }),
         '',
-        'Download the app, create your account, and enter this code during registration to link it to your company plan.',
+        t('Download the app, create your account, and enter this code during registration to link it to your company plan.'),
       ].join('\n'),
     )
     window.location.href = `mailto:?subject=${subject}&body=${body}`
@@ -240,7 +242,7 @@ function LicensesTab({ state, agg }: { state: CorporateState; agg: Aggregates })
             </p>
             <a
               className="c-btn c-btn--primary"
-              href={`mailto:sales@goodloop.health?subject=${encodeURIComponent(`Licence expansion — ${state.profile.name}`)}`}
+              href={`mailto:sales@goodloop.health?subject=${encodeURIComponent(t('Licence expansion — {company}', { company: state.profile.name }))}`}
             >
               {t('Contact Good Loop')}
             </a>

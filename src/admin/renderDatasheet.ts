@@ -448,24 +448,24 @@ export function deriveBowlStrikes(v: DsVersionParams, rows: DsTimelineRow[], pha
 
 export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, onProgress?: DsRenderProgress): Promise<DsRenderResult> {
   const v = ds.versions.find((x) => x.duration === opts.duration)
-  if (!v) throw new Error(`This datasheet has no ${opts.duration}-minute version.`)
+  if (!v) throw new Error(`Questa scheda non ha una versione da ${opts.duration} minuti.`)
   if (!timelineReady(ds, opts.duration)) {
-    throw new Error(`Timeline_${opts.duration}min is not compiled yet — fill the timeline sheet and re-import before rendering this version.`)
+    throw new Error(`Timeline_${opts.duration}min non è ancora compilata: completa il foglio della timeline e reimporta prima di renderizzare questa versione.`)
   }
   const rows = ds.timelines[opts.duration]!
   const phases = ds.phases.filter((p) => p.duration === opts.duration)
-  if (!phases.length) throw new Error(`The Fasi sheet has no phases for the ${opts.duration}-minute version.`)
+  if (!phases.length) throw new Error(`Il foglio Fasi non ha fasi per la versione da ${opts.duration} minuti.`)
 
   const notes: string[] = []
   const fullSec = opts.duration * 60
   const totalSec = Math.max(10, Math.min(fullSec, opts.capSeconds ?? fullSec))
-  if (totalSec < fullSec) notes.push(`Preview render — first ${totalSec}s of ${fullSec}s.`)
+  if (totalSec < fullSec) notes.push(`Render di anteprima: primi ${totalSec}s di ${fullSec}s.`)
   const map = opts.assetMap
 
   /* ---- 1. voice (TTS) ---- */
   const dichoticJobs = deriveDichoticJobs(ds, v, rows, phases)
   if (dichoticJobs.length) {
-    notes.push(`Dichotic layer derived from the Versioni sheet — ${dichoticJobs.length} hard-panned utterance${dichoticJobs.length === 1 ? '' : 's'} every ${v.dichotic!.intervalSec}s${v.dichotic!.doubleInduction ? ' (double induction: two affirmations at once, one per ear)' : ''}; a compiled timeline with explicit L/R rows overrides this.`)
+    notes.push(`Livello dicotico ricavato dal foglio Versioni: ${dichoticJobs.length} ${dichoticJobs.length === 1 ? 'frase panoramicata' : 'frasi panoramicate'} ai lati ogni ${v.dichotic!.intervalSec}s${v.dichotic!.doubleInduction ? ' (doppia induzione: due affermazioni insieme, una per orecchio)' : ''}; una timeline compilata con righe L/R esplicite lo sostituisce.`)
   }
   const jobs = [...deriveVoiceJobs(ds, v, rows), ...dichoticJobs]
     .sort((a, b) => a.timeSec - b.timeSec)
@@ -476,7 +476,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   const tts = getTtsProvider()
   if (opts.withVoice && (jobs.length || v.continuousWhisper)) {
     if (!tts.canRender) {
-      notes.push(`No render-capable TTS configured (${tts.label} is preview-only) — rendered the bed without voice.`)
+      notes.push(`Nessun TTS abilitato al render (${tts.label} è solo anteprima): letto sonoro renderizzato senza voce.`)
     } else {
       const decoder = new AudioContext({ sampleRate: SAMPLE_RATE })
       const cache = new Map<string, AudioBuffer>()
@@ -490,13 +490,13 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         ?? matchVoiceFromText(ds.invariants.find((i) => /voce primaria|voce predefinita/i.test(i.param))?.value)
       const dsSecondary = matchVoiceFromText(ds.defaultVoiceM)
         ?? matchVoiceFromText(ds.invariants.find((i) => /voce secondaria/i.test(i.param))?.value)
-      notes.push(`Voices: [F] ${dsPrimary ? `${dsPrimary.name} (from the datasheet)` : `${defaultPrimary().name} (default — the datasheet doesn't specify one)`} · [M] ${dsSecondary ? `${dsSecondary.name} (from the datasheet)` : `${defaultSecondary().name} (default)`}.`)
+      notes.push(`Voci: [F] ${dsPrimary ? `${dsPrimary.name} (dalla scheda)` : `${defaultPrimary().name} (predefinita: la scheda non ne indica una)`} · [M] ${dsSecondary ? `${dsSecondary.name} (dalla scheda)` : `${defaultSecondary().name} (predefinita)`}.`)
       const usedVoices = new Set<string>()
       const resolveJobVoice = (job: VoiceJob): string | undefined => {
         const rowMatch = matchVoiceFromText(job.voiceName)
         const id = rowMatch?.id ?? (job.secondary ? dsSecondary?.id : dsPrimary?.id)
         if (rowMatch) usedVoices.add(rowMatch.name)
-        if (job.voiceName && !rowMatch) notes.push(`Voice "${job.voiceName}" at ${fmtTime(job.timeSec)} is not in the PO catalog — the default was used.`)
+        if (job.voiceName && !rowMatch) notes.push(`La voce "${job.voiceName}" a ${fmtTime(job.timeSec)} non è nel catalogo dei PO: usata quella predefinita.`)
         return id
       }
       const renderText = async (text: string, voice: 'primary' | 'secondary' = 'primary', voiceId?: string): Promise<AudioBuffer> => {
@@ -524,7 +524,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
             }
             voiceRendered++
           } catch (e) {
-            notes.push(`Voice row at ${fmtTime(jobs[i].timeSec)} failed: ${(e as Error).message}`)
+            notes.push(`Riga vocale a ${fmtTime(jobs[i].timeSec)} non riuscita: ${(e as Error).message}`)
           }
         }
         // Deep continuous-whisper loop (Layer 9): quoted loop text from the
@@ -534,19 +534,19 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
           const layer9 = ds.layers.find((l) => /sussurro continuo/i.test(l.description))
           const quoted = layer9 ? /["\u201c]([^"\u201d]+)["\u201d]/.exec(layer9.description)?.[1] : undefined
           const text = quoted ?? (ds.refrain ? ds.refrain.toLowerCase().split(/[,\s]+/).filter((w) => w.length > 3).join('… ') + '…' : 'centro… respiro… pace…')
-          try { whisperLoopBuffer = await renderText(text, 'secondary', dsSecondary?.id) } catch (e) { notes.push(`Continuous whisper failed: ${(e as Error).message}`) }
+          try { whisperLoopBuffer = await renderText(text, 'secondary', dsSecondary?.id) } catch (e) { notes.push(`Sussurro continuo non riuscito: ${(e as Error).message}`) }
         }
       } finally {
         await decoder.close()
       }
       onProgress?.('voice', jobs.length, jobs.length)
       if (jobs.some((j) => j.secondary)) {
-        notes.push(`Secondary [M] voice rows: ${jobs.filter((j) => j.secondary).length} (rendered with ${dsSecondary?.name ?? defaultSecondary().name}).`)
+        notes.push(`Righe della voce secondaria [M]: ${jobs.filter((j) => j.secondary).length} (renderizzate con ${dsSecondary?.name ?? defaultSecondary().name}).`)
       }
-      if (usedVoices.size) notes.push(`Row-level voices from the datasheet: ${[...usedVoices].join(', ')}.`)
+      if (usedVoices.size) notes.push(`Voci per riga dalla scheda: ${[...usedVoices].join(', ')}.`)
     }
   } else if (!opts.withVoice && jobs.length) {
-    notes.push(`Bed-only render — ${jobs.length} spoken rows were not synthesized.`)
+    notes.push(`Render del solo letto sonoro: ${jobs.length} righe parlate non sintetizzate.`)
   }
 
   /* ---- 2. fetch the mapped assets ---- */
@@ -569,7 +569,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       try {
         assetBuffers.set(list[i], await fetchAssetBuffer(list[i]))
       } catch (e) {
-        notes.push(`Asset ${list[i]} failed to load (${(e as Error).message}) — synth fallback used.`)
+        notes.push(`Asset ${list[i]} non caricato (${(e as Error).message}): usato il suono sintetico di riserva.`)
       }
     }
     onProgress?.('assets', list.length, list.length)
@@ -608,11 +608,11 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   const TARGET_VOICE_RMS = 0.14 // ≈ −17 dBFS, comfortable session level pre-limiter
   const makeup = Math.min(3, Math.max(1, TARGET_VOICE_RMS / voiceRefRms))
   master.gain.value = 0.9 * makeup
-  notes.push(`Mix law (loudness-measured): voice ref RMS ${voiceRefRms.toFixed(3)} · master makeup ×${makeup.toFixed(2)} → voice ≈ −17 dBFS · music −18 dB · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · loop fades ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration}-min).`)
+  notes.push(`Legge di mix (misurata in loudness): RMS di riferimento voce ${voiceRefRms.toFixed(3)} · master makeup ×${makeup.toFixed(2)} → voice ≈ −17 dBFS · music −18 dB · soundscape −20 dB · echo −8 dB (+2 s) · whisper −12 dB · bilateral ~6% · dissolvenze loop ${v.affFadeInSec}/${v.affFadeOutSec} s (${opts.duration} min).`)
   // one explicit line so it's auditable that every psychoacoustic layer of
   // THIS version was scheduled (or is off by design in the datasheet)
-  notes.push(`Layers (${opts.duration}-min per datasheet): binaural ${v.binaural.beatHz} Hz ON${v.binaural.theta ? ` (Theta ${v.binaural.theta.beatHz} Hz in F${v.binaural.theta.phase})` : ''} · bilateral ${v.bilateral ? `${v.bilateral.toneHz} Hz/${v.bilateral.everySec}s ON` : 'OFF by design'} · heartbeat ${v.heartbeat ? `${v.heartbeat.gainDb} dB F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase} ON` : 'OFF by design'} · whisper ${v.continuousWhisper ? `${v.continuousWhisper.gainDb} dB F${v.continuousWhisper.phase} ON` : 'OFF by design'} · stacking ${v.stacking}.`)
-  notes.push('Binaural −16 dB and music −18 dB vs voice — still not PO-specified; adjust in renderDatasheet.ts if a figure lands.')
+  notes.push(`Livelli (${opts.duration} min secondo la scheda): binaural ${v.binaural.beatHz} Hz ON${v.binaural.theta ? ` (Theta ${v.binaural.theta.beatHz} Hz in F${v.binaural.theta.phase})` : ''} · bilateral ${v.bilateral ? `${v.bilateral.toneHz} Hz/${v.bilateral.everySec}s ON` : 'OFF per scelta'} · heartbeat ${v.heartbeat ? `${v.heartbeat.gainDb} dB F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase} ON` : 'OFF per scelta'} · whisper ${v.continuousWhisper ? `${v.continuousWhisper.gainDb} dB F${v.continuousWhisper.phase} ON` : 'OFF per scelta'} · stacking ${v.stacking}.`)
+  notes.push('Binaurale −16 dB e musica −18 dB rispetto alla voce: valori non ancora specificati dai PO; da regolare in renderDatasheet.ts quando arriva una cifra.')
 
   let stemsUsed = 0
 
@@ -649,8 +649,8 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       unmappedScape.push(p.id)
     }
   }
-  if (unmappedMusic.length) notes.push(`Music: no library file mapped for F${[...new Set(unmappedMusic)].join('/F')} — those phases have no music (map f1–f6 in the Asset Library).`)
-  if (unmappedScape.length) notes.push(`Soundscape: no library file mapped for F${[...new Set(unmappedScape)].join('/F')} — silent there (map in the Asset Library).`)
+  if (unmappedMusic.length) notes.push(`Musica: nessun file di libreria mappato per F${[...new Set(unmappedMusic)].join('/F')}: quelle fasi restano senza musica (mappa f1–f6 nella Libreria audio).`)
+  if (unmappedScape.length) notes.push(`Soundscape: nessun file di libreria mappato per F${[...new Set(unmappedScape)].join('/F')}: lì c’è silenzio (mappa nella Libreria audio).`)
 
   // heartbeat (Layer 2)
   if (v.heartbeat) {
@@ -664,7 +664,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       else {
         // synth thump peaks ≈ its level → scale peak so RMS lands near target
         synthHeartbeat(ctx, master, at, end - at, 60, Math.min(0.5, voiceRefRms * dB(v.heartbeat.gainDb) * 6))
-        notes.push(`Heartbeat: synth provisional at 60 BPM, ${v.heartbeat.gainDb} dB (F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase}) — swaps to the PO file automatically once mapped.`)
+        notes.push(`Battito: sintetico provvisorio a 60 BPM, ${v.heartbeat.gainDb} dB (F${v.heartbeat.fromPhase}–F${v.heartbeat.toPhase}): passa al file dei PO appena viene mappato.`)
       }
     }
   }
@@ -686,7 +686,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
         synthBowl(ctx, master, s.atSec, s.decaySec, Math.min(0.5, voiceRefRms * dB(-10) * 4))
       }
     }
-    if (strikes.length && !bowlFile) notes.push(`Singing bowl: ${strikes.length} synth strikes (provisional) — swaps to the PO file automatically once mapped.`)
+    if (strikes.length && !bowlFile) notes.push(`Campana tibetana: ${strikes.length} colpi sintetici (provvisori): passa al file dei PO appena viene mappato.`)
   }
 
   // binaural / isochronic bed — per-phase curve when the FASI sheet declares
@@ -736,7 +736,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       bg.gain.linearRampToValueAtTime(0, totalSec)
       osc.start(0); lfo.start(0); dc.start(0)
       osc.stop(totalSec); lfo.stop(totalSec); dc.stop(totalSec)
-      notes.push(`Isochronic tones ${b.beatHz} Hz on a ${Math.round((b.carrierLowHz + b.carrierHighHz) / 2)} Hz carrier (MIX: tipo battimento).`)
+      notes.push(`Toni isocronici ${b.beatHz} Hz su portante di ${Math.round((b.carrierLowHz + b.carrierHighHz) / 2)} Hz (MIX: tipo battimento).`)
     } else {
       const oscL = ctx.createOscillator()
       const oscR = ctx.createOscillator()
@@ -760,7 +760,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
             oscR.frequency.linearRampToValueAtTime(b.carrierLowHz + nextBeat, Math.min(totalSec, back + Math.min(120, ramp)))
           }
         }
-        notes.push(`Binaural curve from FASI: ${phaseCurve.map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`).join(' · ')} (ramped).`)
+        notes.push(`Curva binaurale da FASI: ${phaseCurve.map((p) => `F${p.id}→${p.binaural!.beatHz} Hz`).join(' · ')} (con rampe).`)
       } else if (b.theta) {
         const ph = phases.find((p) => p.id === b.theta!.phase)
         if (ph && ph.startSec < totalSec) {
@@ -805,7 +805,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
     g.gain.linearRampToValueAtTime(0, totalSec)
     osc.connect(g).connect(master)
     osc.start(0); osc.stop(totalSec)
-    notes.push(`Solfeggio layer ${ds.mix.solfeggioHz} Hz at ${ds.mix.solfeggioDb ?? -22} dB vs voice (MIX).`)
+    notes.push(`Livello Solfeggio ${ds.mix.solfeggioHz} Hz a ${ds.mix.solfeggioDb ?? -22} dB rispetto alla voce (MIX).`)
   }
 
   // guided breathing pacer (### RESPIRAZIONE) — one entry per declared row
@@ -816,7 +816,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
       if (!ph || ph.startSec >= totalSec) continue
       const lvl = Math.min(0.12, voiceRefRms * dB(-24))
       const used = synthBreathPacer(ctx, master, Math.min(totalSec - 4, ph.startSec + 2), b.pattern, Math.max(1, b.cycles), lvl)
-      notes.push(`Breathing pacer: ${b.pattern} ×${b.cycles} in F${b.phase} (${Math.round(used)} s of soft air swells at −24 dB).`)
+      notes.push(`Guida al respiro: ${b.pattern} ×${b.cycles} in F${b.phase} (${Math.round(used)} s di morbide ondate d’aria a −24 dB).`)
     }
   }
 
@@ -877,7 +877,7 @@ export async function renderDatasheetWav(ds: Datasheet, opts: DsRenderOptions, o
   }
   {
     const n = voiceBuffers.filter(({ job }) => job.effect === 'CORO').length
-    if (n) notes.push(`Effetto CORO applied to ${n} row(s) (harmonized chorus).`)
+    if (n) notes.push(`Effetto CORO applicato a ${n} ${n === 1 ? 'riga' : 'righe'} (coro armonizzato).`)
   }
 
   // Deep continuous whisper (Layer 9) — looped across its phase window

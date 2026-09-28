@@ -24,6 +24,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLegal } from '../legal/LegalContext'
 import { useI18n, fmtDate as localeDate } from '../i18n'
+import { wt, noteTagLabel } from './i18n'
+import { VideoIcon } from './icons'
 import { getProtocol } from '../data/protocols'
 import { useCatalog, type ClinicalEntry } from '../data/liveCatalog'
 import { useDataProvider } from '../data/provider'
@@ -222,8 +224,9 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
                     className="w-btn w-btn--sm"
                     onClick={(e) => { e.stopPropagation(); onCall(p.id) }}
                     aria-label={t('Start video call with {name}', { name: p.name })}
+                    title={t('Start video call with {name}', { name: p.name })}
                   >
-                    📹
+                    <VideoIcon />
                   </button>
                 </td>
               </tr>
@@ -390,7 +393,7 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
               </span>
               <span>{t('Member since')} {localeDate(patient.memberSince, { month: 'short', year: 'numeric' })}</span>
               {patient.company && <span>{t('Company')} · {patient.company}</span>}
-              <span>{t('Linked')} {new Date(patient.linkedAt).toLocaleDateString()}</span>
+              <span>{t('Linked')} {localeDate(patient.linkedAt, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             </div>
           </div>
         </header>
@@ -399,9 +402,9 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
           {!patient.sessions.length ? (
             <p className="w-small">{t('No sessions yet. Start your first video call.')}</p>
           ) : (
-            <table className="w-table">
+            <table className="w-table w-table--history">
               <thead>
-                <tr><th>{t('Date')}</th><th>{t('Type')}</th><th>{t('Content')}</th><th>{t('Dur.')}</th><th>{t('Notes')}</th><th>{t('Report')}</th></tr>
+                <tr><th>{t('Date')}</th><th>{t('Type')}</th><th>{t('Content')}</th><th>{t('Duration')}</th><th>{t('Notes')}</th><th>{t('Report')}</th></tr>
               </thead>
               <tbody>
                 {[...patient.sessions].sort((a, b) => b.at - a.at).map((s) => (
@@ -409,8 +412,8 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
                     <td>{fmtDate(s.at)}</td>
                     <td>{s.kind === 'gl-video' ? t('GL + Video') : t('Video only')}</td>
                     <td className="w-mono w-small">{s.protocolCode ? `${s.protocolCode} ${versionShort(s.version)}` : '—'}</td>
-                    <td>{s.minutes} min</td>
-                    <td className="w-small w-truncate">{s.note}</td>
+                    <td className="w-nowrap">{s.minutes} min</td>
+                    <td className="w-small w-truncate" title={t(s.note)}>{t(s.note)}</td>
                     <td><button className="w-link" onClick={() => onOpenReport(s.id)}>{t('View')}</button></td>
                   </tr>
                 ))}
@@ -448,7 +451,7 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
             <p className="w-small">{t('No Self Use sessions recorded between appointments.')}</p>
           ) : (
             <table className="w-table">
-              <thead><tr><th>{t('Date')}</th><th>{t('Protocol')}</th><th>{t('Duration')}</th><th>{t('Completed')}</th></tr></thead>
+              <thead><tr><th>{t('Date')}</th><th>{t('Content')}</th><th>{t('Duration')}</th><th>{t('Completed')}</th></tr></thead>
               <tbody>
                 {patient.bridgedSessions.map((b, i) => (
                   <tr key={i}>
@@ -533,10 +536,10 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
               <li key={n.id}>
                 <div className="w-notes__meta">
                   <span>{localeDate(n.at, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span className="w-tag">{n.tag}</span>
+                  <span className="w-tag">{noteTagLabel(n.tag)}</span>
                   {n.time && <span className="w-small">{n.time}</span>}
                 </div>
-                <p>{n.text}</p>
+                <p>{t(n.text)}</p>
               </li>
             ))}
           </ul>
@@ -552,7 +555,7 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
           <ul className="w-goals">
             {patient.goals.map((g) => (
               <li key={g.id}>
-                <span>{g.text}</span>
+                <span>{t(g.text)}</span>
                 <select
                   className="w-input w-input--sm"
                   value={g.status}
@@ -591,7 +594,7 @@ export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps
 
       <aside className="w-col-side">
         <div className="w-sticky">
-          <button className="w-btn w-btn--primary w-btn--block w-btn--lg" onClick={onCall}>📹 {t('Start Video Call')}</button>
+          <button className="w-btn w-btn--primary w-btn--block w-btn--lg" onClick={onCall}><VideoIcon size={18} /> {t('Start Video Call')}</button>
           <button className="w-btn w-btn--ghost w-btn--block" onClick={() => setRxOpen(true)}>{t('Select content')}</button>
 
           <div className="w-sidecard">
@@ -701,7 +704,7 @@ function AssessmentQueue({ rows }: { rows: AssessmentRecord[] }) {
 function scoreLine(r: AssessmentRecord): string {
   const s = r.scores
   if (!s) return ''
-  const dir = SCORE_DIRECTION[r.instrumentId] === 'higher-is-more-resource' ? '↑ resource' : '↑ symptom'
+  const dir = SCORE_DIRECTION[r.instrumentId] === 'higher-is-more-resource' ? wt('↑ resource') : wt('↑ symptom')
   switch (s.kind) {
     case 'DASS21':
       return `D ${s.scaled.depression} · A ${s.scaled.anxiety} · S ${s.scaled.stress} (0–42, ${dir})`
@@ -735,7 +738,7 @@ function AssessmentBlock({ patient }: { patient: WorkspacePatient }) {
                   professional's (M2R-17, MN-29). */}
               {last.values.map((v) => (
                 <span key={v.label} className="w-assess__val">
-                  <em>{v.label}</em>
+                  <em>{t(v.label)}</em>
                   <strong>{v.value}</strong>
                 </span>
               ))}
@@ -913,7 +916,7 @@ function PrescriptionModal({
               <optgroup key={family} label={t(CLUSTER_LABEL[family] ?? family)}>
                 {list.map((p) => (
                   <option key={p.code} value={p.code}>
-                    {p.code} · {p.title}{p.audioReady ? '' : ` — ${t('audio not rendered yet')}`}
+                    {p.code} · {t(p.title)}{p.audioReady ? '' : ` — ${t('audio not rendered yet')}`}
                   </option>
                 ))}
               </optgroup>
@@ -956,7 +959,7 @@ function PrescriptionModal({
         </label>
 
         <p className="w-note">
-          {t('Patient will see:')} “{selected?.patientName ?? '…'} · {m('SES-6', { name: t('you') })}”
+          {t('Patient will see:')} “{selected ? t(selected.patientName) : '…'} · {m('SES-6', { name: t('you') })}”
         </p>
         {selected && !selected.audioReady && (
           <p className="w-warnbox">
@@ -1040,13 +1043,14 @@ export function fmtWhen(ms: number): string {
   const isToday = d.toDateString() === today.toDateString()
   const isTomorrow = new Date(today.getTime() + DAY).toDateString() === d.toDateString()
   const time = localeDate(d.getTime(), { hour: '2-digit', minute: '2-digit' })
-  if (isToday) return `Today · ${time}`
-  if (isTomorrow) return `Tomorrow · ${time}`
+  if (isToday) return `${wt('Today')} · ${time}`
+  if (isTomorrow) return `${wt('Tomorrow')} · ${time}`
   return `${localeDate(d.getTime(), { month: 'short', day: 'numeric' })} · ${time}`
 }
 
+/** The short name of a time signature, in the interface language. */
 export function versionShort(d?: Duration): string {
-  return d === 6 ? 'Quick' : d === 12 ? 'Std' : d === 24 ? 'Deep' : ''
+  return d === 6 ? wt('Quick') : d === 12 ? wt('Std') : d === 24 ? wt('Deep') : ''
 }
 
 export { getProtocol }

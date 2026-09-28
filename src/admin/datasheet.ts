@@ -289,7 +289,7 @@ function parseProtocollo(wb: WorkBook, ds: Partial<Datasheet>, issues: string[])
     ds.code = `GL-${cm[1]} ${cm[2]}`
     const fam = `GL-${cm[1]}` as ProtocolFamily
     ds.family = FAMILIES.includes(fam) ? fam : 'GL-ANX'
-    if (!FAMILIES.includes(fam)) issues.push(`Unknown family "${fam}" — filed under GL-ANX.`)
+    if (!FAMILIES.includes(fam)) issues.push(`Famiglia "${fam}" sconosciuta: archiviato sotto GL-ANX.`)
   }
   ds.title = kv.get('titolo (it)') || kv.get('sottogruppo') || ds.code || ''
   const pt = kv.get('titolo (pt-br)') ?? ''
@@ -311,7 +311,7 @@ function invariantValue(ds: Partial<Datasheet>, re: RegExp): string {
 
 function parseVersioni(wb: WorkBook, ds: Partial<Datasheet>, issues: string[]): void {
   const all = rows(wb.Sheets['Versioni'])
-  if (all.length < 2) { issues.push('Versioni sheet is empty — using defaults for all version parameters.'); ds.versions = []; return }
+  if (all.length < 2) { issues.push('Il foglio Versioni è vuoto: valori predefiniti per tutti i parametri di versione.'); ds.versions = []; return }
   const head = all[0]
   // column per duration, detected from the header ("6 MIN (Quick)" …)
   const cols: { duration: Duration; col: number; label: string }[] = []
@@ -357,7 +357,7 @@ function parseVersioni(wb: WorkBook, ds: Partial<Datasheet>, issues: string[]): 
     const theta = /theta\s*(\d+(?:\.\d+)?)\s*hz[^F]*F(\d)/i.exec(binVer)
     const subsetRaw = get(/sub-?set rec/i, col)
     const recSubset = subsetRaw ? parseRecSubset(subsetRaw) : []
-    if (!recSubset.length) issues.push(`${duration}-min: no REC sub-set parsed — the loop phase will use the timeline rows only.`)
+    if (!recSubset.length) issues.push(`${duration} min: nessun sottoinsieme REC letto; la fase loop userà solo le righe della timeline.`)
     return {
       duration,
       label,
@@ -390,7 +390,7 @@ function parseFasi(wb: WorkBook, ds: Partial<Datasheet>, issues: string[]): void
     const start = toSec(r[3])
     const end = toSec(r[4])
     if (d == null || id == null || start == null || end == null) continue
-    if (!DURATIONS.includes(d as Duration)) { issues.push(`Fasi: version ${d} min ignored (supported: 6/12/24).`); continue }
+    if (!DURATIONS.includes(d as Duration)) { issues.push(`Fasi: versione da ${d} min ignorata (supportate: 6/12/24).`); continue }
     const binRaw2 = cell(r, 6)
     const binM2 = binRaw2 ? /(\d+(?:[.,]\d+)?)\s*hz/i.exec(binRaw2) : null
     const rampM2 = binRaw2 ? /ramp\w*\s*(\d+)\s*s/i.exec(binRaw2) : null
@@ -411,7 +411,7 @@ function parseTimeline(ws: WorkSheet | undefined, duration: Duration, issues: st
   for (const r of all) {
     const t = toSec(r[0])
     if (t == null) {
-      if (cell(r, 0) && !/da compilare/i.test(cell(r, 0))) issues.push(`Timeline_${duration}min: row "${cell(r, 0).slice(0, 24)}…" has no readable time — skipped.`)
+      if (cell(r, 0) && !/da compilare/i.test(cell(r, 0))) issues.push(`Timeline_${duration}min: riga "${cell(r, 0).slice(0, 24)}…" senza un tempo leggibile: ignorata.`)
       continue
     }
     const chRaw = cell(r, 2).toUpperCase()
@@ -663,7 +663,7 @@ function parseUnifiedTimelines(rows: unknown[][], ds: Partial<Datasheet>, issues
   for (const d of DURATIONS) {
     const list = byDur[d]
     if (list?.length) ds.timelines[d] = list.sort((a, b) => a.timeSec - b.timeSec)
-    else issues.push(`TIMELINE has no ${d}-min rows — that version imports but can't render until they exist.`)
+    else issues.push(`TIMELINE non ha righe da ${d} min: la versione si importa ma non si può renderizzare finché non ci sono.`)
   }
 }
 
@@ -702,7 +702,7 @@ function parseSingleTabSections(secs: SingleTabSections): DatasheetParseResult {
   // PROTOCOLLO: key/value (no header requirement — tolerate one)
   const proto = (secs['PROTOCOLLO'] ?? []).filter((r) => !/^campo$/i.test(norm(r[0])))
   parseProtocollo(fakeWb('Protocollo', [['Campo', 'Valore'], ...proto]), ds, issues)
-  if (!ds.code) return { error: 'No protocol code in the ### PROTOCOLLO block (expected e.g. "GL-ANX 1.6").' }
+  if (!ds.code) return { error: 'Nessun codice protocollo nel blocco ### PROTOCOLLO (atteso ad es. "GL-ANX 1.6").' }
   const kv = new Map(proto.map((r) => [norm(r[0]).toLowerCase(), norm(r[1])]))
   ds.defaultVoice = kv.get('voce predefinita') || undefined
   ds.defaultVoiceM = kv.get('voce [m] predefinita') || kv.get('voce m predefinita') || undefined
@@ -735,7 +735,7 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
     const { read } = await loadXlsx()
     wb = read(bytes, { type: 'array', cellDates: true })
   } catch (e) {
-    return { error: `Could not read the workbook: ${(e as Error).message}` }
+    return { error: `Impossibile leggere la cartella di lavoro: ${(e as Error).message}` }
   }
   // SINGLE-TAB format first: any sheet with `### SECTION` markers
   const singleTab = findSingleTab(wb)
@@ -743,13 +743,13 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
 
   const missing = REQUIRED_SHEETS.filter((s) => !wb.Sheets[s])
   if (missing.length) {
-    return { error: `Not a Protocol Datasheet — missing sheet${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Expected either the multi-sheet workbook (Protocollo, Invarianti, Versioni, Fasi, Timeline_*, Affermazioni, MappaMusicale) or the single-tab "Scheda Unica" format with ### section markers.` }
+    return { error: `Non è un Protocol Datasheet: ${missing.length > 1 ? 'mancano i fogli' : 'manca il foglio'} ${missing.join(', ')}. Atteso il workbook a più fogli (Protocollo, Invarianti, Versioni, Fasi, Timeline_*, Affermazioni, MappaMusicale) o il formato a foglio unico "Scheda Unica" con le sezioni ###.` }
   }
 
   const issues: string[] = []
   const ds: Partial<Datasheet> = { issues }
   parseProtocollo(wb, ds, issues)
-  if (!ds.code) return { error: 'No protocol code found in the Protocollo sheet (expected e.g. "GL-ANX 1.3").' }
+  if (!ds.code) return { error: 'Nessun codice protocollo nel foglio Protocollo (atteso ad es. "GL-ANX 1.3").' }
   parseInvarianti(wb, ds)
   parseVersioni(wb, ds, issues)
   parseFasi(wb, ds, issues)
@@ -762,7 +762,7 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
   for (const d of DURATIONS) {
     const tl = parseTimeline(wb.Sheets[`Timeline_${d}min`], d, issues)
     if (tl) ds.timelines[d] = tl
-    else issues.push(`Timeline_${d}min is not compiled yet — the ${d}-min version imports with phases and parameters, but can't render until its timeline rows exist.`)
+    else issues.push(`Timeline_${d}min non è ancora compilata: la versione da ${d} min si importa con fasi e parametri, ma non si può renderizzare finché non ci sono le righe della timeline.`)
   }
 
   return finishValidation(ds as Datasheet, issues)
@@ -771,31 +771,31 @@ export async function parseDatasheet(bytes: ArrayBuffer): Promise<DatasheetParse
 /** Shared validation for both workbook formats. */
 function finishValidation(ds: Datasheet, issues: string[]): DatasheetParseResult {
   const versions = ds.versions ?? []
-  if (!versions.length) return { error: 'The VERSIONI section has no 6/12/24-minute columns — nothing to import.' }
+  if (!versions.length) return { error: 'La sezione VERSIONI non ha colonne da 6/12/24 minuti: niente da importare.' }
   const phases = ds.phases ?? []
   const affById = new Map((ds.affirmations ?? []).map((a) => [a.id, a]))
   for (const v of versions) {
     const ph = phases.filter((p) => p.duration === v.duration)
-    if (!ph.length) issues.push(`${v.duration}-min: no phases in the FASI section.`)
+    if (!ph.length) issues.push(`${v.duration} min: nessuna fase nella sezione FASI.`)
     else {
       const last = ph[ph.length - 1]
-      if (Math.abs(last.endSec - v.duration * 60) > 60) issues.push(`${v.duration}-min: last phase ends at ${Math.round(last.endSec / 60)} min — check the FASI section.`)
+      if (Math.abs(last.endSec - v.duration * 60) > 60) issues.push(`${v.duration} min: l’ultima fase finisce a ${Math.round(last.endSec / 60)} min; controlla la sezione FASI.`)
     }
     for (const id of v.recSubset) {
-      if (!affById.has(id)) issues.push(`${v.duration}-min sub-set references ${id}, which is not in AFFERMAZIONI.`)
+      if (!affById.has(id)) issues.push(`Il sottoinsieme da ${v.duration} min richiama ${id}, che non è in AFFERMAZIONI.`)
     }
     const tl = ds.timelines?.[v.duration]
     if (tl) {
       for (const row of tl) {
-        if (row.rec && !affById.has(row.rec.toUpperCase())) issues.push(`Timeline ${v.duration}min at ${fmtTime(row.timeSec)}: unknown ${row.rec}.`)
-        if ((row.kind === 'VOCE' || row.kind === 'LOOP') && !row.text) issues.push(`Timeline ${v.duration}min at ${fmtTime(row.timeSec)}: ${row.kind} row without text.`)
+        if (row.rec && !affById.has(row.rec.toUpperCase())) issues.push(`Timeline ${v.duration}min a ${fmtTime(row.timeSec)}: ${row.rec} sconosciuto.`)
+        if ((row.kind === 'VOCE' || row.kind === 'LOOP') && !row.text) issues.push(`Timeline ${v.duration}min a ${fmtTime(row.timeSec)}: riga ${row.kind} senza testo.`)
       }
       const maxT = tl[tl.length - 1].timeSec
-      if (Math.abs(maxT - v.duration * 60) > 90) issues.push(`Timeline ${v.duration}min ends at ${fmtTime(maxT)} — expected ~${v.duration}:00.`)
+      if (Math.abs(maxT - v.duration * 60) > 90) issues.push(`Timeline ${v.duration}min finisce a ${fmtTime(maxT)}: atteso ~${v.duration}:00.`)
     }
   }
-  if (!(ds.affirmations ?? []).length) issues.push('AFFERMAZIONI is empty — affirmation loops will be silent.')
-  if (!(ds.musicMap ?? []).length) issues.push('MUSICA section is empty — fine: it is metadata only; the sound comes from the Asset Library f1–f6 mapping.')
+  if (!(ds.affirmations ?? []).length) issues.push('AFFERMAZIONI è vuoto: i loop di affermazioni resteranno muti.')
+  if (!(ds.musicMap ?? []).length) issues.push('La sezione MUSICA è vuota: va bene, sono solo metadati; il suono viene dalla mappatura f1–f6 della Libreria audio.')
   return { datasheet: ds }
 }
 

@@ -31,6 +31,7 @@
 
 import { useRef, useState } from 'react'
 import { useLegal } from '../legal/LegalContext'
+import { HelpNowButton } from '../legal/HelpNow'
 import { legalDoc, blocksFor } from '../legal/corpus'
 import { LEGAL_VERSION } from '../legal/types'
 import { useI18n } from '../i18n'
@@ -59,6 +60,8 @@ const CRP_REGIONS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
 const ORDINE_REGIONS = ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Emilia-Romagna', 'Friuli Venezia Giulia', 'Lazio', 'Liguria', 'Lombardia', 'Marche', 'Molise', 'Piemonte', 'Puglia', 'Sardegna', 'Sicilia', 'Toscana', 'Trentino-Alto Adige', 'Umbria', "Valle d'Aosta", 'Veneto']
 
 export function TherapistOnboarding({ account, cred, onSubmit, onCredChanged, onSign, onFinish }: OnboardingProps) {
+  // above every return: a hook after one would change the hook count
+  const legal = useLegal()
   /* Registration is asked for once; after that the SERVER decides whether this
      flow continues. A therapist who has submitted sits on TH-ON-2 until a
      reviewer moves them, and no amount of clicking in here changes that.
@@ -70,11 +73,30 @@ export function TherapistOnboarding({ account, cred, onSubmit, onCredChanged, on
      browser they opened, and the workspace behind it stayed shut. The local
      `submittedAt` is a UI breadcrumb; the row's status is the fact. */
   if (cred.status !== 'approved' && !account.submittedAt && !cred.documents.length) {
-    return <Registration account={account} cred={cred} onSubmit={onSubmit} onCredChanged={onCredChanged} />
+    return <WithHelp><Registration account={account} cred={cred} onSubmit={onSubmit} onCredChanged={onCredChanged} /></WithHelp>
   }
-  if (cred.status !== 'approved') return <VerificationPending account={account} cred={cred} onCredChanged={onCredChanged} />
-  if (!account.termsSignedAt) return <Terms account={account} onSign={onSign} />
-  return <SandboxIntro onFinish={onFinish} />
+  if (cred.status !== 'approved') return <WithHelp><VerificationPending account={account} cred={cred} onCredChanged={onCredChanged} /></WithHelp>
+  /* The Terms screen is owed until the SERVER has this version accepted —
+     the same test the gate in WorkspaceApp applies. Keying it on the local
+     `termsSignedAt` alone was a loop: every therapist who signed before the
+     acceptance was recorded server-side (all of them, the day versioned terms
+     shipped, and anyone after a new version) skipped the Terms, landed on the
+     sandbox intro, and was sent back to it by the gate on every click. */
+  if (!account.termsSignedAt || (legal.loaded && !legal.accepted('professional'))) {
+    return <WithHelp><Terms account={account} onSign={onSign} /></WithHelp>
+  }
+  return <WithHelp><SandboxIntro onFinish={onFinish} /></WithHelp>
+}
+
+/** Help now on the first-time screens too (CRS-01): every screen, not only
+    the ones behind the gate. */
+export function WithHelp({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-authwrap">
+      <div className="w-auth__help"><HelpNowButton variant="inline" /></div>
+      {children}
+    </div>
+  )
 }
 
 /* ------------------------------------------------------------ TH-ON-1 --- */

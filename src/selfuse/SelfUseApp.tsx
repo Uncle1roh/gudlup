@@ -86,10 +86,19 @@ interface SelfUseAppProps {
 export function SelfUseApp(props: SelfUseAppProps) {
   return (
     <LiveCatalogProvider>
-      <SelfUseSurface {...props} />
       {/* One tap from every screen — the first run, the player, a call, every
-          tab (CRS-01). Rendered once, here, above whatever the surface shows. */}
-      <HelpNowButton variant="floating" className="su-studio" />
+          tab (CRS-01). It used to float over the surface as a direct child of
+          #root, where `#root > * { width: 100% }` stretched it across the
+          screen and it sat on top of the primary buttons. It is now a slim
+          bar ABOVE whatever the surface shows, in the flow, so it can never
+          cover a control; on a desk the tab bar is at the top and carries it
+          instead (see `.su-shell` in legal.css). */}
+      <div className="su-shell">
+        <div className="su-shell__bar su-studio">
+          <HelpNowButton variant="bar" />
+        </div>
+        <SelfUseSurface {...props} />
+      </div>
     </LiveCatalogProvider>
   )
 }
@@ -112,6 +121,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 
   const [tab, setTab] = useState<Tab>('home')
+  /* Tapping the tab you are already on takes that tab back to its root, the
+     way a phone's tab bar does: the Therapist tab left on "Find a therapist"
+     used to stay there however often its tab was tapped. The counter keys the
+     tab's view, so a re-tap remounts it at its first screen (and at the top). */
+  const [tabReset, setTabReset] = useState(0)
+  const selectTab = (id: Tab) => {
+    if (id === tab) setTabReset((n) => n + 1)
+    else setTab(id)
+  }
   /* The Partner tab is for admin accounts only while the offers are being
      put together — an admin reaches it through the console's preview. Any
      other account never sees the tab, and cannot land on it. */
@@ -273,7 +291,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      accepted an OLDER version is (LEG-09). The local stamp is only a mirror
      for the device. Until the legal context has answered, nothing is shown
      rather than a screen that might be wrong. */
-  const termsAccepted = legal.accepted('terms') || (!legal.loaded && !!state.consents.termsAt)
+  /* An admin's preview runs on the mock data layer, which has no acceptance
+     row for anybody, so the server-side check could never pass and the
+     walkthrough opened on the legal first run instead of the library. The
+     preview's seeded state carries its own `termsAt`; in preview (and only
+     there — `previewing()` is an admin-only, per-tab flag) that stamp is
+     enough. A real first-time person still sees the first run. */
+  const termsAccepted = legal.accepted('terms')
+    || (!legal.loaded && !!state.consents.termsAt)
+    || (previewing() && role === 'admin' && !!state.consents.termsAt)
   if (legal.loaded && legal.profile && legal.accepted('terms') && !state.consents.termsAt) {
     update((s) => ({ ...s, consents: { ...s.consents, termsAt: Date.now() } }))
   }
@@ -473,12 +499,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       sessions: catalog.sessions,
       pathway: findPathway(catalog.pathways, state.pathway?.id),
       personName: accountName(user?.email),
+      t,
     }).save(`good-loop-${dayKey(Date.now())}.pdf`)
   }
 
   function exportTherapy() {
     if (!therapy.link) return
-    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email))
+    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email), t)
       .save(`good-loop-therapy-${dayKey(Date.now())}.pdf`)
   }
 
@@ -530,7 +557,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
   return (
     <div className="app-frame app-frame--tabs su-studio">
-      <div className="tabview">
+      <div className="tabview" key={`${tab}:${tabReset}`}>
         {tab === 'home' && (
           <Explore
             name={displayName(user?.email)}
@@ -614,11 +641,16 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         </label>
 
         {tabs.map((tb) => (
-          <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => setTab(tb.id)}>
+          <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => selectTab(tb.id)} aria-current={tab === tb.id ? 'page' : undefined}>
             <span className="tabbar__icon"><Icon name={tb.icon} /></span>
             <span className="tabbar__label">{t(tb.label)}</span>
           </button>
         ))}
+
+        {/* The desk layout's copy of Help now: the top bar is where the
+            shell's strip would otherwise stand, so it moves in here. Hidden
+            below 1100px, where the strip above the frame carries it. */}
+        <HelpNowButton variant="bar" className="tabbar__help" />
       </nav>
 
       {onDemoToggle && (

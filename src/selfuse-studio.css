@@ -829,13 +829,25 @@ body:has(.su-studio) { background: var(--su-void); }
    `overflow: hidden` matters here: the frame clips the 600px bloom for every
    other screen, and this one has no frame to clip it. */
 
+/* The door is its OWN scroll container. `body:has(.su-studio)` stops the page
+   scrolling (the app frame scrolls inside itself), and the door has no frame
+   — so once sign-up grew past a phone's height (date of birth, country,
+   promo code) the Create account button sat below the fold with no way to
+   reach it. Scrolling here still clips the bloom. `align-items: start` plus
+   the card's auto block margins keep it centred when it fits and pinned to
+   the top when it does not; plain centring would push the top off-screen
+   where no scroll can reach it. */
 .su-studio.auth {
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--su-ground);
-  min-height: 100dvh;
+  height: 100dvh;
+  min-height: 0;
+  align-items: start;
 }
 .su-studio.auth .auth__card {
+  margin-block: auto;
   position: relative;
   z-index: 1;
   background: var(--su-raised);
@@ -880,6 +892,29 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio.auth .auth__legal,
 .su-studio.auth .auth__switch { color: var(--su-faint); }
 .su-studio.auth a { color: var(--su-accent-2); }
+
+/* The language, chosen at the door: a small select at the end of the logo
+   row. Light on the clinician and employer doors, the surface's own well on
+   the Self Use door. */
+.auth .auth__brand { align-items: center; justify-content: space-between; gap: 12px; }
+.auth .auth__lang {
+  flex: none;
+  max-width: 50%;
+  font: inherit;
+  font-size: 15px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(16, 38, 32, 0.18));
+  background: #fff;
+  color: var(--ink, #11241e);
+  cursor: pointer;
+}
+.auth .auth__lang:focus-visible { outline: 3px solid var(--aura, #1fbf94); outline-offset: 2px; }
+.su-studio.auth .auth__lang {
+  background: var(--su-well);
+  border-color: var(--su-hair-2);
+  color: var(--su-fg);
+}
 
 /* the loading beat before the door: the same ground, and the spinner in
    emerald, so there is no white flash on the way in */
@@ -1759,7 +1794,35 @@ body:has(.su-studio) { overflow: hidden; }
   }
   .su-studio .thr-active .thr-hero .thr-card__id { min-width: 0; }
   .su-studio .thr-active .thr-hero__acts { flex-direction: row; gap: 10px; }
-  .su-studio .thr-active .thr-hero__acts .btn { width: auto; min-width: 176px; }
+  .su-studio .thr-active .thr-hero__acts .btn { width: auto; min-width: 176px; white-space: nowrap; }
+  /* Every child has a place. Left to auto-placement, the consent block took
+     the actions' column, the actions dropped to a narrow first column (their
+     labels on two lines) and "another professional?" landed on top of the
+     Book button and took its clicks. The consent block and the change link
+     each get a full row under the who · when · actions line. */
+  .su-studio .thr-active .thr-hero {
+    grid-template-areas:
+      'id when acts'
+      'consent consent consent'
+      'change change change';
+  }
+  .su-studio .thr-active .thr-hero:not(:has(> .thr-consent)) {
+    grid-template-areas:
+      'id when acts'
+      'change change change';
+  }
+  .su-studio .thr-active .thr-hero > .thr-card__id { grid-area: id; }
+  .su-studio .thr-active .thr-hero > .thr-hero__when { grid-area: when; min-width: 0; }
+  .su-studio .thr-active .thr-hero > .thr-hero__acts { grid-area: acts; justify-self: end; }
+  .su-studio .thr-active .thr-hero > .thr-consent {
+    grid-area: consent;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+  }
+  .su-studio .thr-active .thr-hero > .thr-consent .btn { width: auto; flex: none; white-space: nowrap; }
+  .su-studio .thr-active .thr-hero > .legal-link { grid-area: change; justify-self: start; }
   /* Two lines of type, so it aligns to the identity beside it rather than to
      the middle of a button. */
   .su-studio .thr-active .thr-hero__note { margin-top: 4px; max-width: 34ch; }
@@ -2111,4 +2174,40 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
    width; the labels step down rather than overflow. */
 @media (max-width: 520px) {
   .su-studio .tabbar--5 .tabbar__label { font-size: 12.5px; }
+}
+
+/* ------------------------------------------------------ contrast (AA) --
+
+   The tab bar's resting labels were `--su-faint` under the base sheet's
+   `opacity: 0.6` — about 2.4:1 on paper and 2.8:1 at night. They take the
+   muted ink at full opacity now (5.7:1 on paper, 7.0:1 at night); the lit
+   tab keeps the cream. And the booking slots were the base sheet's white
+   pill with the surface's pale ink on it in the dark theme: they are raised
+   ground with the full foreground now, and a chosen slot is the one filled
+   action, in both themes. */
+.su-studio .tabbar__btn { opacity: 1; color: var(--su-muted); }
+.su-studio .tabbar__btn.is-on { color: var(--su-cream); }
+.su-studio .tabbar__btn .tabbar__icon { filter: none; }
+.su-studio .slot {
+  background: var(--su-raised);
+  color: var(--su-fg);
+  border: 1px solid var(--su-hair-2);
+}
+.su-studio .slot:hover { background: var(--su-well); }
+.su-studio .slot[aria-pressed='true'] {
+  background: var(--su-cream);
+  border-color: var(--su-cream);
+  color: var(--su-on-accent);
+}
+
+/* The floating "?" (help me choose) stands in the right-hand gutter at a desk,
+   and a rail header's ‹ › arrows sat in the same column, so a rail scrolled
+   to the foot of the screen had its "›" under the button. The rail headers
+   keep that column clear wherever the arrows are shown (a fine pointer): the
+   button is 52px wide, 16px from the edge (28px at a desk). */
+@media (hover: hover) and (pointer: fine) {
+  .su-studio .cat-rail__head { padding-right: calc(16px + 52px + 12px - var(--su-inset)); }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .su-studio .cat-rail__head { padding-right: calc(28px + 52px + 12px - var(--su-inset)); }
 }

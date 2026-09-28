@@ -19,7 +19,7 @@
    the audio is named and offered, not whether the practice is followed.
    ============================================================================ */
 
-import type { Duration, Protocol, SessionPhase } from '../types/domain'
+import type { Duration, Protocol, ProtocolI18n, SessionPhase } from '../types/domain'
 
 /** A row of the browse screen. */
 export type LibraryCategory = 'before' | 'calm' | 'reset' | 'sleep' | 'focus' | 'energy'
@@ -108,6 +108,94 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
   { slug: 'fiducia', title: 'Un po’ più di fiducia', blurb: 'Per quando non ti senti all’altezza.', duration: 12, meta: { category: 'energy', emoji: '🔥', tags: ['resilience', 'depression'], order: 3 } },
 ]
 
+/* The starter set in the other two interface languages. Italian above stays
+   the source text (what the admin console edits and what the record keeps);
+   this is the catalogue's own `i18n` overlay on each entry, which
+   `patientTitle()` / `patientBlurb()` read in the person's language. */
+const LIBRARY_SEED_I18N: Record<string, { en: [string, string]; 'pt-BR': [string, string] }> = {
+  volo: {
+    en: ['20 minutes before a flight', 'For your headphones at the departure gate.'],
+    'pt-BR': ['20 minutos antes de um voo', 'Para colocar nos fones na sala de embarque.'],
+  },
+  riunione: {
+    en: ['Getting ready for a difficult meeting', 'Ten minutes to arrive with a clear head.'],
+    'pt-BR': ['Preparando-se para uma reunião difícil', 'Dez minutos para chegar com a cabeça leve.'],
+  },
+  colloquio: {
+    en: ['Just before an interview', 'To show up as you are, without the knot in your stomach.'],
+    'pt-BR': ['Pouco antes de uma entrevista', 'Para se apresentar como você é, sem o nó no estômago.'],
+  },
+  esame: {
+    en: ['The half hour before an exam', 'The revision is done: now what you need is calm.'],
+    'pt-BR': ['A meia hora antes de uma prova', 'A revisão acabou: agora o que falta é calma.'],
+  },
+  conversazione: {
+    en: ['Before a difficult conversation', 'Six minutes to say what you want to say.'],
+    'pt-BR': ['Antes de uma conversa difícil', 'Seis minutos para dizer o que você quer dizer.'],
+  },
+  respiro: {
+    en: ['Back to the breath', 'The shortest one: for when you need it now.'],
+    'pt-BR': ['Voltar à respiração', 'A mais curta: para quando você precisa agora.'],
+  },
+  radicamento: {
+    en: ['Finding solid ground', 'For when everything seems to be moving too much.'],
+    'pt-BR': ['Sentir o chão sob os pés', 'Para quando tudo parece se mexer demais.'],
+  },
+  onda: {
+    en: ['Letting the wave pass', 'Not pushing it away: watching it come and go.'],
+    'pt-BR': ['Deixar a onda passar', 'Sem empurrá-la: vê-la chegar e ir embora.'],
+  },
+  pausa: {
+    en: ['A real break, in six minutes', 'More use than a third coffee.'],
+    'pt-BR': ['Uma pausa de verdade, em seis minutos', 'Mais útil que o terceiro café.'],
+  },
+  finelavoro: {
+    en: ['Closing the working day', 'The line between work and the rest of the evening.'],
+    'pt-BR': ['Fechar o dia de trabalho', 'O limite entre o trabalho e o resto da noite.'],
+  },
+  testapiena: {
+    en: ['When your head is too full', 'Putting a few thoughts down before picking them up again.'],
+    'pt-BR': ['Quando a cabeça está cheia demais', 'Deixar alguns pensamentos de lado antes de retomá-los.'],
+  },
+  sonno: {
+    en: ['Getting ready to sleep', 'To start already in bed, lights off.'],
+    'pt-BR': ['Preparar-se para dormir', 'Para começar já na cama, com a luz apagada.'],
+  },
+  nottesveglia: {
+    en: ['Awake in the middle of the night', 'For three in the morning, without switching anything on.'],
+    'pt-BR': ['Acordado no meio da noite', 'Para as três da manhã, sem acender nada.'],
+  },
+  concentrazione: {
+    en: ['Half an hour of focus', 'A background to work to, not to fall asleep to.'],
+    'pt-BR': ['Meia hora de concentração', 'Um fundo para trabalhar, não para adormecer.'],
+  },
+  mattina: {
+    en: ['Starting the day calmly', 'Six minutes before everything else starts.'],
+    'pt-BR': ['Começar o dia com calma', 'Seis minutos antes de todo o resto começar.'],
+  },
+  ricarica: {
+    en: ['Recharging your batteries', 'The longest one: for when you can be left undisturbed.'],
+    'pt-BR': ['Recarregar as baterias', 'A mais longa: para quando ninguém vai te incomodar.'],
+  },
+  movimento: {
+    en: ['Getting going again', 'For the days when even getting up feels heavy.'],
+    'pt-BR': ['Voltar a se mexer', 'Para os dias em que até levantar pesa.'],
+  },
+  fiducia: {
+    en: ['A little more confidence', 'For when you do not feel up to it.'],
+    'pt-BR': ['Um pouco mais de confiança', 'Para quando você não se sente à altura.'],
+  },
+}
+
+function seedI18n(slug: string): ProtocolI18n | undefined {
+  const tr = LIBRARY_SEED_I18N[slug]
+  if (!tr) return undefined
+  return {
+    en: { title: tr.en[0], blurb: tr.en[1] },
+    'pt-BR': { title: tr['pt-BR'][0], blurb: tr['pt-BR'][1] },
+  }
+}
+
 export function librarySeedCode(slug: string): string {
   return `${LIBRARY_PREFIX} ${slug}`
 }
@@ -119,6 +207,7 @@ export function libraryProtocols(): (Protocol & { library: LibraryMeta })[] {
     family: 'GL-LIB' as const,
     title: s.title,
     blurb: s.blurb,
+    i18n: seedI18n(s.slug),
     phases: LIBRARY_PHASES,
     versions: [{ duration: s.duration }],
     library: s.meta,

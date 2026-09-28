@@ -36,6 +36,16 @@ function monthName(ms: number): string {
   return localeDate(ms, { month: 'long', year: 'numeric' })
 }
 
+/** The interface's `t`, passed in: this module has no hook. Identity when
+    omitted, so the English source still builds. */
+export type Translate = (key: string, vars?: Record<string, string | number>) => string
+const same: Translate = (k, v) => {
+  if (!v) return k
+  let out = k
+  for (const [n, x] of Object.entries(v)) out = out.split(`{${n}}`).join(String(x))
+  return out
+}
+
 function header(name: string) {
   return (d: PdfDoc) => {
     d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
@@ -54,6 +64,7 @@ interface MonthlyOptions {
   personName: string
   /** Any timestamp inside the month to report on. */
   month?: number
+  t?: Translate
 }
 
 export function buildMonthlyReportPdf({
@@ -62,6 +73,7 @@ export function buildMonthlyReportPdf({
   pathway,
   personName,
   month = Date.now(),
+  t = same,
 }: MonthlyOptions): PdfDoc {
   const start = new Date(new Date(month).getFullYear(), new Date(month).getMonth(), 1).getTime()
   const end = new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 1).getTime()
@@ -75,28 +87,27 @@ export function buildMonthlyReportPdf({
   const doc = new PdfDoc({
     title: `Good Loop — ${label}`,
     author: 'Good Loop',
-    subject: 'Personal wellbeing summary',
-    footer: (page, total) => `Your Good Loop summary  ·  ${label}  ·  page ${page} of ${total}`,
-    header: header('Monthly summary'),
+    subject: t('Personal wellbeing summary'),
+    footer: (page, total) => t('Your Good Loop summary  ·  {label}  ·  page {page} of {total}', { label, page, total }),
+    header: header(t('Monthly summary')),
   })
 
   doc.heading(label, 20)
   doc.paragraph(personName, 12, 0.2, 'bold')
-  doc.paragraph(`Generated ${fmtDate(Date.now())}`, 9.5, 0.45)
+  doc.paragraph(t('Generated {date}', { date: fmtDate(Date.now()) }), 9.5, 0.45)
   doc.space(4)
   doc.note(
-    'This is your own record of what you did and how you rated your weeks. It is a wellbeing ' +
-      'summary, not a clinical assessment, and no one else receives it.',
+    t('This is your own record of what you did and how you rated your weeks. It is a wellbeing summary, not a clinical assessment, and no one else receives it.'),
   )
 
   /* ---- sessions ---- */
-  doc.section('Sessions')
+  doc.section(t('Sessions'))
   const minutes = logs.reduce((n, l) => n + l.duration, 0)
-  doc.keyValue('Sessions completed', String(logs.length))
-  doc.keyValue('Total minutes', String(minutes))
-  doc.keyValue('Current streak', `${streakDays(state.logs)} day(s)`)
+  doc.keyValue(t('Sessions completed'), String(logs.length))
+  doc.keyValue(t('Total minutes'), String(minutes))
+  doc.keyValue(t('Current streak'), t('{n} day(s)', { n: streakDays(state.logs) }))
   if (pathway) {
-    doc.keyValue('Pathway', pathway.name)
+    doc.keyValue(t('Pathway'), t(pathway.name))
   }
 
   if (logs.length) {
@@ -104,60 +115,60 @@ export function buildMonthlyReportPdf({
     const nameOf = new Map(sessions.map((s) => [s.slug, s.name]))
     doc.table(
       [
-        { header: 'Date', width: 1.2 },
-        { header: 'Session', width: 3 },
-        { header: 'Length', width: 1, align: 'right' },
+        { header: t('Date'), width: 1.2 },
+        { header: t('Session'), width: 3 },
+        { header: t('Length'), width: 1, align: 'right' },
       ],
       [...logs]
         .sort((a, b) => a.at - b.at)
-        .map((l) => [fmtDate(l.at), nameOf.get(l.slug) ?? l.slug, `${l.duration} min`]),
+        .map((l) => [fmtDate(l.at), t(nameOf.get(l.slug) ?? l.slug), `${l.duration} min`]),
     )
   } else {
-    doc.paragraph('No sessions this month.', 9.5, 0.45)
+    doc.paragraph(t('No sessions this month.'), 9.5, 0.45)
   }
 
   /* ---- weekly check-in ---- */
-  doc.section('Weekly check-in')
+  doc.section(t('Weekly check-in'))
   if (!checks.length) {
-    doc.paragraph('No check-in completed this month.', 9.5, 0.45)
+    doc.paragraph(t('No check-in completed this month.'), 9.5, 0.45)
   } else {
     const latest = checks[checks.length - 1]
     const earlier = checks.length > 1 ? checks[0] : null
     doc.table(
       [
-        { header: 'Dimension', width: 2 },
-        { header: 'Latest', width: 1, align: 'right' },
-        { header: 'Direction', width: 1.6 },
+        { header: t('Dimension'), width: 2 },
+        { header: t('Latest'), width: 1, align: 'right' },
+        { header: t('Direction'), width: 1.6 },
       ],
       GL_CHECK_QUESTIONS.map((q) => {
         const cur = latest.scores[q.id as GlDimension]
         const before = earlier?.scores[q.id as GlDimension] ?? null
         const tr = trend(cur, before, 0.01, 1)
-        return [q.label, `${cur} / 5`, tr ? tr.label : '—']
+        return [t(q.label), `${cur} / 5`, tr ? t(tr.label) : '—']
       }),
     )
     const avg = glCheckAverage(latest)
-    if (avg != null) doc.keyValue('Average', `${avg} / 5`)
+    if (avg != null) doc.keyValue(t('Average'), `${avg} / 5`)
   }
 
   /* The WHO-5 section is gone: no validated instrument is scored back to a
      person in self-guided use (MN-05). */
 
   /* ---- mood ---- */
-  doc.section('Daily mood')
+  doc.section(t('Daily mood'))
   if (!moods.length) {
-    doc.paragraph('No mood entries this month.', 9.5, 0.45)
+    doc.paragraph(t('No mood entries this month.'), 9.5, 0.45)
   } else {
     const counts = new Map<number, number>()
     for (const m of moods) counts.set(m.level, (counts.get(m.level) ?? 0) + 1)
     doc.table(
       [
-        { header: 'How the day felt', width: 2 },
-        { header: 'Days', width: 1, align: 'right' },
+        { header: t('How the day felt'), width: 2 },
+        { header: t('Days'), width: 1, align: 'right' },
       ],
-      MOOD_LEVELS.map((l) => [l.label, String(counts.get(l.value) ?? 0)]),
+      MOOD_LEVELS.map((l) => [t(l.label), String(counts.get(l.value) ?? 0)]),
     )
-    doc.keyValue('Days recorded', String(moods.length))
+    doc.keyValue(t('Days recorded'), String(moods.length))
   }
 
   return doc
@@ -165,64 +176,62 @@ export function buildMonthlyReportPdf({
 
 /* ------------------------------------------------------------- therapy --- */
 
-export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSession[], personName: string): PdfDoc {
+export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSession[], personName: string, t: Translate = same): PdfDoc {
   const doc = new PdfDoc({
-    title: `Therapy summary — ${personName}`,
+    title: `${t('Therapy summary')} — ${personName}`,
     author: 'Good Loop',
-    subject: 'Therapy summary',
+    subject: t('Therapy summary'),
     footer: (page, total) =>
-      `Therapy summary  ·  ${personName}  ·  ${link.therapist.name}  ·  page ${page} of ${total}`,
-    header: header('Therapy summary'),
+      t('Therapy summary  ·  {person}  ·  {therapist}  ·  page {page} of {total}', { person: personName, therapist: link.therapist.name, page, total }),
+    header: header(t('Therapy summary')),
   })
 
   const nameOf = new Map(sessions.map((s) => [s.slug, s.name]))
 
-  doc.heading('Therapy summary', 20)
+  doc.heading(t('Therapy summary'), 20)
   doc.paragraph(personName, 12, 0.2, 'bold')
-  doc.paragraph(`With ${link.therapist.name} · generated ${fmtDate(Date.now())}`, 9.5, 0.45)
+  doc.paragraph(t('With {name} · generated {date}', { name: link.therapist.name, date: fmtDate(Date.now()) }), 9.5, 0.45)
   doc.space(4)
   doc.note(
-    'This summary is yours. The before-and-after check is your own, one tap either side of a ' +
-      'session. The clinical scales were administered by your therapist - they are clinical ' +
-      'measures and are best read together with them, not alone.',
+    t('This summary is yours. The before-and-after check is your own, one tap either side of a session. The clinical scales were administered by your therapist - they are clinical measures and are best read together with them, not alone.'),
   )
 
-  doc.section('Overview')
-  doc.keyValue('Therapist', link.therapist.name)
-  doc.keyValue('Sessions', String(link.sessions.length))
-  doc.keyValue('Weeks in therapy', String(link.weeksInTherapy))
-  if (link.nextSessionAt) doc.keyValue('Next session', fmtDate(link.nextSessionAt))
+  doc.section(t('Overview'))
+  doc.keyValue(t('Therapist'), link.therapist.name)
+  doc.keyValue(t('Sessions'), String(link.sessions.length))
+  doc.keyValue(t('Weeks in therapy'), String(link.weeksInTherapy))
+  if (link.nextSessionAt) doc.keyValue(t('Next session'), fmtDate(link.nextSessionAt))
 
-  doc.section('Sessions')
+  doc.section(t('Sessions'))
   if (!link.sessions.length) {
-    doc.paragraph('No sessions recorded yet.', 9.5, 0.45)
+    doc.paragraph(t('No sessions recorded yet.'), 9.5, 0.45)
   } else {
     doc.table(
       [
-        { header: 'Date', width: 1.2 },
-        { header: 'Session', width: 2.6 },
-        { header: 'Length', width: 1, align: 'right' },
+        { header: t('Date'), width: 1.2 },
+        { header: t('Session'), width: 2.6 },
+        { header: t('Length'), width: 1, align: 'right' },
       ],
       [...link.sessions]
         .sort((a, b) => a.at - b.at)
         .map((s) => [
           fmtDate(s.at),
-          s.slug ? (nameOf.get(s.slug) ?? 'Session') : 'Video session',
+          s.slug ? t(nameOf.get(s.slug) ?? 'Session') : t('Video session'),
           `${s.minutes} min`,
         ]),
     )
   }
 
-  doc.section('How you felt, before and after')
+  doc.section(t('How you felt, before and after'))
   if (!link.vas.length) {
-    doc.paragraph('Not recorded.', 9.5, 0.45)
+    doc.paragraph(t('Not recorded.'), 9.5, 0.45)
   } else {
     doc.table(
       [
-        { header: 'Date', width: 1.4 },
-        { header: 'Before', width: 1, align: 'right' },
-        { header: 'After', width: 1, align: 'right' },
-        { header: 'Change', width: 1, align: 'right' },
+        { header: t('Date'), width: 1.4 },
+        { header: t('Before'), width: 1, align: 'right' },
+        { header: t('After'), width: 1, align: 'right' },
+        { header: t('Change'), width: 1, align: 'right' },
       ],
       link.vas.map((v) => {
         const delta = v.post - v.pre
@@ -233,9 +242,7 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
        never collected through the app. They are one tap in the app now, before
        and after each session, so the sentence describing them changed too. */
     doc.paragraph(
-      'One tap before each session and one after, on a five-point scale. ' +
-        'A positive change means you finished the session feeling better than you started it. ' +
-        'Your therapist sees the same figures.',
+      t('One tap before each session and one after, on a five-point scale. A positive change means you finished the session feeling better than you started it. Your therapist sees the same figures.'),
       8.5,
       0.45,
     )
@@ -244,16 +251,16 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
   /* Questionnaire results appear here only because a therapist administers
      them and goes through them with the person. They are never shown beside a
      questionnaire at the moment it is answered — see `Assessment.tsx`. */
-  doc.section('Clinical scales')
+  doc.section(t('Clinical scales'))
   if (!link.scores.length) {
-    doc.paragraph('None administered yet.', 9.5, 0.45)
+    doc.paragraph(t('None administered yet.'), 9.5, 0.45)
   } else {
     doc.table(
       [
-        { header: 'Instrument', width: 1.6 },
-        { header: 'First', width: 1, align: 'right' },
-        { header: 'Latest', width: 1, align: 'right' },
-        { header: 'Measured', width: 1.6 },
+        { header: t('Instrument'), width: 1.6 },
+        { header: t('First'), width: 1, align: 'right' },
+        { header: t('Latest'), width: 1, align: 'right' },
+        { header: t('Measured'), width: 1.6 },
       ],
       link.scores.map((s) => {
         const first = s.points[0]
@@ -267,18 +274,17 @@ export function buildTherapyReportPdf(link: TherapyLink, sessions: ResolvedSessi
       }),
     )
     doc.paragraph(
-      'Clinical scales are administered under your therapist’s supervision. A number on its own ' +
-        'is not a diagnosis, and the change over time is what they look at with you.',
+      t('Clinical scales are administered under your therapist’s supervision. A number on its own is not a diagnosis, and the change over time is what they look at with you.'),
       8.5,
       0.45,
     )
   }
 
-  doc.section('Goals')
+  doc.section(t('Goals'))
   if (!link.goals.length) {
-    doc.paragraph('No goals set.', 9.5, 0.45)
+    doc.paragraph(t('No goals set.'), 9.5, 0.45)
   } else {
-    doc.bullets(link.goals.map((g) => `${g.text} — ${g.status === 'achieved' ? 'achieved' : 'in progress'}`))
+    doc.bullets(link.goals.map((g) => `${t(g.text)} — ${g.status === 'achieved' ? t('achieved') : t('in progress')}`))
   }
 
   return doc

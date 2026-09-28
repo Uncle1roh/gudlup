@@ -13,7 +13,7 @@
 
    Below 1024px the workspace tells the user to switch to a desktop. That is a
    deliberate refusal rather than a missing responsive pass: this surface holds
-   a live video feed, a three-tab clinical panel and treatment transport at the
+   a live video feed, a three-tab clinical panel and audio transport at the
    same time, and a phone-sized version of it would be unsafe to run a session
    from.
    ============================================================================ */
@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useLegal } from '../legal/LegalContext'
 import { HelpNowButton } from '../legal/HelpNow'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { useI18n, fmtDate } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
@@ -30,7 +31,7 @@ import { mergeServerPatients, applyAppointments, pendingBookings, linkBooking } 
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
-import { TherapistOnboarding } from './Onboarding'
+import { TherapistOnboarding, WithHelp } from './Onboarding'
 import { Roster, PatientCard, initials } from './Patients'
 import { Calendar, AvailabilityModal } from './Calendar'
 import { LiveSession, type SessionResult } from './LiveSession'
@@ -81,10 +82,10 @@ interface WorkspaceAppProps {
 }
 
 /** A stand-in patient for the Sandbox. Nothing about it is ever persisted. */
-function virtualPatient(): WorkspacePatient {
+function virtualPatient(name: string): WorkspacePatient {
   const now = Date.now()
   return {
-    id: 'sandbox', name: 'Virtual Patient', memberSince: now, status: 'active', linkedAt: now,
+    id: 'sandbox', name, memberSince: now, status: 'active', linkedAt: now,
     sessions: [], assessments: [], notes: [], goals: [], prescriptions: [],
     bridged: false, bridgedSessions: [], consentTherapy: true,
   }
@@ -150,27 +151,32 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
      after an early return changes how many run between renders, which is the
      mistake this file was split into two components to avoid. */
   useServerIdentity(cred, user?.email ?? null, update)
+  /* Same rule: it was called below the `if (!cred)` return, so the first
+     render after the credential arrived ran one hook more than the one before
+     it (React #310) and every therapist sign-in landed on the error screen. */
+  const legal = useLegal()
 
   if (!cred) {
     return (
-      <div className="w-auth">
-        <div className="w-auth__card w-auth__card--center">
-          <div className="w-hourglass" aria-hidden="true">⏳</div>
-          <h1 className="w-h1">{credErr ? t('We could not check your credentials') : t('One moment')}</h1>
-          <p className="w-lead">
-            {credErr
-              ? t('The workspace stays closed until your registration can be confirmed. Try again in a moment.')
-              : t('Confirming your registration…')}
-          </p>
-          {credErr && <button className="w-btn w-btn--primary w-btn--block" onClick={loadCred}>{t('Try again')}</button>}
+      <WithHelp>
+        <div className="w-auth">
+          <div className="w-auth__card w-auth__card--center">
+            <div className="w-hourglass" aria-hidden="true">⏳</div>
+            <h1 className="w-h1">{credErr ? t('We could not check your credentials') : t('One moment')}</h1>
+            <p className="w-lead">
+              {credErr
+                ? t('The workspace stays closed until your registration can be confirmed. Try again in a moment.')
+                : t('Confirming your registration…')}
+            </p>
+            {credErr && <button className="w-btn w-btn--primary w-btn--block" onClick={loadCred}>{t('Try again')}</button>}
+          </div>
         </div>
-      </div>
+      </WithHelp>
     )
   }
 
   /* Approved by a reviewer AND the Professional Terms accepted, by version,
      on the server (M2R-05). The local stamp is a mirror for this device. */
-  const legal = useLegal()
   const onboarded = cred.status === 'approved' && (legal.accepted('professional') || (state.account.termsSignedAt && !legal.loaded))
 
   if (!onboarded) {
@@ -326,7 +332,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   /* --------------------------------------------------- full-screen views -- */
 
   if (view.kind === 'call') {
-    const p = view.sandbox ? virtualPatient() : patient
+    const p = view.sandbox ? virtualPatient(t('Virtual Patient')) : patient
     if (p) {
       return (
         <LiveSession
@@ -453,7 +459,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
                   }}
                 />
               )}
-                            {nav === 'settings' && (
+              {nav === 'settings' && (
                 <WorkspaceSettings state={state} update={update} onOpenAvailability={() => setAvailOpen(true)} />
               )}
             </>
@@ -483,11 +489,17 @@ function TooSmall() {
   const { t } = useI18n()
   return (
     <div className="w-toosmall">
-      <div>
+      <div className="w-toosmall__card">
+        <span className="w-brand">Good Loop</span>
         <h2 className="w-h2">{t('Please use a desktop')}</h2>
         <p className="w-lead">
-          {t('The therapist workspace runs a live video call, a clinical panel and treatment controls at once. It needs a screen at least 1024px wide.')}
+          {t('The therapist workspace runs a live video call, a clinical panel and audio controls at once. It needs a screen at least 1024px wide.')}
         </p>
+        {/* Help now is on every screen, this one included (CRS-01): a
+            therapist who opened the workspace on a phone may still need it. */}
+        <HelpNowButton variant="inline" className="w-toosmall__help" />
+        <LanguagePicker className="w-input w-input--sm" />
+        <SignOutButton className="w-btn w-btn--ghost w-btn--block" />
       </div>
     </div>
   )

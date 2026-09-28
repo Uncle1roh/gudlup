@@ -45,9 +45,17 @@ export function Compliance({ actor }: { actor: string }) {
         <h1 className="b2b-h1">Conformità</h1>
         <p className="b2b-sub">Le code che il quadro legale richiede: richieste dei dati con scadenza a 15 giorni, segnalazioni e reclami, il registro delle versioni dei testi, i numeri di emergenza con data di verifica, e lo storico dei consensi di una persona.</p>
       </div>
-      <div className="mt-seg mt-seg--wrap" style={{ marginBottom: 16 }}>
+      <div className="adm-tabs" role="tablist" aria-label="Code di conformità">
         {TABS.map((x) => (
-          <button key={x.id} className={tab === x.id ? 'is-on' : ''} onClick={() => setTab(x.id)}>{x.label}</button>
+          <button
+            key={x.id}
+            role="tab"
+            aria-selected={tab === x.id}
+            className={`adm-tab${tab === x.id ? ' is-on' : ''}`}
+            onClick={() => setTab(x.id)}
+          >
+            {x.label}
+          </button>
         ))}
       </div>
       {tab === 'dsr' && <DataRequests actor={actor} />}

@@ -26,7 +26,11 @@ import { newRail, railsFromDefaults, resolveRails, type ExploreRail } from '../d
 
 export function ExploreRails({ actor }: { actor: string }) {
   const dp = useDataProvider()
-  const { locale } = useI18n()
+  /* The console is pinned to Italian (FixedLocale), so t() here gives the
+     Italian name of a built-in shelf. Only the DISPLAY is translated: an
+     untouched default keeps its English key in the data, so the app still
+     shows each person the shelf in their own language. */
+  const { locale, t } = useI18n()
   const catalog = useLiveCatalog(locale)
   const sessions = catalog.browsable
 
@@ -161,13 +165,13 @@ export function ExploreRails({ actor }: { actor: string }) {
                   <div className="adm-rail__head">
                     <input
                       className="b2b-input adm-rail__title"
-                      value={r.title}
+                      value={t(r.title)}
                       placeholder="Titolo dello scaffale — es. Sei minuti"
                       onChange={(e) => patch(r.id, (x) => ({ ...x, title: e.target.value }))}
                     />
                     <input
                       className="b2b-input"
-                      value={r.subtitle ?? ''}
+                      value={r.subtitle ? t(r.subtitle) : ''}
                       placeholder="Sottotitolo (facoltativo)"
                       onChange={(e) => patch(r.id, (x) => ({ ...x, subtitle: e.target.value }))}
                     />
@@ -205,7 +209,7 @@ export function ExploreRails({ actor }: { actor: string }) {
                           onClick={() => toggleSlug(r.id, s!.slug)}
                           title="Togli da questo scaffale"
                         >
-                          {s!.name} ✕
+                          {t(s!.name)} ✕
                         </button>
                       ))}
                       {!chosen.length && <span className="adm-muted">Nessuna sessione — questo scaffale non verrà mostrato.</span>}
@@ -224,7 +228,7 @@ export function ExploreRails({ actor }: { actor: string }) {
                         />
                         <ul className="adm-rail__list">
                           {sessions
-                            .filter((s) => !filter || s.name.toLowerCase().includes(filter.toLowerCase()))
+                            .filter((s) => !filter || t(s.name).toLowerCase().includes(filter.toLowerCase()) || s.name.toLowerCase().includes(filter.toLowerCase()))
                             .map((s) => (
                               <li key={s.slug}>
                                 <label className="adm-rail__opt">
@@ -233,7 +237,7 @@ export function ExploreRails({ actor }: { actor: string }) {
                                     checked={r.slugs.includes(s.slug)}
                                     onChange={() => toggleSlug(r.id, s.slug)}
                                   />
-                                  <span>{s.name}</span>
+                                  <span>{t(s.name)}</span>
                                   <span className="adm-muted">
                                     {s.durations.join(' · ')} min{s.available ? '' : ' · non pubblicata'}
                                   </span>
@@ -255,8 +259,8 @@ export function ExploreRails({ actor }: { actor: string }) {
           <ol className="adm-rail__preview">
             {preview.map((r) => (
               <li key={r.id}>
-                <b>{r.title}</b>
-                {r.subtitle && <span className="adm-muted"> · {r.subtitle}</span>}
+                <b>{t(r.title)}</b>
+                {r.subtitle && <span className="adm-muted"> · {t(r.subtitle)}</span>}
                 <span className="adm-muted"> — {r.items.length} session{r.items.length === 1 ? 'e' : 'i'}</span>
               </li>
             ))}

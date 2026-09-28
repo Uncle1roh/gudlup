@@ -1413,15 +1413,17 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   border: 1px solid #e0b267; background: #e0b267; color: #2a1f08;
 }
 /* On a phone it has to stay ONE row: a second row eats into the app below it,
-   and the frame is sized against a bar of a known height. The note goes, and
-   so does the exit button — "Admin" already leaves preview — and what is left
-   scrolls sideways rather than wrapping. */
+   and the frame is sized against a bar of a known height. The note goes; the
+   surface buttons scroll sideways; the exit stays pinned at the right edge —
+   it is the one control that must always be on screen. */
 @media (max-width: 560px) {
   .pvw { gap: 6px; padding-inline: 8px; flex-wrap: nowrap; }
-  .pvw__note, .pvw__exit { display: none; }
-  .pvw__nav { margin-left: auto; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pvw__note { display: none; }
+  .pvw__tag { flex-shrink: 0; }
+  .pvw__nav { flex: 1 1 auto; min-width: 0; margin-left: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .pvw__nav::-webkit-scrollbar { display: none; }
   .pvw__btn { white-space: nowrap; }
+  .pvw__exit { flex-shrink: 0; white-space: nowrap; padding-inline: 9px; font-size: 12px; }
 }
 
 .adm-side__foot { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
@@ -1429,7 +1431,58 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-who__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--halo); box-shadow: 0 0 0 3px rgba(122,198,155,0.2); }
 .adm-who__email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.adm-main { padding: 30px 40px 70px; overflow-x: auto; }
+.adm-main { padding: 30px 40px 70px; min-width: 0; }
+
+/* ---- the console on a narrow screen -------------------------------------
+   Desktop keeps the fixed sidebar. Below 900px the sidebar becomes a bar at
+   the top of the page with a menu button; the sections, the preview doors and
+   the account block open as a panel under it. Nothing is wider than the
+   viewport — wide tables scroll inside their own box. */
+.adm-menu { display: none; }
+.adm-drawer { display: contents; }
+.adm-small-note { display: none; }
+@media (max-width: 900px) {
+  .adm { min-width: 0; padding-left: 0; overflow-x: clip; }
+  .adm-side {
+    position: sticky; top: 0; bottom: auto; width: 100%;
+    padding: 10px 14px; gap: 0; overflow: visible;
+  }
+  .pvw-shell .adm-side { top: var(--pvw-h); }
+  .adm-brand { padding: 0; border-bottom: none; }
+  .adm-brand .gl-logo { height: 22px; }
+  .adm-menu {
+    display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+    max-width: 62%; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+    color: #eaf3ec; font: 600 13px var(--sans); cursor: pointer;
+  }
+  .adm-menu__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-drawer {
+    display: none; flex-direction: column; gap: 14px;
+    max-height: calc(100dvh - 60px); overflow-y: auto; overscroll-behavior: contain;
+    padding: 12px 0 6px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .adm-side.is-open .adm-drawer { display: flex; }
+  .adm-open { margin-top: 0; padding: 12px 4px 0; }
+  .adm-main { padding: 18px 16px 60px; }
+  .adm-small-note {
+    display: block; margin: 0 0 14px; padding: 9px 12px; border-radius: var(--r-sm);
+    background: var(--mist-2); color: var(--slate); font-size: 12.5px;
+  }
+  .adm-addrow { flex-wrap: wrap; }
+  .adm-addrow > * { max-width: 100%; }
+}
+
+/* Sub-tabs inside a console page (Conformità): the console's own look, not
+   the Studio's dark segmented control. */
+.adm-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.adm-tab {
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: #fff; color: var(--slate); font: 600 13.5px var(--sans);
+  white-space: nowrap; cursor: pointer; transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.adm-tab:hover { color: var(--ink); border-color: var(--slate); }
+.adm-tab.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
 .adm-page { max-width: 1400px; }
 .adm-page__head { margin-bottom: 22px; }
 .adm-page__head--row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
@@ -1455,7 +1508,10 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 }
 
 /* table */
-.adm-table { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: #fff; min-width: 720px; }
+/* A wide table scrolls inside its own box, never the page: the rows carry the
+   minimum width, the table clips and scrolls them. */
+.adm-table { border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; overflow-y: hidden; background: #fff; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.adm-tr { min-width: 720px; box-sizing: border-box; }
 .adm-tr { display: grid; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .adm-tr:last-child { border-bottom: none; }
 .adm-tr--head { background: var(--mist-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--slate); }
@@ -1479,7 +1535,11 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
    grew over the Stato pill next to it. */
 .adm-table--companies .adm-tr { grid-template-columns: 1.3fr minmax(170px, 0.9fr) 1fr 104px 92px 226px; }
 .adm-table--companies .adm-tr__right { flex-wrap: wrap; gap: 6px; }
-.adm-table--users .adm-tr { grid-template-columns: 1.3fr 1.8fr 1.1fr 172px 128px; }
+/* The access cell holds "Disattiva" and, for app users, "Minorenne": 128px
+   was one button wide, so the second one ran over the role select. */
+.adm-table--users .adm-tr { grid-template-columns: 1.2fr 1.5fr 1fr 220px minmax(212px, auto); min-width: 900px; }
+.adm-table--users .adm-select { width: 100%; }
+.adm-table--users .adm-tr__right { flex-wrap: wrap; gap: 6px; }
 .adm-table--audit .adm-tr { grid-template-columns: 168px 1.3fr 1.4fr 1.1fr 1.4fr; }
 .adm-table--promo .adm-tr { grid-template-columns: minmax(170px, 1.2fr) 96px 96px 1.4fr 220px; }
 .adm-table--promo .adm-tr__right { flex-wrap: wrap; gap: 6px; }
@@ -1903,6 +1963,9 @@ img, svg, video, canvas { max-width: 100%; }
 .hub__head { text-align: center; display: flex; flex-direction: column; gap: 6px; }
 .hub__title { font-family: var(--display); font-weight: 500; font-size: 28px; color: var(--ink); margin: 8px 0 0; }
 .hub__sub { color: var(--slate); font-size: 14px; margin: 0; }
+.hub__lang { display: flex; justify-content: center; margin-top: 8px; }
+.hub__lang .lang-picker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--slate); }
+.hub__lang select { padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: #fff; font: inherit; color: var(--ink); }
 .hub__grid { display: flex; flex-direction: column; gap: 12px; }
 .hub__card {
   display: flex; align-items: center; gap: 16px; text-decoration: none;
@@ -2558,3 +2621,29 @@ td, th { overflow-wrap: anywhere; }
 .adm-rail__opt .adm-muted { margin-left: auto; font-size: 12.5px; white-space: nowrap; }
 .adm-rail__preview { margin: 8px 0 0 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 @media (max-width: 900px) { .adm-rail__head { grid-template-columns: 1fr; } }
+
+/* Console on a narrow screen — overrides for rules defined above this line. */
+@media (max-width: 900px) {
+  .adm-plain__actions { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .adm-page__head--row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .adm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-partner-form__grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) { .adm-tiles { grid-template-columns: 1fr; } }
+
+/* The console borrowed the Studio's segmented control (.mt-seg) for its shelf
+   and filter switches. Outside the Studio its dark tokens are undefined, so it
+   drew as bare text — and its capitalize turned Italian labels into Title
+   Case. Inside the console it takes the console's own tab look. */
+.adm .mt-seg {
+  display: inline-flex; flex-wrap: wrap; gap: 6px; height: auto; overflow: visible;
+  border: none; border-radius: 0; align-self: flex-start;
+}
+.adm .mt-seg button {
+  padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line);
+  background: #fff; color: var(--slate); font: 600 13px var(--sans);
+  text-transform: none; white-space: nowrap; cursor: pointer;
+}
+.adm .mt-seg button:hover { color: var(--ink); border-color: var(--slate); }
+.adm .mt-seg button.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
+.adm .mt-seg button:disabled { opacity: 0.5; cursor: default; }
