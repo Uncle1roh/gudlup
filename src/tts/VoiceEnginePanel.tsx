@@ -98,6 +98,8 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setSyncTick((n) => n + 1)
     if (out.error) {
       setError(`Sincronizzazione voci: ${out.error}`)
+    } else if (out.source === 'registry') {
+      setStatus(`Account riconosciuto: ${out.account} — ${out.voices.length} voci (ITA + BRA) dall’elenco fisso.`)
     } else if (force) {
       setStatus(`${out.voices.length} voci sincronizzate dall’account ElevenLabs.`)
     }

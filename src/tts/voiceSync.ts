@@ -10,7 +10,9 @@
    the seed) stays in place.
    ============================================================================ */
 
+import { accountForKey } from './voiceAccounts'
 import {
+  accountCatalog,
   ARCHETYPE_OVERRIDES,
   inferArchetype,
   parseVoiceName,
@@ -20,7 +22,10 @@ import {
 } from './voiceCatalog'
 import { getTtsSettings } from './settings'
 
-const CACHE_KEY = 'gl.tts.voices'
+/* v2: lists cached before the account registry and the "MALE - RITUAL"
+   parser hold every male voice as female and every name as "BRA"/"ITA" —
+   they are dropped, not trusted. */
+const CACHE_KEY = 'gl.tts.voices.v2'
 const ENDPOINT = 'https://api.elevenlabs.io/v1/voices'
 /** Refresh in the background when the cache is older than this. */
 const STALE_MS = 10 * 60_000
@@ -30,8 +35,10 @@ interface Cache { at: number; voices: CatalogVoice[]; key?: string }
 export interface SyncOutcome {
   voices: CatalogVoice[]
   at: number
-  source: 'api' | 'cache' | 'none'
+  source: 'api' | 'cache' | 'none' | 'registry'
   error?: string
+  /** Set when the key belongs to one of our accounts (voiceAccounts.ts). */
+  account?: string
 }
 
 /** The key actually in force: the one typed in the app, and nothing else. */
@@ -171,6 +178,20 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
   if (!key) {
     if (cached) registerVoices(cached.voices, cached.at)
     return { voices: cached?.voices ?? [], at: cached?.at ?? 0, source: cached ? 'cache' : 'none', error: 'Nessuna chiave ElevenLabs configurata.' }
+  }
+  /* One of OUR accounts: its voices are written down (voiceAccounts.ts) and
+     are exactly what it holds — no network, no name parsing, nothing extra
+     from the workspace. */
+  const known = await accountForKey(key)
+  if (known) {
+    if (!opts.apiKey && activeApiKey() !== key) {
+      return { voices: [], at: 0, source: 'none', error: 'La chiave è cambiata durante l’aggiornamento.' }
+    }
+    const voices = accountCatalog(known)
+    const at = Date.now()
+    registerVoices(voices, at)
+    writeCache({ at, voices, key: keyTag(key) })
+    return { voices, at, source: 'registry', account: known.label }
   }
   if (!opts.force && cached && Date.now() - cached.at < STALE_MS) {
     registerVoices(cached.voices, cached.at)

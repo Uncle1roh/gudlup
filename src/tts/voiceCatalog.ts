@@ -18,6 +18,7 @@
    ============================================================================ */
 
 import { isVoiceLang, type VoiceLang } from './voiceLang'
+import { registrySlot, type VoiceAccount } from './voiceAccounts'
 
 export type ArchetypeId =
   | 'maternal' | 'paternal' | 'wise' | 'neutral' | 'warrior'
@@ -142,6 +143,19 @@ export function parseVoiceName(raw: string): ParsedVoiceName {
     language = language ?? LANG_TOKEN[post[1].toUpperCase().replace(/^PT-?BR$/, 'PTBR')]
     rest = rest.slice(0, post.index).trim()
   }
+  /* "MALE - RITUAL" / "FEMALE - MATERNAL" / "RITUAL - MALE": the form the
+     POs name voices in now. Before this the regex below failed on it, the
+     gender fell through to "F" for every generated voice, and the display
+     name was cut down to "BRA" / "ITA". */
+  const parts = rest.split(/\s*[-–—]\s*|\s+/).filter(Boolean)
+  const genderWord = parts.find((w) => /^(MALE|FEMALE|MASCHIO|FEMMINA|MASCULINO|FEMININO)$/i.test(w))
+  const archWord = parts.find((w) => NAME_TO_ARCHETYPE[w.toUpperCase()])
+  if (genderWord && archWord) {
+    const g: 'F' | 'M' = /^(FEMALE|FEMMINA|FEMININO)$/i.test(genderWord) ? 'F' : 'M'
+    const token = archWord.toUpperCase()
+    const pretty = token.length <= 4 ? token : token.charAt(0) + token.slice(1).toLowerCase()
+    return { name: `${pretty} (${g})`, archetype: NAME_TO_ARCHETYPE[token], gender: g, approved, language }
+  }
   const m = /^([A-Za-zÀ-ÿ]+)\s*(?:\(\s*([FM])\s*\))?$/.exec(rest)
   if (!m) return { name: rest || raw, approved, language }
   const token = m[1].toUpperCase()
@@ -151,6 +165,23 @@ export function parseVoiceName(raw: string): ParsedVoiceName {
   // "MATERNAL" → "Maternal"; keep ASMR-style acronyms upper-case
   const pretty = token.length <= 4 ? token : token.charAt(0) + token.slice(1).toLowerCase()
   return { name: explicit ? `${pretty} (${explicit})` : pretty, archetype, gender, approved, language }
+}
+
+/** The display name of a registered voice: the character, and its gender
+    where the character comes in both ("ASMR (F)" / "ASMR (M)"). */
+const SLOT_NAME: Record<ArchetypeId, string> = {
+  maternal: 'Maternal', paternal: 'Paternal', wise: 'Mentor', neutral: 'Neutral',
+  warrior: 'Warrior', shadow: 'Shadow', ritual: 'Ritual', child: 'Child', whisper: 'ASMR',
+}
+
+/** One of our accounts (voiceAccounts.ts) as catalog voices: exactly its 22,
+    named from the slot, never parsed from ElevenLabs. */
+export function accountCatalog(account: VoiceAccount): CatalogVoice[] {
+  return account.voices.map((v) => {
+    const base = SLOT_NAME[v.archetype]
+    const name = v.archetype === 'maternal' || v.archetype === 'paternal' ? base : `${base} (${v.gender})`
+    return { id: v.id, name, gender: v.gender, archetype: v.archetype, category: 'generated', language: v.language, approved: true }
+  })
 }
 
 /** The language a catalog voice speaks. No marker = Italian: every voice the
@@ -328,6 +359,16 @@ export function resolveVoiceId(id: string | undefined, hint?: { archetype?: stri
   if (!id) return {}
   const exact = VOICE_CATALOG.find((v) => v.id === id)
   if (exact) return { voice: exact }
+  /* A voice of one of OUR accounts (voiceAccounts.ts) has an exact twin in
+     the other: same language, gender and archetype. No guessing, no ledger —
+     the saved id is followed into the account connected now. */
+  const slot = registrySlot(id)
+  if (slot) {
+    const twin = VOICE_CATALOG.find((v) => voiceLangOf(v) === slot.language && v.gender === slot.gender && v.archetype === slot.archetype)
+    if (twin) {
+      return { voice: twin, remappedFrom: { id, name: `${twin.name} · ${slot.account.label}`, archetype: slot.archetype, gender: slot.gender, language: slot.language } }
+    }
+  }
   /* The ledger only holds accounts THIS browser has synced. A protocol
      authored on another machine carries its own answer: the archetype saved
      on the clip. Either source names the same thing. */

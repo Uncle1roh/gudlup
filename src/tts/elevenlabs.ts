@@ -26,6 +26,7 @@
 
 import type { TtsJoinedRender, TtsOptions, TtsProvider, TtsSpan } from './types'
 import { ttsLanguage } from './settings'
+import { resolveVoiceId } from './voiceCatalog'
 import { announceElevenLabsRequest } from './requestNotice'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
@@ -228,8 +229,13 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     // explicit roster voice beats the primary/secondary pair; no secondary
     // configured → 'secondary' falls back to the primary (callers can check
     // hasSecondaryVoice to surface that in their notes)
-    if (opts?.voiceId?.trim()) return opts.voiceId.trim()
-    return opts?.voice === 'secondary' && secondary ? secondary : voiceId
+    const chosen = opts?.voiceId?.trim() || (opts?.voice === 'secondary' && secondary ? secondary : voiceId)
+    /* EVERY request goes out with a voice of the account connected now. A
+       protocol saved under the other Good Loop account names that account's
+       ids — sent as-is they are voice_not_found, or worse, a stranger's voice
+       — so the id is followed to its twin here (voiceAccounts.ts), once, for
+       every caller: the Studio, the Excel render, the datasheet render. */
+    return resolveVoiceId(chosen).voice?.id ?? chosen
   }
 
   async function fetchBytes(text: string, opts?: TtsOptions): Promise<ArrayBuffer> {
