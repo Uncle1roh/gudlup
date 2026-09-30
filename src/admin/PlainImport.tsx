@@ -19,7 +19,10 @@ import { attachRenderedAudio } from './attachAudio'
 import type { Duration } from '../types/domain'
 import {
   CATALOG_DURATIONS,
+  audioLangSummary,
+  audioLangs,
   durationState,
+  hasAnyAudio,
   catalogDuration,
   plainDurations,
   plainFor,
@@ -32,9 +35,11 @@ import { entryForPublish } from './publishPlain'
 import { ProtocolCardEditor, cardDraftFrom, applyCardDraft, type ProtocolCardDraft } from './ProtocolCard'
 import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
-import { plainToStudioTracks } from './plainStudio'
+import { buildScriptIndex, missingScripts, plainToStudioTracks } from './plainStudio'
 import { plainWavFileName, renderPlainWav } from './renderPlain'
 import { secToMmss, type PlainTimeline } from './plainTimeline'
+import { LANG_IN, LANG_LABEL, LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
+import { hasVoicesFor } from '../tts/voiceCatalog'
 
 interface Props {
   /** The protocol this screen belongs to. Its identity comes from HERE, never
@@ -65,7 +70,20 @@ interface Props {
       the one on display, so the import simply appeared to do nothing. */
   notice?: string | null
   onDismissNotice?: () => void
+  /** An Excel read and compared, waiting for a yes: what it would change. The
+      import is written only on confirm (CatalogAdmin.onImportFile). */
+  importReview?: {
+    fileName: string
+    lines: string[]
+    nothing: boolean
+    busy: boolean
+    onConfirm: () => void
+    onCancel: () => void
+  } | null
 }
+
+/** What the language question is being asked for. */
+type LangAsk = 'publish' | 'upload' | 'download'
 
 /** What this protocol actually carries, so the confirmation names it rather
     than asking someone to agree to "the material". */
@@ -90,7 +108,7 @@ function downloadBlob(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-export function PlainImport({ protocolCode, timeline: workbook, initialDuration, fileName, actor, onCancel, onDone, onChanged, onDeleted, onImportExcel, fileInput, notice, onDismissNotice }: Props) {
+export function PlainImport({ protocolCode, timeline: workbook, initialDuration, fileName, actor, onCancel, onDone, onChanged, onDeleted, onImportExcel, fileInput, notice, onDismissNotice, importReview }: Props) {
   /* The timeline as this screen uses it: the workbook's content, the
      PROTOCOL's code. Everything below — the Studio hand-off, attaching the
      timeline, Publish, the WAV name — keyed on the workbook's own code, and a
@@ -287,10 +305,12 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     }
   }
 
-  /** Durations of this protocol that already stream audio. */
+  /** Durations of this protocol that already stream audio — in ANY language.
+      This used to ask for a 'pt-BR' URL by name, so an Italian file read as
+      "never published". Which languages are live is `audioLangs`. */
   const liveDurations = useMemo(() => {
     const set = new Set<Duration>()
-    for (const v of published?.versions ?? []) if (v.audioUrl?.['pt-BR']) set.add(v.duration)
+    for (const d of CATALOG_DURATIONS) if (hasAnyAudio(published ?? undefined, d)) set.add(d)
     return set
   }, [published])
   const live = versionDuration != null && liveDurations.has(versionDuration)
@@ -345,8 +365,28 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
 
   /* ---- externally-mastered file (PO workflow: download WAV → masterize
      outside → upload the mastered version → Publish ships THAT file) ---- */
-  const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer } | null>(null)
+  const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer; lang: VoiceLang } | null>(null)
   const masteredRef = useRef<HTMLInputElement>(null)
+
+  /* ---- which LANGUAGE an audio is for ----
+     Publish, a mastered upload and the local WAV each produce ONE language's
+     audio, so each asks which before doing anything: the texts and voices of
+     the render follow the answer, and the file is filed under it — and only
+     under it, leaving the other language's audio exactly where it was. */
+  const [ask, setAsk] = useState<LangAsk | null>(null)
+  const uploadLang = useRef<VoiceLang>('it')
+  function chooseLang(lang: VoiceLang) {
+    const what = ask
+    setAsk(null)
+    if (what === 'upload') {
+      uploadLang.current = lang
+      masteredRef.current?.click()
+    } else if (what === 'publish') {
+      void publish(lang)
+    } else if (what === 'download') {
+      void download(lang)
+    }
+  }
 
   async function onMasteredFile(file: File | undefined) {
     if (!file) return
@@ -362,7 +402,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         } else {
           setStatus(null)
         }
-        setMastered({ name: file.name, buffer })
+        setMastered({ name: file.name, buffer, lang: uploadLang.current })
       } finally {
         await ctx.close().catch(() => undefined)
       }
@@ -415,7 +455,10 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     if (!t.code) return null
     try {
       const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
-      const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, keepDraft: true, intoExisting: true })
+      /* 'keep': the screen's timeline is what the catalog already holds, so
+         this only ever FILLS a duration with nothing stored — it never writes
+         the screen's merged copy over a stored one. */
+      const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, keepDraft: true, intoExisting: true, mode: 'keep' })
       const stored = await saveProtocolVerified(dp, proto)
       setPublished(stored)
       return stored
@@ -439,15 +482,26 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
          from the workbook. Reseeding would silently discard hand edits — and
          re-draw every random asset, so the mix would not even be the same one
          the PO left. Only a duration with nothing saved is seeded. */
-      const saved = dur ? studioFor(stored ?? published ?? undefined, dur) : undefined
+      const row = stored ?? published ?? undefined
+      /* This duration's OWN stored timeline. The screen's `t` is every
+         duration merged into one, carrying one duration's affirmations; the
+         seed and the language index want this one's. */
+      const slot = dur ? plainFor(row, dur) : undefined
+      /* The texts of every language, for the Studio to fill a language the
+         session does not have yet — a session saved before the Portuguese
+         column was imported gets its Portuguese from here. */
+      const scripts = buildScriptIndex(slot ?? { ...t, versions: [version] })
+      const saved = dur ? studioFor(row, dur) : undefined
       if (saved) {
-        setStudioProject(saved, attach, '#admin')
+        setStudioProject(saved, attach, '#admin', { scripts })
         window.location.hash = '#studio'
         return
       }
 
-      const seed = plainToStudioTracks(t, version, { pools: pools ?? undefined })
-      setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin', phases: seed.phases })
+      /* Seeded in Italian — the session's canonical form — with every
+         language on each clip; the Studio asks which one to work in. */
+      const seed = plainToStudioTracks(slot ? { ...t, affirmations: slot.affirmations } : t, version, { pools: pools ?? undefined, lang: 'it' })
+      setStudioSeed(seed.tracks, seed.name, attach, undefined, { returnTo: '#admin', phases: seed.phases, scripts })
       setNotes(seed.notes)
       window.location.hash = '#studio'
     } catch (e) {
@@ -475,7 +529,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     /* `intoExisting` whenever the protocol exists: the protocol keeps ITS
        clinical title. Without it Publish renamed the protocol after whatever
        the README's first line said. */
-    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, intoExisting: !!existing })
+    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, intoExisting: !!existing, mode: 'keep' })
     const durations = plainDurations(proto)
     // verified: a write rejected by RLS used to leave a protocol that looked
     // published until the next screen change
@@ -510,11 +564,13 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   /** Publish = the WHOLE pipeline for the SELECTED time signature: catalog
       entry → render (with voice) → upload & attach → live in the app. The other
       durations of this protocol are left exactly as they are. */
-  async function publish() {
+  async function publish(lang: VoiceLang) {
     /* Two ways in: a workbook to render from, or a finished file to ship.
        The second is how a demo protocol is made — and how a PO ships a mix
        mastered outside the app against a time signature that has no Excel. */
     if (!version && !mastered) return
+    // an uploaded file is filed under the language it was uploaded for
+    if (mastered && mastered.lang !== lang) return
     setBusy(true)
     setError(null)
     try {
@@ -534,18 +590,25 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           setDetailsOpen(true)
           throw new Error('Il motore vocale non ha una chiave — imposta la chiave ElevenLabs in Dettagli e premi di nuovo Pubblica (oppure carica un file masterizzato).')
         }
-        const result = await renderPlainWav(t, version, {
+        const slot = plainFor(proto, dur)
+        const result = await renderPlainWav(slot ? { ...t, affirmations: slot.affirmations } : t, version, {
           pools: pools ?? undefined,
           withVoice: true,
+          lang,
           onProgress: setStatus,
         })
         setNotes(result.notes)
         audioBuffer = result.buffer
       }
-      setStatus('Caricamento della copia per lo streaming…')
-      const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer)
+      setStatus(`Caricamento della copia per lo streaming (${LANG_LABEL[lang]})…`)
+      /* The OTHER language's file for this duration, before and after: it has
+         to be exactly where it was, and the status line says so. */
+      const otherLang: VoiceLang = lang === 'it' ? 'pt-BR' : 'it'
+      const otherBefore = proto.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
+      const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer, lang)
       setPublished(attached.protocol)
-      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min` }).catch(() => undefined)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min · ${lang}` }).catch(() => undefined)
+      const otherAfter = attached.protocol.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
       const others = [...liveDurations].filter((d) => d !== dur).sort((a, b) => a - b)
       /* The slot says how long a person expects the session to be, and nothing
          upstream checks that the file agrees. Several protocols already in the
@@ -560,8 +623,12 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         ? ` ⚠ ATTENZIONE: il file dura ${mm(gotSec)}, non ${dur} min. È in linea lo stesso, ma chi sceglie "${dur} min" sentirà ${mm(gotSec)}. Controlla che il foglio pubblicato sia quello della durata giusta.`
         : ''
       setStatus(
-        `In linea — ${proto.code} · ${dur} min ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
+        `In linea — ${proto.code} · ${dur} min in ${LANG_LABEL[lang]}: ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate per chi usa l’app ${LANG_IN[lang]}${lang === 'pt-BR' ? ' o in inglese' : ''}${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
+        (otherBefore && otherAfter === otherBefore
+          ? ` L’audio in ${LANG_LABEL[otherLang]} di questa durata resta invariato.`
+          : !otherAfter ? ` In ${LANG_LABEL[otherLang]} non c’è ancora un audio per questa durata: finché manca, anche chi usa quella lingua sente questo.` : '') +
         (others.length ? ` Le versioni da ${others.map((d) => `${d}`).join(' e ')} min restano invariate.` : '') +
+        (attached.demo ? ' (Demo: il file vive solo in questa scheda del browser.)' : '') +
         lengthWarning +
         (persistenceNote() ?? ''),
       )
@@ -574,20 +641,22 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   }
 
   /** Download = the same full render, saved locally as WAV. */
-  async function download() {
+  async function download(lang: VoiceLang) {
     if (!version) return
     setBusy(true)
     setError(null)
     try {
-      const result = await renderPlainWav(t, version, {
+      const slot = versionDuration != null ? plainFor(published ?? undefined, versionDuration) : undefined
+      const result = await renderPlainWav(slot ? { ...t, affirmations: slot.affirmations } : t, version, {
         pools: pools ?? undefined,
         withVoice: tts.canRender,
+        lang,
         onProgress: setStatus,
       })
       setNotes(result.notes)
       if (!tts.canRender) setStatus('Renderizzato SENZA voce (nessuna chiave del motore vocale — vedi Dettagli).')
       else setStatus(null)
-      downloadBlob(plainWavFileName(t.code, version.sheet), result.blob)
+      downloadBlob(plainWavFileName(t.code, version.sheet, lang), result.blob)
     } catch (e) {
       setStatus(null)
       setError(explain(e))
@@ -640,6 +709,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           <span className="adm-plain__meta">
             {version ? `${version.durationMin} min (${secToMmss(version.durationS)}) · ${version.clips.length} clip` : ''}
             {live ? ' · in linea ✓' : versionDuration != null && publishedDurations.has(versionDuration) ? ' · pubblicato' : ''}
+            {/* Which LANGUAGES this duration streams in. */}
+            {versionDuration != null && ` · audio ${audioLangSummary(published ?? undefined, versionDuration)}`}
           </span>
         </div>
         {/* One chip per TIME SIGNATURE, and ALWAYS all three. A protocol ships
@@ -663,14 +734,18 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                 className={`b2b-btn${on ? ' b2b-btn--primary' : ''} adm-plain__chip--${st === 'published' ? 'live' : st}`}
                 onClick={() => { setPicked(d); onDismissNotice?.() }}
                 title={
-                  st === 'published'
+                  (st === 'published'
                     ? `${d} min — pubblicato, in ascolto`
                     : st === 'saved'
                       ? `${d} min — salvato, non ancora pubblicato`
-                      : `${d} min — nessun Excel importato. Selezionalo e usa Importa Excel.`
+                      : `${d} min — nessun Excel importato. Selezionalo e usa Importa Excel.`)
+                  + ` · audio: ${audioLangSummary(published ?? undefined, d)}`
                 }
               >
                 {d}m
+                {audioLangs(published ?? undefined, d).length > 0 && (
+                  <small className="adm-pill__langs"> {audioLangs(published ?? undefined, d).map((l) => LANG_SHORT[l]).join('+')}</small>
+                )}
               </button>
             )
           })}
@@ -682,30 +757,92 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           className="adm-plain__act"
           onClick={() => (onImportExcel ? onImportExcel(picked) : onCancel())}
           disabled={busy}
-          title={`Importa il file Excel della versione da ${picked} minuti`}
+          title={`Importa il file Excel della versione da ${picked} minuti — testo (italiano), testo_pt (portoghese), testo_en (inglese). Prima di salvare mostra cosa cambia.`}
         >
           <span className="adm-plain__act-ico">⬆</span> Importa Excel · {picked}m
         </button>
         <button className="adm-plain__act" onClick={() => void editInStudio()} disabled={disabled} title={noTimelineWhy ?? (poolsLoading ? 'Caricamento della libreria sonora…' : undefined)}>
           <span className="adm-plain__act-ico">🎚</span> Modifica nello Studio
         </button>
-        <button className="adm-plain__act" onClick={() => void download()} disabled={disabled} title={noTimelineWhy}>
+        <button className="adm-plain__act" onClick={() => setAsk('download')} disabled={disabled} title={noTimelineWhy}>
           <span className="adm-plain__act-ico">⬇</span> Scarica
         </button>
         <button
           className={`adm-plain__act${mastered ? ' adm-plain__act--done' : ''}`}
-          onClick={() => masteredRef.current?.click()}
+          onClick={() => setAsk('upload')}
           disabled={!canUpload}
-          title={`Carica il WAV/MP3 per la versione da ${picked} minuti — Pubblica userà esattamente questo file, con o senza Excel`}
+          title={`Carica il WAV/MP3 per la versione da ${picked} minuti — prima si sceglie la lingua; Pubblica userà esattamente questo file, con o senza Excel`}
         >
-          <span className="adm-plain__act-ico">🎧</span> {mastered ? 'Masterizzato ✓' : 'Carica audio'}
+          <span className="adm-plain__act-ico">🎧</span> {mastered ? `Masterizzato ${LANG_SHORT[mastered.lang]} ✓` : 'Carica audio'}
         </button>
-        <button className="adm-plain__act adm-plain__act--primary" onClick={() => void publish()} disabled={!canPublish} title={publishWhy}>
-          <span className="adm-plain__act-ico">🚀</span> Pubblica
+        {/* With a mastered file the language was asked at upload: Pubblica
+            ships it under that one. Without, it asks. */}
+        <button
+          className="adm-plain__act adm-plain__act--primary"
+          onClick={() => (mastered ? void publish(mastered.lang) : setAsk('publish'))}
+          disabled={!canPublish}
+          title={publishWhy}
+        >
+          <span className="adm-plain__act-ico">🚀</span> Pubblica{mastered ? ` · ${LANG_SHORT[mastered.lang]}` : ''}
         </button>
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
         {fileInput}
       </div>
+      {ask && (
+        <div className="adm-plain__status adm-plain__ask" role="dialog" aria-label="Lingua dell’audio">
+          <b>
+            {ask === 'publish'
+              ? `In che lingua pubblichi la versione da ${picked} min?`
+              : ask === 'upload'
+                ? `Per quale lingua è l’audio che stai caricando (${picked} min)?`
+                : `In che lingua vuoi scaricare il WAV da ${picked} min?`}
+          </b>
+          <div className="adm-plain__askrow">
+            {VOICE_LANGS.map((l) => {
+              const missing = version && ask !== 'upload' ? missingScripts(t, version, l) : 0
+              const have = versionDuration != null && audioLangs(published ?? undefined, versionDuration).includes(l)
+              return (
+                <button key={l} className="b2b-btn b2b-btn--primary" onClick={() => chooseLang(l)}>
+                  {LANG_LABEL[l]}
+                  <small>
+                    {ask === 'download' ? '' : have ? ' · sostituisce l’audio attuale' : ' · nuovo'}
+                    {missing ? ` · ${missing} testi mancanti` : ''}
+                    {ask !== 'upload' && l !== 'it' && !hasVoicesFor(l) ? ' · nessuna voce BRA: userebbe quella italiana' : ''}
+                  </small>
+                </button>
+              )
+            })}
+            <button className="b2b-btn" onClick={() => setAsk(null)}>Annulla</button>
+          </div>
+          <span className="b2b-sub">
+            Si scrive solo l’audio della lingua scelta: l’altra lingua, le altre durate, la sessione dello Studio e la timeline restano come sono.
+            {ask !== 'upload' && ' Le clip senza testo nella lingua scelta restano mute.'}
+          </span>
+        </div>
+      )}
+      {importReview && (
+        <div className={`adm-plain__status adm-plain__review${importReview.nothing ? '' : ' adm-plain__review--changes'}`} role="dialog" aria-label="Confronto dell’Excel importato">
+          <b>Confronto con quanto salvato — «{importReview.fileName}»</b>
+          <ul className="adm-spec__issues">
+            {importReview.lines.map((l, k) => <li key={k}>{l}</li>)}
+          </ul>
+          <span className="b2b-sub">
+            L’importazione aggiunge e non toglie: i testi già salvati in una lingua che il file non ha restano, e la sessione dello Studio, l’audio pubblicato, i nomi, i tag e la copertina non vengono toccati.
+          </span>
+          <div className="adm-plain__askrow">
+            {importReview.nothing ? (
+              <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Identico: niente da importare · Chiudi</button>
+            ) : (
+              <>
+                <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onConfirm}>
+                  {importReview.busy ? 'Importazione…' : 'Conferma importazione'}
+                </button>
+                <button className="b2b-btn" disabled={importReview.busy} onClick={importReview.onCancel}>Annulla</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {notice && (
         <div className="adm-plain__status adm-plain__status--err">
           {notice}
@@ -717,7 +854,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
 
       {mastered && (
         <div className="adm-plain__status">
-          Audio caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) per la versione da {picked} min — Pubblica userà questo file
+          Audio caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) per la versione da {picked} min in <b>{LANG_LABEL[mastered.lang]}</b> — Pubblica userà questo file
+
           {hasTimeline ? ' invece del render.' : '; per questa durata non c’è ancora un Excel, e non serve.'}
           {' '}
           <a href="#clear" onClick={(e) => { e.preventDefault(); setMastered(null) }}>
@@ -732,6 +870,15 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           caricarlo — le altre durate non vengono toccate.
         </div>
       )}
+
+      {/* The one rule a PO needs to write a bilingual workbook, where the
+          import is: everything else in the sheet is shared by the languages. */}
+      <div className="adm-plain__status b2b-sub">
+        Testi per lingua, nei fogli delle clip e in Affermazioni: <code>testo</code> = italiano ·{' '}
+        <code>testo_pt</code> = portoghese · <code>testo_en</code> = inglese (conservato, non ancora doppiato).
+        Tempi, livelli, fx e archetipo sono gli stessi per tutte le lingue. Reimportare aggiunge: un testo che il file
+        lascia vuoto resta quello già salvato.
+      </div>
 
       {poolsLoading && <div className="adm-plain__status">Caricamento della libreria sonora…</div>}
       {poolsState === 'failed' && (

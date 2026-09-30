@@ -35,11 +35,12 @@
    Every deviation is recorded in `notes`.
    ============================================================================ */
 
-import type { SeedClip, SeedTrack, StudioPhase } from '../compose/types'
+import type { ScriptIndex, SeedClip, SeedTrack, StudioPhase, VoiceChoice } from '../compose/types'
 import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type SampleParams, type SampleSlot, type VoiceParams } from '../studio/multitrack'
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { applyFxSpecs, describeFx, fxKey } from './plainFx'
-import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, type CatalogVoice } from '../tts/voiceCatalog'
+import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, hasVoicesFor, type CatalogVoice } from '../tts/voiceCatalog'
+import { LANG_IN, VOICE_LANGS, scriptKey, textIn, type TextByLang, type VoiceLang } from '../tts/voiceLang'
 import {
   ANCHOR_LUFS,
   BILATERAL_SOUNDS,
@@ -56,6 +57,91 @@ export interface PlainSeedOptions {
   pools?: AssetPools
   /** RNG seed for reproducible draws. Default: fresh randomness per seed. */
   seed?: number
+  /**
+   * The language the seeded clips are SPOKEN in: which text lands in `text`
+   * and which voice in `params`. Every language's text and voice are seeded
+   * onto the clip regardless (`textByLang` / `voiceByLang`), so a session
+   * seeded in one language can be worked in the other. Default Italian.
+   */
+  lang?: VoiceLang
+}
+
+/* ------------------------------------------------ texts per language ----
+
+   One workbook row speaks in several languages; the Studio clip it becomes
+   carries all of them. The helpers below are the only place that decides
+   which text of a row belongs to which language, so the seed, the render and
+   the "fill a saved session's missing language" lookup cannot disagree. */
+
+function rowScript(c: Pick<PlainClip, 'testo' | 'testoByLang'>): TextByLang | undefined {
+  return c.testoByLang ?? (c.testo ? { it: c.testo } : undefined)
+}
+function affScript(a: Pick<PlainAffirmation, 'testo' | 'testoByLang'> | undefined): TextByLang | undefined {
+  if (!a) return undefined
+  return a.testoByLang ?? (a.testo ? { it: a.testo } : undefined)
+}
+/** Only the languages that can be spoken — English is stored, not voiced. */
+function spoken(byLang: TextByLang | undefined): Partial<Record<VoiceLang, string>> {
+  const out: Partial<Record<VoiceLang, string>> = {}
+  for (const l of VOICE_LANGS) { const v = textIn(byLang, l); if (v) out[l] = v }
+  return out
+}
+/** A whispered refrain's "..."-separated fragments, in one language. */
+function fragmentsOf(text: string | undefined): string[] {
+  return (text ?? '').split(/\.\.\.|…/).map((x) => x.trim()).filter(Boolean)
+}
+
+/**
+ * How many spoken lines of one version have NO text in `lang` — linea clips,
+ * and the affirmations its loops and sequences speak. What a render in that
+ * language would leave silent, counted before anyone presses Publish.
+ */
+export function missingScripts(timeline: PlainTimeline, version: PlainVersion, lang: VoiceLang): number {
+  const affById = new Map(timeline.affirmations.map((a) => [a.id, a]))
+  let n = 0
+  const affIds = new Set<string>()
+  for (const c of version.clips) {
+    if (c.tipo !== 'voice') continue
+    if (c.tipoContenuto === 'loop') {
+      for (const id of c.setRange?.ids ?? []) affIds.add(id)
+      for (const st of c.sequenzaSteps ?? []) affIds.add(st.id)
+      continue
+    }
+    if (!textIn(rowScript(c), lang)) n++
+  }
+  for (const id of affIds) if (!textIn(affScript(affById.get(id)), lang)) n++
+  return n
+}
+
+
+/**
+ * Every spoken text of one duration's timeline, by source id and by Italian
+ * text — what the Studio needs to fill a language a saved session lacks.
+ */
+export function buildScriptIndex(timeline: PlainTimeline): ScriptIndex {
+  const idx: ScriptIndex = { bySource: {}, byItText: {} }
+  const put = (source: string, byLang: Partial<Record<VoiceLang, string>>) => {
+    if (!Object.keys(byLang).length) return
+    idx.bySource[source] = byLang
+    if (byLang.it) idx.byItText[scriptKey(byLang.it)] = byLang
+  }
+  for (const v of timeline.versions) {
+    for (const c of v.clips) if (c.tipo === 'voice' && c.tipoContenuto !== 'loop') put(`clip:${c.clipId}`, spoken(rowScript(c)))
+  }
+  for (const a of timeline.affirmations) {
+    const byLang = spoken(affScript(a))
+    put(`aff:${a.id}`, byLang)
+    const frags = Object.fromEntries(VOICE_LANGS.map((l) => [l, fragmentsOf(byLang[l])])) as Record<VoiceLang, string[]>
+    const n = Math.max(...VOICE_LANGS.map((l) => frags[l].length))
+    if (n > 1) {
+      for (let i = 0; i < n; i++) {
+        const one: Partial<Record<VoiceLang, string>> = {}
+        for (const l of VOICE_LANGS) if (frags[l][i]) one[l] = frags[l][i]
+        put(`aff:${a.id}#${i}`, one)
+      }
+    }
+  }
+  return idx
 }
 
 /* Level model (PO pipeline, rev. 3): the Excel's volume_db is an OFFSET vs
@@ -161,13 +247,20 @@ function speedWhy(c: PlainClip, speed: number | undefined): string | null {
 }
 
 /** Dec. 6 (developer's mapping): archetype+modalità → catalog voice.
-    sussurrato prefers a Whisper voice of the same gender as the archetype. */
-export function resolvePlainVoice(archetipo: string | undefined, modalita: 'normale' | 'sussurrato' | undefined): { voice: CatalogVoice; why: string } {
-  const base = matchVoiceFromText(archetipo) ?? defaultPrimary()
-  const baseWhy = matchVoiceFromText(archetipo) ? `archetipo "${archetipo}"` : archetipo ? `archetipo "${archetipo}" non in catalogo → predefinita` : 'nessun archetipo → predefinita'
+    sussurrato prefers a Whisper voice of the same gender as the archetype.
+
+    The same rule in every language, applied only AMONG THAT LANGUAGE'S voices:
+    a Portuguese line gets the BRA voice of the archetype and gender the
+    Italian line got the ITA one of. A language with no voice for the archetype
+    falls back to its own default (`defaultPrimary(lang)`), which falls back to
+    any voice of the language, and only then to the Italian default. */
+export function resolvePlainVoice(archetipo: string | undefined, modalita: 'normale' | 'sussurrato' | undefined, lang: VoiceLang = 'it'): { voice: CatalogVoice; why: string } {
+  const matched = matchVoiceFromText(archetipo, lang)
+  const base = matched ?? defaultPrimary(lang)
+  const baseWhy = matched ? `archetipo "${archetipo}"` : archetipo ? `archetipo "${archetipo}" senza voce ${lang === 'it' ? 'italiana' : 'portoghese'} → predefinita` : 'nessun archetipo → predefinita'
   if (modalita !== 'sussurrato') return { voice: base, why: baseWhy }
   if (base.archetype === 'whisper') return { voice: base, why: `${baseWhy} (già Whisper)` }
-  const whispers = voicesByArchetype('whisper')
+  const whispers = voicesByArchetype('whisper', lang)
   const sameGender = whispers.find((v) => v.gender === base.gender)
   const chosen = sameGender ?? whispers[0]
   if (!chosen) return { voice: base, why: `${baseWhy} · sussurrato ma nessuna voce Whisper in catalogo` }
@@ -304,17 +397,39 @@ export function plainToStudioTracks(
     return only === -100 ? 'L' : only === 100 ? 'R' : 'C'
   }
 
-  /* Per-traccia voice resolution memo + note (one line per traccia/modalità). */
+  /* Per-traccia voice resolution memo + note (one line per traccia/modalità,
+     for the language being seeded — the other language's choice rides on the
+     clip in `voiceByLang` and is announced by the Studio when it is used). */
+  const lang: VoiceLang = opts.lang ?? 'it'
   const voiceNoteEmitted = new Set<string>()
-  const voiceFor = (c: PlainClip): CatalogVoice => {
-    const { voice, why } = resolvePlainVoice(c.archetipo, c.modalita)
-    const noteKey = `${c.traccia}|${c.archetipo ?? ''}|${c.modalita ?? ''}`
-    if (!voiceNoteEmitted.has(noteKey)) {
-      voiceNoteEmitted.add(noteKey)
-      notes.push(`Voce "${c.traccia}"${c.modalita === 'sussurrato' ? ' (sussurrato)' : ''} → ${voiceLabel(voice)}: ${why}.`)
+  const voicesFor = (c: PlainClip): Record<VoiceLang, CatalogVoice> => {
+    const out = {} as Record<VoiceLang, CatalogVoice>
+    for (const l of VOICE_LANGS) {
+      const { voice, why } = resolvePlainVoice(c.archetipo, c.modalita, l)
+      out[l] = voice
+      const noteKey = `${c.traccia}|${c.archetipo ?? ''}|${c.modalita ?? ''}`
+      if (l === lang && !voiceNoteEmitted.has(noteKey)) {
+        voiceNoteEmitted.add(noteKey)
+        notes.push(`Voce "${c.traccia}"${c.modalita === 'sussurrato' ? ' (sussurrato)' : ''} → ${voiceLabel(voice)}: ${why}.`)
+      }
     }
-    return voice
+    return out
   }
+  const choice = (v: CatalogVoice): VoiceChoice => ({ voiceId: v.id, voiceArchetype: v.archetype, voiceGender: v.gender })
+  /** The per-language half of a voice clip: which text and voice it speaks
+      now, and every language's text and voice for when the session switches. */
+  let missingText = 0
+  const spokenAs = (byLang: Partial<Record<VoiceLang, string>>, vs: Record<VoiceLang, CatalogVoice>, sourceId: string) => {
+    const text = byLang[lang]
+    if (!text && Object.keys(byLang).length) missingText++
+    return {
+      text,
+      textByLang: byLang,
+      voiceByLang: Object.fromEntries(VOICE_LANGS.map((l) => [l, choice(vs[l])])) as Record<VoiceLang, VoiceChoice>,
+      sourceId,
+    }
+  }
+  const voiceParams = (vs: Record<VoiceLang, CatalogVoice>) => ({ ...choice(vs[lang]), voiceLang: lang })
 
   /* Track-level FX derived from clip fields (echo/reverb are per-track in the
      Studio; the split lanes keep them honest). */
@@ -483,7 +598,7 @@ export function plainToStudioTracks(
     }
 
     /* ---- voice ---- */
-    const voice = voiceFor(c)
+    const vs = voicesFor(c)
     const channel = trackChannel(c.traccia)
 
     if (c.tipoContenuto === 'loop') {
@@ -520,8 +635,8 @@ export function plainToStudioTracks(
           l.track.clips.push({
             startSec: start,
             durationSec: dur,
-            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: seqSpeed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
-            text: aff.testo,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: seqSpeed, ...voiceParams(vs) } as VoiceParams,
+            ...spokenAs(spoken(affScript(aff)), vs, `aff:${aff.id}`),
             fadeInSec: 1,
             fadeOutSec: 2,
           })
@@ -542,7 +657,25 @@ export function plainToStudioTracks(
       const isOstinato = c.modalita === 'sussurrato' && ids.length === 1 && c.setRange && c.setRange.from === c.setRange.to
       if (isOstinato) {
         const aff = affById.get(ids[0])
-        const fragments = (aff?.testo ?? '').split(/\.\.\./).map((x) => x.trim()).filter(Boolean)
+        /* Fragments are split PER LANGUAGE, and the Italian ones set the
+           cadence: the layout (how many fragments, where they fall) is part of
+           the shared configuration, so it cannot depend on which language the
+           session happens to be seeded in. Fragment i of every language rides
+           on clip i; a language with fewer fragments leaves the later clips
+           without text in that language (shown as missing, never silently
+           Italian), and one with more has its surplus joined onto the last. */
+        const affText = spoken(affScript(aff))
+        const fragsByLang = Object.fromEntries(VOICE_LANGS.map((l) => [l, fragmentsOf(affText[l])])) as Record<VoiceLang, string[]>
+        const fragments = fragsByLang.it.length ? fragsByLang.it : fragsByLang['pt-BR']
+        for (const l of VOICE_LANGS) {
+          const f = fragsByLang[l]
+          if (f.length > fragments.length && fragments.length) {
+            fragsByLang[l] = [...f.slice(0, fragments.length - 1), f.slice(fragments.length - 1).join('... ')]
+          }
+          if (f.length && f.length !== fragments.length && aff) {
+            notes.push(`Ostinato ${c.clipId} (${aff.id}): ${f.length} frammenti ${LANG_IN[l]} contro ${fragments.length} della cadenza — ${f.length > fragments.length ? 'gli ultimi sono uniti nell’ultimo frammento' : 'i frammenti mancanti restano senza testo'}.`)
+          }
+        }
         if (aff && fragments.length) {
           const SPACING = 5      // s between fragment starts [DESIGN ~4–5 s]
           const BREATH = 9       // s of breathing silence after a pass [DESIGN ~8–10 s]
@@ -575,9 +708,13 @@ export function plainToStudioTracks(
                   toneHz: 320,
                   // the tail really slows DOWN: speed is divided, not multiplied
                   speed: inTail ? tailSpeed : baseSpeed,
-                  voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender,
+                  ...voiceParams(vs),
                 } as VoiceParams,
-                text: fragments[i],
+                ...spokenAs(
+                  Object.fromEntries(VOICE_LANGS.filter((lg) => fragsByLang[lg][i]).map((lg) => [lg, fragsByLang[lg][i]])),
+                  vs,
+                  `aff:${aff.id}#${i}`,
+                ),
                 fadeInSec: 1,
                 fadeOutSec: inTail ? 3 : 1.5, // the tail dissolves, no hard cut
               })
@@ -609,8 +746,8 @@ export function plainToStudioTracks(
           l.track.clips.push({
             startSec: start,
             durationSec: dur,
-            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: loopSpeed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
-            text: aff.testo,
+            params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed: loopSpeed, ...voiceParams(vs) } as VoiceParams,
+            ...spokenAs(spoken(affScript(aff)), vs, `aff:${aff.id}`),
             fadeInSec: 1, // Rules doc: per-affirmation envelope is an app default
             fadeOutSec: 2,
           })
@@ -644,8 +781,8 @@ export function plainToStudioTracks(
     l.track.clips.push({
       startSec: c.startS,
       durationSec: c.endS - c.startS,
-      params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, voiceId: voice.id, voiceArchetype: voice.archetype, voiceGender: voice.gender } as VoiceParams,
-      text: c.testo,
+      params: { pan: channel === 'C' ? (c.pan ?? 0) / 100 : 0, pulseHz: 0.35, toneHz: 320, speed, ...voiceParams(vs) } as VoiceParams,
+      ...spokenAs(spoken(rowScript(c)), vs, `clip:${c.clipId}`),
       fadeInSec: c.fadeInS,
       fadeOutSec: c.fadeOutS,
     })
@@ -737,6 +874,18 @@ export function plainToStudioTracks(
   for (const l of lanes) {
     const rv = l.track.effects?.find((e) => e.kind === 'reverb' && e.enabled)
     if (rv) notes.push(`"${l.track.name}": Reverb ${Math.round((rv.params.mix ?? 0) * 100)}% (riverbero_pct: effetto di traccia).`)
+  }
+
+  /* The language the session is seeded in, said out loud where it is thin:
+     lines with no text in it stay silent (never quietly Italian), and a
+     language the account has no voice for is spoken by the Italian default —
+     both are things to fix in the Excel or in ElevenLabs, not to discover by
+     listening. */
+  if (missingText) {
+    notes.unshift(`⚠ ${missingText} clip vocal${missingText === 1 ? 'e' : 'i'} senza testo ${LANG_IN[lang].replace(/^in /, '')}: ${missingText === 1 ? 'resta muta' : 'restano mute'} in questa lingua. Aggiungi la colonna ${lang === 'pt-BR' ? 'testo_pt' : 'testo'} nell’Excel e reimporta — il resto del lavoro non si perde.`)
+  }
+  if (lang !== 'it' && !hasVoicesFor(lang) && lanes.some((x) => x.track.type === 'voice')) {
+    notes.unshift(`⚠ L’account ElevenLabs non ha voci ${lang === 'pt-BR' ? 'portoghesi (nome che inizia con "BRA")' : lang}: le righe ${LANG_IN[lang]} userebbero la voce italiana predefinita.`)
   }
 
   const code = timeline.code ?? 'PLAIN'

@@ -37,6 +37,9 @@ export interface VoiceParams {
    */
   voiceArchetype?: string
   voiceGender?: 'F' | 'M'
+  /** The language the clip is currently spoken in — which language's default
+      stands in when `voiceId` is empty, and which language a remap stays in. */
+  voiceLang?: import('../tts/voiceLang').VoiceLang
 }
 export type Chord = 'c' | 'g' | 'am' | 'f' | 'dm' | 'em'
 export interface MusicParams { chord: Chord }

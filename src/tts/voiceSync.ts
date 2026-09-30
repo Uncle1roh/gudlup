@@ -55,7 +55,7 @@ function readCache(key: string | undefined = activeApiKey()): Cache | null {
     if (!raw) return null
     const c = JSON.parse(raw) as Cache
     if (!key || c?.key !== keyTag(key)) return null
-    return Array.isArray(c?.voices) && c.voices.length ? c : null
+    return Array.isArray(c?.voices) && c.voices.length ? { ...c, voices: c.voices.map(normalizeCached) } : null
   } catch {
     return null
   }
@@ -121,8 +121,33 @@ export function toCatalogVoice(v: ApiVoice): CatalogVoice {
     gender,
     archetype,
     category: v.category,
-    language: labels.language,
+    /* The language comes from the NAME marker (ITA / BRA), never from the
+       ElevenLabs label: generated voices carry no labels, and a library voice
+       labelled "en" is an accent, not the language the POs voice it in. No
+       marker = Italian, which is what every voice was before BRA existed. */
+    language: parsed.language ?? 'it',
     approved: parsed.approved,
+  }
+}
+
+/**
+ * A voice as it was CACHED before the name's language marker was read.
+ *
+ * The cache holds the cleaned-up entry, not the raw ElevenLabs name, so an old
+ * "BRA MATERNAL (F)" — which the previous parser could not read — sits there
+ * under its raw name with an inferred archetype and no language. Re-reading
+ * that name recovers all three; an entry whose name was already clean
+ * ("Maternal") has nothing more to give and is Italian.
+ */
+function normalizeCached(v: CatalogVoice): CatalogVoice {
+  if (v.language === 'it' || v.language === 'pt-BR') return v
+  const parsed = parseVoiceName(v.name)
+  return {
+    ...v,
+    name: parsed.archetype ? parsed.name : v.name,
+    archetype: parsed.archetype ?? v.archetype,
+    gender: parsed.gender ?? v.gender,
+    language: parsed.language ?? 'it',
   }
 }
 

@@ -134,7 +134,7 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
     setUploading(true)
     setRenderError(null)
     try {
-      const { url, protocol } = await attachRenderedAudio(dp, published.code, rendered.duration, rendered.buffer)
+      const { url, protocol } = await attachRenderedAudio(dp, published.code, rendered.duration, rendered.buffer, 'it')
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: protocol.code, detail: `${rendered.duration} min · mp3` })
       setPublished(protocol)
       setAttached(url)

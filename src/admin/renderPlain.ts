@@ -37,6 +37,7 @@ import type { SeedTrack } from '../compose/types'
 import type { AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
 import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimeline'
+import { LANG_IN, type VoiceLang } from '../tts/voiceLang'
 
 const CHANNEL_PAN: Record<'L' | 'C' | 'R', number> = { L: -1, C: 0, R: 1 }
 
@@ -90,6 +91,10 @@ export interface RenderPlainOptions {
   seed?: number
   /** Synthesize the voice clips with the configured TTS. */
   withVoice?: boolean
+  /** The language to SPEAK: its texts, its voices, and the language flag the
+      TTS request carries. Default Italian, which every render was until the
+      Portuguese column existed (it used to be a hard-coded 'it' below). */
+  lang?: VoiceLang
   onProgress?: (msg: string) => void
 }
 
@@ -108,7 +113,8 @@ export async function renderPlainWav(
 ): Promise<RenderPlainResult> {
   const progress = opts.onProgress ?? (() => undefined)
   progress('Preparazione del progetto Studio…')
-  const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed })
+  const lang: VoiceLang = opts.lang ?? 'it'
+  const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed, lang })
   const notes = [...seed.notes]
   const lengthSec = seed.totalSec
   if (!opts.pools) notes.push('Nessun pool di asset disponibile (Supabase non configurato o libreria vuota): le lane Music/Soundscape restano mute.')
@@ -149,12 +155,12 @@ export async function renderPlainWav(
           const vp = c.params as VoiceParams
           const text = (c.text ?? '').trim()
           if (!text || !canVoice || !decoder) { continue }
-          const voiceId = vp.voiceId ?? defaultPrimary().id
-          const key = `${voiceId}|${text}`
+          const voiceId = vp.voiceId ?? defaultPrimary(lang).id
+          const key = `${voiceId}|${lang}|${text}`
           let decoded = ttsCache.get(key)
           if (!decoded) {
             progress(`Voce ${voiceClips + 1}: "${text.slice(0, 42)}${text.length > 42 ? '…' : ''}" (${voiceById(voiceId)?.name ?? 'predefinita'})`)
-            const bytes = await tts.render(text, { lang: 'it', voiceId })
+            const bytes = await tts.render(text, { lang, voiceId })
             decoded = await decoder.decodeAudioData(bytes.slice(0))
             ttsCache.set(key, decoded)
           }
@@ -253,6 +259,7 @@ export async function renderPlainWav(
       `${m.limiterDb < -0.1 ? `, limiter fino a ${m.limiterDb.toFixed(1)} dB` : ', limiter non intervenuto'}). ` +
       `Il tetto di 70 dB SPL dipende dal volume del dispositivo di chi ascolta: con questa normalizzazione un’impostazione normale di telefono/cuffie resta al di sotto.`,
     )
+    notes.unshift(`Render ${LANG_IN[lang]}: ${voiceClips} clip vocali.`)
     const blob = audioBufferToWav(buffer)
     return { blob, buffer, seconds: lengthSec, voiceClips, notes }
   } finally {
@@ -260,7 +267,7 @@ export async function renderPlainWav(
   }
 }
 
-export function plainWavFileName(code: string | null, sheet: string): string {
+export function plainWavFileName(code: string | null, sheet: string, lang?: VoiceLang): string {
   const safe = (code ?? 'PLAIN').replace(/[^A-Za-z0-9_-]+/g, '_')
-  return `${safe}_${sheet}.wav`
+  return `${safe}_${sheet}${lang ? `_${lang}` : ''}.wav`
 }

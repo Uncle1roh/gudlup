@@ -22,6 +22,7 @@
 
 import type { WorkBook, WorkSheet } from 'xlsx'
 import { parseFxCell, type PlainFxSpec } from './plainFx'
+import { SCRIPT_LANGS, textIn, type ScriptLang, type TextByLang } from '../tts/voiceLang'
 
 /* SheetJS is lazy-loaded (same pattern as datasheet.ts) so it never weighs on
    the main bundle. */
@@ -110,7 +111,16 @@ export interface PlainClip {
   modalita?: 'normale' | 'sussurrato'
   velocitaWpm?: number
   tipoContenuto?: 'linea' | 'loop'
+  /** The ITALIAN text — the `testo` column. Kept as its own field because
+      every reader written before the other languages existed reads it. */
   testo?: string
+  /**
+   * The spoken text in every language the sheet carries: `testo` / `testo_it`
+   * (Italian), `testo_pt` (Portuguese), `testo_en` (English, stored for when
+   * it is voiced). Everything else on the row — timing, level, fx, archetipo —
+   * is shared by all of them. See docs/PLAIN_README_SHEET.md.
+   */
+  testoByLang?: TextByLang
   setAffermazioni?: string
   setRange?: PlainSetRange
   intervalloS?: number
@@ -133,7 +143,10 @@ export interface PlainClip {
 
 export interface PlainAffirmation {
   id: string
+  /** Italian text (`testo`), as every older reader expects. */
   testo: string
+  /** The same affirmation in every language the sheet carries (see PlainClip). */
+  testoByLang?: TextByLang
   /** Raw set cell, e.g. "Quick-Std-Deep". */
   setRaw: string
   inQuick: boolean
@@ -186,6 +199,14 @@ export interface PlainIssue {
   sheet?: string
   clipId?: string
   message: string
+  /**
+   * Set on the issues that describe which LANGUAGES the text is in. They are
+   * the only issues a later import can make untrue without touching the
+   * sheet — a Portuguese text kept from the stored timeline answers "no
+   * Portuguese text yet" — so they are recomputed after a merge rather than
+   * carried over (`scriptIssues`).
+   */
+  code?: 'script'
 }
 
 export interface PlainTimeline {
@@ -360,6 +381,94 @@ function parseReadme(ws: WorkSheet | undefined, X: XlsxModule): ReadmeMeta {
   return meta
 }
 
+/* ------------------------------------------------------------- languages ---
+
+   One text column per language, on the clip sheets AND on Affermazioni:
+
+     testo      Italian (the column every workbook already has)
+     testo_it   alias of `testo`, for sheets that name every language
+     testo_pt   Portuguese (Brazil)  — also testo_pt-br / testo_ptbr / testo_br
+     testo_en   English — stored, not voiced yet
+
+   Headers are matched lower-case, so TESTO_PT works too. A workbook without
+   any testo_pt column is simply Italian-only: nothing about it is invalid. */
+const SCRIPT_COLUMNS: Record<ScriptLang, string[]> = {
+  it: ['testo', 'testo_it', 'testo_ita'],
+  'pt-BR': ['testo_pt', 'testo_pt-br', 'testo_pt_br', 'testo_ptbr', 'testo_br', 'testo_bra'],
+  en: ['testo_en', 'testo_eng'],
+}
+
+/** Every language's text in one row. `read(col)` returns the raw cell of a
+    header, or undefined when the sheet has no such column. */
+function readScript(read: (col: string) => unknown): TextByLang | undefined {
+  const out: TextByLang = {}
+  for (const lang of SCRIPT_LANGS) {
+    for (const col of SCRIPT_COLUMNS[lang]) {
+      const v = str(read(col))
+      if (v) { out[lang] = v; break }
+    }
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+/** Whether a header row carries any text column at all (Italian or not). */
+function hasScriptColumn(col: Record<string, number>): boolean {
+  return SCRIPT_LANGS.some((l) => SCRIPT_COLUMNS[l].some((c) => c in col))
+}
+
+/**
+ * The issues that say which languages the text is in, from the CONTENT.
+ *
+ * Computed from what the timeline carries, not from which columns a file
+ * happened to have, so the same function answers after a parse and after a
+ * merge — where a Portuguese text may have been kept from the stored timeline
+ * while the incoming file had none.
+ *
+ *   · no Portuguese anywhere  → one note: this protocol is Italian-only
+ *   · some Portuguese         → one note per line that still has none
+ *
+ * Info, never an error: a missing translation does not stop an Italian
+ * session from being built, rendered or published. Affirmation notes carry no
+ * sheet on purpose — a per-duration slice keeps only its own sheet's issues
+ * and the workbook-wide ones, and the Affermazioni sheet is neither.
+ */
+export function scriptIssues(t: Pick<PlainTimeline, 'versions' | 'affirmations'>): PlainIssue[] {
+  const out: PlainIssue[] = []
+  const lines: { sheet?: string; id: string; byLang: TextByLang | undefined; aff: boolean }[] = []
+  for (const v of t.versions) {
+    for (const c of v.clips) {
+      if (c.tipo !== 'voice' || c.tipoContenuto === 'loop') continue
+      lines.push({ sheet: v.sheet, id: c.clipId, byLang: c.testoByLang ?? (c.testo ? { it: c.testo } : undefined), aff: false })
+    }
+  }
+  for (const a of t.affirmations) {
+    lines.push({ id: a.id, byLang: a.testoByLang ?? (a.testo ? { it: a.testo } : undefined), aff: true })
+  }
+  if (!lines.length) return out
+  if (!lines.some((l) => !!textIn(l.byLang, 'pt-BR'))) {
+    out.push({
+      level: 'info',
+      code: 'script',
+      message: 'Solo italiano: nessun testo portoghese (colonna testo_pt). La versione portoghese si aggiunge importando lo stesso Excel con la colonna testo_pt — niente di quanto già fatto va perso.',
+    })
+    return out
+  }
+  for (const l of lines) {
+    if (textIn(l.byLang, 'it') && !textIn(l.byLang, 'pt-BR')) {
+      out.push({
+        level: 'info',
+        code: 'script',
+        sheet: l.sheet,
+        clipId: l.id,
+        message: l.aff
+          ? 'Affermazioni: nessun testo portoghese ancora (testo_pt vuoto) — in portoghese resta muta.'
+          : 'Nessun testo portoghese ancora (testo_pt vuoto) — in portoghese questa clip resta muta.',
+      })
+    }
+  }
+  return out
+}
+
 /* ------------------------------------------------------------ Affermazioni */
 
 function findAffirmationSheet(wb: WorkBook): string | null {
@@ -377,7 +486,7 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
   for (let r = 0; r <= Math.min(range.e.r, 10); r++) {
     const cells: string[] = []
     for (let c = 0; c <= range.e.c; c++) cells.push(str(cellAt(ws, r, c, X)).toLowerCase())
-    if (cells.includes('id') && cells.includes('testo')) {
+    if (cells.includes('id') && ['testo', 'testo_it', 'testo_pt'].some((h) => cells.includes(h))) {
       hdrRow = r
       cells.forEach((h, c) => { if (h) col[h] = c })
       break
@@ -397,9 +506,11 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
     const setRaw = str(cellAt(ws, r, col['set'] ?? -1, X))
     const setLc = setRaw.toLowerCase()
     const lato = str(cellAt(ws, r, col['bilaterale_lato'] ?? -1, X)).toUpperCase()
+    const byLang = readScript((h) => (h in col ? cellAt(ws, r, col[h], X) : undefined))
     out.push({
       id: id.toUpperCase(),
-      testo: str(cellAt(ws, r, col['testo'], X)),
+      testo: byLang?.it ?? '',
+      testoByLang: byLang,
       setRaw,
       inQuick: /quick/.test(setLc),
       inStandard: /std|standard/.test(setLc),
@@ -624,7 +735,8 @@ function parseClipSheet(
       if (modalitaRaw && !clip.modalita) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `modalita "${modalitaRaw}" sconosciuta: trattata come "normale".` })
       clip.velocitaWpm = num(get(r, 'velocita_wpm')) ?? undefined
       clip.tipoContenuto = contRaw === 'loop' ? 'loop' : contRaw === 'linea' ? 'linea' : undefined
-      clip.testo = str(get(r, 'testo')) || undefined
+      clip.testoByLang = readScript((h) => get(r, h))
+      clip.testo = clip.testoByLang?.it
       clip.setAffermazioni = str(get(r, 'set_affermazioni')) || undefined
       clip.intervalloS = num(get(r, 'intervallo_s')) ?? undefined
       clip.cicli = num(get(r, 'cicli')) ?? undefined
@@ -639,8 +751,10 @@ function parseClipSheet(
       if (clip.pan !== undefined && (clip.pan < -100 || clip.pan > 100)) issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `pan ${clip.pan} fuori intervallo −100..+100.` })
       if (!clip.tipoContenuto) {
         issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Voice clip without tipo_contenuto (linea/loop).` })
+      } else if (clip.tipoContenuto === 'linea' && !clip.testoByLang) {
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea ma "testo" è vuoto${hasScriptColumn(col) ? '' : ' (nessuna colonna testo nel foglio)'}.` })
       } else if (clip.tipoContenuto === 'linea' && !clip.testo) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea ma "testo" è vuoto.` })
+        issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Manca il testo italiano (colonna testo): la clip ha solo ${Object.keys(clip.testoByLang ?? {}).join(' / ')} — in italiano resta muta.` })
       } else if (clip.tipoContenuto === 'loop' && !clip.setAffermazioni && !clip.sequenza) {
         issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=loop ma né set_affermazioni né sequenza sono compilati.` })
       }
@@ -919,7 +1033,10 @@ export async function parsePlainTimeline(bytes: ArrayBuffer): Promise<PlainParse
     issues.push({ level: 'error', message: 'Le clip loop richiamano set di affermazioni ma manca il foglio Affermazioni.' })
   }
 
+  issues.push(...scriptIssues({ versions, affirmations }))
+
   // subset sanity 8 ⊂ 12 ⊂ 20 (informative — the file may carry only one version)
+
   if (affirmations.length) {
     const clinical = affirmations.filter((a) => !a.refrain)
     const q = clinical.filter((a) => a.inQuick).length

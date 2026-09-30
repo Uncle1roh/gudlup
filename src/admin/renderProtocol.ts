@@ -189,7 +189,10 @@ export async function renderSpecWav(spec: ProtocolSpec, opts: SpecRenderOptions,
           try {
             let buf = cache.get(line.text)
             if (!buf) {
-              const bytes = await tts.render(line.text, { lang: 'pt-BR' })
+              /* The spec documents are written in Italian and the file is
+                 attached as Italian audio (SpecImport → attachRenderedAudio
+                 'it'); the request says so rather than claiming Portuguese. */
+              const bytes = await tts.render(line.text, { lang: 'it' })
               buf = await decoder.decodeAudioData(bytes.slice(0))
               cache.set(line.text, buf)
             }

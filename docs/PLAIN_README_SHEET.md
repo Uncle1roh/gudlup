@@ -6,6 +6,9 @@ from. What changed recently is only that the phase map now travels on into the
 Sound Studio, where one rule needs to know which part of a session is the
 closing. Nothing about how you write the sheet has changed.
 
+The clip sheets' per-language text columns (`testo`, `testo_pt`, `testo_en`)
+are described in `docs/PLAIN_LANGUAGES.md`.
+
 There was no written spec for it, which is what this file fixes. The authority
 is still `parseReadme()` in `src/admin/plainTimeline.ts`; everything below was
 read off that function.

@@ -796,7 +796,7 @@ function PreLaunchCheck({
       <div className="w-selected">
         <div>
           <div className="w-mono">{code}</div>
-          <div className="w-small">{t(entry?.title ?? protocol?.title ?? '')}</div>
+          <div className="w-small">{t(entry?.title ?? (protocol ? protocolTitle(protocol, locale) : ''))}</div>
           <div className="w-small">{t(version === 6 ? 'Quick' : version === 12 ? 'Standard' : 'Deep')} ({version} min)</div>
         </div>
         <button className="w-link" onClick={onChange}>{t('Change content')}</button>
@@ -872,6 +872,11 @@ function TreatmentMonitor({
      when one is published. Monitoring a placeholder while the patient listens
      to a rendered voice would make the observation worthless, so a failure to
      load it is reported here rather than passed over. */
+  /* Which LANGUAGE's file: the patient's would be right, but the workspace
+     roster carries no language for a patient (WorkspacePatient has none, and
+     the call's control channel does not report one), so this is the
+     therapist's interface language — with the usual fallback to the other
+     language when that one has no file. */
   const audioUrl = audioUrlFor(protocol, state.version, locale)
   const [audioFailed, setAudioFailed] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -963,7 +968,7 @@ function TreatmentMonitor({
   return (
     <div className="w-panel__body">
       <h3 className="w-h3">
-        <span className="w-mono">{state.code}</span> — {t(entry ? protocolTitle(entry, locale) : protocol?.title ?? '')}
+        <span className="w-mono">{state.code}</span> — {t(entry ? protocolTitle(entry, locale) : protocol ? protocolTitle(protocol, locale) : '')}
       </h3>
       <p className="w-small">
         {t(state.version === 6 ? 'Quick' : state.version === 12 ? 'Standard' : 'Deep')} — {fmtClock(state.total)}

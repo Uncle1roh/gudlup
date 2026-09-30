@@ -24,8 +24,9 @@
    Nothing here holds AudioBuffers, so it serialises cleanly.
    ============================================================================ */
 
-import type { SeedTrack, StudioPhase, StudioProject } from './types'
+import type { ScriptIndex, SeedTrack, StudioPhase, StudioProject } from './types'
 import type { Duration } from '../types/domain'
+import type { VoiceLang } from '../tts/voiceLang'
 
 const KEY = 'gl.studio.handoff'
 
@@ -44,6 +45,15 @@ export interface StudioSeed {
   masterGain?: number
   /** The six phase windows, when there are any. */
   phases?: StudioPhase[]
+  /**
+   * The language the session is being WORKED in. Absent when the Studio is
+   * opened for a protocol = not chosen yet, and the Studio asks. Written back
+   * by the Studio's own hand-off sync, so a remount (a resize past the desktop
+   * gate, a reload) comes back in the same language without asking again.
+   */
+  workingLang?: VoiceLang
+  /** The stored timeline's texts, to fill a language a saved session lacks. */
+  scripts?: ScriptIndex
 }
 
 export interface SeedExtras {
@@ -51,6 +61,8 @@ export interface SeedExtras {
   lengthSec?: number
   masterGain?: number
   phases?: StudioPhase[]
+  workingLang?: VoiceLang
+  scripts?: ScriptIndex
 }
 
 let pending: StudioSeed | null = null
@@ -77,8 +89,14 @@ export function setStudioSeed(
 }
 
 /** Reopen a saved Studio session (the "edit protocol" path). */
-export function setStudioProject(project: StudioProject, attach?: StudioAttachTarget, returnTo?: string): void {
+export function setStudioProject(
+  project: StudioProject,
+  attach?: StudioAttachTarget,
+  returnTo?: string,
+  extras?: Pick<SeedExtras, 'workingLang' | 'scripts'>,
+): void {
   remember({
+    ...extras,
     tracks: project.tracks,
     name: project.name,
     attach,

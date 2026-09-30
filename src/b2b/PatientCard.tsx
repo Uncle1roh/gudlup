@@ -4,6 +4,8 @@ import { LINKED_PATIENT_ID } from '../data/mock'
 import { PatientNotes } from './PatientNotes'
 import { PlanEditor } from './PlanEditor'
 import { isLibraryCode } from '../data/library'
+import { protocolTitle } from '../types/domain'
+import { currentLocale } from '../i18n'
 
 interface PatientCardProps {
   patient: Patient
@@ -128,7 +130,7 @@ export function PatientCard({ patient: p, onBack, onEdit, onOpenConsultation, on
               return (
                 <li key={s.id} className="chron__item">
                   <div>
-                    <strong>{proto?.title ?? s.protocolCode}</strong>
+                    <strong>{proto ? protocolTitle(proto, currentLocale()) : s.protocolCode}</strong>
                     <span className="b2b-sub">{fmtDate(s.date)} · {s.duration} min · {s.notes.length} not{s.notes.length !== 1 ? 'e' : 'a'}</span>
                   </div>
                   <span className="chron__delta">+{(s.vasPost - s.vasPre).toFixed(0)}</span>

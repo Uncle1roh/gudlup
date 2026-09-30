@@ -18,6 +18,7 @@ import type { PlainTimeline, PlainVersion } from '../admin/plainTimeline'
 import type { AssetMap } from '../admin/assets'
 import { PROTOCOLS } from './protocols'
 import { libraryProtocols, type LibraryMeta } from './library'
+import { LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
 
 export type ProtocolSource = 'seed' | 'imported'
 
@@ -189,10 +190,38 @@ export function durationState(
   duration: Duration,
 ): DurationState {
   if (!p) return 'empty'
-  const version = p.versions.find((v) => v.duration === duration)
-  const hasAudio = Boolean(version?.audioUrl && Object.values(version.audioUrl).some(Boolean))
-  if (p.enabled && hasAudio) return 'published'
+  // any language counts: an Italian-only duration is as live as a bilingual one
+  if (p.enabled && hasAnyAudio(p, duration)) return 'published'
   return plainFor(p, duration) || studioFor(p, duration) ? 'saved' : 'empty'
+}
+
+/**
+ * The spoken languages one duration has a published file in.
+ *
+ * "Published" used to mean "has a `pt-BR` URL", written out by hand in three
+ * screens — so the day a file is filed under `it`, a live duration reads as
+ * never published. Every screen asks here instead: a duration is on the air
+ * when ANY language has a file, and this says which.
+ */
+export function audioLangs(
+  p: Pick<CatalogProtocol, 'versions'> | undefined,
+  duration: Duration,
+): VoiceLang[] {
+  const urls = p?.versions.find((v) => v.duration === duration)?.audioUrl
+  return VOICE_LANGS.filter((l) => !!urls?.[l])
+}
+
+/** True when a duration has a file in ANY language, including the ones the
+    app does not voice yet — a file is a file. */
+export function hasAnyAudio(p: Pick<CatalogProtocol, 'versions'> | undefined, duration?: Duration): boolean {
+  return (p?.versions ?? []).some((v) =>
+    (duration == null || v.duration === duration) && !!v.audioUrl && Object.values(v.audioUrl).some(Boolean))
+}
+
+/** "IT ✓ · PT —": which languages are live for one duration, at a glance. */
+export function audioLangSummary(p: Pick<CatalogProtocol, 'versions'> | undefined, duration: Duration): string {
+  const have = audioLangs(p, duration)
+  return VOICE_LANGS.map((l) => `${LANG_SHORT[l]} ${have.includes(l) ? '✓' : '—'}`).join(' · ')
 }
 
 /** The durations that actually have a timeline, ascending. */

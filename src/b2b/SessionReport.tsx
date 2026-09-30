@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { PRESETS, fmtDateTime, type Patient, type Therapist } from './data'
 import { getProtocol } from '../data/protocols'
+import { protocolTitle } from '../types/domain'
+import { currentLocale } from '../i18n'
 import type { SessionResult } from './ConsultationRoom'
 import type { DebriefData } from './Debrief'
 
@@ -30,7 +32,7 @@ export function SessionReport({ patient, therapist, result, debrief, onConfirm }
       <div className="report">
         <div className="report__row"><span>Paziente</span><b>{patient.name} · {patient.age}</b></div>
         <div className="report__row"><span>Data e ora</span><b>{fmtDateTime(result.endedAt)}</b></div>
-        <div className="report__row"><span>Protocollo</span><b>{proto ? `${proto.code} — ${proto.title}` : 'Nessuno — solo colloquio'}</b></div>
+        <div className="report__row"><span>Protocollo</span><b>{proto ? `${proto.code} — ${protocolTitle(proto, currentLocale())}` : 'Nessuno — solo colloquio'}</b></div>
         {preset && <div className="report__row"><span>Parametri</span><b>{preset.binaural} · respirazione {preset.breathing} · {preset.voice}</b></div>}
         <div className="report__row"><span>Durata</span><b>{mmss(Math.round((result.endedAt - result.startedAt) / 1000))} {result.audioPlayed ? (result.completed ? '(audio completato)' : '(audio interrotto)') : ''}</b></div>
         {/* 0 means the reading was never taken. Printing "0 → 0 (+0)" would

@@ -3,7 +3,8 @@ import { useProtocols } from '../admin/hooks'
 import { clinicalEntries } from '../data/catalog'
 import { PRESETS, type Patient } from './data'
 import type { ComposeSettings } from '../compose/types'
-import type { Duration } from '../types/domain'
+import { protocolBlurb, protocolTitle, type Duration } from '../types/domain'
+import { useI18n } from '../i18n'
 
 export interface LaunchConfig {
   protocolCode: string
@@ -24,6 +25,7 @@ export function ClinicalWizard({ patient, onLaunch, onCancel }: ClinicalWizardPr
   const { data: catalog, loading } = useProtocols()
   // clinical only: the family presets below are keyed by clinical family, and
   // library audio is never prescribed
+  const { locale } = useI18n()
   const protocols = clinicalEntries(catalog ?? [])
   const [protocolCode, setProtocolCode] = useState<string>('')
   const [goal, setGoal] = useState('')
@@ -71,8 +73,8 @@ export function ClinicalWizard({ patient, onLaunch, onCancel }: ClinicalWizardPr
                 <button key={p.code} className={`proto${selectedCode === p.code ? ' is-on' : ''}`} onClick={() => setProtocolCode(p.code)}>
                   <span className="proto__radio" />
                   <span className="proto__body">
-                    <strong>{p.code} · {p.title}</strong>
-                    <span className="b2b-sub">{p.blurb}</span>
+                    <strong>{p.code} · {protocolTitle(p, locale)}</strong>
+                    <span className="b2b-sub">{protocolBlurb(p, locale)}</span>
                   </span>
                 </button>
               ))}

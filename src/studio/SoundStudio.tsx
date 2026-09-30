@@ -42,11 +42,13 @@ import {
   type SampleSlot,
   type Chord,
 } from './multitrack'
-import { getTtsProvider, ttsLanguage, type TtsSpan } from '../tts'
+import { getTtsProvider, type TtsSpan } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
-import { ARCHETYPES, defaultPrimary, resolveVoiceId, voiceById, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
+import { ARCHETYPES, defaultPrimary, hasVoicesFor, resolveVoiceId, voiceById, voiceLangOf, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
+import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
+import { canonicalVoiceClip, isTextMissing, switchClipLang } from './sessionLang'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
@@ -59,7 +61,7 @@ import { setReturnToProtocol } from '../admin/workscreenReturn'
 import { lookup as ttsLookup, store as ttsStore, ttsPath as ttsPathFor, type TtsKey } from '../tts/ttsStore'
 import type { Duration } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
-import type { StudioProject } from '../compose/types'
+import type { ScriptIndex, StudioProject, VoiceChoice } from '../compose/types'
 import { useDataProvider } from '../data/provider'
 import type { SeedTrack, StudioPhase } from '../compose/types'
 import { planVoiceOverlaps, VOICE_GAP, type VoicePlan } from './voiceOverlap'
@@ -189,6 +191,13 @@ interface Clip {
   /** Per-clip parametric EQ (Studio tool) — baked into the buffer before
       the loudness calibration, so EQ never moves the layer level. */
   eq?: ClipEq
+  /* Voice clips, per language (see studio/sessionLang.ts): `text`, `ttsPath`
+     / `ttsText` and `params.voiceId` above are the WORKING language's; these
+     hold every language, and where the text came from in the workbook. */
+  sourceId?: string
+  textByLang?: Partial<Record<VoiceLang, string>>
+  ttsByLang?: Partial<Record<VoiceLang, { path?: string; text?: string }>>
+  voiceByLang?: Partial<Record<VoiceLang, VoiceChoice>>
 }
 type TrackChannel = 'L' | 'C' | 'R'
 const CHANNEL_PAN: Record<TrackChannel, number> = { L: -1, C: 0, R: 1 }
@@ -308,8 +317,33 @@ function seedTrackToTrack(t: SeedTrack): Track {
       gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec,
       calibrateDb: c.calibrateDb, eq: c.eq,
       ttsPath: c.ttsPath, ttsText: c.ttsText,
+      sourceId: c.sourceId, textByLang: c.textByLang, ttsByLang: c.ttsByLang, voiceByLang: c.voiceByLang,
     })),
   }
+}
+
+/**
+ * Every voice clip of a session switched from one language to another. The
+ * counts are for the message the switch leaves: how many lines found their
+ * text in the stored timeline, how many have none, and how many cut pieces
+ * keep audio in the language they were cut in (their audio is frozen).
+ */
+function switchTracksLang(tracks: Track[], from: VoiceLang, to: VoiceLang, scripts?: ScriptIndex): { tracks: Track[]; missing: number; filled: number; frozen: number } {
+  let missing = 0
+  let filled = 0
+  let frozen = 0
+  const next = tracks.map((t) => (t.type !== 'voice' ? t : {
+    ...t,
+    clips: t.clips.map((c) => {
+      const r = switchClipLang(c, from, to, scripts)
+      if (r.missing) missing++
+      if (r.filled) filled++
+      if (c.frozen) { frozen++; return r.clip }
+      // the audio in the clip is the OTHER language's: it re-renders on demand
+      return { ...r.clip, ttsSource: null }
+    }),
+  }))
+  return { tracks: next, missing, filled, frozen }
 }
 
 /* seed = the GL-ANX 1.1 bed, so the studio opens with something to hear + edit */
@@ -376,9 +410,23 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       fadeInSec: h.fadeInSec ?? 0,
       fadeOutSec: h.fadeOutSec ?? 0,
       returnTo: h.returnTo ?? null,
+      workingLang: h.workingLang,
+      scripts: h.scripts,
     }
   }, [])
-  const [tracks, setTracks] = useState<Track[]>(() => handoff?.tracks ?? makeSeed())
+  /* ---- the WORKING language ----
+     The hand-off holds the session in its canonical form (Italian in the live
+     fields). A remount that already had a language chosen comes back in it
+     without asking; a protocol opened fresh asks (`langAsk`). */
+  const scripts = handoff?.scripts
+  const [workingLang, setWorkingLang] = useState<VoiceLang>(handoff?.workingLang ?? 'it')
+  const [langAsk, setLangAsk] = useState<boolean>(() => !!handoff?.attach && !handoff.workingLang)
+  const workingLangRef = useRef(workingLang); workingLangRef.current = workingLang
+  const [tracks, setTracks] = useState<Track[]>(() => {
+    const base = handoff?.tracks ?? makeSeed()
+    const lang = handoff?.workingLang
+    return lang && lang !== 'it' ? switchTracksLang(base, 'it', lang, handoff?.scripts).tracks : base
+  })
   const [projectName, setProjectName] = useState(handoff?.name ?? 'GL-ANX 1.1 — Calm and Inner Safety')
   const [masterGain, setMasterGain] = useState(handoff?.masterGain ?? 0.82)
   const [lengthSec, setLengthSec] = useState(handoff?.lengthSec ?? 120)
@@ -414,22 +462,32 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         channel: t.channel,
         effects: t.effects,
         baseLufs: t.baseLufs,
-        clips: t.clips.map((c) => ({
-          startSec: c.startSec,
-          durationSec: c.durationSec,
-          params: c.params,
-          text: c.text,
-          gainDb: c.gainDb,
-          fadeInSec: c.fadeInSec,
-          fadeOutSec: c.fadeOutSec,
-          calibrateDb: c.calibrateDb,
-          eq: c.eq,
-          /* What makes a synthesized voice survive the save. Only written when
-             the render matches the text currently on the clip — an edited line
-             must come back unrendered, not silently spoken as the old one. */
-          ttsPath: c.ttsText && c.ttsText === (c.text ?? '').trim() ? c.ttsPath : undefined,
-          ttsText: c.ttsPath ? c.ttsText : undefined,
-        })),
+        clips: t.clips.map((live) => {
+          /* Every language together, in the canonical form: the live fields
+             are the ITALIAN ones whatever language is being worked in, and
+             the maps carry all of them (studio/sessionLang.ts). */
+          const c = t.type === 'voice' ? canonicalVoiceClip(live, workingLang) : live
+          return {
+            startSec: c.startSec,
+            durationSec: c.durationSec,
+            params: c.params,
+            text: c.text,
+            gainDb: c.gainDb,
+            fadeInSec: c.fadeInSec,
+            fadeOutSec: c.fadeOutSec,
+            calibrateDb: c.calibrateDb,
+            eq: c.eq,
+            /* What makes a synthesized voice survive the save. Only written when
+               the render matches the text currently on the clip — an edited line
+               must come back unrendered, not silently spoken as the old one. */
+            ttsPath: c.ttsText && c.ttsText === (c.text ?? '').trim() ? c.ttsPath : undefined,
+            ttsText: c.ttsPath ? c.ttsText : undefined,
+            sourceId: c.sourceId,
+            textByLang: c.textByLang,
+            ttsByLang: c.ttsByLang,
+            voiceByLang: c.voiceByLang,
+          }
+        }),
       })),
     }
   }
@@ -631,14 +689,16 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        setStudioProject(toStudioProject(), attachTarget ?? undefined, returnTo ?? undefined)
+        /* The working language rides along only once it has been chosen: a
+           remount before the question is answered must ask it again. */
+        setStudioProject(toStudioProject(), attachTarget ?? undefined, returnTo ?? undefined, { workingLang: langAsk ? undefined : workingLang, scripts })
       } catch {
         /* a project too large for sessionStorage keeps working in memory */
       }
     }, 800)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracks, projectName, lengthSec, masterGain, sessionFades.inSec, sessionFades.outSec])
+  }, [tracks, projectName, lengthSec, masterGain, sessionFades.inSec, sessionFades.outSec, workingLang, langAsk])
 
   /* No voice is loaded when a project opens. Every voice line starts
      unrendered and is voiced only on request — "Tutte le voci" or the clip's
@@ -819,7 +879,8 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         return
       }
       const provider = getTtsProvider()
-      const lang = ttsLanguage()
+      // the session's WORKING language, not a deployment-wide setting
+      const lang = workingLangRef.current
       if (!provider.canRender || !player) {
         // no key: the browser engine can only speak in an OS voice — say so
         await provider.speak(text, { lang, voiceId: voice.id, rate: vp.speed })
@@ -867,7 +928,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       const key: TtsKey = {
         text,
         voiceId: effectiveVoice(vp).id,
-        lang: ttsLanguage(),
+        lang: workingLangRef.current,
         context: `${ctx.previousText ?? ''}|${ctx.nextText ?? ''}`,
         seed,
       }
@@ -924,7 +985,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     }
     if (!jobs.length) { setTtsError(lt('No voice clip with text to synthesize.')); return }
     setTtsError(null)
-    const lang = ttsLanguage()
+    const lang = workingLangRef.current
     const cache = new Map<string, AudioBuffer>()
     /* One joined render serves every clip in its block, and repeats of the same
        block (a LOOP lane cycles the same four words all phase) reuse it — so the
@@ -1032,6 +1093,65 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     return { remapped, stale, examples }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks, ttsTick])
+
+  /* ---- switching the working language ----
+     Everything but the voice clips' words and voices is shared, so a switch
+     touches nothing else: timing, levels, fx and draws stay exactly as they
+     are. Each clip's current text, render and voice are folded into its
+     per-language maps first, so switching back finds them again — nothing is
+     lost by switching, in either direction. Refused while voices are being
+     synthesized: a take landing after the switch would be filed under the
+     wrong language. */
+  const [langMsg, setLangMsg] = useState<string | null>(null)
+  function switchLang(next: VoiceLang) {
+    setLangAsk(false)
+    if (next === workingLang) return
+    if (ttsInFlight.current.size > 0 || synthAll) {
+      setLangMsg(lt('Wait for the voices being synthesized to finish, then switch language.'))
+      return
+    }
+    const r = switchTracksLang(tracksRef.current, workingLang, next, scripts)
+    setTracks(r.tracks)
+    setWorkingLang(next)
+    const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this language; everything else is shared.', { lang: LANG_LABEL[next] })]
+    if (r.filled) bits.push(lt('{n} texts filled from the stored Excel.', { n: r.filled }))
+    if (r.missing) bits.push(lt('{n} voice clips have no text in {lang} yet — marked ⚠, they stay silent in this language.', { n: r.missing, lang: LANG_LABEL[next] }))
+    if (r.frozen) bits.push(lt('{n} cut pieces keep the audio they were cut from (frozen audio).', { n: r.frozen }))
+    if (!hasVoicesFor(next)) bits.push(lt('The ElevenLabs account has no {lang} voices: the default voice is used.', { lang: LANG_LABEL[next] }))
+    setLangMsg(bits.join(' '))
+    /* The clips were holding the other language's audio: back to the
+       placeholder until they are synthesized in this one. */
+    window.setTimeout(() => {
+      for (const t of tracksRef.current) {
+        if (t.type !== 'voice') continue
+        for (const c of t.clips) if (!c.frozen) scheduleRender(t.id, c.id)
+      }
+    }, 0)
+  }
+  /** Voice clips with no text in the working language, for the top bar. */
+  const missingInLang = useMemo(
+    () => tracks.reduce((n, t) => n + (t.type === 'voice' ? t.clips.filter((c) => isTextMissing(c)).length : 0), 0),
+    [tracks],
+  )
+  /** How many voice clips have text in each language, for the question. */
+  const textCount = useMemo(() => {
+    const out: Record<VoiceLang, number> = { it: 0, 'pt-BR': 0 }
+    let total = 0
+    for (const t of tracks) {
+      if (t.type !== 'voice') continue
+      for (const c of t.clips) {
+        total++
+        for (const l of VOICE_LANGS) {
+          const live = l === workingLang ? c.text : c.textByLang?.[l]
+          const fromIndex = !live?.trim() && scripts
+            ? (c.sourceId ? scripts.bySource[c.sourceId]?.[l] : undefined)
+            : undefined
+          if (live?.trim() || fromIndex?.trim()) out[l]++
+        }
+      }
+    }
+    return { ...out, total }
+  }, [tracks, workingLang, scripts])
 
   /* any edit after the first paint means the saved project is behind */
   const firstTracks = useRef(true)
@@ -1227,6 +1347,8 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       params: { ...(cl.params as object) } as ClipParams,
       buffer: buf, peaks: computePeaks(buf, peakBuckets(buf.duration)),
       text, frozen: true,
+      // the first piece keeps the line in every language, and where it came from
+      ...(text !== undefined ? { sourceId: cl.sourceId, textByLang: cl.textByLang, voiceByLang: cl.voiceByLang } : {}),
     })
     const a = mk(t0, bufA, cl.text)
     const b = mk(t0 + bufA.duration, bufB)
@@ -1260,7 +1382,11 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       params: { ...(cl.params as object) } as ClipParams,
       buffer: buf, peaks: computePeaks(buf, peakBuckets(buf.duration)),
       text: cl.text ?? nx.text, frozen: true,
+      sourceId: cl.sourceId ?? nx.sourceId,
+      textByLang: cl.textByLang ?? nx.textByLang,
+      voiceByLang: cl.voiceByLang ?? nx.voiceByLang,
     }
+
     setTracks((prev) => prev.map((t) => (t.id !== tr.id ? t : {
       ...t,
       clips: [...t.clips.filter((c) => c.id !== cl.id && c.id !== nx.id), merged].sort((x, y) => x.startSec - y.startSec),
@@ -1588,6 +1714,18 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
             into it from the Studio meant two code paths that could disagree
             about what a published protocol looks like. The Studio saves; the
             workscreen publishes. */}
+        {/* The session's WORKING language: which text and voice the voice
+            clips speak. Not the interface language (the picker next to it). */}
+        <div className="mt-worklang" role="group" aria-label={lt('Working language')} title={lt('Working language: the voice clips show and speak this language; everything else is shared')}>
+          {VOICE_LANGS.map((l) => (
+            <button key={l} className={workingLang === l ? 'is-on' : ''} aria-pressed={workingLang === l} onClick={() => switchLang(l)}>
+              {LANG_SHORT[l]}
+            </button>
+          ))}
+          {missingInLang > 0 && (
+            <span className="mt-worklang__warn" title={lt('Voice clips with no text in {lang}', { lang: LANG_LABEL[workingLang] })}>⚠ {missingInLang}</span>
+          )}
+        </div>
         {languagePicker && <LanguagePicker label={false} className="mt-lang" />}
         <button className="mt-back" onClick={goBack} title={returnTo ? lt('Back to the previous screen') : lt('Leave the studio')}>
           {lt('← Back')}
@@ -1600,6 +1738,24 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         </div>
       )}
       {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
+      {langMsg && <div className="mt-editmsg" onClick={() => setLangMsg(null)}>{langMsg} ✕</div>}
+      {langAsk && (
+        <div className="mt-langask" role="dialog" aria-modal="true" aria-label={lt('Which language do you want to work in?')}>
+          <div className="mt-langask__card">
+            <h2>{lt('Which language do you want to work in?')}</h2>
+            <p>{lt('Tracks, timing, levels, effects and draws are the same in every language: only the voice clips’ text and voice change. You can switch at any time from the top bar, and saving keeps every language.')}</p>
+            <div className="mt-langask__opts">
+              {VOICE_LANGS.map((l) => (
+                <button key={l} className="mt-langask__opt" onClick={() => switchLang(l)}>
+                  <b>{LANG_LABEL[l]}</b>
+                  <span>{lt('{n} of {total} voice clips have text', { n: textCount[l], total: textCount.total })}</span>
+                  {!hasVoicesFor(l) && <span className="mt-langask__warn">{lt('No {lang} voices in the account', { lang: LANG_LABEL[l] })}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-hint">{lt('🎧 Use headphones — the binaural beat lives in the L/R difference.')}</div>
       {/* The voices were authored against one ElevenLabs account; the key can
@@ -1711,6 +1867,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         onVoicePreview={() => selClip && void previewVoice(selClip)}
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
+        workingLang={workingLang}
         onEq={(eq) => selected && setClipEq(selected.trackId, selected.clipId, eq)}
         onDrawClip={() => selected && void drawForClip(selected.trackId, selected.clipId)}
         onDrawAllMissing={() => void drawAllMissing()}
@@ -1928,7 +2085,12 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
       onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('move', e) }}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      <div className="mt-clip__label" style={{ color: meta.color }}>{meta.icon} {lt(trackText(track.type).label)}{clip.peaks ? '' : ' …'}</div>
+      <div className="mt-clip__label" style={{ color: meta.color }}>
+        {meta.icon} {lt(trackText(track.type).label)}{clip.peaks ? '' : ' …'}
+        {track.type === 'voice' && isTextMissing(clip) && (
+          <span className="mt-clip__missing" title={lt('No text in the working language — this clip stays silent')}> ⚠ {lt('no text')}</span>
+        )}
+      </div>
       <canvas ref={canvasRef} className="mt-clip__wave" />
       <div className="mt-clip__h mt-clip__h--l" onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('trim-l', e) }} />
       <div className="mt-clip__h mt-clip__h--r" onPointerDown={(e) => { e.stopPropagation(); onSelect(); onBeginDrag('trim-r', e) }} />
@@ -2128,7 +2290,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg }: {
+function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg, workingLang }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -2149,6 +2311,8 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   onDrawAllMissing: () => void
   drawBusy: boolean
   drawMsg: string | null
+  /** The session's working language: which text the box edits. */
+  workingLang: VoiceLang
 }) {
   const { t: lt } = useI18n()
   if (!track || !clip) {
@@ -2293,7 +2457,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
         {track.type === 'voice' && (() => { const p = clip.params as VoiceParams; const txt = (clip.text ?? '').trim(); const staleText = !!clip.ttsSource && clip.ttsText !== txt; const rendered = !!clip.ttsSource && !staleText; const hasText = !!txt; const voice = effectiveVoice(p); const stale = staleVoiceId(p); const remap = remappedVoice(p); return <>
           <div className="mt-tts">
             <div className="mt-tts__row">
-              <span className="mt-tts__lbl">{lt('Affirmation')}</span>
+              <span className="mt-tts__lbl">{lt('Affirmation')} · {LANG_SHORT[workingLang]}</span>
               <span className="mt-tts__eng">{rendered ? lt('voice rendered ✓') : staleText ? lt('text changed — needs re-synthesis') : lt('voice: {engine}', { engine: ttsLabel })}</span>
             </div>
             <textarea
@@ -2316,6 +2480,18 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
                 {ttsBusy ? lt('Synthesizing…') : rendered ? lt('↻ Re-synthesize') : lt('✓ Synthesize into clip')}
               </button>
             </div>
+            {isTextMissing(clip) && (
+              <div className="mt-tts__hint mt-tts__hint--missing">
+                {lt('⚠ No text in {lang} for this clip yet — it stays silent in this language. Write it here, or add it to the Excel (testo_pt) and import it again: nothing else is lost.', { lang: LANG_LABEL[workingLang] })}
+              </div>
+            )}
+            {/* The same line in the other language, read-only: what is being
+                translated, and what the other language will say. */}
+            {VOICE_LANGS.filter((l) => l !== workingLang && clip.textByLang?.[l]?.trim()).map((l) => (
+              <div key={l} className="mt-tts__other">
+                <span>{LANG_LABEL[l]}:</span> «{clip.textByLang?.[l]}»
+              </div>
+            ))}
             {!ttsCanRender && <div className="mt-tts__hint">{lt('No TTS key: preview is off — the browser voice is a system voice, not the one chosen here. Add a key (🎙) to hear and render the real voice (docs/TTS_SETUP.md).')}</div>}
             {staleText && <div className="mt-tts__hint">{lt('⚠ The text changed after synthesis: the clip still holds the previous line. Re-synthesize to update it (the preview will request a new voice).')}</div>}
             {stale && (
@@ -2333,7 +2509,7 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
               {withBold(lt('To keep the current one, pick {voice} below.'), { voice: voice.name })}
             </div>
           )}
-          <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} />
+          <VoicePicker value={p.voiceId ?? ''} onChange={onVoiceChange} rendered={rendered} lang={workingLang} />
           <Slider label={lt('Pan')} value={p.pan} min={-1} max={1} step={0.05} onChange={(v) => onParam({ pan: v })} fmt={(v) => (v === 0 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
           <Slider label={lt('Speed')} value={p.speed ?? 1} min={0.7} max={1.4} step={0.05} onChange={(v) => onParam({ speed: v })} fmt={(v) => `×${v.toFixed(2)}`} />
           {rendered && <div className="mt-note">{lt('Pan and speed reprocess the rendered voice immediately, with no new TTS call. Speed preserves pitch (time-stretch): the voice speaks faster or slower without getting higher or lower.')}</div>}
@@ -2383,10 +2559,13 @@ function masterSessionBuffer(buffer: AudioBuffer): string {
    voice when that id is still in the catalog, otherwise the engine default.
    Everything that speaks must agree — a preview that resolves differently from
    the render is exactly the bug the POs reported. */
-const voiceHint = (p: VoiceParams) => ({ archetype: p.voiceArchetype, gender: p.voiceGender })
+const voiceHint = (p: VoiceParams) => ({ archetype: p.voiceArchetype, gender: p.voiceGender, language: p.voiceLang })
 
+/* An empty `voiceId` means "the default" — of the language the clip is spoken
+   in, so a Portuguese line with no voice picked is not read by the Italian
+   default. */
 function effectiveVoice(p: VoiceParams): CatalogVoice {
-  return resolveVoiceId(p.voiceId, voiceHint(p)).voice ?? defaultPrimary()
+  return resolveVoiceId(p.voiceId, voiceHint(p)).voice ?? defaultPrimary(p.voiceLang)
 }
 
 /** The voice this clip was saved with, when it came from another ElevenLabs
@@ -2501,17 +2680,21 @@ function voiceContext(tracks: Track[], clipId: string): { previousText?: string;
   return { previousText: lines[i - 1]?.text, nextText: lines[i + 1]?.text }
 }
 
-/* ---- per-clip voice picker (the built-in PO catalog, by archetype) ---- */
-function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (v: string) => void; rendered: boolean }) {
+/* ---- per-clip voice picker (the built-in PO catalog, by archetype) ----
+   The working language's voices come first, grouped by archetype; the other
+   language's follow in one group of their own. Picking across languages is
+   allowed — a PO may want it — but it is never the path of least resistance. */
+function VoicePicker({ value, onChange, rendered, lang }: { value: string; onChange: (v: string) => void; rendered: boolean; lang: VoiceLang }) {
   void rendered
   const { t: lt } = useI18n()
-  const res = resolveVoiceId(value)
+  const res = resolveVoiceId(value, { language: lang })
   const known = !value || !!res.voice
+  const others = VOICE_LANGS.filter((l) => l !== lang)
   return (
     <div className="mt-tts__row" style={{ margin: '8px 0 4px' }}>
       <span className="mt-tts__lbl">{lt('Voice')}</span>
       <select className="mt-tts__sel" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{lt('Default — {name} (engine voice)', { name: defaultPrimary().name })}</option>
+        <option value="">{lt('Default — {name} (engine voice)', { name: `${defaultPrimary(lang).name} · ${LANG_SHORT[voiceLangOf(defaultPrimary(lang))]}` })}</option>
         {/* an id that left the catalog stays visible instead of silently
             showing "Predefinita" while the clip still uses the old voice */}
         {!known && <option value={value}>{lt('⚠ Voice outside the catalogue — {id}', { id: value })}</option>}
@@ -2521,10 +2704,18 @@ function VoicePicker({ value, onChange, rendered }: { value: string; onChange: (
           <option value={value}>{lt('↪ {old} (other account) → {new}', { old: res.remappedFrom.name, new: res.voice?.name ?? '—' })}</option>
         )}
         {ARCHETYPES.map((a) => {
-          const list = voicesByArchetype(a.id)
+          const list = voicesByArchetype(a.id, lang)
           return list.length ? (
-            <optgroup key={a.id} label={`${a.icon} ${archetypeLabel(lt, a)}`}>
+            <optgroup key={a.id} label={`${a.icon} ${archetypeLabel(lt, a)} · ${LANG_SHORT[lang]}`}>
               {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
+            </optgroup>
+          ) : null
+        })}
+        {others.map((l) => {
+          const list = ARCHETYPES.flatMap((a) => voicesByArchetype(a.id, l))
+          return list.length ? (
+            <optgroup key={l} label={lt('Other language — {lang}', { lang: LANG_LABEL[l] })}>
+              {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender} · {LANG_SHORT[l]})</option>)}
             </optgroup>
           ) : null
         })}

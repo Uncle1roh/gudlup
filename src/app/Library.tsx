@@ -20,7 +20,10 @@ import { LIBRARY_CATEGORIES, type LibraryCategory } from '../data/library'
 import { versionLengthSeconds } from '../data/protocols'
 import { useI18n } from '../i18n'
 import type { CatalogProtocol } from '../data/catalog'
-import { patientBlurb, patientTitle } from '../types/domain'
+import { patientBlurb, patientTitle, type TextLocale } from '../types/domain'
+
+/** Search matches the names in every language the app speaks. */
+const SEARCH_LOCALES: TextLocale[] = ['it', 'pt-BR', 'en']
 import type { Duration } from '../types/domain'
 
 interface LibraryProps {
@@ -54,7 +57,7 @@ function Card({ p, onStart }: { p: CatalogProtocol; onStart: LibraryProps['onSta
 }
 
 export function Library({ onStart, onChooseForMe }: LibraryProps) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const { data: all = [], loading } = useProtocols()
   const [query, setQuery] = useState('')
 
@@ -62,8 +65,11 @@ export function Library({ onStart, onChooseForMe }: LibraryProps) {
   const found = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return null
-    return items.filter((p) => `${patientTitle(p, locale)} ${patientBlurb(p, locale)} ${p.title}`.toLowerCase().includes(q))
-  }, [items, query, locale])
+    /* Every language's name, not only the one on screen: a person who
+       switched the app from Italian remembers the session by the name they
+       first read it under. */
+    return items.filter((p) => SEARCH_LOCALES.map((l) => `${patientTitle(p, l)} ${patientBlurb(p, l)}`).join(' ').toLowerCase().includes(q))
+  }, [items, query])
 
   const shelves: { id: LibraryCategory; label: string; blurb: string; items: CatalogProtocol[] }[] =
     LIBRARY_CATEGORIES.map((c) => ({

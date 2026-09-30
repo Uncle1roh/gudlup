@@ -8,6 +8,7 @@
 
 import type { Duration, ProtocolFamily } from '../types/domain'
 import type { TrackType, ClipParams, ClipEq } from '../studio/multitrack'
+import type { VoiceLang } from '../tts/voiceLang'
 
 export type Length = 'quick' | 'standard' | 'deep'
 export const LENGTH_MIN: Record<Length, Duration> = { quick: 6, standard: 12, deep: 24 }
@@ -54,6 +55,49 @@ export interface SeedClip {
   /** The text `ttsPath` was spoken from, so an edited line is not passed off
       as still rendered. */
   ttsText?: string
+
+  /* ---- spoken languages (voice clips) --------------------------------------
+     A session is ONE mix spoken in several languages. Everything above —
+     timing, level, fades, EQ, the lane's fx — is shared; what changes with the
+     language is the TEXT, the VOICE speaking it and the render of it. So each
+     of those is kept per language, and `text` / `ttsPath` / `ttsText` /
+     `params.voiceId` stay the ITALIAN ones, which is what every session saved
+     before this existed holds and what every older reader expects. */
+
+  /** Where the text came from in the workbook — `clip:VC-012`, `aff:CSI-04`,
+      `aff:REF-01#2` for a whisper fragment — so a session can find its
+      Portuguese text in the stored timeline long after it was saved. */
+  sourceId?: string
+  /** The spoken text in each language. */
+  textByLang?: Partial<Record<VoiceLang, string>>
+  /** Each language's stored render (see `ttsPath` / `ttsText`). */
+  ttsByLang?: Partial<Record<VoiceLang, { path?: string; text?: string }>>
+  /** Each language's voice: an Italian line and its Portuguese line are
+      spoken by the same archetype, in two different ElevenLabs voices. */
+  voiceByLang?: Partial<Record<VoiceLang, VoiceChoice>>
+}
+
+/** Which voice speaks a clip, and what that voice IS (see VoiceParams). */
+export interface VoiceChoice {
+  voiceId?: string
+  voiceArchetype?: string
+  voiceGender?: 'F' | 'M'
+}
+
+/**
+ * The stored timeline's texts, as the Studio needs them to fill a language a
+ * saved session never had.
+ *
+ * A session saved before a protocol had Portuguese holds Italian only. Opened
+ * in Portuguese, each clip looks its text up here: by `sourceId` when the
+ * session has one, else by its Italian text (sessions saved before clips
+ * carried a source id). Compact on purpose — it rides in the hand-off, which
+ * lives in sessionStorage.
+ */
+export interface ScriptIndex {
+  bySource: Record<string, Partial<Record<VoiceLang, string>>>
+  /** Keyed by the normalized Italian text (`scriptKey`). */
+  byItText: Record<string, Partial<Record<VoiceLang, string>>>
 }
 
 /** A Studio session saved into a catalog protocol: everything needed to reopen

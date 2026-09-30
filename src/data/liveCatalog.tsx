@@ -48,24 +48,32 @@ import {
   type SelfUseSession,
   type SelfUseTheme,
 } from './selfuse'
-import { patientTitle, patientBlurb, protocolTitle, type Duration, type Language, type Protocol } from '../types/domain'
+import { nameLocales, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Language, type Protocol } from '../types/domain'
 import { useI18n, type Locale } from '../i18n'
+import { otherVoiceLang, type VoiceLang } from '../tts/voiceLang'
 
 /* ------------------------------------------------------------- audio ----- */
 
-/** The app's locale → the audio language key on a protocol version. */
-export function audioLanguage(locale: Locale): Language {
-  return locale === 'it' ? 'it' : locale === 'en' ? 'en' : 'pt-BR'
+/**
+ * The app's locale → the SPOKEN language to play.
+ *
+ * Italian and Portuguese are voiced; English is not yet (the Excel has no
+ * English column in use), and the owner's decision is that an English reader
+ * hears the Portuguese session until it is. When English is voiced this is
+ * the one line to change.
+ */
+export function audioLanguage(locale: Locale): VoiceLang {
+  return locale === 'it' ? 'it' : 'pt-BR'
 }
 
 /**
  * The rendered audio for one version, in the best language available.
  *
- * The fallback chain is deliberate rather than alphabetical: the person's own
- * language first, then Portuguese (the pilot language, where the recorded
- * voice exists first), then English, then whatever else was rendered. A voice
- * in the wrong language is still a guided session; silence is not, and the
- * synthesized placeholder bed is the honest last resort.
+ * The wanted language, then the other voiced one, then anything at all. Most
+ * durations exist in ONE language for a while after publishing, and a voice in
+ * the other language is still a guided session — silence is not, and the
+ * synthesized placeholder bed is the honest last resort. `locale` can also be
+ * a spoken language directly, for callers that know which file they want.
  */
 export function audioUrlFor(
   p: Pick<Protocol, 'versions'> | undefined,
@@ -76,7 +84,7 @@ export function audioUrlFor(
   const urls = version?.audioUrl
   if (!urls) return undefined
   const want = audioLanguage(locale)
-  const order: Language[] = [want, 'pt-BR', 'en', 'it', 'es', 'de']
+  const order: Language[] = [want, otherVoiceLang(want), 'en', 'es', 'de']
   for (const lang of order) {
     const url = urls[lang]
     if (url) return url
@@ -171,11 +179,22 @@ const THEME_BY_LIBRARY_CATEGORY: Record<string, SelfUseTheme> = {
  */
 /** The public NAME a PO has written for this language, if any — the base
     column when the language has nothing of its own. Empty string = none. */
+/* Same chain as `patientTitle`: the reader's language, then (for English)
+   Portuguese, then the base column. `||` rather than `??`: a language saved
+   with an empty field has not named anything. */
 function publicName(p: CatalogProtocol, locale: Locale): string {
-  return (p.i18n?.[locale]?.publicTitle ?? p.publicTitle ?? '').trim()
+  for (const l of nameLocales(locale)) {
+    const v = p.i18n?.[l]?.publicTitle?.trim()
+    if (v) return v
+  }
+  return (p.publicTitle ?? '').trim()
 }
 function publicLine(p: CatalogProtocol, locale: Locale): string {
-  return (p.i18n?.[locale]?.publicBlurb ?? p.publicBlurb ?? '').trim()
+  for (const l of nameLocales(locale)) {
+    const v = p.i18n?.[l]?.publicBlurb?.trim()
+    if (v) return v
+  }
+  return (p.publicBlurb ?? '').trim()
 }
 
 export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): ResolvedSession[] {
@@ -330,7 +349,7 @@ export function resolveClinical(catalog: CatalogProtocol[], locale: Locale, sess
       // the CLINICAL name, in the language the clinician is reading the app in
       title: protocolTitle(p, locale),
       family: p.family,
-      blurb: p.i18n?.[locale]?.blurb?.trim() || p.blurb,
+      blurb: protocolBlurb(p, locale),
       durations: playableDurations(p),
       clinicalOnly: isClinicalOnly(p.code),
       audioReady: hasRenderedAudio(p, locale),

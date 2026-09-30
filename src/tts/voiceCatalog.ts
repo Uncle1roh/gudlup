@@ -17,6 +17,8 @@
    voice), so every [M] double-induction row rendered in the wrong voice.
    ============================================================================ */
 
+import { isVoiceLang, type VoiceLang } from './voiceLang'
+
 export type ArchetypeId =
   | 'maternal' | 'paternal' | 'wise' | 'neutral' | 'warrior'
   | 'shadow' | 'ritual' | 'child' | 'whisper'
@@ -43,8 +45,13 @@ export interface CatalogVoice {
   /** ElevenLabs category. 'premade' = stock voice on every account; anything
       else is this workspace's own (generated / cloned / library-added). */
   category?: string
-  /** BCP-47-ish language tag from the ElevenLabs labels, when present. */
-  language?: string
+  /**
+   * The language this voice SPEAKS, read from the POs' naming convention:
+   * "ITA …" / "… - ITA" is Italian, "BRA …" / "… - BRA" is Portuguese.
+   * Absent on voices cached before the convention was read — those are
+   * Italian, which is what the whole library was until then (`voiceLangOf`).
+   */
+  language?: VoiceLang
   /** Carries the POs' "[ok]" approval marker. */
   approved?: boolean
 }
@@ -96,22 +103,61 @@ export interface ParsedVoiceName {
   gender?: 'F' | 'M'
   /** The PO marked this voice as approved with the [ok] prefix. */
   approved: boolean
+  /** The language marker, when the name carries one. */
+  language?: VoiceLang
 }
 
-/** Read "[ok] ASMR (M) - ITA" into archetype + gender + a clean display name. */
+/* ---- the language marker -------------------------------------------------
+   The POs name a voice's language in the voice's NAME, because ElevenLabs
+   labels are empty on generated voices. Two forms are in the wild and both are
+   accepted, so renaming the library is never a prerequisite:
+
+     prefix   "ITA MATERNAL (F)"   "BRA - MATERNAL"   "[ok] ITA ASMR (M)"
+     suffix   "[ok] MATERNAL - ITA"   "PATERNAL - BRA"
+
+   ITA is Italian and BRA is Portuguese (Brazil). The marker is STRIPPED before
+   the archetype is read, so "BRA MATERNAL" parses exactly as "MATERNAL" did. */
+const LANG_TOKEN: Record<string, VoiceLang> = {
+  ITA: 'it', IT: 'it',
+  BRA: 'pt-BR', BR: 'pt-BR', PT: 'pt-BR', PTBR: 'pt-BR', 'PT-BR': 'pt-BR',
+}
+/* The prefix is only ever the two three-letter markers: "IT…" or "PT…" at the
+   start of a name is more likely a word than a language. */
+const LANG_PREFIX = /^(ITA|BRA)(?=$|[\s\-–—:_])\s*[-–—:_]?\s*/i
+const LANG_SUFFIX = /\s*[-–—]\s*(ITA|IT|BRA|BR|PT-?BR|PT)\s*$/i
+
+/** Read "[ok] ASMR (M) - ITA" / "BRA MATERNAL (F)" into archetype + gender +
+    language + a clean display name. */
 export function parseVoiceName(raw: string): ParsedVoiceName {
   const approved = /^\s*\[ok\]/i.test(raw)
   let rest = raw.replace(/^\s*\[ok\]\s*/i, '').trim()
-  rest = rest.replace(/\s*[-–—]\s*IT(A)?\s*$/i, '').trim() // drop the language tail
+  let language: VoiceLang | undefined
+  const pre = LANG_PREFIX.exec(rest)
+  if (pre) {
+    language = LANG_TOKEN[pre[1].toUpperCase()]
+    rest = rest.slice(pre[0].length).trim()
+  }
+  const post = LANG_SUFFIX.exec(rest)
+  if (post) {
+    language = language ?? LANG_TOKEN[post[1].toUpperCase().replace(/^PT-?BR$/, 'PTBR')]
+    rest = rest.slice(0, post.index).trim()
+  }
   const m = /^([A-Za-zÀ-ÿ]+)\s*(?:\(\s*([FM])\s*\))?$/.exec(rest)
-  if (!m) return { name: rest || raw, approved }
+  if (!m) return { name: rest || raw, approved, language }
   const token = m[1].toUpperCase()
   const archetype = NAME_TO_ARCHETYPE[token]
   const explicit = m[2]?.toUpperCase() as 'F' | 'M' | undefined
   const gender = explicit ?? (archetype ? ARCHETYPE_GENDER[archetype] : undefined)
   // "MATERNAL" → "Maternal"; keep ASMR-style acronyms upper-case
   const pretty = token.length <= 4 ? token : token.charAt(0) + token.slice(1).toLowerCase()
-  return { name: explicit ? `${pretty} (${explicit})` : pretty, archetype, gender, approved }
+  return { name: explicit ? `${pretty} (${explicit})` : pretty, archetype, gender, approved, language }
+}
+
+/** The language a catalog voice speaks. No marker = Italian: every voice the
+    POs made before the Portuguese library existed is an Italian one. */
+export function voiceLangOf(v: Pick<CatalogVoice, 'language'> | undefined): VoiceLang {
+  const l: unknown = v?.language
+  return isVoiceLang(l) ? l : 'it'
 }
 
 /* The live list. Mutated in place so existing imports of VOICE_CATALOG keep
@@ -134,22 +180,68 @@ export function voicesSyncedAt(): number | null {
   return lastSyncAt
 }
 
-function pick(preferred: string[], fallback: (v: CatalogVoice) => boolean): CatalogVoice {
-  for (const id of preferred) {
-    const hit = VOICE_CATALOG.find((v) => v.id === id)
-    if (hit) return hit
-  }
-  return VOICE_CATALOG.find(fallback) ?? VOICE_CATALOG[0]
+/** The voices of one language, or the whole catalog when no language is
+    asked for (callers that predate spoken languages). */
+export function voicesForLang(lang?: VoiceLang): CatalogVoice[] {
+  return lang ? VOICE_CATALOG.filter((v) => voiceLangOf(v) === lang) : VOICE_CATALOG
 }
 
-/** The standard engine voice — every [F] / unmarked line. */
-export function defaultPrimary(): CatalogVoice {
-  return pick(PRIMARY_PREFERENCE, (v) => v.archetype === 'maternal' || v.gender === 'F')
+/** True when the connected account has at least one voice in `lang`. */
+export function hasVoicesFor(lang: VoiceLang): boolean {
+  return VOICE_CATALOG.some((v) => voiceLangOf(v) === lang)
+}
+
+/**
+ * A default, within one language.
+ *
+ * The preferred ids are Italian voices, so they only count when Italian is
+ * what is asked for. Then, inside the language: the archetype the default
+ * stands for (maternal / paternal), PO-approved first · then the gender ·
+ * then any voice of that language. A language with NO voice at all falls back
+ * to the Italian default rather than to nothing — the caller says so in its
+ * notes (`hasVoicesFor`), because a Portuguese line read by an Italian voice
+ * is a wrong take, and it must not happen quietly.
+ */
+function pick(preferred: string[], archetype: ArchetypeId, gender: 'F' | 'M', lang?: VoiceLang): CatalogVoice {
+  const pool = voicesForLang(lang)
+  for (const id of preferred) {
+    const hit = pool.find((v) => v.id === id)
+    if (hit) return hit
+  }
+  const sorted = [...pool].sort((a, b) => Number(!!b.approved) - Number(!!a.approved))
+  const inLang = sorted.find((v) => v.archetype === archetype)
+    ?? sorted.find((v) => v.gender === gender)
+    ?? sorted[0]
+  if (inLang) return inLang
+  if (lang && lang !== 'it') return pick(preferred, archetype, gender, 'it')
+  return VOICE_CATALOG.find((v) => v.archetype === archetype || v.gender === gender) ?? VOICE_CATALOG[0]
+}
+
+/** The standard engine voice — every [F] / unmarked line — in `lang`
+    (Italian when omitted: the defaults CLAUDE.md names are Italian voices). */
+export function defaultPrimary(lang?: VoiceLang): CatalogVoice {
+  return pick(PRIMARY_PREFERENCE, 'maternal', 'F', lang)
 }
 
 /** The default secondary — [M] rows of the Deep double-induction. */
-export function defaultSecondary(): CatalogVoice {
-  return pick(SECONDARY_PREFERENCE, (v) => v.archetype === 'paternal' || v.gender === 'M')
+export function defaultSecondary(lang?: VoiceLang): CatalogVoice {
+  return pick(SECONDARY_PREFERENCE, 'paternal', 'M', lang)
+}
+
+/**
+ * The same voice, in another language: the voice of `lang` with the same
+ * archetype AND gender, then the same archetype, then that language's default
+ * of the same gender. This is how a Portuguese session finds its voices — the
+ * Excel's `archetipo` chose an Italian maternal voice, so the Portuguese line
+ * gets the Portuguese maternal voice, never a different character.
+ */
+export function counterpartVoice(v: { archetype?: string; gender?: 'F' | 'M' } | undefined, lang: VoiceLang): CatalogVoice {
+  if (v?.archetype) {
+    const same = voicesByArchetype(v.archetype as ArchetypeId, lang)
+    const hit = same.find((x) => x.gender === v.gender) ?? same[0]
+    if (hit) return hit
+  }
+  return v?.gender === 'M' ? defaultSecondary(lang) : defaultPrimary(lang)
 }
 
 /* ============================================================================
@@ -182,6 +274,8 @@ export interface KnownVoice {
   name: string
   archetype: ArchetypeId
   gender: 'F' | 'M'
+  /** Absent on ledger entries written before voices had a language. */
+  language?: VoiceLang
 }
 
 function readKnown(): Record<string, KnownVoice> {
@@ -202,8 +296,9 @@ export function rememberVoices(list: CatalogVoice[]): void {
   let changed = false
   for (const v of list) {
     const prev = KNOWN[v.id]
-    if (prev && prev.archetype === v.archetype && prev.gender === v.gender && prev.name === v.name) continue
-    KNOWN[v.id] = { id: v.id, name: v.name, archetype: v.archetype, gender: v.gender }
+    const language = voiceLangOf(v)
+    if (prev && prev.archetype === v.archetype && prev.gender === v.gender && prev.name === v.name && prev.language === language) continue
+    KNOWN[v.id] = { id: v.id, name: v.name, archetype: v.archetype, gender: v.gender, language }
     changed = true
   }
   if (!changed) return
@@ -229,7 +324,7 @@ export interface VoiceResolution {
  * Gender is allowed to give way because an account may carry only one voice
  * of an archetype; archetype never is, because it is the clinical choice.
  */
-export function resolveVoiceId(id: string | undefined, hint?: { archetype?: string; gender?: 'F' | 'M' }): VoiceResolution {
+export function resolveVoiceId(id: string | undefined, hint?: { archetype?: string; gender?: 'F' | 'M'; language?: VoiceLang }): VoiceResolution {
   if (!id) return {}
   const exact = VOICE_CATALOG.find((v) => v.id === id)
   if (exact) return { voice: exact }
@@ -237,11 +332,16 @@ export function resolveVoiceId(id: string | undefined, hint?: { archetype?: stri
      authored on another machine carries its own answer: the archetype saved
      on the clip. Either source names the same thing. */
   const was: KnownVoice | undefined = KNOWN[id] ?? (hint?.archetype
-    ? { id, name: hint.archetype, archetype: hint.archetype as ArchetypeId, gender: hint.gender ?? 'F' }
+    ? { id, name: hint.archetype, archetype: hint.archetype as ArchetypeId, gender: hint.gender ?? 'F', language: hint.language }
     : undefined)
   if (!was) return {}
-  const byBoth = VOICE_CATALOG.find((v) => v.archetype === was.archetype && v.gender === was.gender)
-  const byArchetype = byBoth ?? VOICE_CATALOG.find((v) => v.archetype === was.archetype)
+  /* The stand-in speaks the SAME language as the voice it replaces: a
+     Portuguese clip remapped to an Italian voice would be a wrong take. Only
+     an account with nothing in that language widens to every voice. */
+  const lang = hint?.language ?? was.language
+  const pool = lang && hasVoicesFor(lang) ? voicesForLang(lang) : VOICE_CATALOG
+  const byBoth = pool.find((v) => v.archetype === was.archetype && v.gender === was.gender)
+  const byArchetype = byBoth ?? pool.find((v) => v.archetype === was.archetype)
   return byArchetype ? { voice: byArchetype, remappedFrom: was } : {}
 }
 
@@ -249,17 +349,19 @@ export function voiceById(id: string | undefined): CatalogVoice | undefined {
   return id ? VOICE_CATALOG.find((v) => v.id === id) : undefined
 }
 
-export function voicesByArchetype(a: ArchetypeId): CatalogVoice[] {
+export function voicesByArchetype(a: ArchetypeId, lang?: VoiceLang): CatalogVoice[] {
   // PO-approved ([ok]) voices first, then the rest of the workspace's voices
-  return VOICE_CATALOG
+  return voicesForLang(lang)
     .filter((v) => v.archetype === a)
     .sort((x, y) => Number(!!y.approved) - Number(!!x.approved) || x.name.localeCompare(y.name))
 }
 
-/** Display label, e.g. "Custom Mattia (F · Materna)". */
+/** Display label, e.g. "Maternal (F · Materna · IT)". The language is part of
+    the label now that an Italian and a Portuguese maternal voice can both be
+    called "Maternal". */
 export function voiceLabel(v: CatalogVoice): string {
   const arch = ARCHETYPES.find((a) => a.id === v.archetype)
-  return `${v.name} (${v.gender} · ${arch?.label ?? v.archetype})`
+  return `${v.name} (${v.gender} · ${arch?.label ?? v.archetype} · ${voiceLangOf(v) === 'pt-BR' ? 'PT' : 'IT'})`
 }
 
 /* ---- archetype inference from the ElevenLabs labels ----
@@ -316,16 +418,21 @@ const ARCHETYPE_KEYWORDS: [RegExp, ArchetypeId][] = [
   [/sussurr|whisper|intim/i, 'whisper'],
 ]
 
-export function matchVoiceFromText(text: string | undefined): CatalogVoice | undefined {
+/* `lang` narrows the whole match to the voices of one language: the SAME
+   `archetipo` cell ("Materna [F]") has to choose the Italian maternal voice
+   for the Italian text and the Portuguese one for the Portuguese text. Without
+   a language the whole catalog is searched, as before. */
+export function matchVoiceFromText(text: string | undefined, lang?: VoiceLang): CatalogVoice | undefined {
   if (!text) return undefined
   const t = text.toLowerCase()
+  const pool = voicesForLang(lang)
   // 1) explicit name wins
-  const byName = VOICE_CATALOG.find((v) => t.includes(v.name.toLowerCase()))
+  const byName = pool.find((v) => t.includes(v.name.toLowerCase()))
   if (byName) return byName
   // 2) archetype keyword, gender-filtered when [F]/[M] present
   const hit = ARCHETYPE_KEYWORDS.find(([rx]) => rx.test(text))
   if (!hit) return undefined
-  const list = voicesByArchetype(hit[1])
+  const list = voicesByArchetype(hit[1], lang)
   const g = /\[F\]|femmin|female|femin/i.test(text) ? 'F' : /\[M\]|maschil|male|masculin/i.test(text) ? 'M' : undefined
   return (g ? list.find((v) => v.gender === g) : undefined) ?? list[0]
 }

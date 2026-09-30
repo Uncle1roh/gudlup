@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { type Patient } from './data'
 import { getProtocol } from '../data/protocols'
+import { protocolTitle } from '../types/domain'
+import { currentLocale } from '../i18n'
 import type { SessionResult } from './ConsultationRoom'
 
 export interface DebriefData {
@@ -31,7 +33,7 @@ export function Debrief({ patient, result, onGenerate }: DebriefProps) {
           <h1 className="b2b-h1">Consulenza conclusa</h1>
           <p className="b2b-sub">
             {result.audioPlayed
-              ? `${proto?.title ?? result.protocolCode} · ${result.completed ? 'completata' : 'terminata in anticipo'}`
+              ? `${proto ? protocolTitle(proto, currentLocale()) : result.protocolCode} · ${result.completed ? 'completata' : 'terminata in anticipo'}`
               : 'Solo colloquio — nessun protocollo riprodotto'}
           </p>
         </div>

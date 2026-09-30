@@ -171,7 +171,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     setUploading(true)
     setRenderError(null)
     try {
-      const { url, protocol } = await attachRenderedAudio(dp, published.code, rendered.duration, rendered.buffer)
+      const { url, protocol } = await attachRenderedAudio(dp, published.code, rendered.duration, rendered.buffer, 'it')
       await dp.logAudit({ actor, action: 'protocol.audio.attached', target: protocol.code, detail: `${rendered.duration} min · mp3 192k` })
       setPublished(protocol)
       setAttached(url)

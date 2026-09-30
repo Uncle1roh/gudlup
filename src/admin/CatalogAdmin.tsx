@@ -8,11 +8,12 @@ import { PlainImport } from './PlainImport'
 import { DatasheetImport } from './DatasheetImport'
 import { SpecImport } from './SpecImport'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
-import { audienceOf, durationState, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
+import { audienceOf, audioLangSummary, audioLangs, durationState, hasAnyAudio, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
 import { publishBlockers, gateComplete, emptyGate } from '../legal/claims'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
-import { ProtocolCardEditor, applyCardDraft, cardDraftError, type ProtocolCardDraft } from './ProtocolCard'
-import { entryForPublish, familyFromCode } from './publishPlain'
+import { ProtocolCardEditor, applyCardDraft, cardDraftError, cleanI18n, type ProtocolCardDraft } from './ProtocolCard'
+import { describeImportPlan, entryForPublish, familyFromCode, planPlainImport } from './publishPlain'
+import { LANG_SHORT } from '../tts/voiceLang'
 import { deleteProtocolVerified, saveProtocolVerified } from './publish'
 import { takeReturnToProtocol } from './workscreenReturn'
 import { LIBRARY_CATEGORIES } from '../data/library'
@@ -35,8 +36,8 @@ function tenantsLabel(p: CatalogProtocol): string {
  */
 function isDraft(p: CatalogProtocol): boolean {
   if (p.enabled) return false
-  const hasAudio = p.versions.some((v) => v.audioUrl?.['pt-BR'])
-  return !hasAudio && !mergedPlain(p) && !p.datasheet && !p.spec
+  // a file in ANY language is material — Italian audio is not a draft
+  return !hasAnyAudio(p) && !mergedPlain(p) && !p.datasheet && !p.spec
 }
 
 /** What material the catalog holds for a protocol, in one short phrase. */
@@ -89,7 +90,13 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
     audience: 'clinical',
     publicTitle: draft.publicTitle.trim() || undefined,
     publicBlurb: draft.publicBlurb.trim() || undefined,
+    /* The names written in the other languages and the cover chosen in the
+       same dialog. They used to be dropped here, so a protocol created with a
+       Portuguese name came into the catalog without one. */
+    i18n: cleanI18n(draft.i18n ?? {}),
+    coverUrl: draft.coverUrl?.trim() || undefined,
     tags: draft.tags,
+
     tier: draft.tier,
     claimsGate: draft.claimsGate,
     updatedAt: now,
@@ -100,6 +107,18 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
     ("gl-anx  1.1" is GL-ANX 1.1). */
 function normalizeCode(code: string | null | undefined): string {
   return (code ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
+}
+
+/** An import waiting for confirmation: what it changes, and what it writes. */
+interface ImportReview {
+  fileName: string
+  selected: Duration | null
+  lines: string[]
+  /** Identical to what is stored — confirming would write nothing new. */
+  nothing: boolean
+  /** The workbook, stamped with the protocol's code — merged at confirm time
+      onto the row as it is THEN. */
+  timeline: PlainTimeline
 }
 
 function emptyTimeline(p: CatalogProtocol): PlainTimeline {
@@ -134,6 +153,13 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   /** The time signature the open file dialog is importing for. */
   const [importFor, setImportFor] = useState<Duration | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  /** An Excel read and compared, waiting for the admin's yes (see onImportFile). */
+  const [review, setReview] = useState<ImportReview | null>(null)
+  const [reviewBusy, setReviewBusy] = useState(false)
+  /* A review belongs to the protocol it was read for: leaving that protocol
+     drops it, so it can never be confirmed onto another one. */
+  const openedCode = opened?.code
+  useEffect(() => { setReview(null) }, [openedCode])
   const [busyCode, setBusyCode] = useState<string | null>(null)
   /* Clinical material and library audio are two different products with two
      different naming rules — the console keeps them on separate tabs so they
@@ -201,21 +227,26 @@ export function CatalogAdmin({ actor }: { actor: string }) {
            not find its own protocol, printed its internal label "catalog ·
            GL-…" as the name, and hid everything that needs the protocol —
            the Scheda, the publish state and the way to remove the Excel. */
-        const proto = entryForPublish({
-          timeline: { ...res.timeline, code: opened.code },
-          existing: opened,
-          selected: importFor ?? openAt ?? undefined,
-          keepDraft: true,
-          intoExisting: true,
+        /* Compare first, write on confirm. An import used to be written the
+           moment the file was read, and what it replaced was only discovered
+           afterwards — the Portuguese text an old Italian-only file wiped, the
+           6-minute version a file imported under the 12m chip overwrote. Now
+           the admin reads what changes (added languages, changed lines, clips
+           added or removed, timing) and says yes; nothing is saved before. */
+        const selected = importFor ?? openAt ?? null
+        const timeline = { ...res.timeline, code: opened.code }
+        /* Compared against the row as the CATALOG holds it now, not as this
+           screen loaded it: a Publish or a Studio save since then is part of
+           what must survive. */
+        const fresh = await freshRow(opened)
+        const plan = planPlainImport({ timeline, existing: fresh, selected })
+        setReview({
+          fileName: file.name,
+          selected,
+          lines: describeImportPlan(plan, selected),
+          nothing: plan.nothing,
+          timeline,
         })
-        const stored = await saveProtocolVerified(dp, proto)
-        await dp.logAudit({
-          actor, action: 'protocol.plain.imported', target: stored.code,
-          detail: `${file.name} · ${importFor ?? openAt ?? '?'}m`,
-        }).catch(() => undefined)
-        setOpenAt(importFor ?? openAt ?? null)
-        setOpened(stored)
-        refetch()
         return
       }
 
@@ -230,6 +261,39 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     } finally {
       setImportFor(null)
       if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  /** The protocol as the catalog holds it right now. */
+  async function freshRow(p: CatalogProtocol): Promise<CatalogProtocol> {
+    const list = await dp.listProtocols().catch(() => [] as CatalogProtocol[])
+    return list.find((x) => x.code === p.code) ?? p
+  }
+
+  /** The admin said yes to the compare summary: write what was shown. */
+  async function confirmImport() {
+    if (!review) return
+    setReviewBusy(true)
+    setImportError(null)
+    try {
+      if (!opened) throw new Error('Nessun protocollo aperto.')
+      /* Re-read the row once more and merge onto THAT: whatever was attached
+         while the summary was on screen (an audio, a session) is carried. */
+      const fresh = await freshRow(opened)
+      const entry = entryForPublish({ timeline: review.timeline, existing: fresh, selected: review.selected, keepDraft: true, intoExisting: true })
+      const stored = await saveProtocolVerified(dp, entry)
+      await dp.logAudit({
+        actor, action: 'protocol.plain.imported', target: stored.code,
+        detail: `${review.fileName} · ${review.selected ?? '?'}m`,
+      }).catch(() => undefined)
+      setReview(null)
+      setOpenAt(review.selected)
+      setOpened(stored)
+      refetch()
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      setReviewBusy(false)
     }
   }
 
@@ -342,6 +406,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
         initialDuration={openAt ?? undefined}
         notice={importError}
         onDismissNotice={() => setImportError(null)}
+        importReview={review ? {
+          fileName: review.fileName,
+          lines: review.lines,
+          nothing: review.nothing,
+          busy: reviewBusy,
+          onConfirm: () => void confirmImport(),
+          onCancel: () => setReview(null),
+        } : null}
         fileName={`catalog · ${opened.code}`}
         actor={actor}
         onCancel={() => { setOpened(null); setOpenAt(null); refetch() }}
@@ -562,20 +634,25 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               <div className="adm-durs" onClick={(e) => e.stopPropagation()}>
                 {CATALOG_DURATIONS.map((d) => {
                   const st = durationState(p, d)
+                  /* WHICH languages are live, on the pill itself: a duration
+                     published in Italian only is green, and still has a
+                     Portuguese take missing. */
+                  const langs = audioLangs(p, d)
                   return (
                     <button
                       key={d}
                       className={`adm-pill adm-pill--btn ${st === 'published' ? 'adm-pill--live' : st === 'saved' ? 'adm-pill--saved' : 'adm-pill--idle'}`}
                       title={
-                        st === 'published'
+                        (st === 'published'
                           ? `${d} min — pubblicato, in ascolto`
                           : st === 'saved'
                             ? `${d} min — salvato, non ancora pubblicato · apri questa versione`
-                            : `${d} min — nessun Excel importato · apri per caricarlo`
+                            : `${d} min — nessun Excel importato · apri per caricarlo`)
+                        + ` · audio: ${audioLangSummary(p, d)}`
                       }
                       onClick={() => { setOpenAt(d); setOpened(p) }}
                     >
-                      {d}m
+                      {d}m{langs.length > 0 && <small className="adm-pill__langs"> {langs.map((l) => LANG_SHORT[l]).join('+')}</small>}
                     </button>
                   )
                 })}

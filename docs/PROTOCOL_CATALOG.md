@@ -14,7 +14,7 @@ three *time signatures* of that row, and each one is its own material:
 |---|---|---|
 | the workbook (PLAIN Timeline) | `protocols.plain_by_duration` → `{"6":…, "12":…, "24":…}` | per duration |
 | the saved Sound Studio session | `protocols.studio_by_duration` | per duration |
-| the streaming audio URL | `versions[].audioUrl['pt-BR']` | per duration |
+| the streaming audio URL | `versions[].audioUrl[<lang>]` — `it` / `pt-BR` | per duration, per spoken language |
 | code · family · phases · titles · tags | the row itself | shared |
 
 ### The rule
@@ -31,7 +31,10 @@ in `tools/test-publish-versions.ts` to still pass:
 - `SoundStudio.saveToProtocol()` — writes the session under the duration being
   edited and spreads the existing entry first, so nothing it does not know
   about is dropped.
-- `attachRenderedAudio()` — already only ever touched one version; unchanged.
+- `attachRenderedAudio()` — touches one version and ONE language of it
+  (`audioUrl[lang]`); the other language's file stays. See
+  `docs/PLAIN_LANGUAGES.md` for the two-language model (Excel columns,
+  import merge, Studio working language, publish and playback per language).
 
 ### What it used to do (the bug)
 

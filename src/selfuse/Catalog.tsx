@@ -109,7 +109,15 @@ export function Catalog({
            library is browsed in Italian or Portuguese, and searching the
            English source strings meant typing what you could see found
            nothing. */
-        return [s.name, s.blurb, s.theme].some((f) => t(f ?? '').toLowerCase().includes(q))
+        if ([s.name, s.blurb, s.theme].some((f) => t(f ?? '').toLowerCase().includes(q))) return true
+        /* …and the PUBLIC names a PO wrote in the other languages: someone
+           who switched the app from Italian remembers the session by the name
+           they first read. Public names only — the clinical title is never a
+           way a person finds anything. */
+        const e = s.entry
+        if (!e) return false
+        return [e.publicTitle, e.publicBlurb, ...Object.values(e.i18n ?? {}).flatMap((x) => [x?.publicTitle, x?.publicBlurb])]
+          .some((f) => !!f && f.toLowerCase().includes(q))
       }),
     [all, dur, theme, q, t],
   )

@@ -127,11 +127,30 @@ export interface Protocol {
 
 type Named = Pick<Protocol, 'title' | 'blurb' | 'publicTitle' | 'publicBlurb' | 'i18n'>
 
-/** One field, in `locale` when that language has it, else the base text. */
+/**
+ * The languages a reader of `locale` is served, in order, before the base
+ * text. English falls through to Portuguese: an English reader HEARS the
+ * Portuguese session (English is not voiced yet), and a name in the language
+ * of what they hear beats one in the language the catalogue was authored in.
+ */
+export function nameLocales(locale?: TextLocale): TextLocale[] {
+  if (!locale) return []
+  return locale === 'en' ? ['en', 'pt-BR'] : [locale]
+}
+
+/** One field, in `locale` when that language has it (then its fallback
+    language, see `nameLocales`), else the base text. */
 function field(p: Partial<Named>, key: keyof ProtocolText, locale?: TextLocale): string {
-  const translated = locale ? p.i18n?.[locale]?.[key]?.trim() : ''
-  if (translated) return translated
+  for (const l of nameLocales(locale)) {
+    const translated = p.i18n?.[l]?.[key]?.trim()
+    if (translated) return translated
+  }
   return (p[key] as string | undefined)?.trim() ?? ''
+}
+
+/** The CLINICAL blurb — the therapist's one-liner — in `locale`. */
+export function protocolBlurb(p: Pick<Protocol, 'blurb' | 'i18n'>, locale?: TextLocale): string {
+  return field(p, 'blurb', locale) || p.blurb
 }
 
 /** The CLINICAL title — what a therapist and the admin console read. */

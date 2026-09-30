@@ -10,6 +10,7 @@ import { useVideoCall } from './webrtc/useVideoCall'
 import type { LaunchConfig } from './ClinicalWizard'
 import { audioUrlFor } from '../data/liveCatalog'
 import { useI18n } from '../i18n'
+import { protocolBlurb, protocolTitle } from '../types/domain'
 
 export interface SessionResult {
   /** '' when the consultation was talk-only (no audio played). */
@@ -149,7 +150,7 @@ export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, 
     setActiveCode(code)
     setStatus('running')
     setDock('session')
-    addNote(`Audio avviato — ${p.code} ${p.title}`)
+    addNote(`Audio avviato — ${p.code} ${protocolTitle(p, locale)}`)
     // the patient's device plays the file LOCALLY (streaming it through the
     // call would collapse the binaural image); we only send the cue
     call.sendControl({ action: 'play', protocolCode: code, durationMin })
@@ -311,8 +312,8 @@ export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, 
                     <button key={p.code} className={`proto${pick === p.code ? ' is-on' : ''}`} onClick={() => setPick(p.code)}>
                       <span className="proto__radio" />
                       <span className="proto__body">
-                        <strong>{p.code} · {p.title}</strong>
-                        <span className="b2b-sub">{p.blurb}</span>
+                        <strong>{p.code} · {protocolTitle(p, locale)}</strong>
+                        <span className="b2b-sub">{protocolBlurb(p, locale)}</span>
                       </span>
                     </button>
                   ))}

@@ -27,3 +27,29 @@
   --mt-text: #e6efe9;
   --mt-accent: #1FBF94;
 }
+
+/* The session's WORKING language (the voice clips' text and voice), beside the
+   interface-language picker. Two segments, like the other top-bar toggles. */
+.mt-worklang { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 2px; border-radius: 8px; border: 1px solid var(--mt-line); background: var(--mt-panel2); }
+.mt-worklang button { height: 28px; min-width: 34px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--mt-sub, #9fb3aa); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer; }
+.mt-worklang button.is-on { background: var(--mt-accent); color: #0e1413; }
+.mt-worklang button:focus-visible { outline: 2px solid var(--mt-accent); outline-offset: 1px; }
+.mt-worklang__warn { padding: 0 6px 0 4px; font-size: 11.5px; font-weight: 700; color: #ffd98a; white-space: nowrap; }
+
+/* "In che lingua vuoi lavorare?" — asked once when a protocol's session opens */
+.mt-langask { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: rgba(6, 10, 9, 0.72); }
+.mt-langask__card { width: min(520px, 100%); padding: 22px 22px 18px; border-radius: 14px; border: 1px solid var(--mt-line); background: var(--mt-panel, #121a18); color: var(--mt-text); }
+.mt-langask__card h2 { margin: 0 0 8px; font-size: 18px; }
+.mt-langask__card p { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--mt-sub, #9fb3aa); }
+.mt-langask__opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mt-langask__opt { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 14px; border-radius: 10px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); font: inherit; text-align: left; cursor: pointer; }
+.mt-langask__opt:hover, .mt-langask__opt:focus-visible { border-color: var(--mt-accent); outline: none; }
+.mt-langask__opt b { font-size: 16px; }
+.mt-langask__opt span { font-size: 12px; color: var(--mt-sub, #9fb3aa); }
+.mt-langask__opt .mt-langask__warn { color: #ffd98a; }
+
+/* a voice clip with no text in the working language */
+.mt-clip__missing { color: #ffd98a; font-weight: 700; }
+.mt-tts__hint--missing { color: #ffd98a; }
+.mt-tts__other { font-size: 11.5px; line-height: 1.4; color: var(--mt-sub, #9fb3aa); margin-top: 4px; }
+.mt-tts__other span { font-weight: 700; }
