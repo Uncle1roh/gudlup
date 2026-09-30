@@ -14,11 +14,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getTtsProvider } from './index'
 import {
-  getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource,
-  hydrateTtsSettings, saveSharedTtsSettings, clearSharedTtsSettings, type SharedState,
+  getTtsSettings, saveTtsSettings, elevenLabsSource,
+  hydrateTtsSettings, saveSharedTtsSettings, loadAccountKeys, saveAccountKey, type SharedState,
 } from './settings'
-import { ARCHETYPES, defaultPrimary, defaultSecondary, resolveVoiceId, VOICE_CATALOG, voicesByArchetype, voicesSyncedAt } from './voiceCatalog'
+import { ARCHETYPES, defaultPrimary, defaultSecondary, resolveVoiceId, VOICE_CATALOG, voicesByArchetype, voiceLangOf } from './voiceCatalog'
 import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
+import { VOICE_ACCOUNTS, accountForKey } from './voiceAccounts'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
 const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
@@ -49,11 +50,19 @@ function VoiceSelect({ value, onChange, allowDefault }: { value: string; onChang
       {res.remappedFrom && (
         <option value={value}>↪ {res.remappedFrom.name} (account precedente) → {res.voice?.name}</option>
       )}
-      {ARCHETYPES.map((a) => {
-        const list = voicesByArchetype(a.id)
+      {/* Only the connected account's voices are in the catalog. Grouped by
+          the language they speak: an Italian and a Portuguese "Maternal" are
+          both in every account, and one flat list read as the same voice
+          twice. */}
+      {(['it', 'pt-BR'] as const).map((lang) => {
+        const list = ARCHETYPES.flatMap((a) => voicesByArchetype(a.id, lang))
         return list.length ? (
-          <optgroup key={a.id} label={`${a.icon} ${a.label}`}>
-            {list.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.gender})</option>)}
+          <optgroup key={lang} label={lang === 'it' ? 'Italiano (ITA)' : 'Português (BRA)'}>
+            {list.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}{/\([FM]\)$/.test(v.name) ? '' : ` (${v.gender})`} · {voiceLangOf(v) === 'pt-BR' ? 'PT' : 'IT'}
+              </option>
+            ))}
           </optgroup>
         ) : null
       })}
@@ -86,6 +95,13 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [dirty, setDirty] = useState(false)
   const [savedNote, setSavedNote] = useState<string | null>(null)
   const lastSavedKey = useRef(getTtsSettings()?.apiKey ?? '')
+  /* The account the key in force belongs to ('' = none; '?' = a key that is
+     not one of ours), the keys the database holds for our accounts, and the
+     account waiting for its key to be pasted — once. */
+  const [accountId, setAccountId] = useState('')
+  const [accountKeys, setAccountKeys] = useState<Record<string, string>>({})
+  const [pasteFor, setPasteFor] = useState<string | null>(null)
+  const [pasteValue, setPasteValue] = useState('')
 
   /** Pull the account's voices — the POs add one in ElevenLabs and it lands
       here, no code change. */
@@ -130,12 +146,24 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         }
       }
       await refreshVoices(false)
+      const keys = await loadAccountKeys()
+      const current = getTtsSettings()?.apiKey ?? ''
+      const acct = await accountForKey(current)
+      if (!alive) return
+      setAccountKeys(keys)
+      setAccountId(acct ? acct.id : current ? '?' : '')
+      /* The key in force is one of ours and the database does not hold it
+         under that account yet: store it now, so the dropdown can come back
+         to it without anybody pasting it again. */
+      if (acct && keys[acct.id] !== current.trim()) {
+        const res = await saveAccountKey(acct.id, current)
+        if (res.state === 'ok' && alive) setAccountKeys({ ...keys, [acct.id]: current.trim() })
+      }
       if (alive) setHydrated(true)
     })()
     return () => { alive = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const syncedAt = voicesSyncedAt()
   const provider = getTtsProvider()
   const source = elevenLabsSource()
   const sourceNote = source === 'shared'
@@ -218,27 +246,45 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     return () => clearTimeout(id)
   }, [dirty, hydrated, apiKey, voiceId, voiceIdM, persist])
 
-  async function save() {
-    setError(null); setStatus(null)
-    if (!apiKey.trim()) { setError('Incolla la chiave API di ElevenLabs.'); return }
-    await persist({ apiKey, voiceId, voiceIdSecondary: voiceIdM || undefined }, { resync: true, loud: true })
+  /** Make an account the one in force: its key becomes the shared key, its
+      22 voices the catalog, and the chosen voices move to their twins there. */
+  async function switchTo(id: string, key: string) {
+    setError(null); setStatus(null); setPasteFor(null); setPasteValue('')
+    setAccountId(id)
+    setApiKey(key)
+    lastSavedKey.current = key
+    await refreshVoices(true, key)
+    const p = resolveVoiceId(voiceId).voice?.id ?? defaultPrimary().id
+    const m = resolveVoiceId(voiceIdM).voice?.id ?? defaultSecondary().id
+    setVoiceId(p)
+    setVoiceIdM(m)
+    setSyncTick((n) => n + 1)
+    await persist({ apiKey: key, voiceId: p, voiceIdSecondary: m }, { loud: true })
   }
 
-  async function clear() {
-    clearTtsSettings()
-    setApiKey('')
-    setVoiceId(defaultPrimary().id)
-    setVoiceIdM(defaultSecondary().id)
-    setError(null)
-    setStatus('Cancellato — si torna alla chiave d’ambiente (se impostata) o alla voce del browser.')
-    onChanged?.()
-    /* The shared row goes too: leaving it would silently restore the key on
-       the next load, which is not what "Cancella" can be allowed to mean. */
-    const res = await clearSharedTtsSettings()
-    if (res.state === 'ok') {
-      setSharedAt(null)
-      setStatus('Cancellato ovunque — rimossa anche la chiave condivisa nel database.')
+  async function chooseAccount(id: string) {
+    const key = accountKeys[id]
+    if (key) { await switchTo(id, key); return }
+    // not stored yet: ask for it once, below the dropdown
+    setPasteFor(id); setPasteValue(''); setError(null)
+  }
+
+  /** The one-time key: accepted only if its fingerprint IS that account. */
+  async function submitPaste() {
+    if (!pasteFor) return
+    const key = pasteValue.trim()
+    const acct = await accountForKey(key)
+    const want = VOICE_ACCOUNTS.find((a) => a.id === pasteFor)
+    if (!acct || acct.id !== pasteFor) {
+      setError(`Questa chiave non appartiene a ${want?.label ?? 'questo account'}.`)
+      return
     }
+    const res = await saveAccountKey(acct.id, key)
+    setAccountKeys((k) => ({ ...k, [acct.id]: key }))
+    await switchTo(acct.id, key)
+    /* Switching works either way; only remembering the key for everyone
+       needs the database. Said, not hidden. */
+    if (res.state !== 'ok') setStatus(`Account collegato in questo browser — la chiave non è stata salvata nel database (${res.state === 'forbidden' ? 'serve ruolo admin' : res.state === 'no-table' ? 'esegui supabase/3-shared-voice-key.sql' : 'nessuna connessione'}).`)
   }
 
   async function test(which: 'primary' | 'secondary') {
@@ -278,42 +324,42 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
       )}
 
       <div className="voice-panel__fields">
-        <input
-          className="voice-panel__input" type="password" placeholder="Chiave API ElevenLabs"
-          value={apiKey}
-          onChange={(e) => { setApiKey(e.target.value); setDirty(true) }}
-          autoComplete="off"
-        />
+        <select
+          className="voice-panel__input"
+          value={pasteFor ?? accountId}
+          onChange={(e) => void chooseAccount(e.target.value)}
+          aria-label="Account ElevenLabs"
+        >
+          {!accountId && !pasteFor && <option value="" disabled>Scegli l’account ElevenLabs…</option>}
+          {accountId === '?' && <option value="?" disabled>Chiave attuale — non è un account Good Loop</option>}
+          {VOICE_ACCOUNTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+        </select>
         <VoiceSelect key={`p-${syncTick}`} value={voiceId} onChange={(v) => { setVoiceId(v); setDirty(true) }} />
         <VoiceSelect key={`m-${syncTick}`} value={voiceIdM} onChange={(v) => { setVoiceIdM(v); setDirty(true) }} />
       </div>
+      {pasteFor && (
+        <div className="voice-panel__fields">
+          <input
+            className="voice-panel__input" type="password" autoComplete="off"
+            placeholder={`Chiave di ${VOICE_ACCOUNTS.find((a) => a.id === pasteFor)?.label ?? ''} — solo la prima volta`}
+            value={pasteValue}
+            onChange={(e) => setPasteValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void submitPaste() }}
+          />
+          <button className="voice-panel__btn voice-panel__btn--primary" onClick={() => void submitPaste()} disabled={!pasteValue.trim()}>Collega</button>
+          <button className="voice-panel__btn voice-panel__btn--quiet" onClick={() => { setPasteFor(null); setError(null) }}>Annulla</button>
+        </div>
+      )}
       <p className="voice-panel__fine" style={{ marginTop: 2 }}>
-        A sinistra: voce principale (ogni battuta [F] o non marcata — predefinita {defaultPrimary().name}).
-        A destra: voce [M] (doppia induzione Deep — predefinita {defaultSecondary().name}).
-        L’elenco arriva dall’account ElevenLabs collegato: {VOICE_CATALOG.length} voci
-        {syncedAt ? ` · aggiornato ${new Date(syncedAt).toLocaleString('it-IT')}` : ' · non ancora sincronizzato'}.
-        Le voci create dai PO compaiono qui da sole.
+        Il primo menu sceglie l’account ElevenLabs; gli altri due mostrano solo le sue {VOICE_CATALOG.length} voci.
+        Voce principale: ogni battuta [F] o non marcata (predefinita {defaultPrimary().name}).
+        Voce [M]: doppia induzione Deep (predefinita {defaultSecondary().name}).
+        {syncing ? ' Caricamento delle voci…' : ''}
       </p>
 
       <div className="voice-panel__actions">
-        <button
-          className="voice-panel__btn voice-panel__btn--primary"
-          onClick={() => void save()}
-          title="Le modifiche si salvano da sole; questo forza il salvataggio e rilegge le voci dell’account"
-        >
-          Salva ora
-        </button>
-        <button
-          className="voice-panel__btn"
-          onClick={() => void refreshVoices(true)}
-          disabled={syncing}
-          title="Rilegge l’elenco voci dall’account ElevenLabs collegato"
-        >
-          {syncing ? 'Sincronizzazione…' : '⟳ Aggiorna voci'}
-        </button>
         <button className="voice-panel__btn" onClick={() => void test('primary')} disabled={busy}>{busy ? 'Riproduzione…' : '▶ Prova la voce'}</button>
         <button className="voice-panel__btn" onClick={() => void test('secondary')} disabled={busy} title="Riproduce una battuta italiana di doppia induzione con la voce [M]">▶ Prova [M]</button>
-        <button className="voice-panel__btn voice-panel__btn--quiet" onClick={() => void clear()}>Cancella</button>
       </div>
 
       {remapped.length > 0 && (
@@ -326,13 +372,13 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
       {status && <p className="voice-panel__ok">{status}</p>}
       {error && <p className="voice-panel__err">{error}</p>}
       <p className="voice-panel__fine">
-        Le modifiche si salvano da sole appena le fai — chiave e voci.{' '}
+        Le modifiche si salvano da sole appena le fai — account e voci.{' '}
         {shared === 'no-table'
           ? 'La chiave resta solo in questo browser: la tabella app_settings non esiste ancora. Esegui supabase/3-shared-voice-key.sql per salvarla una volta sola e ritrovarla su ogni computer.'
           : shared === 'forbidden'
             ? 'La chiave resta solo in questo browser: questo account non può scrivere nelle impostazioni condivise (serve ruolo admin).'
             : 'La chiave viene salvata nel database (visibile ai soli admin) e riappare da sola su ogni computer e su ogni deploy. Una copia locale resta in questo browser per lavorare offline.'}
-        {' '}Viene usata solo la chiave inserita qui: non esiste una chiave di ripiego.
+        {' '}Le chiavi degli account restano nel database (solo admin), mai nel codice.
       </p>
     </div>
   )

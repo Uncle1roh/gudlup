@@ -205,3 +205,46 @@ export function ttsLanguage(): string {
   const env = (import.meta.env.VITE_TTS_LANG as string | undefined)?.trim()
   return env || 'it'
 }
+
+/* ---- the keys of OUR accounts ------------------------------------------
+   The voice panel chooses an ElevenLabs ACCOUNT from a dropdown instead of
+   taking a pasted key. The keys behind it live in the same admin-only table
+   as the shared key (`app_settings`, row 'tts.elevenlabs.accounts'), keyed by
+   the account id in tts/voiceAccounts.ts — never in the code or the bundle.
+   A key is only ever stored against the account its fingerprint proves it
+   belongs to. */
+const ACCOUNTS_KEY = 'tts.elevenlabs.accounts'
+
+/** Stored keys by account id, or {} when there are none / it is off. */
+export async function loadAccountKeys(): Promise<Record<string, string>> {
+  const c = sb()
+  if (!c) return {}
+  try {
+    const { data, error } = await c.from('app_settings').select('value').eq('key', ACCOUNTS_KEY).maybeSingle()
+    if (error || !data?.value) return {}
+    const keys = (data.value as { keys?: Record<string, unknown> }).keys ?? {}
+    const out: Record<string, string> = {}
+    for (const [id, k] of Object.entries(keys)) if (typeof k === 'string' && k.trim()) out[id] = k.trim()
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/** Store one account's key next to the others. Only an admin may. */
+export async function saveAccountKey(accountId: string, apiKey: string): Promise<SharedResult> {
+  const c = sb()
+  if (!c) return { state: 'unavailable', message: 'Nessuna connessione Supabase.' }
+  const keys = { ...(await loadAccountKeys()), [accountId]: apiKey.trim() }
+  try {
+    const { error } = await c.from('app_settings')
+      .upsert({ key: ACCOUNTS_KEY, value: { keys }, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    if (error) {
+      if (/relation|does not exist|schema cache/i.test(error.message)) return { state: 'no-table', message: error.message }
+      return { state: 'forbidden', message: error.message }
+    }
+    return { state: 'ok' }
+  } catch (e) {
+    return { state: 'unavailable', message: (e as Error).message }
+  }
+}
