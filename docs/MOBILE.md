@@ -120,6 +120,32 @@ is one line in `gradle/wrapper/gradle-wrapper.properties`, but it drags the
 Android Gradle Plugin's own Gradle-9 compatibility into the question. Not
 worth it to avoid installing an LTS JDK.
 
+### One command for the whole cycle
+
+```bash
+sh tools/android-run.sh                  # build, install, keep existing data
+sh tools/android-run.sh --fresh          # …and wipe the app's data first
+sh tools/android-run.sh --demo --fresh   # …against the demo fixtures
+```
+
+It finds the JDK and the SDK itself, syncs, assembles, installs and launches,
+and says something useful when a device is not attached.
+
+**Which backend you are testing is a choice, and it is easy to make by
+accident.** `npm run build:app` reads `.env.local` like every other build, so
+by default the app on the phone talks to the **real Supabase project** and
+needs a real account — a wrong password there answers "Invalid login
+credentials", which looks like a bug in the app and is not. `--demo` blanks
+those two variables for that build only: any email and password sign in,
+everything comes from the in-memory fixtures, and nothing you tap touches
+live data. The sign-in screen says which one you are in.
+
+**Resetting.** `--fresh` runs `adb shell pm clear health.goodloop.app`, which
+drops the webview's `localStorage` as well — the consents, the onboarding
+stamp and the addressed-as answer all live there, so the next launch is a
+genuine first run. Reinstalling *without* it keeps everything, which is the
+right default when you are iterating on one screen.
+
 ### Installing it on a phone
 
 ```bash
