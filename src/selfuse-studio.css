@@ -425,6 +425,12 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .hud {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  /* One column, and it must be told to fill the width. Without this the
+     implicit column is sized to its content, so every row — the phase label,
+     the clock, the transport — packed against the left inset and only looked
+     centred when the content happened to be wide. `minmax(0, 1fr)` rather
+     than `1fr` so a long session name wraps instead of widening the grid. */
+  grid-template-columns: minmax(0, 1fr);
   padding: max(28px, env(safe-area-inset-top)) var(--su-inset) max(30px, env(safe-area-inset-bottom));
 }
 /* Three columns, not space-between: with a close button on one side and a
@@ -1089,8 +1095,18 @@ body:has(.su-studio) { background: var(--su-void); }
 
 /* The rows INSIDE those cards, which were the tightest thing on either tab. */
 .su-studio .thr-card { gap: 14px; }
-.su-studio .thr-hero { gap: 14px; }
 .su-studio .thr-card__id { gap: 14px; }
+
+/* The hero answers three things — who, when, and what you can do about it —
+   and they are not peers. One uniform 14px gap made them read as a single
+   stack, so the appointment, which is the whole reason the tab gets opened,
+   had no more weight than the role under the name. The groups get air
+   between them and the lines inside each group stay tight, which is what
+   makes them read as groups at all. */
+.su-studio .thr-hero { gap: 18px; }
+.su-studio .thr-hero__when { gap: 4px; }
+.su-studio .thr-hero__note { margin-top: 8px; }
+.su-studio .thr-hero__acts { gap: 10px; }
 .su-studio .chron__row { padding-top: 12px; padding-bottom: 12px; }
 .su-studio .goals { gap: 12px; }
 .su-studio .statgrid { gap: 14px; margin-top: 0; }
