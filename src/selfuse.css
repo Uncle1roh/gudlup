@@ -1357,3 +1357,18 @@
   .cat-hero__title { font-size: 32px; }
   .sess-full__title { font-size: 48px; }
 }
+
+/* "How should the audio address you?" — the one-time question for accounts
+   that predate the female recordings. Two choices, each showing the words
+   it will actually hear, because that is the difference. */
+.adr__choices { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 36ch; }
+.adr__choice {
+  display: flex; flex-direction: column; gap: 4px; text-align: left;
+  padding: 16px 18px; border-radius: var(--r-md);
+  border: 1px solid var(--line); background: transparent; color: inherit;
+  cursor: pointer;
+}
+.adr__choice b { font-size: 17px; }
+.adr__choice span { font-size: 15px; line-height: 1.4; color: var(--slate); }
+.adr__choice:hover { border-color: var(--aura); }
+.adr__choice:disabled { opacity: 0.5; cursor: progress; }

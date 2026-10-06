@@ -503,6 +503,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   if (overlay.kind === 'call' && therapy.link) {
     return (
       <PatientVideoCall
+        addressedAs={state.addressedAs ?? 'm'}
         therapist={therapy.link.therapist}
         startsAt={appointment?.startsAtMs ?? therapy.link.nextSessionAt}
         roomId={appointment?.id ?? null}

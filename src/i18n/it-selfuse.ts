@@ -158,6 +158,24 @@ export const IT_SELF_USE: Record<string, string> = {
   'ACTIVE': 'IN CORSO',
   'COMPLETED': 'COMPLETATO',
   'Start Pathway': 'Inizia la serie',
+  /* How the guided audio addresses the listener: asked at registration, on
+     the one-time gate for older accounts, and changeable in Profilo. */
+  'One question before you start': 'Una domanda prima di iniziare',
+  'The sessions speak to you directly, and the words change with how you are addressed. Which should we use?':
+    'Le sessioni parlano direttamente a te, e le parole cambiano a seconda di come ti rivolgiamo la parola. Quale usiamo?',
+  '“Trova una posizione comoda, quando sei pronta.”': '“Trova una posizione comoda, quando sei pronta.”',
+  '“Trova una posizione comoda, quando sei pronto.”': '“Trova una posizione comoda, quando sei pronto.”',
+  'It chooses which recording you hear — nothing else. You can change it any time in Profile → Session preferences.':
+    'Sceglie quale registrazione ascolti, nient’altro. Puoi cambiarla quando vuoi in Profilo → Preferenze delle sessioni.',
+  'How the audio addresses you': 'Come ti parla l’audio',
+  'How should the audio address you?': 'Come deve rivolgersi a te l’audio?',
+  'You can change this any time in Profile.': 'Puoi cambiarlo quando vuoi nel Profilo.',
+  'Some sessions are only recorded in one form for now. When yours is missing you still hear the session, and the screen before it says so.':
+    'Alcune sessioni per ora sono registrate in una sola versione. Quando manca la tua, la sessione si ascolta lo stesso e la schermata prima te lo dice.',
+  'This session is only recorded in the male form for now — it will say “pronto”.':
+    'Questa sessione per ora è registrata solo al maschile: dirà “pronto”.',
+  'This session is only recorded in the female form for now — it will say “pronta”.':
+    'Questa sessione per ora è registrata solo al femminile: dirà “pronta”.',
   'Week by week': 'Settimana per settimana',
   'Continue': 'Continua',
   'Restart': 'Ricomincia',

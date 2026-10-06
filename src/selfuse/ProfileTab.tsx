@@ -241,12 +241,38 @@ function NotificationSettings({ state, update, hasTherapist }: ProfileProps) {
 
 function SessionPrefs({ state, update }: ProfileProps) {
   const { t } = useI18n()
+  const dp = useDataProvider()
   const p = state.prefs
   const set = (patch: Partial<typeof p>) => update((s) => ({ ...s, prefs: { ...s.prefs, ...patch } }))
 
   return (
     <>
       <h2 className="display su-h1">{t('Session Preferences')}</h2>
+
+      {/* The promise made at registration — "you can change it any time in
+          Profile" — kept here. It writes the ACCOUNT, not just this browser,
+          so the next session on any device is in the right words. */}
+      <div className="ob-field__label">{t('How the audio addresses you')}</div>
+      <div className="chip-row">
+        {(['f', 'm'] as const).map((to) => (
+          <button
+            key={to}
+            className="chip"
+            aria-pressed={state.addressedAs === to}
+            onClick={() => {
+              update((s) => ({ ...s, addressedAs: to }))
+              void dp.setMyAddressedAs(to).catch(() => { /* retried on next open */ })
+            }}
+          >
+            <span className="chip__label">{to === 'f' ? t('Femminile') : t('Maschile')}</span>
+            <span className="chip__hint">{to === 'f' ? t('“sei pronta”') : t('“sei pronto”')}</span>
+          </button>
+        ))}
+      </div>
+      <p className="small muted">
+        {t('Some sessions are only recorded in one form for now. When yours is missing you still hear the session, and the screen before it says so.')}
+      </p>
+
       <div className="ob-field__label">{t('Default duration')}</div>
       <div className="chip-row">
         {DURATIONS.map((d: Duration) => (

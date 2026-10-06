@@ -30,6 +30,7 @@ import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer } from '../lib/audio'
 import { useLegal } from '../legal/LegalContext'
 import { useDataProvider } from '../data/provider'
+import type { Addressee } from '../tts/voiceLang'
 import { useI18n, fmtDate } from '../i18n'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { audioUrlFor, useCatalog } from '../data/liveCatalog'
@@ -50,6 +51,9 @@ interface VideoCallProps {
   appointmentId?: string | null
   /** Testing hook — shortens the audio. null = the content's real length. */
   demoSeconds?: number | null
+  /** How this person is addressed: a therapist-led session plays on THIS
+      device, so it plays their recording, not a default one. */
+  addressedAs: Addressee
   onLeave: () => void
 }
 
@@ -61,7 +65,7 @@ interface Treatment {
   duration: Duration
 }
 
-export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, demoSeconds, onLeave }: VideoCallProps) {
+export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, demoSeconds, addressedAs, onLeave }: VideoCallProps) {
   const { t } = useI18n()
   const { m } = useLegal()
   const dp = useDataProvider()
@@ -225,6 +229,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
         call={call}
         treatment={treatment}
         demoSeconds={demoSeconds ?? null}
+        addressedAs={addressedAs}
         paused={paused}
         intervening={intervening}
         onFinished={() => setStage('debrief')}
@@ -375,6 +380,7 @@ function TreatmentMode({
   call,
   treatment,
   demoSeconds,
+  addressedAs,
   paused,
   intervening,
   onFinished,
@@ -387,6 +393,7 @@ function TreatmentMode({
   call: Call
   treatment: Treatment
   demoSeconds: number | null
+  addressedAs: Addressee
   paused: boolean
   intervening: boolean
   onFinished: () => void
@@ -410,7 +417,7 @@ function TreatmentMode({
     : [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
   /* THIS device plays the published mixdown for the version the therapist
      chose. Nothing about the treatment audio travels over the call. */
-  const audioUrl = protocol ? audioUrlFor(protocol, treatment.duration, locale) : undefined
+  const audioUrl = protocol ? audioUrlFor(protocol, treatment.duration, locale, addressedAs) : undefined
   const [audioFailed, setAudioFailed] = useState<string | null>(null)
   const total = demoSeconds ?? (protocol ? versionLengthSeconds(protocol, treatment.duration) : treatment.duration * 60)
 

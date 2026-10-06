@@ -2214,3 +2214,10 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 
 /* A save that failed on the first run, said above the button that made it. */
 .su-studio .fr__error { margin: 0 0 10px; font-size: 15px; line-height: 1.45; color: var(--su-warm-fg, #e8a37c); }
+
+/* The addressed-as question, on the dark ground. */
+.su-studio .adr__choice { border-color: var(--su-hair-2); border-radius: 14px; }
+.su-studio .adr__choice b { color: var(--su-fg); }
+.su-studio .adr__choice span { color: var(--su-muted); }
+.su-studio .adr__choice:hover { border-color: var(--su-accent); background: var(--su-hover); }
+.su-studio .adr .fr__fine { max-width: 36ch; }

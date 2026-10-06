@@ -74,6 +74,10 @@ function seedSelfUse(): void {
       /* The code that resolves to Self Use + Professional Support, so the
          Terapeuta tab is open — which is the half sales came to show. */
       companyCode: 'DEMO-2026-GL',
+      /* Answered, so a walkthrough opens on the library rather than on the
+         "how should the audio address you" question. The setting itself is
+         in Profilo → Preferenze, which is where sales should show it. */
+      addressedAs: 'f',
       consents: { termsAt: Date.now() - 30 * day, usageAt: Date.now() - 30 * day, measurementAt: Date.now() - 30 * day },
     }))
   } catch {
