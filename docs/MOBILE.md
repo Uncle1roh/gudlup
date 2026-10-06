@@ -43,19 +43,39 @@ nothing about the site.
 
 ## Running it on a phone
 
-Capacitor's CLI is installed (`@capacitor/cli`, `@capacitor/core`) and
-`capacitor.config.ts` is written. The native projects are **not** generated —
-they need the platform toolchains, and whether `ios/` and `android/` are
-committed is a decision for whoever owns the release process.
+Capacitor's CLI is installed (`@capacitor/cli`, `@capacitor/core`,
+`@capacitor/android`) and `capacitor.config.ts` is written. **Android is
+generated and committed.** iOS is not: it needs a Mac with Xcode.
 
-**Android** (works from Windows, Linux or macOS; needs Android Studio):
+### Android — already generated, in `android/`
+
+The project exists and is committed: app id `health.goodloop.app`, name
+"Good Loop", the Self Use build bundled, and the permissions the video call
+needs declared in `AndroidManifest.xml` with a comment each saying why.
+
+What is committed is the *project* — manifest, icons, gradle, app id. The web
+assets inside it (`android/app/src/main/assets/public`) are generated and
+ignored; `npm run cap:sync` puts a fresh build there.
+
+To produce an APK you need a JDK 21 and the Android SDK, neither of which is
+on the machine this was scaffolded on:
 
 ```bash
-npm i -D @capacitor/android
-npm run build:app
-npx cap add android
-npx cap open android      # builds and runs from Android Studio
+npm run cap:sync          # build the web app + copy it into android/
+npx cap open android      # opens Android Studio; Run builds and installs
 ```
+
+or without the IDE, once `JAVA_HOME` and `ANDROID_HOME` are set:
+
+```bash
+cd android && ./gradlew assembleDebug
+# android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Checked here without a toolchain: the manifest parses, `cap sync` succeeds,
+and the bundled `index.html` references its assets relatively
+(`./assets/index-*.js`) — an absolute path is what white-screens a Capacitor
+app, and `base: './'` in the app build is what prevents it.
 
 **iOS** (needs macOS with Xcode — it cannot be done from this machine):
 

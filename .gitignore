@@ -13,7 +13,16 @@ dist
 # TypeScript incremental build cache: a build artifact, not source
 *.tsbuildinfo
 
-# the app build output and the native projects
+# the app build output
 dist-app
+
+# iOS is not generated here (it needs a Mac). Android IS committed: it holds
+# the manifest, the permissions, the app id and the icons — edits that belong
+# to the product, not to one machine. Its own android/.gitignore keeps the
+# build output out, and these are the per-machine bits on top of it.
 ios
-android
+android/.gradle
+android/local.properties
+android/.idea
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json

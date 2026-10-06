@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Good Loop</string>
+    <string name="title_activity_main">Good Loop</string>
+    <string name="package_name">health.goodloop.app</string>
+    <string name="custom_url_scheme">health.goodloop.app</string>
+</resources>
