@@ -24,7 +24,14 @@ import {
 } from '../data/catalog'
 import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
 import { scriptIssues, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
-import { SCRIPT_LANGS, langsWithText, textIn, type ScriptLang, type TextByLang } from '../tts/voiceLang'
+import { SCRIPT_LANGS, ADDRESSEES, langsWithText, textIn, variantKey, parseVariantKey, type ScriptLang, type TextByLang } from '../tts/voiceLang'
+
+/* Text is counted and compared per VARIANT — a language and the form it
+   addresses the listener in — because "the Italian changed" stopped being one
+   fact the day the same protocol carried both forms. */
+const SCRIPT_VARIANTS: string[] = SCRIPT_LANGS.flatMap((l) => ADDRESSEES.map((to) => variantKey(l, to)))
+function keyLang(key: string): ScriptLang { return parseVariantKey(key)?.lang ?? 'it' }
+function keyTo(key: string): 'm' | 'f' { return parseVariantKey(key)?.to ?? 'm' }
 
 const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
 
@@ -182,21 +189,21 @@ function affScript(a: Pick<PlainAffirmation, 'testo' | 'testoByLang'> | undefine
 }
 
 /** Stored text first, the file's non-empty text over it. */
-function mergeText(stored: TextByLang | undefined, incoming: TextByLang | undefined, kept: Partial<Record<ScriptLang, number>>): TextByLang | undefined {
+function mergeText(stored: TextByLang | undefined, incoming: TextByLang | undefined, kept: Partial<Record<string, number>>): TextByLang | undefined {
   const out: TextByLang = {}
-  for (const l of SCRIPT_LANGS) {
-    const inc = textIn(incoming, l)
-    const old = textIn(stored, l)
-    if (inc) out[l] = inc
-    else if (old) { out[l] = old; kept[l] = (kept[l] ?? 0) + 1 }
+  for (const k of SCRIPT_VARIANTS) {
+    const inc = textIn(incoming, keyLang(k), keyTo(k))
+    const old = textIn(stored, keyLang(k), keyTo(k))
+    if (inc) out[k] = inc
+    else if (old) { out[k] = old; kept[k] = (kept[k] ?? 0) + 1 }
   }
   return Object.keys(out).length ? out : undefined
 }
 
 export interface ScriptMerge {
   merged: PlainTimeline
-  /** Per language: how many stored texts were KEPT because the file had none. */
-  kept: Partial<Record<ScriptLang, number>>
+  /** Per variant: how many stored texts were KEPT because the file had none. */
+  kept: Partial<Record<string, number>>
 }
 
 /**
@@ -204,7 +211,7 @@ export interface ScriptMerge {
  * merged in from what was stored. Pure; asserted in tools/test-voice-lang.ts.
  */
 export function mergeScripts(stored: PlainTimeline | undefined, incoming: PlainTimeline): ScriptMerge {
-  const kept: Partial<Record<ScriptLang, number>> = {}
+  const kept: Partial<Record<string, number>> = {}
   if (!stored) return { merged: incoming, kept }
   const oldClips = new Map<string, PlainClip>()
   for (const v of stored.versions) for (const c of v.clips) oldClips.set(c.clipId, c)
@@ -231,6 +238,86 @@ export function mergeScripts(stored: PlainTimeline | undefined, incoming: PlainT
   return { merged: { ...incoming, versions, affirmations, issues }, kept }
 }
 
+/* ------------------------------------------------- text-only import -------
+
+   `mergeScripts` above takes the FILE's structure and carries the stored text
+   into it. This takes the opposite view, and it is the one to use when a
+   workbook arrives carrying nothing but a new column of words:
+
+       the STORED timeline is the truth about everything except the words.
+
+   Timing, levels, fades, fx, loop sets, phases, the audio already rendered —
+   none of it is read from the incoming file, so none of it can be changed by
+   a file somebody re-exported with a different template. Only `testoByLang`
+   moves, and only where a clip id matches.
+
+   Rows in the file that match no stored clip are NOT added. They are
+   returned, because a file full of unmatched ids means somebody picked the
+   wrong protocol or the wrong duration, and silently importing nothing would
+   look identical to success.
+   ============================================================================ */
+
+export interface ScriptOverlay {
+  merged: PlainTimeline
+  /** Clips and affirmations whose text actually changed. */
+  updated: string[]
+  /** Ids in the incoming file that match nothing stored — nothing was added. */
+  unmatched: string[]
+}
+
+export function overlayScripts(stored: PlainTimeline, incoming: PlainTimeline): ScriptOverlay {
+  const updated: string[] = []
+  const matched = new Set<string>()
+
+  const incClips = new Map<string, PlainClip>()
+  for (const v of incoming.versions) for (const c of v.clips) incClips.set(c.clipId, c)
+  const incAffs = new Map(incoming.affirmations.map((a) => [a.id, a]))
+
+  /** Stored text, with the file's non-empty text over it. Nothing else. */
+  function overlay(old: TextByLang | undefined, inc: TextByLang | undefined): { next: TextByLang | undefined; changed: boolean } {
+    if (!inc) return { next: old, changed: false }
+    const next: TextByLang = { ...(old ?? {}) }
+    let changed = false
+    for (const k of SCRIPT_VARIANTS) {
+      const v = textIn(inc, keyLang(k), keyTo(k))
+      if (!v || v === textIn(old, keyLang(k), keyTo(k))) continue
+      next[k] = v
+      changed = true
+    }
+    return { next: Object.keys(next).length ? next : undefined, changed }
+  }
+
+  const versions: PlainVersion[] = stored.versions.map((v) => ({
+    ...v,
+    clips: v.clips.map((c) => {
+      if (c.tipo !== 'voice') return c
+      const inc = incClips.get(c.clipId)
+      if (inc) matched.add(c.clipId)
+      const { next, changed } = overlay(clipScript(c), clipScript(inc))
+      if (changed) updated.push(c.clipId)
+      return changed ? { ...c, testoByLang: next, testo: next?.it ?? c.testo } : c
+    }),
+  }))
+
+  const affirmations: PlainAffirmation[] = stored.affirmations.map((a) => {
+    const inc = incAffs.get(a.id)
+    if (inc) matched.add(a.id)
+    const { next, changed } = overlay(affScript(a), affScript(inc))
+    if (changed) updated.push(`Aff. ${a.id}`)
+    return changed ? { ...a, testoByLang: next, testo: next?.it ?? a.testo } : a
+  })
+
+  const unmatched = [...incClips.keys(), ...incAffs.keys()].filter((id) => !matched.has(id))
+
+  /* The notes describe the CONTENT, and the content just changed. */
+  const issues = [
+    ...stored.issues.filter((i) => i.code !== 'script'),
+    ...scriptIssues({ versions, affirmations }).filter((i) => !i.sheet || versions.some((v) => v.sheet === i.sheet)),
+  ]
+
+  return { merged: { ...stored, versions, affirmations, issues }, updated, unmatched }
+}
+
 /* --------------------------------------------------------------- compare */
 
 export interface TimelineDiff {
@@ -240,12 +327,12 @@ export interface TimelineDiff {
   /** Languages the protocol had no text in before and has now. */
   newLangs: ScriptLang[]
   /** Clip / affirmation ids whose text changed, per language. */
-  textChanged: Partial<Record<ScriptLang, string[]>>
+  textChanged: Partial<Record<string, string[]>>
   /** …and those that had NO text in that language before (a translation
       arriving is not the same news as a line being rewritten). */
-  textAdded: Partial<Record<ScriptLang, string[]>>
+  textAdded: Partial<Record<string, string[]>>
   /** Stored texts kept because the file left them empty, per language. */
-  textKept: Partial<Record<ScriptLang, number>>
+  textKept: Partial<Record<string, number>>
   added: string[]
   removed: string[]
   affAdded: string[]
@@ -286,7 +373,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     added: [], removed: [], affAdded: [], affRemoved: [], paramChanged: [],
     identical: false,
   }
-  const note = (l: ScriptLang, id: string, before: string | undefined) => {
+  const note = (l: string, id: string, before: string | undefined) => {
     const bucket = before ? diff.textChanged : diff.textAdded
     ;(bucket[l] ??= []).push(id)
   }
@@ -302,7 +389,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     if (c.tipo !== 'voice') continue
     const a = clipScript(old)
     const b = clipScript(c)
-    for (const l of SCRIPT_LANGS) if ((textIn(a, l) ?? '') !== (textIn(b, l) ?? '')) note(l, id, textIn(a, l))
+    for (const k of SCRIPT_VARIANTS) if ((textIn(a, keyLang(k), keyTo(k)) ?? '') !== (textIn(b, keyLang(k), keyTo(k)) ?? '')) note(k, id, textIn(a, keyLang(k), keyTo(k)))
   }
   for (const id of oldClips.keys()) if (!newClips.has(id)) diff.removed.push(id)
 
@@ -312,7 +399,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     const old = oldAffs.get(id)
     if (!old) { if (stored) diff.affAdded.push(id); continue }
     if (paramKey(old) !== paramKey(a)) diff.paramChanged.push(`Aff. ${id}`)
-    for (const l of SCRIPT_LANGS) if ((textIn(affScript(old), l) ?? '') !== (textIn(affScript(a), l) ?? '')) note(l, id, textIn(affScript(old), l))
+    for (const k of SCRIPT_VARIANTS) if ((textIn(affScript(old), keyLang(k), keyTo(k)) ?? '') !== (textIn(affScript(a), keyLang(k), keyTo(k)) ?? '')) note(k, id, textIn(affScript(old), keyLang(k), keyTo(k)))
   }
   for (const id of oldAffs.keys()) if (!newAffs.has(id)) diff.affRemoved.push(id)
 

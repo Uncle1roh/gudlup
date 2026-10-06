@@ -67,6 +67,10 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
      processed on the contract and are not a consent at all. */
   const [resetSent, setResetSent] = useState(false)
   const [birthDate, setBirthDate] = useState('')
+  /* Which recording of a protocol this person hears: the scripts address the
+     listener, and Italian and Portuguese make that audible. Required for a
+     listener account, because the very first session needs it. */
+  const [addressedAs, setAddressedAs] = useState<'m' | 'f' | null>(null)
   const [country, setCountry] = useState('')
   const [team, setTeam] = useState('')
   const [promo, setPromo] = useState('')
@@ -98,6 +102,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             usage: true,
             measurement: false,
             companyCode: normalizeCode(companyCode) || null,
+            addressedAs,
           })
         }
         await auth.signUp(email.trim(), password, role, {
@@ -111,6 +116,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           birthDate,
           country,
           locale,
+          addressedAs: addressedAs ?? undefined,
         })
       } else {
         /* The role goes with it for DEMO mode only, where there is no profile
@@ -209,7 +215,9 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
     (!signup || !isHr || looksLikeCompanyCode(companyCode)) &&
     // a code that was checked and is unknown blocks the button; one still
     // being checked does not — submit asks again
-    (!offersPromo || !promo.trim() || promoPct !== null)
+    (!offersPromo || !promo.trim() || promoPct !== null) &&
+    // a listener account must say which recording it hears
+    (!needsConsent || addressedAs !== null)
 
   return (
     /* The b2c door belongs to the Self Use surface, so it carries that
@@ -307,6 +315,28 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             {codeCheck && (
               <p className={`auth__code${codeCheck.ok ? ' is-ok' : ''}`}>{codeCheck.text}</p>
             )}
+
+            {/* The guided voice speaks TO the listener, and Italian and
+                Portuguese make the listener's gender audible — "sei pronto"
+                or "sei pronta". One recording cannot do both, so the app has
+                to know before the first session. Asked as what it is: how the
+                audio addresses you, not who you are. */}
+            <div className="auth__addressed" role="group" aria-label={t('How the audio addresses you')}>
+              <span className="auth__addressed__q">{t('How should the audio address you?')}</span>
+              <div className="auth__kind">
+                <button type="button" className={`auth__kindbtn${addressedAs === 'f' ? ' is-on' : ''}`}
+                  aria-pressed={addressedAs === 'f'} onClick={() => setAddressedAs('f')}>
+                  <b>{t('Femminile')}</b>
+                  <small>{t('“sei pronta”')}</small>
+                </button>
+                <button type="button" className={`auth__kindbtn${addressedAs === 'm' ? ' is-on' : ''}`}
+                  aria-pressed={addressedAs === 'm'} onClick={() => setAddressedAs('m')}>
+                  <b>{t('Maschile')}</b>
+                  <small>{t('“sei pronto”')}</small>
+                </button>
+              </div>
+              <small className="auth__fine">{t('You can change this any time in Profile.')}</small>
+            </div>
             {!demo && (
               <input className="auth__input" type="text" placeholder={t('Team (optional)')}
                 value={team} onChange={(e) => setTeam(e.target.value)} />

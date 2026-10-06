@@ -500,6 +500,13 @@ export function createMockProvider(): DataProvider {
        the full app — Professional Support included. Typing a code at sign-up
        overrides this: NOVA-2026 is the without-Professional-Support state. */
     getMyCompanyCode: () => delay('DEMO-2026-GL' as string | null),
+    getMyAddressedAs: async () => {
+      try { const v = localStorage.getItem('gl.mock.addressedAs'); return v === 'm' || v === 'f' ? v : null } catch { return null }
+    },
+    setMyAddressedAs: async (to: 'm' | 'f') => {
+      try { localStorage.setItem('gl.mock.addressedAs', to) } catch { /* private mode */ }
+      await wait()
+    },
     getMyTherapistLink: () => delay({ ...link }),
     redeemTherapistCode: async (code: string) => {
       await wait()

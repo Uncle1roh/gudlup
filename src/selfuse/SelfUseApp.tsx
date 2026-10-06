@@ -25,6 +25,7 @@ import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
 import { Explore } from './Explore'
 import { FirstRun } from './FirstRun'
+import { AddressedAsGate } from './AddressedAsGate'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
 import { ProgressTab } from './ProgressTab'
@@ -210,6 +211,20 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      onboarding here — a second device, or one provisioned server-side — had no
      company, so the convention resolved to nothing and the app told them their
      plan has no professional support. A code typed here is never overwritten. */
+  /* Asked once, and remembered on the ACCOUNT: somebody who answered on their
+     phone is not asked again on a laptop. */
+  useEffect(() => {
+    if (state.addressedAs) return
+    let alive = true
+    void dp.getMyAddressedAs()
+      .then((to) => {
+        if (!alive || !to) return
+        update((s) => (s.addressedAs ? s : { ...s, addressedAs: to }))
+      })
+      .catch(() => { /* offline: the gate asks, and writing it back retries */ })
+    return () => { alive = false }
+  }, [dp, state.addressedAs, update])
+
   useEffect(() => {
     if (state.companyCode) return
     let alive = true
@@ -267,6 +282,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       ...s,
       onboardedAt: now,
       companyCode: signup?.companyCode ?? s.companyCode,
+      addressedAs: signup?.addressedAs ?? s.addressedAs,
       consents: {
         ...s.consents,
         usageAt: s.consents.usageAt ?? now,
@@ -318,6 +334,20 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     )
   }
 
+  /* Accounts from before the female recordings existed have no answer, and
+     there is no default worth guessing — "male" is what they have silently
+     been getting. Asked once, then never again. */
+  if (!state.addressedAs) {
+    return (
+      <AddressedAsGate
+        onChoose={(to) => {
+          update((s) => ({ ...s, addressedAs: to }))
+          void dp.setMyAddressedAs(to).catch(() => { /* retried by the hydrate above */ })
+        }}
+      />
+    )
+  }
+
   /* ------------------------------------------------------ the session --- */
   if (launch) {
     const session = catalog.sessions.find((x) => x.slug === launch.slug)
@@ -352,6 +382,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         <SessionFlow
           session={session}
           duration={launch.duration}
+          /* The gate above guarantees an answer; 'm' is only the type's
+             floor, never a silent default anybody actually hears. */
+          addressedAs={state.addressedAs ?? 'm'}
           needsStereoCheck={!state.stereoCheckedAt}
           contextLine={context}
           demoSeconds={demoSeconds}

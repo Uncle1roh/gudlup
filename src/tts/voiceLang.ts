@@ -67,18 +67,117 @@ export function otherVoiceLang(l: VoiceLang): VoiceLang {
   return l === 'it' ? 'pt-BR' : 'it'
 }
 
-/** Per-language text, as stored on a clip, an affirmation or a Studio clip. */
-export type TextByLang = Partial<Record<ScriptLang, string>>
+/* ============================================================================
+   WHO the protocol is speaking to
 
-/** The non-empty text of one language, or undefined. */
-export function textIn(map: TextByLang | undefined, lang: ScriptLang): string | undefined {
-  const v = map?.[lang]?.trim()
+   The scripts address the listener directly, and Italian and Portuguese make
+   the listener's gender audible: "sei pronto" / "sei pronta". One recording
+   cannot do both, so the same protocol is written and voiced twice.
+
+   This is a SECOND AXIS on the path language already travels — workbook,
+   Studio, published file — not a new path. Everything below is keyed by the
+   pair, and the one rule that matters is this:
+
+       THE MALE FORM KEEPS THE BARE LANGUAGE KEY.
+
+   `it` IS Italian addressed to a man; `it:f` is the new one. Every protocol
+   published before this existed therefore stays exactly where it is, counts
+   as the male version, and needs no migration — which is the whole reason
+   the key is shaped this way rather than `it:m`.
+   ============================================================================ */
+
+/** Which form the listener is addressed in. */
+export type Addressee = 'm' | 'f'
+
+export const ADDRESSEES: Addressee[] = ['m', 'f']
+
+/** How the admin console names each form. */
+export const ADDRESSEE_LABEL: Record<Addressee, string> = {
+  m: 'Maschile',
+  f: 'Femminile',
+}
+
+/** One letter for chips and status lines: "IT·M ✓ · IT·F —". */
+export const ADDRESSEE_SHORT: Record<Addressee, string> = { m: 'M', f: 'F' }
+
+/** A language AND the form it addresses the listener in. */
+export interface VoiceVariant {
+  lang: VoiceLang
+  to: Addressee
+}
+
+/** Every variant that can be voiced today, in the order the console lists. */
+export const VOICE_VARIANTS: VoiceVariant[] = VOICE_LANGS.flatMap((lang) =>
+  ADDRESSEES.map((to) => ({ lang, to })),
+)
+
+/**
+ * The key a variant's text and audio are stored under.
+ *
+ * Male → the bare language code, so nothing already published moves.
+ */
+export function variantKey(lang: ScriptLang, to: Addressee = 'm'): string {
+  return to === 'f' ? `${lang}:f` : lang
+}
+
+/** Read a variant key back. An unsuffixed key is the male form. */
+export function parseVariantKey(key: string): { lang: ScriptLang; to: Addressee } | null {
+  const [lang, suffix] = key.split(':f').length > 1 ? [key.slice(0, -2), 'f'] : [key, 'm']
+  return SCRIPT_LANGS.includes(lang as ScriptLang) ? { lang: lang as ScriptLang, to: suffix as Addressee } : null
+}
+
+export function variantLabel(lang: ScriptLang, to: Addressee): string {
+  return `${LANG_LABEL[lang]} · ${ADDRESSEE_LABEL[to]}`
+}
+
+export function variantShort(lang: ScriptLang, to: Addressee): string {
+  return `${LANG_SHORT[lang]}·${ADDRESSEE_SHORT[to]}`
+}
+
+/** Per-language text, as stored on a clip, an affirmation or a Studio clip.
+    Keyed by `variantKey`, so `it` is Italian-to-a-man and `it:f` the other. */
+export type TextByLang = Partial<Record<string, string>>
+
+/** The non-empty text of one language and form, or undefined.
+ *
+ *  Reading the female form of a protocol written before this feature existed
+ *  must not invent one: it returns undefined, and the caller decides whether
+ *  to fall back. Only `textFor` below falls back, and it says when it did.
+ */
+export function textIn(map: TextByLang | undefined, lang: ScriptLang, to: Addressee = 'm'): string | undefined {
+  const v = map?.[variantKey(lang, to)]?.trim()
   return v ? v : undefined
 }
 
-/** Languages that actually carry text in a map. */
+/**
+ * The text to use, and whether it is the form that was asked for.
+ *
+ * A catalogue mid-translation has protocols written for a man and not yet for
+ * a woman. Hiding those would empty her library, so she gets the male text —
+ * and `exact: false` is what the screens use to say so rather than let her
+ * discover it by being called "pronto".
+ */
+export function textFor(
+  map: TextByLang | undefined,
+  lang: ScriptLang,
+  to: Addressee,
+): { text: string; exact: boolean } | undefined {
+  const wanted = textIn(map, lang, to)
+  if (wanted) return { text: wanted, exact: true }
+  const other = textIn(map, lang, to === 'f' ? 'm' : 'f')
+  return other ? { text: other, exact: false } : undefined
+}
+
+/** Languages that carry text in a map, in either form. */
 export function langsWithText(map: TextByLang | undefined): ScriptLang[] {
-  return SCRIPT_LANGS.filter((l) => !!textIn(map, l))
+  return SCRIPT_LANGS.filter((l) => ADDRESSEES.some((to) => !!textIn(map, l, to)))
+}
+
+/** The variants a map actually carries text for. */
+export function variantsWithText(map: TextByLang | undefined): { lang: ScriptLang; to: Addressee }[] {
+  const out: { lang: ScriptLang; to: Addressee }[] = []
+  for (const lang of SCRIPT_LANGS) for (const to of ADDRESSEES) if (textIn(map, lang, to)) out.push({ lang, to })
+  return out
 }
 
 /** The key a line is looked up by when only its Italian text is known:

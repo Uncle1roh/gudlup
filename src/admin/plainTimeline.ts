@@ -22,7 +22,7 @@
 
 import type { WorkBook, WorkSheet } from 'xlsx'
 import { parseFxCell, type PlainFxSpec } from './plainFx'
-import { SCRIPT_LANGS, textIn, type ScriptLang, type TextByLang } from '../tts/voiceLang'
+import { SCRIPT_LANGS, ADDRESSEES, LANG_IN, variantKey, textIn, type TextByLang } from '../tts/voiceLang'
 
 /* SheetJS is lazy-loaded (same pattern as datasheet.ts) so it never weighs on
    the main bundle. */
@@ -392,28 +392,36 @@ function parseReadme(ws: WorkSheet | undefined, X: XlsxModule): ReadmeMeta {
 
    Headers are matched lower-case, so TESTO_PT works too. A workbook without
    any testo_pt column is simply Italian-only: nothing about it is invalid. */
-const SCRIPT_COLUMNS: Record<ScriptLang, string[]> = {
-  it: ['testo', 'testo_it', 'testo_ita'],
-  'pt-BR': ['testo_pt', 'testo_pt-br', 'testo_pt_br', 'testo_ptbr', 'testo_br', 'testo_bra'],
-  en: ['testo_en', 'testo_eng'],
+const SCRIPT_COLUMNS: Record<string, string[]> = {
+  /* Male keeps the plain names, because those are the columns every workbook
+     written so far already uses — and those scripts are written to a man. */
+  it: ['testo_it_m', 'testo_m', 'testo', 'testo_it', 'testo_ita'],
+  'it:f': ['testo_it_f', 'testo_f', 'testo_ita_f'],
+  'pt-BR': ['testo_pt_m', 'testo_pt', 'testo_pt-br', 'testo_pt_br', 'testo_ptbr', 'testo_br', 'testo_bra'],
+  'pt-BR:f': ['testo_pt_f', 'testo_pt-br_f', 'testo_pt_br_f', 'testo_ptbr_f', 'testo_br_f'],
+  en: ['testo_en_m', 'testo_en', 'testo_eng'],
+  'en:f': ['testo_en_f', 'testo_eng_f'],
 }
 
-/** Every language's text in one row. `read(col)` returns the raw cell of a
-    header, or undefined when the sheet has no such column. */
+/** Every variant key a sheet can carry, in a stable order. */
+const SCRIPT_KEYS: string[] = SCRIPT_LANGS.flatMap((l) => ADDRESSEES.map((to) => variantKey(l, to)))
+
+/** Every language's text in one row, in both forms. `read(col)` returns the
+    raw cell of a header, or undefined when the sheet has no such column. */
 function readScript(read: (col: string) => unknown): TextByLang | undefined {
   const out: TextByLang = {}
-  for (const lang of SCRIPT_LANGS) {
-    for (const col of SCRIPT_COLUMNS[lang]) {
+  for (const key of SCRIPT_KEYS) {
+    for (const col of SCRIPT_COLUMNS[key] ?? []) {
       const v = str(read(col))
-      if (v) { out[lang] = v; break }
+      if (v) { out[key] = v; break }
     }
   }
   return Object.keys(out).length ? out : undefined
 }
 
-/** Whether a header row carries any text column at all (Italian or not). */
+/** Whether a header row carries any text column at all. */
 function hasScriptColumn(col: Record<string, number>): boolean {
-  return SCRIPT_LANGS.some((l) => SCRIPT_COLUMNS[l].some((c) => c in col))
+  return SCRIPT_KEYS.some((k) => (SCRIPT_COLUMNS[k] ?? []).some((c) => c in col))
 }
 
 /**
@@ -466,6 +474,41 @@ export function scriptIssues(t: Pick<PlainTimeline, 'versions' | 'affirmations'>
       })
     }
   }
+
+  /* ---- and the same question for WHO the script speaks to ----------------
+
+     A protocol written before the female scripts existed carries only the
+     male form, which is correct and is not an error: it says so once, and
+     says how to add the other without losing anything. Once some lines have
+     a female text, the ones that do not are each worth naming — that is the
+     list somebody works through. */
+  for (const lang of ['it', 'pt-BR'] as const) {
+    const inLang = lines.filter((l) => !!textIn(l.byLang, lang, 'm') || !!textIn(l.byLang, lang, 'f'))
+    if (!inLang.length) continue
+    const withF = inLang.filter((l) => !!textIn(l.byLang, lang, 'f'))
+    const col = lang === 'it' ? 'testo_it_f' : 'testo_pt_f'
+    if (!withF.length) {
+      out.push({
+        level: 'info',
+        code: 'script',
+        message: `Solo maschile ${LANG_IN[lang]}: nessun testo femminile (colonna ${col}). Si aggiunge importando lo stesso Excel con "solo i testi" — niente di quanto già fatto va perso.`,
+      })
+      continue
+    }
+    if (withF.length === inLang.length) continue
+    for (const l of inLang) {
+      if (textIn(l.byLang, lang, 'f')) continue
+      out.push({
+        level: 'info',
+        code: 'script',
+        sheet: l.sheet,
+        clipId: l.id,
+        message: l.aff
+          ? `Affermazioni: nessun testo femminile ${LANG_IN[lang]} (${col} vuoto) — chi ascolta al femminile sente la versione maschile.`
+          : `Nessun testo femminile ${LANG_IN[lang]} (${col} vuoto) — chi ascolta al femminile sente la versione maschile.`,
+      })
+    }
+  }
   return out
 }
 
@@ -486,7 +529,7 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
   for (let r = 0; r <= Math.min(range.e.r, 10); r++) {
     const cells: string[] = []
     for (let c = 0; c <= range.e.c; c++) cells.push(str(cellAt(ws, r, c, X)).toLowerCase())
-    if (cells.includes('id') && ['testo', 'testo_it', 'testo_pt'].some((h) => cells.includes(h))) {
+    if (cells.includes('id') && cells.some((h) => h.startsWith('testo'))) {
       hdrRow = r
       cells.forEach((h, c) => { if (h) col[h] = c })
       break

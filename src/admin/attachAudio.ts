@@ -23,16 +23,21 @@ import { registerProtocol } from '../data/protocols'
 import type { DataProvider } from '../data/provider'
 import type { CatalogProtocol } from '../data/catalog'
 import type { Duration } from '../types/domain'
-import type { VoiceLang } from '../tts/voiceLang'
+import { variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
 
 export const SESSION_MP3_KBPS = 192
 
 export interface AttachResult { url: string; protocol: CatalogProtocol; demo?: boolean }
 
 /** Storage path of one duration's file in one language. */
-export function audioPath(code: string, duration: Duration, lang: VoiceLang): string {
+export function audioPath(code: string, duration: Duration, lang: VoiceLang, to: Addressee = 'm'): string {
   const safeCode = code.replace(/[^A-Za-z0-9_-]+/g, '_')
-  return `${safeCode}/${duration}min-${lang}.mp3`
+  /* The male file keeps the path it has always had, so nothing already in
+     storage has to be moved or re-uploaded. The female one is a new name
+     beside it. */
+  return to === 'f'
+    ? `${safeCode}/${duration}min-${lang}-f.mp3`
+    : `${safeCode}/${duration}min-${lang}.mp3`
 }
 
 /**
@@ -40,12 +45,12 @@ export function audioPath(code: string, duration: Duration, lang: VoiceLang): st
  * language, every other duration, every other field exactly as it was. Pure;
  * asserted in tools/test-voice-lang.ts.
  */
-export function withAudioUrl(proto: CatalogProtocol, duration: Duration, lang: VoiceLang, url: string, now = Date.now()): CatalogProtocol {
+export function withAudioUrl(proto: CatalogProtocol, duration: Duration, lang: VoiceLang, url: string, now = Date.now(), to: Addressee = 'm'): CatalogProtocol {
   return {
     ...proto,
     versions: proto.versions.map((v) =>
       v.duration === duration
-        ? { ...v, audioUrl: { ...(v.audioUrl ?? {}), [lang]: url } }
+        ? { ...v, audioUrl: { ...(v.audioUrl ?? {}), [variantKey(lang, to)]: url } }
         : v),
     audioReady: true,
     updatedAt: now,
@@ -59,6 +64,11 @@ export async function attachRenderedAudio(
   buffer: AudioBuffer,
   lang: VoiceLang,
   kbps: number = SESSION_MP3_KBPS,
+  /* WHO the recording speaks to. Defaults to the male form, so every caller
+     written before the female scripts existed keeps filing audio exactly
+     where it filed it — which is what makes the published catalogue valid
+     without a migration. */
+  to: Addressee = 'm',
 ): Promise<AttachResult> {
   const protocols = await dp.listProtocols()
   const proto = protocols.find((p) => p.code === code)
@@ -76,7 +86,7 @@ export async function attachRenderedAudio(
      (publish, then hear it in the app) impossible to show. */
   if (!hasSupabaseEnv()) {
     const url = URL.createObjectURL(mp3)
-    const next = withAudioUrl(proto, duration, lang, url)
+    const next = withAudioUrl(proto, duration, lang, url, Date.now(), to)
     await dp.saveProtocol(next)
     registerProtocol(next)
     return { url, protocol: next, demo: true }
@@ -85,13 +95,13 @@ export async function attachRenderedAudio(
   const sbUrl = import.meta.env.VITE_SUPABASE_URL as string
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string
   const sb = getSupabaseClient(sbUrl, anon)
-  const path = audioPath(code, duration, lang)
+  const path = audioPath(code, duration, lang, to)
   const { error: upErr } = await sb.storage.from('protocol-audio')
     .upload(path, mp3, { upsert: true, contentType: 'audio/mpeg' })
   if (upErr) throw upErr
   const { data: pub } = sb.storage.from('protocol-audio').getPublicUrl(path)
 
-  const next = withAudioUrl(proto, duration, lang, pub.publicUrl)
+  const next = withAudioUrl(proto, duration, lang, pub.publicUrl, Date.now(), to)
   await dp.saveProtocol(next)
   registerProtocol(next)
   return { url: pub.publicUrl, protocol: next }

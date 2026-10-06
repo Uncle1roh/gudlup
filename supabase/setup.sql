@@ -240,6 +240,16 @@ alter table patients add column if not exists next_session_at timestamptz;
 -- employee provisioning: which team the employee belongs to (feeds NR-1 by-team)
 alter table profiles add column if not exists team text;
 
+-- How the guided audio addresses this person: 'm' → "sei pronto", 'f' → "sei
+-- pronta". Italian and Portuguese make it audible, so the recording has to
+-- know which one to play. NULL means nobody has been asked yet, which is
+-- every account that existed before the female scripts did; the app asks
+-- those once. It selects a recording and nothing else reads it.
+alter table profiles add column if not exists addressed_as text;
+do $$ begin
+  alter table profiles add constraint profiles_addressed_as_ck check (addressed_as in ('m', 'f'));
+exception when duplicate_object then null; end $$;
+
 -- defensive adds: databases first created from the older docs/DATA_MODEL.sql may
 -- lack these (create table if not exists doesn't add columns to existing tables)
 alter table therapists add column if not exists review_reason text;

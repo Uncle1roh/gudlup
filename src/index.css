@@ -2679,3 +2679,9 @@ td, th { overflow-wrap: anywhere; }
 .adm .mt-seg button:hover { color: var(--ink); border-color: var(--slate); }
 .adm .mt-seg button.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
 .adm .mt-seg button:disabled { opacity: 0.5; cursor: default; }
+
+/* "How should the audio address you?" — asked at registration, because the
+   first session needs an answer and the recordings are two. */
+.auth__addressed { display: flex; flex-direction: column; gap: 8px; }
+.auth__addressed__q { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.auth__addressed .auth__fine { margin-top: 0; text-align: left; }

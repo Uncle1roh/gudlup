@@ -26,7 +26,8 @@ import { useI18n } from '../i18n'
 import { useLegal } from '../legal/LegalContext'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
 import { durationLabel } from '../data/selfuse'
-import { audioUrlFor, type ResolvedSession } from '../data/liveCatalog'
+import { audioPick, type ResolvedSession } from '../data/liveCatalog'
+import type { Addressee } from '../tts/voiceLang'
 import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
 import { Icon } from './icons'
@@ -105,6 +106,8 @@ interface SessionFlowProps {
   onCancel: () => void
   /** "Need support" — hands control to the Safety Gateway Level 3. */
   onNeedSupport: () => void
+  /** How this person is addressed — which of the two recordings to play. */
+  addressedAs: Addressee
   /** PLY-4: the link every self-guided session ends with (M1-06). */
   onFindProfessional: () => void
 }
@@ -130,6 +133,7 @@ const SESSION_FRAME = 'app-frame su-studio su-dark'
 
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
+  const { locale } = useI18n()
   const [stage, setStage] = useState<Stage>('pre')
   /* Before the audio starts, back is the screen's own back: leave the session.
      While it plays, the player catches it (below). Afterwards there is nothing
@@ -141,6 +145,12 @@ export function SessionFlow(props: SessionFlowProps) {
   const startedAt = useRef(Date.now())
   const completed = useRef(true)
   const vasPre = useRef<number | null>(null)
+  /* Whether the recording about to play addresses this person the way they
+     asked. Resolved here, so the pre-session screen can say it BEFORE the
+     audio starts rather than after. */
+  const flowProtocol = session.entry ?? getProtocol(session.protocolCode)
+  const flowPick = flowProtocol ? audioPick(flowProtocol, duration, locale, props.addressedAs) : undefined
+  const otherForm = !!flowPick && !flowPick.exact
 
   function begin(pre: number | null) {
     vasPre.current = pre
@@ -149,7 +159,16 @@ export function SessionFlow(props: SessionFlowProps) {
   }
 
   if (stage === 'pre') {
-    return <PreSession session={session} duration={duration} onBegin={begin} onCancel={onCancel} />
+    return (
+      <PreSession
+        session={session}
+        duration={duration}
+        onBegin={begin}
+        onCancel={onCancel}
+        addressedAs={props.addressedAs}
+        otherForm={otherForm}
+      />
+    )
   }
   if (stage === 'stereo') {
     return (
@@ -164,6 +183,7 @@ export function SessionFlow(props: SessionFlowProps) {
       <ImmersiveSession
         session={session}
         duration={duration}
+        addressedAs={props.addressedAs}
         demoSeconds={props.demoSeconds ?? null}
         onEnd={(finished) => { completed.current = finished; setStage('post') }}
       />
@@ -199,11 +219,17 @@ function PreSession({
   duration,
   onBegin,
   onCancel,
+  otherForm,
+  addressedAs,
 }: {
   session: ResolvedSession
   duration: Duration
   onBegin: (vasPre: number | null) => void
   onCancel: () => void
+  /** True when this protocol has not been voiced in the listener's form yet
+      and they are about to hear the other one. */
+  otherForm?: boolean
+  addressedAs?: Addressee
 }) {
   const { t } = useI18n()
   const { m } = useLegal()
@@ -221,6 +247,17 @@ function PreSession({
             <li>{t('Get comfortable.')}</li>
           </ul>
           <p className="small muted"><Icon name="headphones" size={15} /> {t('Headphones recommended')}</p>
+
+          {/* Said before it plays, not discovered during it. A protocol gets
+              its second recording when it is made; until then this is the
+              honest version of "we only have one". */}
+          {otherForm && (
+            <p className="small muted pre-session__form">
+              {addressedAs === 'f'
+                ? t('This session is only recorded in the male form for now — it will say “pronto”.')
+                : t('This session is only recorded in the female form for now — it will say “pronta”.')}
+            </p>
+          )}
 
           {/* PLY-1 — once, before the first audio session (Tier C). */}
           {safeNote && (
@@ -409,11 +446,13 @@ function ImmersiveSession({
   session,
   duration,
   demoSeconds,
+  addressedAs,
   onEnd,
 }: {
   session: ResolvedSession
   duration: Duration
   demoSeconds: number | null
+  addressedAs: Addressee
   onEnd: (completed: boolean) => void
 }) {
   const { t, locale } = useI18n()
@@ -433,7 +472,13 @@ function ImmersiveSession({
      placeholder bed — and looked like it had worked. Nothing is a safer
      outcome than the wrong thing played silently. */
   const protocol = session.entry ?? getProtocol(session.protocolCode)
-  const audioUrl = protocol ? audioUrlFor(protocol, duration, locale) : undefined
+  /* The recording that addresses this person — and whether it is the one
+     they asked for. A protocol voiced for a man and not yet for a woman is
+     still played, because an empty library is worse than a mismatched
+     pronoun; `exact` is what lets the screen say so instead of letting her
+     find out by being called "pronto". */
+  const pick = protocol ? audioPick(protocol, duration, locale, addressedAs) : undefined
+  const audioUrl = pick?.url
   const total = demoSeconds ?? (protocol ? versionLengthSeconds(protocol, duration) : duration * 60)
   const fractions = protocol?.phases.length ? protocol.phases.map((p) => p.fraction) : STANDARD_FRACTIONS
   /* Set when a published file existed but would not play. */

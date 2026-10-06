@@ -29,6 +29,8 @@ export interface SignUpExtra {
   birthDate?: string
   country?: string
   locale?: string
+  /** 'm' | 'f' — which recording of a protocol this person hears. */
+  addressedAs?: 'm' | 'f'
 }
 
 export interface AuthApi {
@@ -177,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           team: extra?.team?.trim() || null,
           promo_code: extra?.promoCode?.trim() || null,
           birth_date: extra?.birthDate || null,
+          addressed_as: extra?.addressedAs ?? null,
           country: extra?.country || null,
           locale: extra?.locale || 'it',
         })

@@ -815,6 +815,20 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return ((data as { company_id: string | null } | null)?.company_id) ?? null
     },
 
+    async getMyAddressedAs() {
+      const uid = await authUid()
+      const { data, error } = await sb.from('profiles').select('addressed_as').eq('auth_uid', uid).maybeSingle()
+      if (error) return null
+      const v = (data as { addressed_as: string | null } | null)?.addressed_as
+      return v === 'm' || v === 'f' ? v : null
+    },
+
+    async setMyAddressedAs(to: 'm' | 'f') {
+      const uid = await authUid()
+      const { error } = await sb.from('profiles').update({ addressed_as: to }).eq('auth_uid', uid)
+      if (error) throw error
+    },
+
     async getMyTherapistLink() {
       const { data, error } = await sb.rpc('my_therapist_link')
       if (error) return null

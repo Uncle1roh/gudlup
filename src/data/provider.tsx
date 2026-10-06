@@ -123,6 +123,11 @@ export interface DataProvider {
    * own crisis contacts) then silently resolved to nothing.
    */
   getMyCompanyCode(): Promise<string | null>
+  /** How the audio should address the signed-in person, or null if unasked.
+      It chooses a recording; it is not an identity field and nothing else
+      reads it. */
+  getMyAddressedAs(): Promise<'m' | 'f' | null>
+  setMyAddressedAs(to: 'm' | 'f'): Promise<void>
   /** The signed-in person's therapist, or null when they have none. */
   getMyTherapistLink(): Promise<TherapistLink | null>
   /** Connect to a therapist with the code they gave you. Idempotent. */

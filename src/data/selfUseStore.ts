@@ -18,6 +18,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useState } from 'react'
+import type { Addressee } from '../tts/voiceLang'
 import type { Duration } from '../types/domain'
 import type { GlCheckEntry, Who5Entry, MoodEntry } from './measures'
 import type { PathwayId, IntakeTime, IntakeMatter } from './selfuse'
@@ -49,6 +50,9 @@ export interface SignupIntake {
   /** Wellbeing check-ins: measurement is off unless it is given. */
   measurement: boolean
   companyCode: string | null
+  /** How the audio should address them — asked on the same form, because it
+      decides which recording they hear from their very first session. */
+  addressedAs: Addressee | null
 }
 
 export function stashSignupIntake(v: SignupIntake): void {
@@ -67,6 +71,7 @@ export function takeSignupIntake(): SignupIntake | null {
       usage: p.usage === true,
       measurement: p.measurement === true,
       companyCode: typeof p.companyCode === 'string' && p.companyCode.trim() ? p.companyCode.trim() : null,
+      addressedAs: p.addressedAs === 'm' || p.addressedAs === 'f' ? p.addressedAs : null,
     }
   } catch {
     return null
@@ -178,6 +183,17 @@ export interface SelfUseState {
   tutorialSeenAt: number | null
   /** Safety Gateway L2: the trigger id last shown, so a cycle shows once. */
   safetyShown: string | null
+  /**
+   * How the audio addresses this person: "sei pronto" or "sei pronta".
+   *
+   * Italian and Portuguese make it audible, so the recording has to know. It
+   * is asked at registration and answerable again in Profilo; null means
+   * nobody has been asked yet, which is every account that existed before the
+   * female scripts did — the app asks them once before the library.
+   *
+   * Not an identity field and not used as one: it chooses a recording.
+   */
+  addressedAs: Addressee | null
 }
 
 export function emptyState(): SelfUseState {
@@ -217,6 +233,7 @@ export function emptyState(): SelfUseState {
     stereoCheckedAt: null,
     tutorialSeenAt: null,
     safetyShown: null,
+  addressedAs: null,
   }
 }
 
