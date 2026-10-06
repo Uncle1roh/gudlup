@@ -65,17 +65,71 @@ npm run cap:sync          # build the web app + copy it into android/
 npx cap open android      # opens Android Studio; Run builds and installs
 ```
 
-or without the IDE, once `JAVA_HOME` and `ANDROID_HOME` are set:
+or without the IDE:
 
 ```bash
+export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
 cd android && ./gradlew assembleDebug
 # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Checked here without a toolchain: the manifest parses, `cap sync` succeeds,
-and the bundled `index.html` references its assets relatively
-(`./assets/index-*.js`) — an absolute path is what white-screens a Capacitor
-app, and `base: './'` in the app build is what prevents it.
+**That `JAVA_HOME` line is not optional**, and it is the one thing that will
+waste an afternoon. See below.
+
+### If gradlew fails with `JdkImageTransform` / `jlink.exe`
+
+```
+Execution failed for task ':capacitor-android:compileDebugJavaWithJavac'.
+> Could not resolve all files for configuration ':capacitor-android:androidJdkImage'.
+   > Failed to transform core-for-system-modules.jar ...
+      > Error while executing process ...\jdk-27in\jlink.exe
+```
+
+Gradle picked the machine's own JDK instead of the one Android Studio ships.
+The Android Gradle Plugin cannot build with a JDK that new — the path in the
+error message says which one it found.
+
+Build with Studio's bundled runtime instead. Either press Run in Android
+Studio, which always uses its own, or set `JAVA_HOME` as above before
+`./gradlew`. Verified on this project: JDK 27 fails, the bundled JBR 25.0.3
+builds in about 70 seconds.
+
+Nothing in the repository pins a JDK path on purpose: it would be one
+machine's path committed for everyone. If CLI builds should stop depending on
+whatever JDK happens to be installed, the permanent fix is a Gradle Java
+toolchain in `android/app/build.gradle` — worth doing before this is wired
+into CI, not before.
+
+### Installing it on a phone
+
+```bash
+export PATH="$PATH:$LOCALAPPDATA/Android/Sdk/platform-tools"
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or copy the `.apk` to the phone and open it (Android will ask about
+installing from an unknown source — a debug build is unsigned for the store).
+
+### What the APK was verified to contain
+
+Built and inspected on 6 Oct: 8.2 MB, Gradle 8.14.3, 93 tasks, 71 seconds.
+
+* the Self Use bundle, `index-vCnYAsdU.js`, 1.2 MB — the same file
+  `npm run build:app` produces;
+* assets referenced **relatively** (`./assets/…`). An absolute path is what
+  white-screens a Capacitor app, and `base: './'` is what prevents it;
+* **no desktop code.** Every marker that only the desktop components emit —
+  `adm-nav__item`, `w-table--roster`, `w-navitem`, `c-kpis`, `mt-worklang`,
+  `mt-track`, `pvw__btn` — is absent from the bundle.
+
+Two honest qualifications to that last point:
+
+* the **i18n dictionary** is one module and ships whole, so admin and
+  workspace *strings* ("Catalogo protocolli", "Add patient") are in the
+  binary as data. No screen can render them;
+* the **stylesheet** still carries the desktop rules — roughly a third of
+  273 kB of dead CSS. Harmless, invisible, and worth trimming one day.
 
 **iOS** (needs macOS with Xcode — it cannot be done from this machine):
 
