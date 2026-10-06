@@ -16,3 +16,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/**
+ * True in the bundle Capacitor wraps (VITE_TARGET=app), false on the web.
+ *
+ * A compile-time constant, not a runtime check: the branch the other target
+ * does not use is dropped by the bundler instead of shipped and skipped.
+ */
+declare const __GL_APP__: boolean

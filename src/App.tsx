@@ -89,6 +89,26 @@ export default function App() {
   }, [pinnedIt])
 
   function content() {
+    /* ---- inside the app, there is one surface ---------------------------
+
+       The downloadable app is the Self Use app: sessions to listen to. The
+       console, the Studio, the workspace and the company dashboard are not
+       compiled into it (vite.config.ts aliases them away), and the hash is
+       ignored here so a stale deep link, a pasted URL or a restored tab
+       cannot try to reach one. On the web this whole branch is dead code and
+       is dropped at build time. */
+    if (__GL_APP__) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <AuthGate mode="b2c">
+              <SelfUseApp />
+            </AuthGate>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
+    }
+
     // Demo hub: links every surface for testers. No gate — it's just links.
     if (route === '#hub') {
       return <Hub />

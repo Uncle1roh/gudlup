@@ -12,3 +12,8 @@ dist
 
 # TypeScript incremental build cache: a build artifact, not source
 *.tsbuildinfo
+
+# the app build output and the native projects
+dist-app
+ios
+android
