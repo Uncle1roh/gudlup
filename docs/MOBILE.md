@@ -77,29 +77,46 @@ cd android && ./gradlew assembleDebug
 **That `JAVA_HOME` line is not optional**, and it is the one thing that will
 waste an afternoon. See below.
 
-### If gradlew fails with `JdkImageTransform` / `jlink.exe`
+### The JDK: neither one on this machine works
 
-```
-Execution failed for task ':capacitor-android:compileDebugJavaWithJavac'.
-> Could not resolve all files for configuration ':capacitor-android:androidJdkImage'.
-   > Failed to transform core-for-system-modules.jar ...
-      > Error while executing process ...\jdk-27in\jlink.exe
-```
+This cost two builds, so it is written down properly.
 
-Gradle picked the machine's own JDK instead of the one Android Studio ships.
-The Android Gradle Plugin cannot build with a JDK that new — the path in the
-error message says which one it found.
+The project needs a JDK that **both** the Android Gradle Plugin and Gradle
+8.14.3 accept. Two JDKs are installed here and neither qualifies:
 
-Build with Studio's bundled runtime instead. Either press Run in Android
-Studio, which always uses its own, or set `JAVA_HOME` as above before
-`./gradlew`. Verified on this project: JDK 27 fails, the bundled JBR 25.0.3
-builds in about 70 seconds.
+| JDK | Where | What happens |
+|---|---|---|
+| **27** | `C:\Program Files\Java\jdk-27` | AGP dies in `JdkImageTransform` — `jlink.exe` fails on `core-for-system-modules.jar` |
+| **25** | Android Studio's bundled JBR | Gradle cannot compile its own scripts: `Unsupported class file major version 69` |
 
-Nothing in the repository pins a JDK path on purpose: it would be one
-machine's path committed for everyone. If CLI builds should stop depending on
-whatever JDK happens to be installed, the permanent fix is a Gradle Java
-toolchain in `android/app/build.gradle` — worth doing before this is wired
-into CI, not before.
+Java 25 is class-file major version 69, and **Gradle only supports running on
+Java 25 from version 9.1.0**. The wrapper here is 8.14.3, whose ceiling is
+Java 24.
+
+A build *did* succeed on the JBR once, before the media-session plugin was
+added. That was luck: the settings script was still compiled in the Gradle
+cache, so the Groovy compiler never ran. The first `cap sync` that changed
+`capacitor.settings.gradle` invalidated it and the real incompatibility
+surfaced. Do not trust a green build that follows a cache hit.
+
+**The fix: build on JDK 21.** It is the LTS that AGP 8.x and Gradle 8.14.3
+both target, and it is what Android tooling expects.
+
+* In Android Studio: Settings → Build, Execution, Deployment → Build Tools →
+  Gradle → **Gradle JDK** → *Download JDK* → version 21 (Temurin). Studio
+  fetches and manages it, and Run works from then on.
+* From a terminal, once a 21 exists:
+
+  ```bash
+  export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21"   # wherever it lands
+  export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
+  cd android && ./gradlew assembleDebug
+  ```
+
+The alternative — moving the wrapper to Gradle 9.1+ so Java 25 is allowed —
+is one line in `gradle/wrapper/gradle-wrapper.properties`, but it drags the
+Android Gradle Plugin's own Gradle-9 compatibility into the question. Not
+worth it to avoid installing an LTS JDK.
 
 ### Installing it on a phone
 

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
+    "@capgo/capacitor-media-session": "^8.0.32",
     "@supabase/supabase-js": "^2.45.0",
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",

@@ -12,9 +12,19 @@
    controls arrive on the WEBSITE too, not only in the app, and can be tested
    in a browser rather than only on a device.
 
-   What this is NOT: it does not keep audio alive in the background. On iOS
-   that is `UIBackgroundModes: audio` in Info.plist; on Android it is a
-   foreground service. This is the face of those; they are in docs/MOBILE.md.
+   Inside the app it is the same calls against a NATIVE media session
+   (`@capgo/capacitor-media-session`), which matters for more than the
+   notification: that plugin runs an Android foreground service of type
+   `mediaPlayback` for as long as a session is active, and a foreground
+   service is the only thing that stops Android suspending the webview — and
+   with it the audio — a few seconds after the screen goes dark.
+
+   So this module is both the lock screen AND, on Android, the reason a
+   twelve-minute session survives the screen locking at minute two.
+
+   One interface, two implementations, chosen at runtime. The plugin is only
+   reached inside `__GL_APP__`, so the website neither loads it nor grows by
+   a byte for its existence.
    ============================================================================ */
 
 export interface NowPlaying {
@@ -34,6 +44,55 @@ export interface TransportHandlers {
   onStop: () => void
 }
 
+/* ---- which implementation -------------------------------------------- */
+
+type NativePlugin = {
+  setMetadata(o: { title?: string; artist?: string; album?: string; artwork?: { src: string; sizes?: string; type?: string }[] }): Promise<void>
+  setPlaybackState(o: { playbackState: 'none' | 'paused' | 'playing' }): Promise<void>
+  setActionHandler(o: { action: string }, h: ((d: { action: string; seekTime?: number | null }) => void) | null): Promise<void>
+  setPositionState(o: { duration?: number; position?: number; playbackRate?: number }): Promise<void>
+}
+
+/** Resolved once, then cached. `null` means "web, or the plugin is absent". */
+let nativePlugin: NativePlugin | null | undefined
+
+function runningNative(): boolean {
+  if (!__GL_APP__) return false
+  try {
+    const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    return !!cap?.isNativePlatform?.()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * The native plugin, or null.
+ *
+ * Imported dynamically and only inside `__GL_APP__`, which the bundler
+ * replaces with a literal: in the web build this whole function is dead code
+ * and the import is never emitted.
+ */
+async function native(): Promise<NativePlugin | null> {
+  if (!runningNative()) return null
+  if (nativePlugin === undefined) {
+    try {
+      const mod = await import('@capgo/capacitor-media-session')
+      nativePlugin = mod.MediaSession as unknown as NativePlugin
+    } catch {
+      nativePlugin = null // the plugin is not in this build; the web API stands
+    }
+  }
+  return nativePlugin
+}
+
+/** Fire a native call and forget it: nothing on screen waits for the OS. */
+function onNative(fn: (p: NativePlugin) => Promise<unknown>): boolean {
+  if (!runningNative()) return false
+  void native().then((p) => { if (p) void fn(p).catch(() => undefined) })
+  return true
+}
+
 function session(): MediaSession | undefined {
   try {
     return typeof navigator !== 'undefined' && 'mediaSession' in navigator
@@ -46,6 +105,14 @@ function session(): MediaSession | undefined {
 
 /** Put the session on the lock screen. */
 export function showNowPlaying(now: NowPlaying): void {
+  if (onNative((p) => p.setMetadata({
+    title: now.title,
+    artist: now.artist ?? 'Good Loop',
+    artwork: now.artworkUrl ? [{ src: now.artworkUrl, sizes: '512x512', type: 'image/png' }] : undefined,
+  }))) {
+    setPlaybackState('playing')
+    return
+  }
   const ms = session()
   if (!ms) return
   try {
@@ -73,6 +140,16 @@ export function showNowPlaying(now: NowPlaying): void {
  * controls that do nothing.
  */
 export function bindTransport(h: TransportHandlers): void {
+  if (onNative(async (p) => {
+    await p.setActionHandler({ action: 'play' }, () => h.onPlay())
+    await p.setActionHandler({ action: 'pause' }, () => h.onPause())
+    await p.setActionHandler({ action: 'stop' }, () => h.onStop())
+    /* Unset for the same reason as on the web: a guided protocol is not a
+       track to scrub through. */
+    for (const a of ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack']) {
+      await p.setActionHandler({ action: a }, null)
+    }
+  })) return
   const ms = session()
   if (!ms) return
   const set = (action: MediaSessionAction, fn: (() => void) | null) => {
@@ -90,6 +167,7 @@ export function bindTransport(h: TransportHandlers): void {
 
 /** Keep the lock screen honest about whether sound is coming out. */
 export function setPlaybackState(state: 'playing' | 'paused'): void {
+  if (onNative((p) => p.setPlaybackState({ playbackState: state }))) return
   const ms = session()
   if (!ms) return
   try { ms.playbackState = state } catch { /* fine */ }
@@ -97,9 +175,14 @@ export function setPlaybackState(state: 'playing' | 'paused'): void {
 
 /** How far through, so the OS can draw a progress bar that is not a lie. */
 export function setPosition(elapsedSec: number, durationSec: number): void {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return
+  if (onNative((p) => p.setPositionState({
+    duration: durationSec,
+    position: Math.max(0, Math.min(elapsedSec, durationSec)),
+    playbackRate: 1,
+  }))) return
   const ms = session()
   if (!ms || typeof ms.setPositionState !== 'function') return
-  if (!Number.isFinite(durationSec) || durationSec <= 0) return
   try {
     ms.setPositionState({
       duration: durationSec,
@@ -113,6 +196,10 @@ export function setPosition(elapsedSec: number, durationSec: number): void {
 
 /** The session is over: take it off the lock screen. */
 export function clearNowPlaying(): void {
+  if (onNative(async (p) => {
+    await p.setPlaybackState({ playbackState: 'none' })
+    for (const a of ['play', 'pause', 'stop']) await p.setActionHandler({ action: a }, null)
+  })) return
   const ms = session()
   if (!ms) return
   try {

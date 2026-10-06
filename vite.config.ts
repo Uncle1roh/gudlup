@@ -22,6 +22,11 @@ import { fileURLToPath } from 'node:url'
 
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+/** The native plugin has no business in the website's bundle: on the web the
+    media session goes through `navigator.mediaSession`, and the plugin's web
+    implementation would just be two chunks nobody can use. */
+const NATIVE_ONLY = new Set(['@capgo/capacitor-media-session'])
+
 /** Exactly as App.tsx imports them. These do not go in the phone binary. */
 const DESKTOP_ONLY = new Set([
   './studio/SoundStudio',
@@ -39,13 +44,15 @@ const DESKTOP_ONLY = new Set([
  * regex over part of the specifier, and a partial match leaves the "./"
  * in front of an absolute path — which resolves to nothing, slowly.
  */
-function desktopOnlyStub(active: boolean): Plugin {
+function targetStubs(active: boolean): Plugin {
   const stub = here('./src/app-target/desktopOnly.tsx')
+  const noNative = here('./src/app-target/noNativeMediaSession.ts')
   return {
-    name: 'gl-desktop-only-stub',
+    name: 'gl-target-stubs',
     enforce: 'pre',
     resolveId(source, importer) {
-      if (!active || !importer) return null
+      if (!importer) return null
+      if (!active) return NATIVE_ONLY.has(source) ? noNative : null
       return DESKTOP_ONLY.has(source) ? stub : null
     },
   }
@@ -54,7 +61,7 @@ function desktopOnlyStub(active: boolean): Plugin {
 export default defineConfig(({ mode }) => {
   const isApp = mode === 'app' || process.env.VITE_TARGET === 'app'
   return {
-    plugins: [react(), desktopOnlyStub(isApp)],
+    plugins: [react(), targetStubs(isApp)],
     /* The app is loaded from the device's own filesystem, so asset URLs have
        to be relative: an absolute "/assets/…" resolves to the root of the
        webview's origin and finds nothing. */
