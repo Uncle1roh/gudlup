@@ -119,6 +119,10 @@ interface ImportReview {
   /** The workbook, stamped with the protocol's code — merged at confirm time
       onto the row as it is THEN. */
   timeline: PlainTimeline
+  /** Which import the summary describes. The admin can switch and the
+      summary is recomputed — the two answers are genuinely different, and
+      reading one while confirming the other is how work gets lost. */
+  mode: 'import' | 'text'
 }
 
 function emptyTimeline(p: CatalogProtocol): PlainTimeline {
@@ -239,13 +243,20 @@ export function CatalogAdmin({ actor }: { actor: string }) {
            screen loaded it: a Publish or a Studio save since then is part of
            what must survive. */
         const fresh = await freshRow(opened)
-        const plan = planPlainImport({ timeline, existing: fresh, selected })
+        /* Default to TEXT-ONLY when this duration already has a timeline.
+           The safe answer is the one that cannot undo somebody's work, and a
+           workbook arriving for a finished protocol is nearly always a new
+           column of words rather than a new session. */
+        const already = !!mergedPlain(fresh)?.versions?.length
+        const mode: 'import' | 'text' = already ? 'text' : 'import'
+        const plan = planPlainImport({ timeline, existing: fresh, selected, mode })
         setReview({
           fileName: file.name,
           selected,
           lines: describeImportPlan(plan, selected),
           nothing: plan.nothing,
           timeline,
+          mode,
         })
         return
       }
@@ -270,6 +281,22 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     return list.find((x) => x.code === p.code) ?? p
   }
 
+  /** The admin switched between "everything" and "only the words": the
+      summary is recomputed so what they read is what they will get. */
+  async function setImportMode(mode: 'import' | 'text') {
+    if (!review || !opened) return
+    setReviewBusy(true)
+    try {
+      const fresh = await freshRow(opened)
+      const plan = planPlainImport({ timeline: review.timeline, existing: fresh, selected: review.selected, mode })
+      setReview({ ...review, mode, lines: describeImportPlan(plan, review.selected), nothing: plan.nothing })
+    } catch (e) {
+      setImportError((e as Error).message)
+    } finally {
+      setReviewBusy(false)
+    }
+  }
+
   /** The admin said yes to the compare summary: write what was shown. */
   async function confirmImport() {
     if (!review) return
@@ -280,7 +307,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       /* Re-read the row once more and merge onto THAT: whatever was attached
          while the summary was on screen (an audio, a session) is carried. */
       const fresh = await freshRow(opened)
-      const entry = entryForPublish({ timeline: review.timeline, existing: fresh, selected: review.selected, keepDraft: true, intoExisting: true })
+      const entry = entryForPublish({ timeline: review.timeline, existing: fresh, selected: review.selected, keepDraft: true, intoExisting: true, mode: review.mode })
       const stored = await saveProtocolVerified(dp, entry)
       await dp.logAudit({
         actor, action: 'protocol.plain.imported', target: stored.code,
@@ -411,6 +438,8 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           lines: review.lines,
           nothing: review.nothing,
           busy: reviewBusy,
+          mode: review.mode,
+          onMode: (m) => void setImportMode(m),
           onConfirm: () => void confirmImport(),
           onCancel: () => setReview(null),
         } : null}

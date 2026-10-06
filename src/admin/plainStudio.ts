@@ -40,7 +40,7 @@ import { MAX_SAMPLE_SLOTS, type BilateralParams, type BinauralParams, type Sampl
 import { defaultEffects, type TrackEffect } from '../studio/effects'
 import { applyFxSpecs, describeFx, fxKey } from './plainFx'
 import { matchVoiceFromText, voiceLabel, voicesByArchetype, defaultPrimary, hasVoicesFor, type CatalogVoice } from '../tts/voiceCatalog'
-import { LANG_IN, VOICE_LANGS, scriptKey, textIn, type TextByLang, type VoiceLang } from '../tts/voiceLang'
+import { LANG_IN, VOICE_LANGS, scriptKey, textIn, type Addressee, type TextByLang, type VoiceLang, VOICE_VARIANTS, variantKey } from '../tts/voiceLang'
 import {
   ANCHOR_LUFS,
   BILATERAL_SOUNDS,
@@ -81,9 +81,14 @@ function affScript(a: Pick<PlainAffirmation, 'testo' | 'testoByLang'> | undefine
   return a.testoByLang ?? (a.testo ? { it: a.testo } : undefined)
 }
 /** Only the languages that can be spoken — English is stored, not voiced. */
-function spoken(byLang: TextByLang | undefined): Partial<Record<VoiceLang, string>> {
-  const out: Partial<Record<VoiceLang, string>> = {}
-  for (const l of VOICE_LANGS) { const v = textIn(byLang, l); if (v) out[l] = v }
+function spoken(byLang: TextByLang | undefined): Partial<Record<string, string>> {
+  const out: Partial<Record<string, string>> = {}
+  /* Every variant, not every language: the Studio fills "Italian, female"
+     from the workbook the same way it fills Italian. */
+  for (const v of VOICE_VARIANTS) {
+    const t = textIn(byLang, v.lang, v.to)
+    if (t) out[variantKey(v.lang, v.to)] = t
+  }
   return out
 }
 /** A whispered refrain's "..."-separated fragments, in one language. */
@@ -96,7 +101,7 @@ function fragmentsOf(text: string | undefined): string[] {
  * and the affirmations its loops and sequences speak. What a render in that
  * language would leave silent, counted before anyone presses Publish.
  */
-export function missingScripts(timeline: PlainTimeline, version: PlainVersion, lang: VoiceLang): number {
+export function missingScripts(timeline: PlainTimeline, version: PlainVersion, lang: VoiceLang, to: Addressee = 'm'): number {
   const affById = new Map(timeline.affirmations.map((a) => [a.id, a]))
   let n = 0
   const affIds = new Set<string>()
@@ -107,9 +112,9 @@ export function missingScripts(timeline: PlainTimeline, version: PlainVersion, l
       for (const st of c.sequenzaSteps ?? []) affIds.add(st.id)
       continue
     }
-    if (!textIn(rowScript(c), lang)) n++
+    if (!textIn(rowScript(c), lang, to)) n++
   }
-  for (const id of affIds) if (!textIn(affScript(affById.get(id)), lang)) n++
+  for (const id of affIds) if (!textIn(affScript(affById.get(id)), lang, to)) n++
   return n
 }
 
@@ -120,7 +125,7 @@ export function missingScripts(timeline: PlainTimeline, version: PlainVersion, l
  */
 export function buildScriptIndex(timeline: PlainTimeline): ScriptIndex {
   const idx: ScriptIndex = { bySource: {}, byItText: {} }
-  const put = (source: string, byLang: Partial<Record<VoiceLang, string>>) => {
+  const put = (source: string, byLang: Partial<Record<string, string>>) => {
     if (!Object.keys(byLang).length) return
     idx.bySource[source] = byLang
     if (byLang.it) idx.byItText[scriptKey(byLang.it)] = byLang

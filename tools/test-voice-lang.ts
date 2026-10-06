@@ -215,16 +215,16 @@ async function main() {
   console.log('\n--- 6. a session saved before languages existed, opened in Portuguese ---')
   const scripts = buildScriptIndex(bi)
   const old: SeedClip = { startSec: 10, durationSec: 15, params: { pan: 0, pulseHz: 0.35, toneHz: 320, voiceId: 'aYBXyupCnZqrSVuPsR5i', voiceArchetype: 'maternal', voiceGender: 'F' } as VoiceParams, text: 'Sono al sicuro.', ttsPath: 'tts/a.mp3', ttsText: 'Sono al sicuro.' }
-  const r = switchClipLang(old, 'it', 'pt-BR', scripts)
+  const r = switchClipLang(old, { lang: 'it', to: 'm' }, { lang: 'pt-BR', to: 'm' }, scripts)
   assert(r.filled && r.clip.text === 'Estou seguro.', 'no source id: its Portuguese is found by its Italian text')
   assert((r.clip.params as VoiceParams).voiceId === 'bra-mat', 'and it is given the BRA voice of the same archetype')
   assert(!r.clip.ttsPath, 'the Italian render is not passed off as Portuguese')
-  const back = switchClipLang(r.clip, 'pt-BR', 'it', scripts)
+  const back = switchClipLang(r.clip, { lang: 'pt-BR', to: 'm' }, { lang: 'it', to: 'm' }, scripts)
   assert(back.clip.text === 'Sono al sicuro.' && back.clip.ttsPath === 'tts/a.mp3' && (back.clip.params as VoiceParams).voiceId === 'aYBXyupCnZqrSVuPsR5i', 'switching back restores the Italian text, render and voice')
-  const canon = canonicalVoiceClip(r.clip, 'pt-BR')
+  const canon = canonicalVoiceClip(r.clip, { lang: 'pt-BR', to: 'm' })
   assert(canon.text === 'Sono al sicuro.' && canon.textByLang?.['pt-BR'] === 'Estou seguro.' && (canon.params as VoiceParams).voiceId === 'aYBXyupCnZqrSVuPsR5i', 'a save made in Portuguese is canonical: Italian in the live fields, both in the maps')
   const orphan: SeedClip = { ...old, text: 'Una riga che non è nel foglio.' }
-  const o = switchClipLang(orphan, 'it', 'pt-BR', scripts)
+  const o = switchClipLang(orphan, { lang: 'it', to: 'm' }, { lang: 'pt-BR', to: 'm' }, scripts)
   assert(o.missing && o.clip.text === '', 'a line with no Portuguese anywhere shows as missing')
 
   /* --------------------------------------------------- 7. audio per language */

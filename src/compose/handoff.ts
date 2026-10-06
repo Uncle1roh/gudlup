@@ -26,7 +26,7 @@
 
 import type { ScriptIndex, SeedTrack, StudioPhase, StudioProject } from './types'
 import type { Duration } from '../types/domain'
-import type { VoiceLang } from '../tts/voiceLang'
+import type { Addressee, VoiceLang } from '../tts/voiceLang'
 
 const KEY = 'gl.studio.handoff'
 
@@ -52,6 +52,8 @@ export interface StudioSeed {
    * gate, a reload) comes back in the same language without asking again.
    */
   workingLang?: VoiceLang
+  /** Which address form the Studio should open in. Absent = the male one. */
+  workingTo?: Addressee
   /** The stored timeline's texts, to fill a language a saved session lacks. */
   scripts?: ScriptIndex
 }
@@ -62,6 +64,8 @@ export interface SeedExtras {
   masterGain?: number
   phases?: StudioPhase[]
   workingLang?: VoiceLang
+  /** Which address form the Studio should open in. Absent = the male one. */
+  workingTo?: Addressee
   scripts?: ScriptIndex
 }
 
@@ -93,7 +97,7 @@ export function setStudioProject(
   project: StudioProject,
   attach?: StudioAttachTarget,
   returnTo?: string,
-  extras?: Pick<SeedExtras, 'workingLang' | 'scripts'>,
+  extras?: Pick<SeedExtras, 'workingLang' | 'workingTo' | 'scripts'>,
 ): void {
   remember({
     ...extras,

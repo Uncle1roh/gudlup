@@ -38,7 +38,7 @@ import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { buildScriptIndex, missingScripts, plainToStudioTracks } from './plainStudio'
 import { plainWavFileName, renderPlainWav } from './renderPlain'
 import { secToMmss, type PlainTimeline } from './plainTimeline'
-import { LANG_IN, LANG_LABEL, LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
+import { LANG_IN, LANG_LABEL, LANG_SHORT, VOICE_VARIANTS, variantKey, variantLabel, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { hasVoicesFor } from '../tts/voiceCatalog'
 
 interface Props {
@@ -77,6 +77,9 @@ interface Props {
     lines: string[]
     nothing: boolean
     busy: boolean
+    /** Which import the summary above describes. */
+    mode: 'import' | 'text'
+    onMode: (m: 'import' | 'text') => void
     onConfirm: () => void
     onCancel: () => void
   } | null
@@ -375,16 +378,21 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
      under it, leaving the other language's audio exactly where it was. */
   const [ask, setAsk] = useState<LangAsk | null>(null)
   const uploadLang = useRef<VoiceLang>('it')
-  function chooseLang(lang: VoiceLang) {
+  /* …and WHO it addresses. A file is one language and one form, so the same
+     question that already asked which language now asks which of the two
+     versions — and the answer is what the file is tagged with. */
+  const uploadTo = useRef<Addressee>('m')
+  function chooseLang(lang: VoiceLang, to: Addressee = 'm') {
     const what = ask
     setAsk(null)
     if (what === 'upload') {
       uploadLang.current = lang
+      uploadTo.current = to
       masteredRef.current?.click()
     } else if (what === 'publish') {
-      void publish(lang)
+      void publish(lang, to)
     } else if (what === 'download') {
-      void download(lang)
+      void download(lang, to)
     }
   }
 
@@ -564,7 +572,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   /** Publish = the WHOLE pipeline for the SELECTED time signature: catalog
       entry → render (with voice) → upload & attach → live in the app. The other
       durations of this protocol are left exactly as they are. */
-  async function publish(lang: VoiceLang) {
+  async function publish(lang: VoiceLang, to: Addressee = 'm') {
     /* Two ways in: a workbook to render from, or a finished file to ship.
        The second is how a demo protocol is made — and how a PO ships a mix
        mastered outside the app against a time signature that has no Excel. */
@@ -605,9 +613,9 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
          to be exactly where it was, and the status line says so. */
       const otherLang: VoiceLang = lang === 'it' ? 'pt-BR' : 'it'
       const otherBefore = proto.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
-      const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer, lang)
+      const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer, lang, undefined, to)
       setPublished(attached.protocol)
-      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min · ${lang}` }).catch(() => undefined)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min · ${variantLabel(lang, to)}` }).catch(() => undefined)
       const otherAfter = attached.protocol.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
       const others = [...liveDurations].filter((d) => d !== dur).sort((a, b) => a - b)
       /* The slot says how long a person expects the session to be, and nothing
@@ -641,7 +649,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   }
 
   /** Download = the same full render, saved locally as WAV. */
-  async function download(lang: VoiceLang) {
+  async function download(lang: VoiceLang, to: Addressee = 'm') {
+    void to // the WAV is named below
     if (!version) return
     setBusy(true)
     setError(null)
@@ -792,18 +801,19 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         <div className="adm-plain__status adm-plain__ask" role="dialog" aria-label="Lingua dell’audio">
           <b>
             {ask === 'publish'
-              ? `In che lingua pubblichi la versione da ${picked} min?`
+              ? `Quale versione pubblichi per i ${picked} min?`
               : ask === 'upload'
-                ? `Per quale lingua è l’audio che stai caricando (${picked} min)?`
-                : `In che lingua vuoi scaricare il WAV da ${picked} min?`}
+                ? `Di quale versione è l’audio che stai caricando (${picked} min)?`
+                : `Quale versione vuoi scaricare in WAV (${picked} min)?`}
           </b>
           <div className="adm-plain__askrow">
-            {VOICE_LANGS.map((l) => {
-              const missing = version && ask !== 'upload' ? missingScripts(t, version, l) : 0
-              const have = versionDuration != null && audioLangs(published ?? undefined, versionDuration).includes(l)
+            {VOICE_VARIANTS.map(({ lang: l, to }) => {
+              const missing = version && ask !== 'upload' ? missingScripts(t, version, l, to) : 0
+              const have = versionDuration != null
+                && !!(published?.versions.find((v) => v.duration === versionDuration)?.audioUrl as Record<string, string | undefined> | undefined)?.[variantKey(l, to)]
               return (
-                <button key={l} className="b2b-btn b2b-btn--primary" onClick={() => chooseLang(l)}>
-                  {LANG_LABEL[l]}
+                <button key={variantKey(l, to)} className="b2b-btn b2b-btn--primary" onClick={() => chooseLang(l, to)}>
+                  {variantLabel(l, to)}
                   <small>
                     {ask === 'download' ? '' : have ? ' · sostituisce l’audio attuale' : ' · nuovo'}
                     {missing ? ` · ${missing} testi mancanti` : ''}
@@ -823,6 +833,33 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
       {importReview && (
         <div className={`adm-plain__status adm-plain__review${importReview.nothing ? '' : ' adm-plain__review--changes'}`} role="dialog" aria-label="Confronto dell’Excel importato">
           <b>Confronto con quanto salvato — «{importReview.fileName}»</b>
+
+          {/* WHAT this import is allowed to touch. Asked before the summary
+              is read, because the two answers describe different outcomes:
+              one can replace a session somebody built, the other cannot
+              touch anything but the words. */}
+          <div className="adm-plain__mode" role="group" aria-label="Cosa importare">
+            <button
+              type="button"
+              className={importReview.mode === 'text' ? 'is-on' : ''}
+              aria-pressed={importReview.mode === 'text'}
+              disabled={importReview.busy}
+              onClick={() => importReview.onMode('text')}
+            >
+              <b>Solo i testi</b>
+              <small>Aggiorna le parole (testo_it_m/f, testo_pt_m/f). Tempi, livelli, fx, loop e audio restano come sono.</small>
+            </button>
+            <button
+              type="button"
+              className={importReview.mode === 'import' ? 'is-on' : ''}
+              aria-pressed={importReview.mode === 'import'}
+              disabled={importReview.busy}
+              onClick={() => importReview.onMode('import')}
+            >
+              <b>Tutto il file</b>
+              <small>Sostituisce la timeline con quella del file: tempi, livelli, fx e parametri compresi.</small>
+            </button>
+          </div>
           <ul className="adm-spec__issues">
             {importReview.lines.map((l, k) => <li key={k}>{l}</li>)}
           </ul>

@@ -95,9 +95,12 @@ export interface VoiceChoice {
  * lives in sessionStorage.
  */
 export interface ScriptIndex {
-  bySource: Record<string, Partial<Record<VoiceLang, string>>>
+  /* Keyed by VARIANT — 'it', 'it:f', 'pt-BR', 'pt-BR:f' — so the Studio can
+     fill either address form from the stored timeline, not just either
+     language. The bare key is the male form, as everywhere else. */
+  bySource: Record<string, Partial<Record<string, string>>>
   /** Keyed by the normalized Italian text (`scriptKey`). */
-  byItText: Record<string, Partial<Record<VoiceLang, string>>>
+  byItText: Record<string, Partial<Record<string, string>>>
 }
 
 /** A Studio session saved into a catalog protocol: everything needed to reopen

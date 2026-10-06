@@ -2685,3 +2685,14 @@ td, th { overflow-wrap: anywhere; }
 .auth__addressed { display: flex; flex-direction: column; gap: 8px; }
 .auth__addressed__q { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .auth__addressed .auth__fine { margin-top: 0; text-align: left; }
+
+/* "Only the words" or "the whole file" — asked above the import summary. */
+.adm-plain__mode { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+.adm-plain__mode button {
+  flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: #fff; cursor: pointer;
+}
+.adm-plain__mode button.is-on { border-color: var(--aura); box-shadow: inset 0 0 0 1px var(--aura); }
+.adm-plain__mode b { font-size: 13.5px; }
+.adm-plain__mode small { font-size: 12px; color: var(--slate); line-height: 1.4; }

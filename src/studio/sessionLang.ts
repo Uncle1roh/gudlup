@@ -32,7 +32,28 @@
 import type { ScriptIndex, VoiceChoice } from '../compose/types'
 import type { ClipParams, VoiceParams } from './multitrack'
 import { counterpartVoice, voiceById } from '../tts/voiceCatalog'
-import { VOICE_LANGS, scriptKey, type VoiceLang } from '../tts/voiceLang'
+import { VOICE_VARIANTS, scriptKey, variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
+
+/* ---- the working VARIANT ------------------------------------------------
+
+   The Studio used to work in one LANGUAGE at a time. It now works in one
+   language AND one address form — "sei pronto" and "sei pronta" are two
+   recordings of the same clip, with the same timing, levels, fx and draws.
+
+   Everything below is keyed by `variantKey`, so the male form keeps the bare
+   language key and every session saved before this still loads as what it
+   is: the male one. The SPOKEN language is still a language — it picks the
+   voice and the TTS — and that is why both travel together. */
+export interface Variant {
+  lang: VoiceLang
+  to: Addressee
+}
+
+export const IT_M: Variant = { lang: 'it', to: 'm' }
+
+function keyOf(v: Variant): string {
+  return variantKey(v.lang, v.to)
+}
 
 /** What a clip needs for this module — the Studio's Clip and a SeedClip both fit. */
 export interface LangClip {
@@ -41,9 +62,9 @@ export interface LangClip {
   ttsText?: string
   params: ClipParams
   sourceId?: string
-  textByLang?: Partial<Record<VoiceLang, string>>
-  ttsByLang?: Partial<Record<VoiceLang, { path?: string; text?: string }>>
-  voiceByLang?: Partial<Record<VoiceLang, VoiceChoice>>
+  textByLang?: Partial<Record<string, string>>
+  ttsByLang?: Partial<Record<string, { path?: string; text?: string }>>
+  voiceByLang?: Partial<Record<string, VoiceChoice>>
 }
 
 const nonEmpty = (s: string | undefined): s is string => !!s && !!s.trim()
@@ -54,7 +75,8 @@ function liveVoice(p: VoiceParams): VoiceChoice {
 }
 
 /** Fold the WORKING language's live fields into the per-language maps. */
-export function stashLang<C extends LangClip>(c: C, lang: VoiceLang): C {
+export function stashLang<C extends LangClip>(c: C, v: Variant): C {
+  const lang = keyOf(v)
   const p = c.params as VoiceParams
   const textByLang = { ...(c.textByLang ?? {}) }
   if (c.text !== undefined) textByLang[lang] = c.text
@@ -81,7 +103,8 @@ export interface LoadResult<C> {
  * the stored timeline's texts, and a missing voice with the same archetype and
  * gender in that language.
  */
-export function loadLang<C extends LangClip>(c: C, lang: VoiceLang, scripts?: ScriptIndex): LoadResult<C> {
+export function loadLang<C extends LangClip>(c: C, v: Variant, scripts?: ScriptIndex): LoadResult<C> {
+  const lang = keyOf(v)
   const p = c.params as VoiceParams
   let text = c.textByLang?.[lang]
   let filled = false
@@ -92,7 +115,7 @@ export function loadLang<C extends LangClip>(c: C, lang: VoiceLang, scripts?: Sc
     const found = bySource ?? byText
     if (nonEmpty(found)) { text = found; filled = true }
   }
-  const others = VOICE_LANGS.some((l) => l !== lang && nonEmpty(c.textByLang?.[l]))
+  const others = VOICE_VARIANTS.map(keyOf).some((k) => k !== lang && nonEmpty(c.textByLang?.[k]))
   const missing = !nonEmpty(text) && (others || !!c.sourceId)
 
   const tts = c.ttsByLang?.[lang]
@@ -100,9 +123,16 @@ export function loadLang<C extends LangClip>(c: C, lang: VoiceLang, scripts?: Sc
      the clip has now — the same archetype and gender, in `lang`. */
   let voice = c.voiceByLang?.[lang]
   if (!voice) {
-    const cur = voiceById(p.voiceId)
-    const v = counterpartVoice(cur ? { archetype: cur.archetype, gender: cur.gender } : { archetype: p.voiceArchetype, gender: p.voiceGender }, lang)
-    voice = { voiceId: v.id, voiceArchetype: v.archetype, voiceGender: v.gender }
+    /* The other FORM of the same language keeps the same voice — the words
+       change, the speaker does not. Only a language change needs a
+       counterpart voice. */
+    const sameLangOtherForm = c.voiceByLang?.[variantKey(v.lang, v.to === 'f' ? 'm' : 'f')]
+    if (sameLangOtherForm) voice = sameLangOtherForm
+    else {
+      const cur = voiceById(p.voiceId)
+      const alt = counterpartVoice(cur ? { archetype: cur.archetype, gender: cur.gender } : { archetype: p.voiceArchetype, gender: p.voiceGender }, v.lang)
+      voice = { voiceId: alt.id, voiceArchetype: alt.archetype, voiceGender: alt.gender }
+    }
   }
   const textByLang = filled ? { ...(c.textByLang ?? {}), [lang]: text } : c.textByLang
   return {
@@ -112,7 +142,7 @@ export function loadLang<C extends LangClip>(c: C, lang: VoiceLang, scripts?: Sc
       textByLang,
       ttsPath: tts?.path,
       ttsText: tts?.text,
-      params: { ...p, voiceId: voice.voiceId, voiceArchetype: voice.voiceArchetype, voiceGender: voice.voiceGender, voiceLang: lang } as ClipParams,
+      params: { ...p, voiceId: voice.voiceId, voiceArchetype: voice.voiceArchetype, voiceGender: voice.voiceGender, voiceLang: v.lang } as ClipParams,
     },
     missing,
     filled,
@@ -120,7 +150,7 @@ export function loadLang<C extends LangClip>(c: C, lang: VoiceLang, scripts?: Sc
 }
 
 /** Switch one voice clip from the working language to another. */
-export function switchClipLang<C extends LangClip>(c: C, from: VoiceLang, to: VoiceLang, scripts?: ScriptIndex): LoadResult<C> {
+export function switchClipLang<C extends LangClip>(c: C, from: Variant, to: Variant, scripts?: ScriptIndex): LoadResult<C> {
   return loadLang(stashLang(c, from), to, scripts)
 }
 
@@ -130,7 +160,7 @@ export function switchClipLang<C extends LangClip>(c: C, from: VoiceLang, to: Vo
  * worked in — so an older reader of the session still finds Italian where it
  * always did.
  */
-export function canonicalVoiceClip<C extends LangClip>(c: C, working: VoiceLang): C {
+export function canonicalVoiceClip<C extends LangClip>(c: C, working: Variant): C {
   const s = stashLang(c, working)
   const p = s.params as VoiceParams
   const it = s.voiceByLang?.it
@@ -147,5 +177,5 @@ export function canonicalVoiceClip<C extends LangClip>(c: C, working: VoiceLang)
 /** A voice clip with no text in the working language that should have one. */
 export function isTextMissing(c: LangClip): boolean {
   if (nonEmpty(c.text)) return false
-  return !!c.sourceId || VOICE_LANGS.some((l) => nonEmpty(c.textByLang?.[l]))
+  return !!c.sourceId || VOICE_VARIANTS.map(keyOf).some((k) => nonEmpty(c.textByLang?.[k]))
 }

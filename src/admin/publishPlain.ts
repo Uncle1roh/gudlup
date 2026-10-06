@@ -91,7 +91,16 @@ export interface PublishInput {
    *             into one, with ONE duration's affirmations — so writing it back
    *             could only ever lose something.
    */
-  mode?: 'import' | 'keep'
+  /**
+   * 'import' — the file is the truth: structure, timing, parameters, text.
+   * 'keep'   — a duration that already has a timeline is left alone.
+   * 'text'   — ONLY the words move. The stored timeline keeps its timing,
+   *            levels, fades, fx, loop sets and rendered audio, and the file
+   *            may add or replace `testo_*` on clips it can match by id.
+   *            This is what protects a protocol that is already finished when
+   *            a workbook arrives carrying nothing but a new column.
+   */
+  mode?: 'import' | 'keep' | 'text'
   now?: number
 }
 
@@ -451,6 +460,33 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
     const incoming = narrowTimeline(t, v)
     const old = stored[d]
     const isSelected = selected == null || d === selected
+
+    /* Text-only: there has to be something to put text ON. */
+    if (mode === 'text') {
+      if (!isSelected) continue
+      if (!old) {
+        plan.skipped.push({
+          duration: d,
+          why: `${d} min non ha ancora una timeline: "solo i testi" aggiorna le parole di una versione esistente, non ne crea una.`,
+        })
+        continue
+      }
+      const { merged, updated, unmatched } = overlayScripts(old, incoming)
+      plan.written[d] = merged
+      const diff = diffTimelines(d, old, merged, {})
+      plan.diffs.push(diff)
+      if (unmatched.length) {
+        plan.skipped.push({
+          duration: d,
+          why: `${unmatched.length} righe del file non corrispondono a nessuna clip salvata e sono state ignorate: ${unmatched.slice(0, 5).join(', ')}${unmatched.length > 5 ? '…' : ''}. Controlla di aver scelto il protocollo e la durata giusti.`,
+        })
+      }
+      if (!updated.length && !unmatched.length) {
+        plan.skipped.push({ duration: d, why: `${d} min: nessun testo nuovo nel file.` })
+      }
+      continue
+    }
+
     if (old && (mode === 'keep' || !isSelected)) {
       plan.skipped.push({
         duration: d,

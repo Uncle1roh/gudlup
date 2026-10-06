@@ -47,8 +47,8 @@ import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, hasVoicesFor, resolveVoiceId, voiceById, voiceLangOf, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
-import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
-import { canonicalVoiceClip, isTextMissing, switchClipLang } from './sessionLang'
+import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, ADDRESSEES, ADDRESSEE_LABEL, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { canonicalVoiceClip, isTextMissing, switchClipLang, type Variant } from './sessionLang'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
@@ -328,7 +328,7 @@ function seedTrackToTrack(t: SeedTrack): Track {
  * text in the stored timeline, how many have none, and how many cut pieces
  * keep audio in the language they were cut in (their audio is frozen).
  */
-function switchTracksLang(tracks: Track[], from: VoiceLang, to: VoiceLang, scripts?: ScriptIndex): { tracks: Track[]; missing: number; filled: number; frozen: number } {
+function switchTracksLang(tracks: Track[], from: Variant, to: Variant, scripts?: ScriptIndex): { tracks: Track[]; missing: number; filled: number; frozen: number } {
   let missing = 0
   let filled = 0
   let frozen = 0
@@ -411,6 +411,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       fadeOutSec: h.fadeOutSec ?? 0,
       returnTo: h.returnTo ?? null,
       workingLang: h.workingLang,
+      workingTo: h.workingTo,
       scripts: h.scripts,
     }
   }, [])
@@ -420,12 +421,23 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
      without asking; a protocol opened fresh asks (`langAsk`). */
   const scripts = handoff?.scripts
   const [workingLang, setWorkingLang] = useState<VoiceLang>(handoff?.workingLang ?? 'it')
+  /* WHO the session being worked on speaks to. The same timing, levels, fx
+     and draws carry both forms; only the words and the rendered voice change,
+     so this is a switch beside the language rather than a second session. */
+  const [workingTo, setWorkingTo] = useState<Addressee>(handoff?.workingTo ?? 'm')
+  const workingVariant: Variant = { lang: workingLang, to: workingTo }
+  const workingToRef = useRef(workingTo); workingToRef.current = workingTo
   const [langAsk, setLangAsk] = useState<boolean>(() => !!handoff?.attach && !handoff.workingLang)
   const workingLangRef = useRef(workingLang); workingLangRef.current = workingLang
   const [tracks, setTracks] = useState<Track[]>(() => {
     const base = handoff?.tracks ?? makeSeed()
-    const lang = handoff?.workingLang
-    return lang && lang !== 'it' ? switchTracksLang(base, 'it', lang, handoff?.scripts).tracks : base
+    const lang = handoff?.workingLang ?? 'it'
+    const to = handoff?.workingTo ?? 'm'
+    /* A session is stored canonically as Italian-to-a-man; anything else is
+       loaded out of the maps on open. */
+    return lang !== 'it' || to !== 'm'
+      ? switchTracksLang(base, { lang: 'it', to: 'm' }, { lang, to }, handoff?.scripts).tracks
+      : base
   })
   const [projectName, setProjectName] = useState(handoff?.name ?? 'GL-ANX 1.1 — Calm and Inner Safety')
   const [masterGain, setMasterGain] = useState(handoff?.masterGain ?? 0.82)
@@ -466,7 +478,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
           /* Every language together, in the canonical form: the live fields
              are the ITALIAN ones whatever language is being worked in, and
              the maps carry all of them (studio/sessionLang.ts). */
-          const c = t.type === 'voice' ? canonicalVoiceClip(live, workingLang) : live
+          const c = t.type === 'voice' ? canonicalVoiceClip(live, workingVariant) : live
           return {
             startSec: c.startSec,
             durationSec: c.durationSec,
@@ -691,14 +703,14 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       try {
         /* The working language rides along only once it has been chosen: a
            remount before the question is answered must ask it again. */
-        setStudioProject(toStudioProject(), attachTarget ?? undefined, returnTo ?? undefined, { workingLang: langAsk ? undefined : workingLang, scripts })
+        setStudioProject(toStudioProject(), attachTarget ?? undefined, returnTo ?? undefined, { workingLang: langAsk ? undefined : workingLang, workingTo, scripts })
       } catch {
         /* a project too large for sessionStorage keeps working in memory */
       }
     }, 800)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracks, projectName, lengthSec, masterGain, sessionFades.inSec, sessionFades.outSec, workingLang, langAsk])
+  }, [tracks, projectName, lengthSec, masterGain, sessionFades.inSec, sessionFades.outSec, workingLang, workingTo, langAsk])
 
   /* No voice is loaded when a project opens. Every voice line starts
      unrendered and is voiced only on request — "Tutte le voci" or the clip's
@@ -1103,6 +1115,25 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
      synthesized: a take landing after the switch would be filed under the
      wrong language. */
   const [langMsg, setLangMsg] = useState<string | null>(null)
+  /* The other ADDRESS FORM of the same language: same timing, same levels,
+     same fx, same draws — different words, and a render of its own. The
+     voice does not change; the speaker is the same person saying a different
+     sentence. */
+  function switchTo(next: Addressee) {
+    if (next === workingTo) return
+    if (ttsInFlight.current.size > 0 || synthAll) {
+      setLangMsg(lt('Wait for the voices being synthesized to finish, then switch.'))
+      return
+    }
+    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: workingLang, to: next }, scripts)
+    setTracks(r.tracks)
+    setWorkingTo(next)
+    const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this version.', { lang: `${LANG_LABEL[workingLang]} · ${ADDRESSEE_LABEL[next]}` })]
+    if (r.filled) bits.push(lt('{n} texts filled from the stored Excel.', { n: r.filled }))
+    if (r.missing) bits.push(lt('{n} voice clips have no text in this version yet — marked ⚠, they stay silent.', { n: r.missing }))
+    setLangMsg(bits.join(' '))
+  }
+
   function switchLang(next: VoiceLang) {
     setLangAsk(false)
     if (next === workingLang) return
@@ -1110,7 +1141,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       setLangMsg(lt('Wait for the voices being synthesized to finish, then switch language.'))
       return
     }
-    const r = switchTracksLang(tracksRef.current, workingLang, next, scripts)
+    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: next, to: workingTo }, scripts)
     setTracks(r.tracks)
     setWorkingLang(next)
     const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this language; everything else is shared.', { lang: LANG_LABEL[next] })]
@@ -1725,6 +1756,20 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
           {missingInLang > 0 && (
             <span className="mt-worklang__warn" title={lt('Voice clips with no text in {lang}', { lang: LANG_LABEL[workingLang] })}>⚠ {missingInLang}</span>
           )}
+        </div>
+        {/* WHO this version speaks to. A second axis, not a second session:
+            everything but the words and the render is shared. */}
+        <div
+          className="mt-worklang mt-workto"
+          role="group"
+          aria-label={lt('Who it speaks to')}
+          title={lt('Who it speaks to: the same session, in the words that address a man or a woman')}
+        >
+          {ADDRESSEES.map((to) => (
+            <button key={to} className={workingTo === to ? 'is-on' : ''} aria-pressed={workingTo === to} onClick={() => switchTo(to)}>
+              {ADDRESSEE_LABEL[to][0]}
+            </button>
+          ))}
         </div>
         {languagePicker && <LanguagePicker label={false} className="mt-lang" />}
         <button className="mt-back" onClick={goBack} title={returnTo ? lt('Back to the previous screen') : lt('Leave the studio')}>
