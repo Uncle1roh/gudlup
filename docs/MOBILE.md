@@ -100,7 +100,9 @@ cache, so the Groovy compiler never ran. The first `cap sync` that changed
 surfaced. Do not trust a green build that follows a cache hit.
 
 **The fix: build on JDK 21.** It is the LTS that AGP 8.x and Gradle 8.14.3
-both target, and it is what Android tooling expects.
+both target. Installed here as Temurin 21
+(`winget install EclipseAdoptium.Temurin.21.JDK`), and with it the APK builds
+in about 20 seconds.
 
 * In Android Studio: Settings → Build, Execution, Deployment → Build Tools →
   Gradle → **Gradle JDK** → *Download JDK* → version 21 (Temurin). Studio
@@ -108,7 +110,7 @@ both target, and it is what Android tooling expects.
 * From a terminal, once a 21 exists:
 
   ```bash
-  export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21"   # wherever it lands
+  export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot"
   export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
   cd android && ./gradlew assembleDebug
   ```
@@ -164,16 +166,23 @@ After any change to the web code: `npm run cap:sync`.
 The scaffolding above is done and verified. These are the real pieces of app
 work, roughly in the order they matter:
 
-1. **Background audio.** Today `SessionPlayer` (`src/lib/audio.ts`) plays the
-   published MP3 through an `<audio>` element. In a webview that stops when
-   the screen locks — fatal for an eyes-closed product. The fix is a native
-   audio plugin behind the *same* class: `playFile`, `pause`, `resume` and
-   `stop` are the whole surface, and the Web Audio synth path (the
-   placeholder bed) does not need touching. This is the single most valuable
-   change and the reason to build an app at all.
+1. ~~**Background audio**~~ and ~~**lock-screen controls**~~ — **done**, via
+   `@capgo/capacitor-media-session` behind `src/lib/mediaSession.ts`. One
+   interface, two implementations: `navigator.mediaSession` on the web, the
+   plugin in the app. `SessionPlayer` did not change.
 
-2. **Lock-screen controls and the Now Playing entry** — comes with (1) in
-   most plugins, but has to be wired to the session's name and length.
+   Two things to know. The plugin runs a foreground service of type
+   `mediaPlayback`, and that service — not the audio element — is what stops
+   Android suspending the webview when the screen goes dark. And its own
+   manifest declares only `FOREGROUND_SERVICE`; from Android 14 a service
+   also needs the permission matching its type, so
+   `FOREGROUND_SERVICE_MEDIA_PLAYBACK` is declared in ours. Without that line
+   the merged manifest looks right and the service is refused at runtime,
+   which reads as "the audio stops when I lock the phone".
+
+   **Not yet confirmed on a device.** It builds and the manifest merges; that
+   a twelve-minute session really survives the lock screen is the next thing
+   to watch, on hardware.
 
 3. **Storage.** The app keeps its state in `localStorage`
    (`gl.selfuse.<id>`, consents, the addressed-as answer). iOS can evict

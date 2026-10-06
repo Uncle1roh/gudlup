@@ -41,10 +41,11 @@
          sensitive permissions are for, and the honest answer has to be a
          feature somebody can point at.
 
-         Nothing for background audio yet: a foreground-service permission
-         has to be declared together with its service type and justified in
-         the Play console, so it goes in with the native audio plugin that
-         uses it, not before. See docs/MOBILE.md. -->
+         The background-audio pair is here now, because the plugin that uses
+         them is: @capgo/capacitor-media-session runs a foreground service of
+         type mediaPlayback for as long as a session is playing, which is the
+         only thing that stops Android suspending the webview, and the audio
+         with it, seconds after the screen goes dark. See docs/MOBILE.md. -->
 
     <!-- Reaching Supabase: the catalogue, the published audio, the account. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -57,6 +58,13 @@
 
     <!-- The call needs to know it has a route before it opens the room. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- A session keeps playing with the screen off. The plugin's own
+         manifest brings FOREGROUND_SERVICE, but from Android 14 a service
+         must ALSO hold the permission matching its type — without this line
+         the merged manifest looks right and the service is refused at
+         runtime, which reads as "the audio just stops when I lock it". -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- The camera is for the call; a device without one still gets the
          sessions, which are the product. Declared not-required so Play does

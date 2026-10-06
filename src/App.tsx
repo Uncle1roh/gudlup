@@ -98,12 +98,21 @@ export default function App() {
        cannot try to reach one. On the web this whole branch is dead code and
        is dropped at build time. */
     if (__GL_APP__) {
+      /* The same providers the web b2c branch has, in the same order, and
+         LegalProvider is not optional: without it `useLegal()` falls back to
+         a stub whose `accept()` does nothing and whose `accepted()` is always
+         false. The first run then accepts the terms, reaches its last card,
+         calls onDone — and the shell sends it straight back, because the
+         acceptance it is waiting for was never recorded. From the person's
+         side the button simply stops working. */
       return (
         <AuthProvider>
           <DataLayerProvider>
-            <AuthGate mode="b2c">
-              <SelfUseApp />
-            </AuthGate>
+            <LegalProvider>
+              <AuthGate mode="b2c">
+                <SelfUseApp />
+              </AuthGate>
+            </LegalProvider>
           </DataLayerProvider>
         </AuthProvider>
       )
