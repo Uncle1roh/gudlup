@@ -67,6 +67,11 @@ export function playEarTone(side: 'left' | 'right', durationMs = 1100): void {
 
 /* -------------------------------------------------------------------------- */
 
+import {
+  showNowPlaying, bindTransport, setPlaybackState, setPosition, clearNowPlaying,
+  type NowPlaying,
+} from './mediaSession'
+
 export interface SessionPlayerOptions {
   /** Pre-rendered audio URL (MVP). If omitted, a placeholder bed is synthesized. */
   audioUrl?: string
@@ -80,6 +85,15 @@ export interface SessionPlayerOptions {
    * session; silence is a broken product nobody reports.
    */
   onFallback?: (reason: string) => void
+  /**
+   * What the lock screen should say while this plays.
+   *
+   * Optional, because the placeholder bed and the Studio's own preview have
+   * nothing worth putting there. When it IS given, the player owns the
+   * lock-screen entry for its whole life and clears it on stop — one owner,
+   * so two players cannot leave a stale title behind.
+   */
+  nowPlaying?: NowPlaying
 }
 
 /**
@@ -96,6 +110,7 @@ export class SessionPlayer {
   private volume: number
   private audioUrl?: string
   private onFallback?: (reason: string) => void
+  private nowPlaying?: NowPlaying
 
   // file mode
   private el?: HTMLAudioElement
@@ -110,9 +125,29 @@ export class SessionPlayer {
     this.isPlaceholder = !opts.audioUrl
     this.volume = opts.volume ?? 0.5
     this.onFallback = opts.onFallback
+    this.nowPlaying = opts.nowPlaying
+  }
+
+  /** Put this session on the lock screen and wire its buttons to us. */
+  private claimLockScreen(): void {
+    if (!this.nowPlaying) return
+    showNowPlaying(this.nowPlaying)
+    bindTransport({
+      onPlay: () => { void this.resume() },
+      onPause: () => this.pause(),
+      onStop: () => this.stop(),
+    })
+  }
+
+  /** Called by the player UI as the session runs, so the OS progress bar is
+      not a lie. Safe to call every tick. */
+  reportPosition(elapsedSec: number): void {
+    if (!this.nowPlaying?.durationSec) return
+    setPosition(elapsedSec, this.nowPlaying.durationSec)
   }
 
   async play(): Promise<void> {
+    this.claimLockScreen()
     if (this.isPlaceholder) return this.playSynth()
     try {
       await this.playFile()
@@ -129,6 +164,7 @@ export class SessionPlayer {
   pause(): void {
     if (this.el) this.el.pause()
     if (this.ctx && this.master) this.fadeMaster(0, 0.3)
+    if (this.nowPlaying) setPlaybackState('paused')
   }
 
   async resume(): Promise<void> {
@@ -149,9 +185,11 @@ export class SessionPlayer {
       if (this.ctx.state === 'suspended') await this.ctx.resume()
       this.fadeMaster(this.bedLevel(), 0.4)
     }
+    if (this.nowPlaying) setPlaybackState('playing')
   }
 
   stop(): void {
+    if (this.nowPlaying) clearNowPlaying()
     if (this.el) {
       this.el.pause()
       this.el.currentTime = 0

@@ -547,6 +547,9 @@ function ImmersiveSession({
       return
     }
     setElapsed(elapsedRef.current)
+    /* Keep the OS progress bar honest. Cheap, and it is what makes the lock
+       screen look like a real player rather than a notification. */
+    playerRef.current?.reportPosition(elapsedRef.current)
   }
 
   async function begin() {
@@ -555,6 +558,15 @@ function ImmersiveSession({
       audioUrl,
       volume,
       onFallback: (reason) => setAudioFailed(reason),
+      /* What the lock screen shows once the screen goes dark — which is the
+         normal way this product is used, not an edge case. The session's own
+         name, never the protocol code: a person reads "Calma e sicurezza",
+         not "GL-ANX 1.1". */
+      nowPlaying: {
+        title: t(session.name),
+        artist: 'Good Loop',
+        durationSec: total,
+      },
     })
     playerRef.current = p
     await p.play()
