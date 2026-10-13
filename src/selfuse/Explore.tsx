@@ -50,6 +50,9 @@ interface ExploreProps {
   professionalOffered?: boolean
   /** LIB-2/3 and PLY-4 lead here. */
   onFindProfessional: () => void
+  /** Slugs on this person's own list, newest first. */
+  saved?: string[]
+  onToggleSave?: (slug: string) => void
 }
 
 type View =
@@ -59,7 +62,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave }: ExploreProps) {
   const { t } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
@@ -190,6 +193,8 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         }
         query={query}
         onClearQuery={() => onQuery?.('')}
+        saved={saved}
+        onToggleSave={onToggleSave}
       />
 
       {/* LIB-2 / LIB-3 — the static footer link to a professional, the same

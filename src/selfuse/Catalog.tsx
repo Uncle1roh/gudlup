@@ -64,6 +64,9 @@ interface CatalogProps {
       and giving them two different-looking answers would say otherwise. */
   query?: string
   onClearQuery?: () => void
+  /** Slugs on this person's own list, newest first. */
+  saved?: string[]
+  onToggleSave?: (slug: string) => void
   /** The shelf an admin defined. Absent or empty = the built-in rails. */
   storedRails?: ExploreRail[] | null
 }
@@ -80,6 +83,8 @@ export function Catalog({
   query = '',
   onClearQuery,
   storedRails,
+  saved = [],
+  onToggleSave,
 }: CatalogProps) {
   const { t } = useI18n()
   const { m } = useLegal()
@@ -136,6 +141,17 @@ export function Catalog({
      is none. The rule and the defaults live in data/rails.ts so the console's
      editor and this screen cannot disagree about what a rail is. */
   const rails = useMemo(() => resolveRails(storedRails, all), [storedRails, all])
+
+  /* "My List" rides above everything an admin arranged, because it is the one
+     shelf the person built themselves — and it disappears entirely when it is
+     empty rather than sitting there as an empty promise. Order follows the
+     saved list, newest first, not the catalogue's. */
+  const myList = useMemo(() => {
+    if (!saved.length) return null
+    const bySlug = new Map(all.map((s) => [s.slug, s]))
+    const items = saved.map((slug) => bySlug.get(slug)).filter((s): s is ResolvedSession => !!s)
+    return items.length ? { id: 'mine', title: 'My List', items } : null
+  }, [saved, all])
 
   if (!all.length) {
     return (
@@ -271,7 +287,13 @@ export function Catalog({
             ) : (
               <div className="cat__grid">
                 {filtered.map((s) => (
-                  <CoverCard key={s.slug} session={s} onOpen={() => onOpen(s.slug)} />
+                  <CoverCard
+                    key={s.slug}
+                    session={s}
+                    onOpen={() => onOpen(s.slug)}
+                    saved={saved.includes(s.slug)}
+                    onToggleSave={onToggleSave && (() => onToggleSave(s.slug))}
+                  />
                 ))}
               </div>
             )}
@@ -282,9 +304,9 @@ export function Catalog({
              on themselves before they have been shown anything — the rail is
              useful once you are already browsing and nothing has caught you,
              which is where it now sits: pathways, two rails, then the moods. */
-          rails.map((rail, i) => (
+          [...(myList ? [myList] : []), ...rails].map((rail, i) => (
             <Fragment key={rail.id}>
-              <RailRow rail={rail} onOpen={onOpen} />
+              <RailRow rail={rail} onOpen={onOpen} saved={saved} onToggleSave={onToggleSave} />
               {i === 1 && moodsSlot}
             </Fragment>
           ))
@@ -362,7 +384,12 @@ function Hero({
 
 /* ---------------------------------------------------------------- rail --- */
 
-function RailRow({ rail, onOpen }: { rail: ResolvedRail; onOpen: (slug: string) => void }) {
+function RailRow({ rail, onOpen, saved = [], onToggleSave }: {
+  rail: ResolvedRail
+  onOpen: (slug: string) => void
+  saved?: string[]
+  onToggleSave?: (slug: string) => void
+}) {
   const { t } = useI18n()
   const track = useRef<HTMLDivElement>(null)
 
@@ -388,7 +415,13 @@ function RailRow({ rail, onOpen }: { rail: ResolvedRail; onOpen: (slug: string) 
       </header>
       <div className="cat-rail__track" ref={track}>
         {rail.items.map((s) => (
-          <CoverCard key={s.slug} session={s} onOpen={() => onOpen(s.slug)} />
+          <CoverCard
+            key={s.slug}
+            session={s}
+            onOpen={() => onOpen(s.slug)}
+            saved={saved.includes(s.slug)}
+            onToggleSave={onToggleSave && (() => onToggleSave(s.slug))}
+          />
         ))}
       </div>
     </section>
@@ -397,11 +430,33 @@ function RailRow({ rail, onOpen }: { rail: ResolvedRail; onOpen: (slug: string) 
 
 /* ---------------------------------------------------------------- card --- */
 
-export function CoverCard({ session, onOpen }: { session: ResolvedSession; onOpen: () => void }) {
+export function CoverCard({ session, onOpen, saved = false, onToggleSave }: {
+  session: ResolvedSession
+  onOpen: () => void
+  saved?: boolean
+  onToggleSave?: () => void
+}) {
   const { t } = useI18n()
   const cover = coverFor(session.slug, session.theme, session.coverUrl)
 
+  /* The card is a <button>, and a button inside a button is invalid HTML that
+     React warns about and screen readers cannot navigate. So the toggle is a
+     SIBLING, positioned over the cover by `.cat-card-wrap`, and the wrapper
+     takes the sizing the card used to own so the rails measure the same. */
   return (
+    <div className="cat-card-wrap">
+      {onToggleSave && (
+        <button
+          type="button"
+          className={`cat-card__save${saved ? ' is-on' : ''}`}
+          aria-pressed={saved}
+          aria-label={saved ? t('Remove from My List') : t('Save to My List')}
+          title={saved ? t('Remove from My List') : t('Save to My List')}
+          onClick={onToggleSave}
+        >
+          {saved ? '✓' : '+'}
+        </button>
+      )}
     <button className="cat-card" onClick={onOpen}>
       <span className="cat-card__cover" style={coverStyle(cover)}>
         <span className="cat-card__lengths">
@@ -416,5 +471,6 @@ export function CoverCard({ session, onOpen }: { session: ResolvedSession; onOpe
       <span className="cat-card__title">{t(session.name)}</span>
       <span className="cat-card__blurb">{t(session.blurb)}</span>
     </button>
+    </div>
   )
 }

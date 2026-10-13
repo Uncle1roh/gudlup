@@ -194,6 +194,15 @@ export interface SelfUseState {
    * Not an identity field and not used as one: it chooses a recording.
    */
   addressedAs: Addressee | null
+  /**
+   * Slugs the person has put on their own list, newest first.
+   *
+   * Slugs, not protocol codes: the library browses by slug, and a saved item
+   * has to survive the protocol behind it being re-coded. Kept on the device
+   * with the rest of this state — a list of what you mean to listen to is a
+   * preference, not a clinical record.
+   */
+  saved: string[]
 }
 
 export function emptyState(): SelfUseState {
@@ -233,7 +242,8 @@ export function emptyState(): SelfUseState {
     stereoCheckedAt: null,
     tutorialSeenAt: null,
     safetyShown: null,
-  addressedAs: null,
+    addressedAs: null,
+    saved: [],
   }
 }
 
@@ -262,6 +272,7 @@ export function loadState(userId?: string): SelfUseState {
       who5: parsed.who5 ?? [],
       moods: parsed.moods ?? [],
       completedPathways: parsed.completedPathways ?? [],
+      saved: parsed.saved ?? [],
     }
   } catch {
     return emptyState()

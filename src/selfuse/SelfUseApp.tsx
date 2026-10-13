@@ -604,6 +604,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             sponsored={!!convention}
             professionalOffered={hasProfessionalSupport(convention)}
             onFindProfessional={() => setTab('therapist')}
+            saved={state.saved}
+            onToggleSave={(slug) => update((s) => ({
+              ...s,
+              /* Newest first, so the rail reads as a list being built rather
+                 than whatever order the library happens to be in. */
+              saved: s.saved.includes(slug) ? s.saved.filter((x) => x !== slug) : [slug, ...s.saved],
+            }))}
           />
         )}
 

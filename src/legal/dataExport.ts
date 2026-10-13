@@ -75,6 +75,9 @@ export function buildDataExport(i: ExportInput) {
         series: i.state.pathway ?? NIL,
         completedSeries: nil(i.state.completedPathways),
         preferences: { notifications: i.state.notifications, session: i.state.prefs },
+        /* The person's own saved list. It is data we hold about them, so it
+           belongs in the copy they can ask for. */
+        savedList: nil(i.state.saved),
       },
       E_user_created_content: NIL,
       F_communications_with_good_loop: NIL,

@@ -29,15 +29,30 @@ cd "$(dirname "$0")/.."
 
 # ---- the JDK -------------------------------------------------------------
 # Gradle 8.14.3 runs on Java up to 24, and AGP refuses anything newer still.
-# Prefer a 21 if one is installed; say so clearly if not.
-if [ -z "$JAVA_HOME" ]; then
-  for candidate in "/c/Program Files/Eclipse Adoptium"/jdk-21*; do
-    if [ -x "$candidate/bin/java.exe" ] || [ -x "$candidate/bin/java" ]; then
-      JAVA_HOME="$candidate"
-      break
+#
+# An inherited JAVA_HOME is NOT trusted. This machine's is `jdk-27`, which
+# fails deep inside AGP with "Error while executing process jlink.exe" — a
+# message that names no JDK and reads like a broken Android SDK. Honouring it
+# cost a build and a confused half hour. A 21 on the disk wins over whatever
+# the environment points at, and if JAVA_HOME is already a 21 nothing changes.
+JDK21=""
+for candidate in "/c/Program Files/Eclipse Adoptium"/jdk-21* "/c/Program Files/Java"/jdk-21*; do
+  if [ -x "$candidate/bin/java.exe" ] || [ -x "$candidate/bin/java" ]; then
+    JDK21="$candidate"
+    break
+  fi
+done
+case "$JAVA_HOME" in
+  *jdk-21*|*jdk21*) ;;                      # already a 21 — leave it alone
+  "") JAVA_HOME="$JDK21" ;;
+  *)
+    if [ -n "$JDK21" ]; then
+      echo "note: ignoring JAVA_HOME=$JAVA_HOME — AGP cannot build on it." >&2
+      echo "      using $JDK21 instead." >&2
+      JAVA_HOME="$JDK21"
     fi
-  done
-fi
+    ;;
+esac
 if [ -z "$JAVA_HOME" ]; then
   echo "No JDK 21 found, and the JDKs this machine ships with cannot build" >&2
   echo "this project (see docs/MOBILE.md, 'The JDK')." >&2

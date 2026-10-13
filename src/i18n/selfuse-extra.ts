@@ -3,6 +3,11 @@
    base dictionaries, so a key here wins over the same key elsewhere. */
 
 export const IT_SELFUSE_EXTRA: Record<string, string> = {
+/* The shelf the person builds themselves. */
+  'My List': 'La mia lista',
+  'Save to My List': 'Salva nella mia lista',
+  'Remove from My List': 'Togli dalla mia lista',
+
 /* Changing the password from inside the account (Profile → Privacy & Data). */
   'Choose a new password for this account. You will stay signed in on this device.': 'Scegli una nuova password per questo account. Su questo dispositivo resti collegato.',
   'Your password has been changed.': 'La tua password è stata cambiata.',
@@ -163,6 +168,11 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
+/* The shelf the person builds themselves. */
+  'My List': 'Minha lista',
+  'Save to My List': 'Salvar na minha lista',
+  'Remove from My List': 'Tirar da minha lista',
+
 /* Changing the password from inside the account (Profile → Privacy & Data). */
   'Choose a new password for this account. You will stay signed in on this device.': 'Escolha uma nova senha para esta conta. Neste aparelho você continua conectado.',
   'Your password has been changed.': 'Sua senha foi alterada.',

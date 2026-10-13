@@ -921,6 +921,39 @@
 
 /* ---------------------------------------------------------------- card --- */
 
+/* The wrapper owns the sizing the card used to, so the rails and the grid
+   measure exactly as before and the card simply fills it. It exists because
+   the save toggle cannot be nested inside the card's own <button>. */
+.cat-card-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(132px, 40vw, 168px);
+  scroll-snap-align: start;
+}
+.cat-card-wrap > .cat-card { width: 100%; }
+.cat__grid .cat-card-wrap { width: auto; }
+.cat-card__save {
+  position: absolute;
+  z-index: 2;
+  /* Top-LEFT: top-right is where "Ambient bed" sits on unpublished sessions,
+     and bottom-left belongs to the duration pills. */
+  left: 8px;
+  top: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  line-height: 1;
+  background: rgba(10, 18, 17, 0.58);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(4px);
+  transition: background 160ms var(--ease), transform 160ms var(--ease);
+}
+.cat-card__save:active { transform: scale(0.92); }
+.cat-card__save.is-on { background: var(--aura); border-color: transparent; }
 .cat-card {
   flex: 0 0 auto;
   width: clamp(132px, 40vw, 168px);
