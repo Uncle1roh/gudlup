@@ -415,6 +415,11 @@ alter table protocols  add column if not exists library jsonb;
 -- keyed "6" / "12" / "24"; `plain` and `studio` stay as the last-written mirror
 -- so a client from before this change still finds something to open.
 alter table protocols  add column if not exists plain_by_duration jsonb;
+-- The free / reduced-cost flag on a self-service entry. saveProtocol writes
+-- it unconditionally, and PostgREST rejects the whole row over one unknown
+-- column — so a missing column here stops EVERY protocol save, not just the
+-- priced ones. See supabase/13-offers-and-import-stamps.sql.
+alter table protocols  add column if not exists offer jsonb;
 -- When each duration's timeline was last replaced by a full import, so a
 -- Studio session saved from the clips it replaced can be recognised as stale
 -- WITHOUT being deleted. The delete came first and destroyed rack work on
