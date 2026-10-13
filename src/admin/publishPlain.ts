@@ -494,6 +494,40 @@ export interface ImportPlan {
  * With no `selected` duration every duration in the file counts as selected —
  * the behaviour callers without a chip (tools, the legacy importers) expect.
  */
+/**
+ * Which mode the compare panel should OPEN in.
+ *
+ * "Solo i testi" is the safe default on a duration that already has a
+ * timeline: a workbook arriving for finished material is nearly always a new
+ * column of words, and the safe answer is the one that cannot undo somebody's
+ * work.
+ *
+ * But it is the WRONG default for a duration that has no timeline yet, and
+ * that is the bug this replaces. The old test asked whether the PROTOCOL had
+ * any material — `mergedPlain(row)` merges all three durations — so the
+ * moment a protocol had its first time signature, every LATER one opened in
+ * text-only mode. Text-only has nothing to put words on, so it wrote nothing
+ * and the panel reported "Identico: niente da importare". Importing the very
+ * first workbook worked; importing the second one appeared to do nothing at
+ * all, with no hint that one toggle away was the mode that would have worked.
+ *
+ * So the question is asked about the duration being IMPORTED, not the
+ * protocol: text-only only when every target already has something to overlay.
+ */
+export function defaultImportMode(
+  t: PlainTimeline,
+  existing: CatalogProtocol | undefined,
+  selected: Duration | null | undefined,
+): 'import' | 'text' {
+  const stored = timelinesByDuration(existing)
+  const inFile = t.versions
+    .map((v) => catalogDuration(v.durationMin))
+    .filter((d): d is Duration => !!d)
+  const targets = selected != null ? [selected] : inFile
+  if (!targets.length) return 'import'
+  return targets.every((d) => !!stored[d]) ? 'text' : 'import'
+}
+
 export function planPlainImport({ timeline: t, existing, selected, mode = 'import' }: Pick<PublishInput, 'timeline' | 'existing' | 'selected' | 'mode'>): ImportPlan {
   const stored = timelinesByDuration(existing)
   const plan: ImportPlan = { written: {}, diffs: [], skipped: [], missingSelected: false, ignored: [], nothing: false }
@@ -553,7 +587,11 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
      case where the operator most needs the confirm step, because the thing
      they came to do did not happen. Reporting `nothing` there is what sent a
      PO round the houses deleting a whole time signature to get their fix in. */
-  plan.nothing = plan.diffs.every((x) => x.identical) && !plan.ignored.length
+  /* "Identical" can only be said about a comparison that HAPPENED. With no
+     diffs at all nothing was written — the duration was skipped, and the
+     reason is in `skipped` — and calling that identical sent an operator
+     looking for a problem in their file instead of at the mode toggle. */
+  plan.nothing = plan.diffs.length > 0 && plan.diffs.every((x) => x.identical) && !plan.ignored.length
   return plan
 }
 

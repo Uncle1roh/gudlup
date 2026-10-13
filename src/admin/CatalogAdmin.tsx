@@ -12,7 +12,7 @@ import { audienceOf, audioLangSummary, audioLangs, durationState, hasAnyAudio, m
 import { publishBlockers, gateComplete, emptyGate } from '../legal/claims'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
 import { ProtocolCardEditor, applyCardDraft, cardDraftError, cleanI18n, type ProtocolCardDraft } from './ProtocolCard'
-import { describeImportPlan, entryForPublish, familyFromCode, planPlainImport } from './publishPlain'
+import { defaultImportMode, describeImportPlan, entryForPublish, familyFromCode, planPlainImport } from './publishPlain'
 import { LANG_SHORT } from '../tts/voiceLang'
 import { deleteProtocolVerified, saveProtocolVerified } from './publish'
 import { takeReturnToProtocol } from './workscreenReturn'
@@ -243,12 +243,10 @@ export function CatalogAdmin({ actor }: { actor: string }) {
            screen loaded it: a Publish or a Studio save since then is part of
            what must survive. */
         const fresh = await freshRow(opened)
-        /* Default to TEXT-ONLY when this duration already has a timeline.
-           The safe answer is the one that cannot undo somebody's work, and a
-           workbook arriving for a finished protocol is nearly always a new
-           column of words rather than a new session. */
-        const already = !!mergedPlain(fresh)?.versions?.length
-        const mode: 'import' | 'text' = already ? 'text' : 'import'
+        /* Text-only when the duration being imported already has something
+           to put words ON; the whole file when it does not. Asked about the
+           DURATION, never the protocol — see defaultImportMode. */
+        const mode = defaultImportMode(timeline, fresh, selected)
         const plan = planPlainImport({ timeline, existing: fresh, selected, mode })
         setReview({
           fileName: file.name,

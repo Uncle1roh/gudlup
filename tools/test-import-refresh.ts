@@ -19,7 +19,7 @@
          && node <tmp>/ir.cjs
    ============================================================================ */
 
-import { entryForPublish, planPlainImport } from '../src/admin/publishPlain'
+import { defaultImportMode, entryForPublish, planPlainImport } from '../src/admin/publishPlain'
 import { plainFor, studioFor, studioStale, type CatalogProtocol } from '../src/data/catalog'
 import type { StudioProject } from '../src/compose/types'
 import type { PlainClip, PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
@@ -163,6 +163,46 @@ const textImported = entryForPublish({
 assert(
   studioFor(textImported, 24) === oldSession && !studioStale(textImported, 24),
   'a texts-only import leaves the Studio session alone and does not mark it stale',
+)
+
+/* ---------------------------------------------------------------------- */
+console.log('--- which mode the compare panel opens in ---')
+
+/* A protocol with nothing in it yet: the only useful mode is the whole file. */
+assert(
+  defaultImportMode(sheet24(), undefined, 24) === 'import',
+  'the very first workbook opens in "tutto il file"',
+)
+
+/* The duration already has material, so words-only is the safe default. */
+assert(
+  defaultImportMode(sheet24(), saved(stored), 24) === 'text',
+  'a workbook for a duration that already has a timeline opens in "solo i testi"',
+)
+
+/* THE BUG. The protocol has a 24, and a 6-minute workbook arrives for a
+   duration with no timeline at all. This used to ask whether the PROTOCOL had
+   any material - which it did - and open in text-only, which has nothing to
+   put words on, so the import wrote nothing and the panel said "Identico:
+   niente da importare". The first time signature imported fine and every
+   later one looked broken. */
+assert(
+  defaultImportMode(sheet24(), saved(stored), 6) === 'import',
+  'a NEW time signature on an existing protocol opens in "tutto il file", not text-only',
+)
+
+/* And if somebody picks text-only there anyway, the panel must not call it
+   identical - nothing was compared, because nothing could be written. */
+/* A real SIX-minute workbook, so the file actually carries the duration
+   being selected — otherwise the plan reports "the file has no 6-minute
+   version", which is a different message about a different mistake. */
+const six = sheet24()
+six.versions[0] = { ...six.versions[0], durationMin: 6, durationS: 360 } as typeof six.versions[0]
+const deadEnd = planPlainImport({ timeline: six, existing: saved(stored), selected: 6, mode: 'text' })
+assert(!deadEnd.nothing, '"solo i testi" on a duration with no timeline is not reported as identical')
+assert(
+  deadEnd.skipped.some((x) => x.why.includes('non ha ancora una timeline')),
+  'it says why instead: there is nothing to put the words on',
 )
 
 console.log(`\n${pass} assertions passed.`)
