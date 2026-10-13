@@ -1,75 +1,47 @@
 /* ===========================================================================
-   WHICH time signatures actually have material — READ ONLY
+   WHICH time signatures have material — READ ONLY
 
-   The first triage asked whether per-duration storage existed and got "yes"
-   everywhere. That was the wrong question: a row can have the map and still
-   have only one duration inside it, and the admin console shows a time
-   signature as empty when `plainFor()` finds nothing for it. "It only shows
-   24 min" is consistent with exactly that.
+   The first triage settled the frightening question: every row still claims
+   6, 12 and 24, so nothing has been trimmed and no work has been destroyed.
+   What it could not answer is whether those maps have anything IN them —
+   `per_duration: true` only says the map is present. The console shows a
+   time signature as empty whenever `plainFor()` finds nothing for it, which
+   reads on screen as "it only shows 24 min" with every byte still in place.
 
-   So this asks what is IN the map.
+   So: the keys, and nothing else.
+
+   THE GUARD, because the obvious version of this raises
+   "cannot call jsonb_object_keys on a scalar": a jsonb column that is SQL
+   NULL, or JSON `null`, is a SCALAR, not an empty object, and `coalesce`
+   does not catch the second kind. `jsonb_typeof` is the only check that
+   tells an object from JSON null, so every accessor goes through it.
 
    Reading the columns:
 
-     versions_say     the time signatures the row claims (all three, per the
-                      first triage).
-     timelines_for    the keys actually present in plain_by_duration. THIS is
-                      what the Studio and the console read through
-                      `plainFor()`. A row that says {6,12,24} here is whole.
-     legacy_plain_for the single duration in the old `plain` field. Expected
-                      to be one value — that field only ever held the last
-                      publish, which is why per-duration storage exists.
-     studio_for       the keys in studio_by_duration: which time signatures
-                      have a saved Sound Studio session of their own.
-     audio_for        the time signatures with a published audio URL.
-     missing_timeline versions_say minus timelines_for — the gap the PO is
-                      looking at. Empty means nothing is missing.
+     plain_map / studio_map   the JSON type of each map. Expect "object".
+                              "null" means that map was never written.
+     timelines_for            the durations with a stored timeline. THIS is
+                              what the Studio and the console read. A row
+                              showing 6, 12 and 24 is whole.
+     studio_for               the durations with their own saved Studio
+                              session. Only {24} here, with 6 and 12 opening
+                              blank, is the other way this symptom appears.
    =========================================================================== */
-with p as (
-  select
-    code,
-    title,
-    updated_at,
-    coalesce(
-      (select array_agg(distinct (v ->> 'duration')::int order by (v ->> 'duration')::int)
-         from jsonb_array_elements(coalesce(versions, '[]'::jsonb)) v),
-      '{}'
-    ) as versions_say,
-    coalesce(
-      (select array_agg(k::int order by k::int)
-         from jsonb_object_keys(coalesce(to_jsonb(protocols) -> 'plain_by_duration', '{}'::jsonb)) k
-        where k ~ '^[0-9]+$'),
-      '{}'
-    ) as timelines_for,
-    coalesce(
-      (select array_agg(distinct (ver ->> 'durationMin')::int order by (ver ->> 'durationMin')::int)
-         from jsonb_array_elements(coalesce(plain -> 'versions', '[]'::jsonb)) ver),
-      '{}'
-    ) as legacy_plain_for,
-    coalesce(
-      (select array_agg(k::int order by k::int)
-         from jsonb_object_keys(coalesce(to_jsonb(protocols) -> 'studio_by_duration', '{}'::jsonb)) k
-        where k ~ '^[0-9]+$'),
-      '{}'
-    ) as studio_for,
-    coalesce(
-      (select array_agg((v ->> 'duration')::int order by (v ->> 'duration')::int)
-         from jsonb_array_elements(coalesce(versions, '[]'::jsonb)) v
-        where v ? 'audioUrl' and v -> 'audioUrl' <> '{}'::jsonb),
-      '{}'
-    ) as audio_for
-  from protocols
-)
 select
-  code,
-  title,
-  versions_say,
-  timelines_for,
-  legacy_plain_for,
-  studio_for,
-  audio_for,
-  array(select unnest(versions_say) except select unnest(timelines_for) order by 1) as missing_timeline,
-  updated_at
-from p
-order by cardinality(array(select unnest(versions_say) except select unnest(timelines_for))) desc,
-         updated_at desc;
+  p.code,
+  p.title,
+  jsonb_typeof(p.plain_by_duration)                                  as plain_map,
+  (select string_agg(k, '  ' order by k)
+     from jsonb_object_keys(
+       case when jsonb_typeof(p.plain_by_duration) = 'object'
+            then p.plain_by_duration
+            else '{}'::jsonb end) k)                                 as timelines_for,
+  jsonb_typeof(p.studio_by_duration)                                 as studio_map,
+  (select string_agg(k, '  ' order by k)
+     from jsonb_object_keys(
+       case when jsonb_typeof(p.studio_by_duration) = 'object'
+            then p.studio_by_duration
+            else '{}'::jsonb end) k)                                 as studio_for,
+  p.updated_at
+from protocols p
+order by p.updated_at desc nulls last;
