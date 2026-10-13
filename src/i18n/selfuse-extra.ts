@@ -3,6 +3,10 @@
    base dictionaries, so a key here wins over the same key elsewhere. */
 
 export const IT_SELFUSE_EXTRA: Record<string, string> = {
+  'Free': 'Gratis',
+
+  'Listen again': 'Ascolta di nuovo',
+
 /* The shelf the person builds themselves. */
   'My List': 'La mia lista',
   'Save to My List': 'Salva nella mia lista',
@@ -168,6 +172,10 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
+  'Free': 'Grátis',
+
+  'Listen again': 'Ouvir de novo',
+
 /* The shelf the person builds themselves. */
   'My List': 'Minha lista',
   'Save to My List': 'Salvar na minha lista',

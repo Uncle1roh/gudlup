@@ -604,6 +604,11 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             sponsored={!!convention}
             professionalOffered={hasProfessionalSupport(convention)}
             onFindProfessional={() => setTab('therapist')}
+            /* Completed sessions, newest first, one entry per session. Not
+               "continue listening": nothing is recorded when a session is
+               ended early, so there is no position to resume — this is the
+               honest version of that shelf, built from data that exists. */
+            recent={[...new Set([...state.logs].sort((a, b) => b.at - a.at).map((l) => l.slug))].filter(Boolean).slice(0, 12)}
             saved={state.saved}
             onToggleSave={(slug) => update((s) => ({
               ...s,

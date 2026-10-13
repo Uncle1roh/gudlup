@@ -954,6 +954,23 @@
 }
 .cat-card__save:active { transform: scale(0.92); }
 .cat-card__save.is-on { background: var(--aura); border-color: transparent; }
+/* Bottom-RIGHT is the one corner of the cover still free: top-left is the
+   save toggle, top-right "Ambient bed", bottom-left the duration pills. */
+.cat-card__offer {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: rgba(10, 18, 17, 0.62);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(4px);
+}
+.cat-card__offer.is-free { background: var(--aura); border-color: transparent; }
 .cat-card {
   flex: 0 0 auto;
   width: clamp(132px, 40vw, 168px);

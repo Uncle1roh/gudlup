@@ -52,6 +52,8 @@ interface ExploreProps {
   onFindProfessional: () => void
   /** Slugs on this person's own list, newest first. */
   saved?: string[]
+  /** Slugs listened to before, newest first, already deduped. */
+  recent?: string[]
   onToggleSave?: (slug: string) => void
 }
 
@@ -62,7 +64,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [] }: ExploreProps) {
   const { t } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
@@ -195,6 +197,7 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         onClearQuery={() => onQuery?.('')}
         saved={saved}
         onToggleSave={onToggleSave}
+        recent={recent}
       />
 
       {/* LIB-2 / LIB-3 — the static footer link to a professional, the same

@@ -34,6 +34,7 @@ import {
   type SelfUseTheme,
 } from '../data/selfuse'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
+import { formatOffer, offerActive } from '../data/catalog'
 import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { coverFor, coverStyle } from './artwork'
 import type { Duration } from '../types/domain'
@@ -67,6 +68,8 @@ interface CatalogProps {
   /** Slugs on this person's own list, newest first. */
   saved?: string[]
   onToggleSave?: (slug: string) => void
+  /** Slugs listened to before, newest first. */
+  recent?: string[]
   /** The shelf an admin defined. Absent or empty = the built-in rails. */
   storedRails?: ExploreRail[] | null
 }
@@ -85,6 +88,7 @@ export function Catalog({
   storedRails,
   saved = [],
   onToggleSave,
+  recent = [],
 }: CatalogProps) {
   const { t } = useI18n()
   const { m } = useLegal()
@@ -152,6 +156,17 @@ export function Catalog({
     const items = saved.map((slug) => bySlug.get(slug)).filter((s): s is ResolvedSession => !!s)
     return items.length ? { id: 'mine', title: 'My List', items } : null
   }, [saved, all])
+
+  /* What they have already listened to, newest first. Deliberately NOT called
+     "continue": a session ended early records nothing, by design, so there is
+     no position to pick up — offering to resume something the app cannot
+     resume would be a worse lie than not offering it. */
+  const recentRail = useMemo(() => {
+    if (!recent.length) return null
+    const bySlug = new Map(all.map((s) => [s.slug, s]))
+    const items = recent.map((slug) => bySlug.get(slug)).filter((s): s is ResolvedSession => !!s)
+    return items.length ? { id: 'recent', title: 'Listen again', items } : null
+  }, [recent, all])
 
   if (!all.length) {
     return (
@@ -304,7 +319,7 @@ export function Catalog({
              on themselves before they have been shown anything — the rail is
              useful once you are already browsing and nothing has caught you,
              which is where it now sits: pathways, two rails, then the moods. */
-          [...(myList ? [myList] : []), ...rails].map((rail, i) => (
+          [...(myList ? [myList] : []), ...(recentRail ? [recentRail] : []), ...rails].map((rail, i) => (
             <Fragment key={rail.id}>
               <RailRow rail={rail} onOpen={onOpen} saved={saved} onToggleSave={onToggleSave} />
               {i === 1 && moodsSlot}
@@ -436,8 +451,11 @@ export function CoverCard({ session, onOpen, saved = false, onToggleSave }: {
   saved?: boolean
   onToggleSave?: () => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const cover = coverFor(session.slug, session.theme, session.coverUrl)
+  /* Only an offer that is actually running today: the window is the whole
+     point of the dates on it. */
+  const offer = offerActive(session.entry)
 
   /* The card is a <button>, and a button inside a button is invalid HTML that
      React warns about and screen readers cannot navigate. So the toggle is a
@@ -467,6 +485,11 @@ export function CoverCard({ session, onOpen, saved = false, onToggleSave }: {
         {/* Only the seeded demo catalog can reach this: a published session
             always has the file its duration promises. */}
         {!session.audioReady && <span className="cat-card__soon">{t('Ambient bed')}</span>}
+        {offer && (
+          <span className={`cat-card__offer${offer.kind === 'free' ? ' is-free' : ''}`}>
+            {formatOffer(offer, locale, t('Free'))}
+          </span>
+        )}
       </span>
       <span className="cat-card__title">{t(session.name)}</span>
       <span className="cat-card__blurb">{t(session.blurb)}</span>
