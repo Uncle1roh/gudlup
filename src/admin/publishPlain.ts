@@ -19,6 +19,7 @@ import {
   catalogDuration,
   mergeVersions,
   narrowTimeline,
+  studioFor,
   timelinesByDuration,
   type CatalogProtocol,
 } from '../data/catalog'
@@ -129,7 +130,39 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
   const plan = planPlainImport({ timeline: t, existing, selected, mode })
   const incoming = plan.written
   const durations = CATALOG_DURATIONS.filter((d) => !!incoming[d])
-  const plainByDuration = { ...timelinesByDuration(existing), ...incoming }
+  const before = timelinesByDuration(existing)
+  const plainByDuration = { ...before, ...incoming }
+
+  /* A FULL import replaces a duration's clips, which makes any Studio session
+     saved from the clips it replaced a liar: `studioFor()` prefers the saved
+     session over the sheet, so the Studio reopens on material that no longer
+     exists and re-importing appears to do nothing at all. That is exactly the
+     dead end a PO hit on CALM 1.4 Deep — the only escape was deleting the
+     whole time signature, because that is the one path that also drops the
+     session.
+
+     Dropped only where a timeline is genuinely being REPLACED, and only for
+     the durations this import writes:
+
+       · a duration with no stored timeline had its session built by hand
+         (the audio-only path), so there is nothing to contradict it — keep it;
+       · "solo i testi" changes words, never structure, so the session still
+         describes the right clips — keep it. This is the translation and M/F
+         path, and it must never cost anyone their Studio work;
+       · every other time signature is untouched, which is the standing rule.
+
+     The legacy single-session mirror has to go the same way or it walks
+     straight back in: `studioFor` falls back to it whenever its length points
+     at the duration we just cleared. */
+  const studioByDuration = { ...(existing?.studioByDuration ?? {}) }
+  let studio = existing?.studio
+  if (mode === 'import') {
+    for (const d of durations) {
+      if (!before[d]) continue
+      delete studioByDuration[d]
+      if (studio && studioFor({ studio }, d) === studio) studio = undefined
+    }
+  }
 
   const catalogPhases = phasesForCatalog(phased)
 
@@ -160,6 +193,8 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
        home of a duration written before per-duration storage existed. */
     plain: durations.length ? (incoming[selected ?? durations[0]] ?? incoming[durations[0]]) : existing?.plain,
     plainByDuration,
+    studio,
+    studioByDuration,
     assetMap: existing?.assetMap,
     updatedAt: now,
   }
@@ -299,9 +334,14 @@ export function overlayScripts(stored: PlainTimeline, incoming: PlainTimeline): 
   const versions: PlainVersion[] = stored.versions.map((v) => ({
     ...v,
     clips: v.clips.map((c) => {
-      if (c.tipo !== 'voice') return c
+      /* Matched means "the file has a row for this saved clip", which is true
+         of a soundscape as much as a voice. Recording it only for voice rows
+         made `unmatched` count every music and ambience row in the workbook
+         as a stranger — harmless while nothing read it, and a flood of false
+         warnings the moment anything did. */
       const inc = incClips.get(c.clipId)
       if (inc) matched.add(c.clipId)
+      if (c.tipo !== 'voice') return c
       const { next, changed } = overlay(clipScript(c), clipScript(inc))
       if (changed) updated.push(c.clipId)
       return changed ? { ...c, testoByLang: next, testo: next?.it ?? c.testo } : c
@@ -440,6 +480,15 @@ export interface ImportPlan {
   skipped: { duration: Duration; why: string }[]
   /** The file has no sheet for the selected duration. */
   missingSelected: boolean
+  /**
+   * Clip ids the file carries that no saved clip matched, so "solo i testi"
+   * dropped them on the floor.
+   *
+   * Separate from `skipped`, which also holds perfectly ordinary reasons
+   * ("12 min already has its timeline"). This list means the operator is
+   * holding a file whose CONTENT did not land, which is never ordinary.
+   */
+  ignored: string[]
   /** Nothing would change: every written duration is identical to what is stored. */
   nothing: boolean
 }
@@ -451,7 +500,7 @@ export interface ImportPlan {
  */
 export function planPlainImport({ timeline: t, existing, selected, mode = 'import' }: Pick<PublishInput, 'timeline' | 'existing' | 'selected' | 'mode'>): ImportPlan {
   const stored = timelinesByDuration(existing)
-  const plan: ImportPlan = { written: {}, diffs: [], skipped: [], missingSelected: false, nothing: false }
+  const plan: ImportPlan = { written: {}, diffs: [], skipped: [], missingSelected: false, ignored: [], nothing: false }
   const seen = new Set<Duration>()
   for (const v of t.versions) {
     const d = catalogDuration(v.durationMin)
@@ -476,6 +525,7 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
       const diff = diffTimelines(d, old, merged, {})
       plan.diffs.push(diff)
       if (unmatched.length) {
+        plan.ignored.push(...unmatched)
         plan.skipped.push({
           duration: d,
           why: `${unmatched.length} righe del file non corrispondono a nessuna clip salvata e sono state ignorate: ${unmatched.slice(0, 5).join(', ')}${unmatched.length > 5 ? '…' : ''}. Controlla di aver scelto il protocollo e la durata giusti.`,
@@ -501,7 +551,13 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
     plan.diffs.push(diffTimelines(d, old, merged, kept))
   }
   plan.missingSelected = selected != null && !seen.has(selected)
-  plan.nothing = plan.diffs.every((x) => x.identical)
+  /* "Identical" has to mean the FILE had nothing to add, not merely that the
+     rows we looked at matched. A corrected sheet whose new rows were all
+     dropped by "solo i testi" is the opposite of identical: it is the one
+     case where the operator most needs the confirm step, because the thing
+     they came to do did not happen. Reporting `nothing` there is what sent a
+     PO round the houses deleting a whole time signature to get their fix in. */
+  plan.nothing = plan.diffs.every((x) => x.identical) && !plan.ignored.length
   return plan
 }
 

@@ -864,7 +864,10 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
             {importReview.lines.map((l, k) => <li key={k}>{l}</li>)}
           </ul>
           <span className="b2b-sub">
-            L’importazione aggiunge e non toglie: i testi già salvati in una lingua che il file non ha restano, e la sessione dello Studio, l’audio pubblicato, i nomi, i tag e la copertina non vengono toccati.
+            L’importazione aggiunge e non toglie: i testi già salvati in una lingua che il file non ha restano, e l’audio pubblicato, i nomi, i tag e la copertina non vengono toccati.
+            {importReview.mode === 'import'
+              ? ' Sostituendo la timeline, la sessione dello Studio di QUESTA durata viene ricostruita dal foglio: le altre durate non si toccano. Senza, lo Studio continuerebbe a mostrare le clip appena sostituite.'
+              : ' La sessione dello Studio resta com’è: cambiano le parole, non la struttura.'}
           </span>
           <div className="adm-plain__askrow">
             {importReview.nothing ? (

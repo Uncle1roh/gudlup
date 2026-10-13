@@ -1126,6 +1126,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       return
     }
     const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: workingLang, to: next }, scripts)
+    versionSwitch.current = true
     setTracks(r.tracks)
     setWorkingTo(next)
     const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this version.', { lang: `${LANG_LABEL[workingLang]} · ${ADDRESSEE_LABEL[next]}` })]
@@ -1142,6 +1143,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       return
     }
     const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: next, to: workingTo }, scripts)
+    versionSwitch.current = true
     setTracks(r.tracks)
     setWorkingLang(next)
     const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this language; everything else is shared.', { lang: LANG_LABEL[next] })]
@@ -1186,8 +1188,18 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
 
   /* any edit after the first paint means the saved project is behind */
   const firstTracks = useRef(true)
+  /* …but SWITCHING VERSION is not an edit. Both switches rewrite `tracks` to
+     show the other version's words, which tripped this effect and lit the
+     unsaved dot with nothing changed. A PO reading that dot reasonably
+     concluded Save only covered the version on screen and saved four times,
+     fighting the "leave without saving?" prompt each way — when one Save had
+     always been enough: `toStudioProject` stashes the working version into
+     the per-version maps and writes all four together. The dot was the only
+     thing saying otherwise. */
+  const versionSwitch = useRef(false)
   useEffect(() => {
     if (firstTracks.current) { firstTracks.current = false; return }
+    if (versionSwitch.current) { versionSwitch.current = false; return }
     setDirty(true)
   }, [tracks, lengthSec, masterGain, projectName])
 
@@ -1735,7 +1747,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
             className={`mt-export${dirty ? ' is-dirty' : ''}`}
             onClick={() => void onSave()}
             disabled={saving}
-            title={lt('Save every change into the protocol — reopen it to find this session again')}
+            title={lt('Save every change into the protocol, in ALL FOUR versions at once — IT and PT, male and female. Switching version is not an edit and needs no save of its own.')}
           >
             {saving ? lt('Saving…') : dirty ? lt('💾 Save •') : lt('💾 Save')}
           </button>
