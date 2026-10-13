@@ -326,13 +326,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
               <div className="auth__kind">
                 <button type="button" className={`auth__kindbtn${addressedAs === 'f' ? ' is-on' : ''}`}
                   aria-pressed={addressedAs === 'f'} onClick={() => setAddressedAs('f')}>
-                  <b>{t('Femminile')}</b>
-                  <small>{t('“sei pronta”')}</small>
+                  <b>{t('Feminine')}</b>
+                  <small>{t('feminine form')}</small>
                 </button>
                 <button type="button" className={`auth__kindbtn${addressedAs === 'm' ? ' is-on' : ''}`}
                   aria-pressed={addressedAs === 'm'} onClick={() => setAddressedAs('m')}>
-                  <b>{t('Maschile')}</b>
-                  <small>{t('“sei pronto”')}</small>
+                  <b>{t('Masculine')}</b>
+                  <small>{t('masculine form')}</small>
                 </button>
               </div>
               <small className="auth__fine">{t('You can change this any time in Profile.')}</small>

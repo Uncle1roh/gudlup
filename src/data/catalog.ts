@@ -35,6 +35,68 @@ export type Audience = 'clinical' | 'library'
 /** 'all' = available to every company; otherwise the list of company ids. */
 export type TenantScope = 'all' | string[]
 
+/* ------------------------------------------------------------- offers --- */
+
+/**
+ * Free, or priced low enough to be a gesture rather than a transaction.
+ *
+ * `priceMinor` is in MINOR UNITS of `currency` — 10 EUR-cents, 50 BRL-centavos
+ * — because money in floating point is how you end up charging 0.30000000004.
+ *
+ * There is deliberately no conversion. The brief asked for ten euro-cents
+ * "converted to any currency the platform may use", and this platform has no
+ * exchange rate, no payment provider and no notion of currency anywhere else;
+ * a number converted at a rate nobody chose and nobody refreshes is worse
+ * than a number somebody typed. So the console offers EUR 0,10 as the
+ * starting point and the operator sets the amount and the currency they
+ * actually mean to charge.
+ */
+export interface ProtocolOffer {
+  kind: 'free' | 'reduced'
+  /** Minor units. Only meaningful when `kind` is 'reduced'. */
+  priceMinor?: number
+  /** ISO 4217, e.g. 'EUR', 'BRL'. */
+  currency?: string
+  /** Epoch ms. Absent at either end means open-ended on that side. */
+  from?: number
+  until?: number
+}
+
+/** The console's starting point: ten euro-cents. */
+export const OFFER_DEFAULT_MINOR = 10
+export const OFFER_DEFAULT_CURRENCY = 'EUR'
+
+/**
+ * The offer in force right now, or undefined.
+ *
+ * The window is the whole point of the dates: a promotion that nobody
+ * remembers to switch off is a price change. Both ends are optional, so an
+ * open-ended giveaway is still expressible.
+ */
+export function offerActive(
+  p: Pick<CatalogProtocol, 'offer'> | undefined,
+  now: number = Date.now(),
+): ProtocolOffer | undefined {
+  const o = p?.offer
+  if (!o) return undefined
+  if (typeof o.from === 'number' && now < o.from) return undefined
+  if (typeof o.until === 'number' && now > o.until) return undefined
+  return o
+}
+
+/** "Gratis" / "€ 0,10" — the badge, in the reader's own locale. */
+export function formatOffer(o: ProtocolOffer, locale: string, freeLabel: string): string {
+  if (o.kind === 'free') return freeLabel
+  const minor = o.priceMinor ?? OFFER_DEFAULT_MINOR
+  const currency = o.currency || OFFER_DEFAULT_CURRENCY
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100)
+  } catch {
+    /* An unknown currency code must not take the card down with it. */
+    return `${(minor / 100).toFixed(2)} ${currency}`
+  }
+}
+
 export interface CatalogProtocol extends Protocol {
   /** Disabled protocols are hidden from prescription but kept for history. */
   enabled: boolean
@@ -87,6 +149,20 @@ export interface CatalogProtocol extends Protocol {
   audience?: Audience
   /** Browse metadata: only on `audience: 'library'` entries. */
   library?: LibraryMeta
+  /**
+   * A commercial offer, for the self-service library only.
+   *
+   * Two shapes, because the commercial side needs both: give something away,
+   * or put a token price on it. Absent means neither is running.
+   *
+   * It does NOT decide whether a person may press play — nothing in this app
+   * charges anybody yet, and a price with no checkout behind it would be a
+   * promise the product cannot keep. What it does is mark the intent, carry
+   * the window it applies in, and show the badge. Wiring it to a real payment
+   * is a separate piece of work, and on Android a digital purchase made
+   * in-app has to go through Play billing (docs/MOBILE.md).
+   */
+  offer?: ProtocolOffer
   /**
    * A real cover image, when a PO has uploaded one.
    *

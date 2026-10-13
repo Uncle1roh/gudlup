@@ -218,6 +218,7 @@ function mapCatalog(r: any): CatalogProtocol {
     // rows written before the clinical/library split are clinical
     audience: r.audience === 'library' ? 'library' : 'clinical',
     library: r.library ?? undefined,
+    offer: r.offer ?? undefined,
     coverUrl: r.cover_url ?? undefined,
     tier: r.tier === 'amber' || r.tier === 'red' ? r.tier : r.tier === 'green' ? 'green' : undefined,
     claimsGate: r.claims_gate ?? undefined,
@@ -922,6 +923,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         studio_by_duration: p.studioByDuration ?? null,
         audience: p.audience ?? 'clinical',
         library: p.library ?? null,
+        offer: p.offer ?? null,
         cover_url: p.coverUrl ?? null,
         public_title: p.publicTitle ?? null,
         public_blurb: p.publicBlurb ?? null,

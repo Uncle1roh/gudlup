@@ -242,7 +242,7 @@ export const PT: Record<string, string> = {
   'Pick a few presets — no timeline needed.': 'Escolha alguns presets — sem precisar de timeline.',
   'Fine-tune in the Studio if you want.': 'Refine no Studio se quiser.',
   'Length': 'Duração',
-  'Quick': 'Rápida',
+  'Quick': 'Breve',
   'Standard': 'Padrão',
   'Deep': 'Profundo',
   'Soundscape': 'Paisagem sonora',
@@ -553,7 +553,7 @@ export const PT: Record<string, string> = {
   'Focus & Performance': 'Foco e desempenho',
   'For anyone who has to perform under pressure: a crowded mind, trouble concentrating, performance anxiety, putting things off as a deadline closes in.':
     'Para quem precisa render sob pressão: mente cheia, dificuldade de concentração, ansiedade de desempenho, adiar enquanto o prazo se aproxima.',
-  'The Working Day': 'O dia de trabalho',
+  'The Working Day': 'Dia de trabalho',
   'A progressive journey for the structured management of everyday working stress: first calm is recovered, then demands are reorganised, then boundaries are protected, and finally confidence is consolidated.':
     'Um percurso progressivo para a gestão estruturada do estresse do trabalho no dia a dia: primeiro se recupera a calma, depois se reorganizam as demandas, depois se protegem os limites e, por fim, se consolida a confiança.',
   'Energy & Rest': 'Energia e descanso',
@@ -630,7 +630,7 @@ export const PT: Record<string, string> = {
   'The library is being prepared.': 'A biblioteca está sendo preparada.',
   'Sessions appear here as soon as they are published.': 'As sessões aparecem aqui assim que forem publicadas.',
   'All themes': 'Todos os temas',
-  'Pathways': 'Percursos',
+  'Journeys': 'Jornadas',
   'Duration': 'Duração',
   'Any length': 'Qualquer duração',
   'Theme': 'Tema',

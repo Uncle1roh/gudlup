@@ -153,7 +153,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Notifications': 'Notifiche',
 
   /* ---- explore ---- */
-  'Pathways': 'Percorsi',
+  'Journeys': 'Percorsi',
   'All Sessions': 'Tutte le sessioni',
   'ACTIVE': 'IN CORSO',
   'COMPLETED': 'COMPLETATO',

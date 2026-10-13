@@ -65,7 +65,22 @@ export interface AuthApi {
    * reason.
    */
   resetPassword(email: string): Promise<void>
+  /**
+   * Change the password of the person already signed in.
+   *
+   * `current` is not ceremony. Supabase authorises the change on the SESSION
+   * alone, so without this check anyone holding an unlocked phone could lock
+   * the owner out of their own account from the Profile screen. Re-entering
+   * the old password proves it is still the owner at the keyboard.
+   *
+   * Throws `WRONG_PASSWORD` when `current` does not match, so the caller can
+   * say which field is wrong instead of showing one vague failure.
+   */
+  updatePassword(current: string, next: string): Promise<void>
 }
+
+/** Thrown by `updatePassword` when the current password is not right. */
+export const WRONG_PASSWORD = 'WRONG_PASSWORD'
 
 const AuthCtx = createContext<AuthApi | null>(null)
 
@@ -145,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ready: true, user, role, mode: 'demo',
         async signIn(email, _password, r) { enter(email, r ?? 'b2c_user') },
         async resetPassword() { /* demo mode has no mailbox to send to */ },
+        async updatePassword() { /* demo mode has no password to change */ },
         async signUp(email, _password, r, extra) {
           stashMockLegalProfile({
             name: extra?.name || email.split('@')[0], email: email || 'demo@goodloop.app',
@@ -210,6 +226,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* A rejected address is not reported: the caller shows the same
            message either way. Only a transport failure is worth raising. */
         if (error && !/user not found/i.test(error.message)) throw error
+      },
+      async updatePassword(current: string, next: string) {
+        const email = user?.email
+        if (!email) throw new Error('Not signed in.')
+        /* Prove it is still the account holder. signInWithPassword on the
+           SAME account refreshes the session rather than disturbing it, so a
+           correct password costs nothing and a wrong one never reaches the
+           change below. */
+        const { error: wrong } = await sb.auth.signInWithPassword({ email, password: current })
+        if (wrong) throw new Error(WRONG_PASSWORD)
+        const { error } = await sb.auth.updateUser({ password: next })
+        if (error) throw error
       },
     }
   }, [supa, ready, user, role])

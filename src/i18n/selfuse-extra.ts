@@ -3,6 +3,31 @@
    base dictionaries, so a key here wins over the same key elsewhere. */
 
 export const IT_SELFUSE_EXTRA: Record<string, string> = {
+/* Changing the password from inside the account (Profile → Privacy & Data). */
+  'Choose a new password for this account. You will stay signed in on this device.': 'Scegli una nuova password per questo account. Su questo dispositivo resti collegato.',
+  'Your password has been changed.': 'La tua password è stata cambiata.',
+  'Change password': 'Cambia password',
+  'Current password': 'Password attuale',
+  'New password': 'Nuova password',
+  'At least 8 characters.': 'Almeno 8 caratteri.',
+  'Repeat the new password': 'Ripeti la nuova password',
+  'The two do not match.': 'Le due non coincidono.',
+  'That is not your current password.': 'Questa non è la tua password attuale.',
+  'We could not change it just now. Try again in a moment.': 'Non siamo riusciti a cambiarla adesso. Riprova tra poco.',
+  'Save the new password': 'Salva la nuova password',
+  'Saving…': 'Salvataggio…',
+  'Close account': 'Chiudi l’account',
+
+/* How the guided audio addresses the listener. The source keys used to BE
+   Italian ('Femminile'), so English fell through to Italian and Portuguese had
+   nothing to look up — the same two words showed in all three languages. */
+  'Feminine': 'Femminile',
+  'Masculine': 'Maschile',
+  'feminine form': '“sei pronta”',
+  'masculine form': '“sei pronto”',
+  '“Find a comfortable position, when you are ready.” — feminine': '“Trova una posizione comoda, quando sei pronta.”',
+  '“Find a comfortable position, when you are ready.” — masculine': '“Trova una posizione comoda, quando sei pronto.”',
+
   'Links': 'Collegamenti',
   'We could not save your answer just now. Check your connection and try again.': 'Non siamo riusciti a salvare la tua risposta. Controlla la connessione e riprova.',
   /* ---- the pathways: what each is for, the week focus lines, the when ---- */
@@ -138,6 +163,40 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
+/* Changing the password from inside the account (Profile → Privacy & Data). */
+  'Choose a new password for this account. You will stay signed in on this device.': 'Escolha uma nova senha para esta conta. Neste aparelho você continua conectado.',
+  'Your password has been changed.': 'Sua senha foi alterada.',
+  'Change password': 'Alterar senha',
+  'Current password': 'Senha atual',
+  'New password': 'Nova senha',
+  'At least 8 characters.': 'Pelo menos 8 caracteres.',
+  'Repeat the new password': 'Repita a nova senha',
+  'The two do not match.': 'As duas não coincidem.',
+  'That is not your current password.': 'Essa não é a sua senha atual.',
+  'We could not change it just now. Try again in a moment.': 'Não foi possível alterar agora. Tente de novo em instantes.',
+  'Save the new password': 'Salvar a nova senha',
+  'Saving…': 'Salvando…',
+  'Close account': 'Encerrar a conta',
+
+/* How the guided audio addresses the listener. The source keys used to BE
+   Italian ('Femminile'), so English fell through to Italian and Portuguese had
+   nothing to look up — the same two words showed in all three languages. */
+  'Feminine': 'Feminino',
+  'Masculine': 'Masculino',
+  'feminine form': '“está pronta”',
+  'masculine form': '“está pronto”',
+  '“Find a comfortable position, when you are ready.” — feminine': '“Encontre uma posição confortável, quando estiver pronta.”',
+  '“Find a comfortable position, when you are ready.” — masculine': '“Encontre uma posição confortável, quando estiver pronto.”',
+  'One question before you start': 'Uma pergunta antes de começar',
+  'The sessions speak to you directly, and the words change with how you are addressed. Which should we use?': 'As sessões falam diretamente com você, e as palavras mudam conforme a forma de tratamento. Qual devemos usar?',
+  'It chooses which recording you hear — nothing else. You can change it any time in Profile → Session preferences.': 'Escolhe apenas qual gravação você ouve. Você pode mudar quando quiser em Perfil → Preferências das sessões.',
+  'How the audio addresses you': 'Como o áudio fala com você',
+  'How should the audio address you?': 'Como o áudio deve falar com você?',
+  'You can change this any time in Profile.': 'Você pode mudar isso quando quiser no Perfil.',
+  'Some sessions are only recorded in one form for now. When yours is missing you still hear the session, and the screen before it says so.': 'Algumas sessões, por ora, estão gravadas em apenas uma forma. Quando faltar a sua, você ouve a sessão mesmo assim, e a tela anterior avisa.',
+  'This session is only recorded in the male form for now — it will say “pronto”.': 'Esta sessão, por ora, está gravada apenas no masculino: vai dizer “pronto”.',
+  'This session is only recorded in the female form for now — it will say “pronta”.': 'Esta sessão, por ora, está gravada apenas no feminino: vai dizer “pronta”.',
+
   'Links': 'Links',
   'We could not save your answer just now. Check your connection and try again.': 'Não conseguimos salvar sua resposta agora. Verifique a conexão e tente de novo.',
   /* ---- the weekly check-in: questions, scale ends and trends ---- */

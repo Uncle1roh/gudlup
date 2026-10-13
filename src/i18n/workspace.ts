@@ -144,7 +144,7 @@ const ROWS: Row[] = [
   ['General', 'Generale', 'Geral'],
   ['Today', 'Oggi', 'Hoje'],
   ['Tomorrow', 'Domani', 'Amanhã'],
-  ['Quick', 'Breve', 'Rápida'],
+  ['Quick', 'Breve', 'Breve'],
   ['Std', 'Std', 'Padrão'],
   ['Deep', 'Profonda', 'Profundo'],
 

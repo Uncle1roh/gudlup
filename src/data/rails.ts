@@ -57,8 +57,11 @@ export function defaultRails(all: ResolvedSession[]): ResolvedRail[] {
     if (items.length) out.push({ id: th.id, title: th.label, items })
   }
 
-  const deep = all.filter((s) => s.durations.includes(24))
-  if (deep.length) out.push({ id: 'deep', title: 'Longer sessions', subtitle: 'For when you will not be interrupted', items: deep })
+  /* No "Longer sessions" rail. It selected every session that OFFERS 24
+     minutes, and almost all of them also offer 6 and 12 — so the shelf
+     promising long sessions was full of six-minute ones. A duration is a
+     choice made when you open a session, not a category of session, and the
+     duration chips above already filter by it honestly. */
 
   const fresh = all.filter((s) => s.fromCatalog)
   if (fresh.length) out.push({ id: 'new', title: 'New in the library', items: fresh })

@@ -1321,7 +1321,10 @@ body:has(.su-studio) { background: var(--su-void); }
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
+  /* Centred, not bottom-pinned. With the week count gone most of these carry
+     a single line, and a one-line name sitting on the floor of a 104px box
+     next to a two-line one looked like two different components. */
+  justify-content: center;
   gap: 5px;
   width: 218px;
   min-height: 104px;
@@ -1353,6 +1356,26 @@ body:has(.su-studio) { background: var(--su-void); }
   font-size: 16px;
   color: var(--su-faint);
   letter-spacing: 0.01em;
+}
+
+/* --- changing the password ------------------------------------------------ */
+.su-studio .pwd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--r-md);
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair);
+}
+.su-studio .pwd-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--su-ground);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg);
+  font: inherit;
 }
 
 /* --- a length is the start ------------------------------------------------ */
@@ -1797,6 +1820,14 @@ body:has(.su-studio) { overflow: hidden; }
   /* Centred, or on a 2560px monitor the whole tab hugs the left edge with two
      thirds of the screen empty beside it. */
   .su-studio .thr-active { max-width: 1180px; margin-inline: auto; }
+  /* Profile gets the same measure. It was the one tab still running the full
+     width of the window: a settings list stretched across 2560px, with the
+     label at one edge and its switch at the other. */
+  .su-studio .profile { max-width: 1180px; margin-inline: auto; }
+  /* …and its reading column narrower still, because these are sentences and
+     single-file rows, not the rails and grids the 1180 was sized for. */
+  .su-studio .profile > *:not(.su-back) { max-width: 760px; width: 100%; }
+  .su-studio .pwd-form { max-width: 420px; }
 
   /* Who · when · what you can do, on one line, each in its own column rather
      than five children wrapping wherever they land. The actions sit at the

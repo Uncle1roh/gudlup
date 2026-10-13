@@ -274,7 +274,7 @@ function PathwayRail({
   return (
     <section className="cat-rail pw-rail">
       <header className="cat-rail__head">
-        <h3 className="cat__railtitle">{t('Pathways')}</h3>
+        <h3 className="cat__railtitle">{t('Journeys')}</h3>
       </header>
       <div className="cat-rail__track pw-rail__track">
         {pathways.map((p) => (
@@ -284,10 +284,15 @@ function PathwayRail({
             onClick={() => onOpen(p.id)}
           >
             <span className="pw-big__name">{t(p.name)}</span>
-            <span className="pw-big__meta">
-              {t('{n} weeks', { n: p.weeks })}
-              {active === p.id ? ` · ${t('In progress')}` : completed.includes(p.id) ? ` · ${t('Completed')}` : ''}
-            </span>
+            {/* A journey is named by what it is for, not by how many weeks it
+                runs: a length on the card reads as a commitment to make before
+                you have been told what it is. Where it stands in YOUR copy of
+                it still shows — that is status, not a category. */}
+            {(active === p.id || completed.includes(p.id)) && (
+              <span className="pw-big__meta">
+                {active === p.id ? t('In progress') : t('Completed')}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -342,12 +347,12 @@ function PathwayDetail({
         </div>
 
         <div className="sess-full__body">
-          {/* `lengthLabel` is English copy from the catalogue ("4 weeks") and
-              has no translation behind it — the rails count the weeks instead,
-              and so does this, or the eyebrow reads "4 WEEKS" in an Italian
-              app. */}
+          {/* No week count here either: the week-by-week plan is below, where
+              it is structure rather than a label to judge the journey by.
+              (`lengthLabel` is untranslated English from the catalogue, so it
+              was never a candidate — it reads "4 WEEKS" in an Italian app.) */}
           <p className="sess-full__eyebrow">
-            {t('{n} weeks', { n: pathway.weeks })} · {t('{per} sessions/wk', { per: pathway.perWeekLabel })}
+            {t('{per} sessions/wk', { per: pathway.perWeekLabel })}
           </p>
           <h1 className="display sess-full__title">{t(pathway.name)}</h1>
           <p className="sess-full__about">{t(pathway.about)}</p>

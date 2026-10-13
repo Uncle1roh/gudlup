@@ -169,7 +169,7 @@ export function Catalog({
           aria-pressed={onlyPathways}
           onClick={() => { setDur('all'); setTheme('all'); setOnlyPathways((v) => !v) }}
         >
-          {t('Pathways')}
+          {t('Journeys')}
         </button>
         {SELF_USE_THEMES.map((th) => (
           <button

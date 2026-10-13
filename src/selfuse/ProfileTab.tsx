@@ -33,6 +33,7 @@ import type { Convention } from '../data/convention'
 import { useBackLayer } from './backStack'
 import { useDataProvider } from '../data/provider'
 import { useLegal } from '../legal/LegalContext'
+import { useAuth, WRONG_PASSWORD } from '../auth/auth'
 import { LegalSheet } from '../legal/LegalPage'
 import { HelpNowButton } from '../legal/HelpNow'
 import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES } from '../legal/market'
@@ -61,8 +62,11 @@ export function ProfileTab(props: ProfileProps) {
 
   if (page !== 'menu') {
     const back = () => setPage('menu')
+    /* `profile` on the subscreens too, not just the menu: it is what gives
+       them the same centred measure as the therapist tab on a desktop.
+       Without it they were bare `su-page`, which is uncapped by design. */
     return (
-      <div className="su-page">
+      <div className="su-page profile">
         <button className="su-back" onClick={back}>‹ {t('Back')}</button>
         {page === 'account' && <AccountSettings {...props} />}
         {page === 'notifications' && <NotificationSettings {...props} />}
@@ -264,8 +268,8 @@ function SessionPrefs({ state, update }: ProfileProps) {
               void dp.setMyAddressedAs(to).catch(() => { /* retried on next open */ })
             }}
           >
-            <span className="chip__label">{to === 'f' ? t('Femminile') : t('Maschile')}</span>
-            <span className="chip__hint">{to === 'f' ? t('“sei pronta”') : t('“sei pronto”')}</span>
+            <span className="chip__label">{to === 'f' ? t('Feminine') : t('Masculine')}</span>
+            <span className="chip__hint">{to === 'f' ? t('feminine form') : t('masculine form')}</span>
           </button>
         ))}
       </div>
@@ -369,6 +373,8 @@ function PrivacyData({ update, hasTherapist, convention, onExport, onDelete }: P
         </div>
       )}
 
+      <ChangePassword />
+
       <h3 className="home__sect">{t('Your data')}</h3>
       <p className="small muted">{t('Everything we hold about you, in a machine-readable copy with a note on each category. A request is logged and answered within fifteen days, in every country.')}</p>
       <button className="btn btn--ghost" onClick={() => { onExport(); setRequested(true) }}>{legal.m('SET-4')}</button>
@@ -380,6 +386,92 @@ function PrivacyData({ update, hasTherapist, convention, onExport, onDelete }: P
       </p>
       <button className="btn btn--danger" onClick={onDelete}>{t('Close account')}</button>
       {sheet && <LegalSheet id={sheet} onClose={() => setSheet(null)} />}
+    </>
+  )
+}
+
+/* ---------------------------------------------------------- password ---- */
+
+/**
+ * Change the password, from inside the account.
+ *
+ * It lives in Privacy & Data because that is where the account's own
+ * controls are — the export, the acceptances, the closure. Until now the only
+ * way to change a password was to sign OUT and use "forgot your password",
+ * which needs a mailbox you can reach and tells you nothing if the mail does
+ * not arrive.
+ *
+ * Nothing here is shown in demo mode: there is no password to change.
+ */
+function ChangePassword() {
+  const { t } = useI18n()
+  const auth = useAuth()
+  const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [again, setAgain] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  if (auth.mode === 'demo') return null
+
+  /* Supabase's own floor is six. Saying so up front beats submitting and
+     being told by the server. */
+  const tooShort = next.length > 0 && next.length < 8
+  const mismatch = again.length > 0 && next !== again
+  const ready = current.length > 0 && next.length >= 8 && next === again && !busy
+
+  async function submit() {
+    setError(null)
+    setBusy(true)
+    try {
+      await auth.updatePassword(current, next)
+      setDone(true)
+      setOpen(false)
+      setCurrent(''); setNext(''); setAgain('')
+    } catch (e) {
+      setError((e as Error)?.message === WRONG_PASSWORD
+        ? t('That is not your current password.')
+        : t('We could not change it just now. Try again in a moment.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <h3 className="home__sect">{t('Password')}</h3>
+      {done && !open
+        ? <p className="small muted">{t('Your password has been changed.')}</p>
+        : <p className="small muted">{t('Choose a new password for this account. You will stay signed in on this device.')}</p>}
+      {!open ? (
+        <button className="btn btn--ghost" onClick={() => { setOpen(true); setDone(false) }}>{t('Change password')}</button>
+      ) : (
+        <div className="pwd-form">
+          <label className="ob-field">
+            <span className="ob-field__label">{t('Current password')}</span>
+            <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+          </label>
+          <label className="ob-field">
+            <span className="ob-field__label">{t('New password')}</span>
+            <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+            {tooShort && <span className="small muted">{t('At least 8 characters.')}</span>}
+          </label>
+          <label className="ob-field">
+            <span className="ob-field__label">{t('Repeat the new password')}</span>
+            <input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+            {mismatch && <span className="small muted">{t('The two do not match.')}</span>}
+          </label>
+          {error && <p className="small" role="alert">{error}</p>}
+          <div className="chip-row">
+            <button className="btn btn--primary" disabled={!ready} onClick={() => void submit()}>
+              {busy ? t('Saving…') : t('Save the new password')}
+            </button>
+            <button className="btn btn--ghost" disabled={busy} onClick={() => { setOpen(false); setError(null) }}>{t('Cancel')}</button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

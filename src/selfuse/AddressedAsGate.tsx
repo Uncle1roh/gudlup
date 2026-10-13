@@ -44,12 +44,12 @@ export function AddressedAsGate({ onChoose }: { onChoose: (to: Addressee) => voi
 
         <div className="adr__choices">
           <button className="adr__choice" disabled={!!busy} onClick={() => choose('f')}>
-            <b>{t('Femminile')}</b>
-            <span>{t('“Trova una posizione comoda, quando sei pronta.”')}</span>
+            <b>{t('Feminine')}</b>
+            <span>{t('“Find a comfortable position, when you are ready.” — feminine')}</span>
           </button>
           <button className="adr__choice" disabled={!!busy} onClick={() => choose('m')}>
-            <b>{t('Maschile')}</b>
-            <span>{t('“Trova una posizione comoda, quando sei pronto.”')}</span>
+            <b>{t('Masculine')}</b>
+            <span>{t('“Find a comfortable position, when you are ready.” — masculine')}</span>
           </button>
         </div>
 

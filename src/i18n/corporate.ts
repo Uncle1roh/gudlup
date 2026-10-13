@@ -418,7 +418,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Session Volume': 'Volume de sessões',
   'By duration · last 12 weeks': 'Por duração · últimas 12 semanas',
   '{n} sessions this month': '{n} sessões este mês',
-  'Quick (6 min)': 'Rápida (6 min)',
+  'Quick (6 min)': 'Breve (6 min)',
   'Standard (12 min)': 'Padrão (12 min)',
   'Deep (24 min)': 'Profundo (24 min)',
   'count': 'quantidade',
