@@ -74,11 +74,22 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
      here: no rails means the library's built-in rows, which is what this
      screen showed before anyone could arrange anything. */
   const [rails, setRails] = useState<ExploreRail[] | null>(null)
+  /* The chart. Codes, ranked, from an aggregate that suppresses anything
+     fewer than five people have finished — so an empty answer is the normal
+     one on a young install, and the shelf just does not appear. */
+  const [top, setTop] = useState<string[]>([])
   useEffect(() => {
     let alive = true
     void dp.listExploreRails()
       .then((rows) => { if (alive) setRails(rows) })
       .catch(() => { if (alive) setRails([]) })
+    return () => { alive = false }
+  }, [dp])
+  useEffect(() => {
+    let alive = true
+    void dp.topSessions(10)
+      .then((codes) => { if (alive) setTop(codes) })
+      .catch(() => { if (alive) setTop([]) })
     return () => { alive = false }
   }, [dp])
   /* Every view here has the same ‹ Back: it returns to the library. */
@@ -198,6 +209,7 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         saved={saved}
         onToggleSave={onToggleSave}
         recent={recent}
+        top={top}
       />
 
       {/* LIB-2 / LIB-3 — the static footer link to a professional, the same

@@ -70,6 +70,8 @@ interface CatalogProps {
   onToggleSave?: (slug: string) => void
   /** Slugs listened to before, newest first. */
   recent?: string[]
+  /** Protocol CODES, most listened first, already k-suppressed server-side. */
+  top?: string[]
   /** The shelf an admin defined. Absent or empty = the built-in rails. */
   storedRails?: ExploreRail[] | null
 }
@@ -89,6 +91,7 @@ export function Catalog({
   saved = [],
   onToggleSave,
   recent = [],
+  top = [],
 }: CatalogProps) {
   const { t } = useI18n()
   const { m } = useLegal()
@@ -167,6 +170,16 @@ export function Catalog({
     const items = recent.map((slug) => bySlug.get(slug)).filter((s): s is ResolvedSession => !!s)
     return items.length ? { id: 'recent', title: 'Listen again', items } : null
   }, [recent, all])
+
+  /* The chart arrives as protocol CODES, because that is what the sessions
+     table records; the library is addressed by slug. Anything the catalogue
+     cannot resolve is dropped rather than guessed at. */
+  const topRail = useMemo(() => {
+    if (!top.length) return null
+    const byCode = new Map(all.filter((s) => s.protocolCode).map((s) => [s.protocolCode as string, s]))
+    const items = top.map((code) => byCode.get(code)).filter((s): s is ResolvedSession => !!s)
+    return items.length ? { id: 'top', title: 'Top 10 most listened', items } : null
+  }, [top, all])
 
   if (!all.length) {
     return (
@@ -319,7 +332,14 @@ export function Catalog({
              on themselves before they have been shown anything — the rail is
              useful once you are already browsing and nothing has caught you,
              which is where it now sits: pathways, two rails, then the moods. */
-          [...(myList ? [myList] : []), ...(recentRail ? [recentRail] : []), ...rails].map((rail, i) => (
+          [
+            /* The person's own shelves first, then the chart, then whatever
+               the console arranged. */
+            ...(myList ? [myList] : []),
+            ...(recentRail ? [recentRail] : []),
+            ...(topRail ? [topRail] : []),
+            ...rails,
+          ].map((rail, i) => (
             <Fragment key={rail.id}>
               <RailRow rail={rail} onOpen={onOpen} saved={saved} onToggleSave={onToggleSave} />
               {i === 1 && moodsSlot}

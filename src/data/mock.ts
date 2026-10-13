@@ -606,6 +606,9 @@ export function createMockProvider(): DataProvider {
     },
 
     listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs] })) },
+    /* The fixtures have no cross-user history to count, and inventing a
+       chart would make the demo look like it had real usage behind it. */
+    topSessions: async () => { await wait(); return [] },
     saveExploreRails: async (rails) => {
       await wait()
       exploreRails = rails.map((r) => ({ ...r, slugs: [...r.slugs] }))

@@ -1637,6 +1637,51 @@ create trigger profiles_market_guard
   for each row execute function profiles_market_guard();
 
 -- ---------------------------------------------------------------------------
+/* ===========================================================================
+   Top sessions — the only cross-user aggregate the library exposes
+
+   `sessions` is deliberately per-principal: a person reads their own rows, a
+   therapist reads a consenting patient's, and there is no admin select policy
+   at all. A "most listened" shelf cannot be built from the client for exactly
+   that reason, which is correct — so this is the one narrow hole, cut on
+   purpose and no wider than the shelf needs.
+
+   What leaves the function is a LIST OF PROTOCOL CODES. No counts, no
+   profiles, no dates. The ranking is the product; the numbers behind it are
+   nobody's business and are not returned.
+
+   k-anonymity, the house rule from NR-1 reporting, applies here too. A
+   protocol needs FIVE distinct listeners before it can be named. On a
+   small or young install that means the shelf is short or empty, which is the
+   right failure: with three users and no threshold, "most listened" is a
+   readout of what one identifiable person has been playing.
+
+   Ranked by distinct listeners first and plays second, so one enthusiast
+   cannot push a session to the top of a shelf the whole library sees.
+
+   Ninety days, not all time: a shelf that cannot change is not a chart.
+   =========================================================================== */
+create or replace function top_sessions(p_limit int default 10)
+  returns table (protocol_code text)
+  language sql stable security definer set search_path = public as $$
+  select s.protocol_code
+    from sessions s
+   where s.kind = 'b2c'
+     and s.completed
+     and s.b2c_profile_id is not null
+     and s.ended_at is not null
+     and s.ended_at >= now() - interval '90 days'
+   group by s.protocol_code
+  having count(distinct s.b2c_profile_id) >= 5
+   order by count(distinct s.b2c_profile_id) desc, count(*) desc, s.protocol_code
+   limit greatest(1, least(coalesce(p_limit, 10), 50))
+$$;
+
+-- Signed-in readers only. `anon` must not have it: the shelf is for people
+-- using the app, not for anyone holding the public key.
+revoke execute on function top_sessions(int) from public, anon;
+grant execute on function top_sessions(int) to authenticated;
+
 -- PostgREST schema-cache reload. Supabase's API layer caches the table schema;
 -- after the ALTERs above (protocols.plain, asset_meta) a stale cache yields
 -- "Could not find the 'plain' column of 'protocols' in the schema cache" on

@@ -3,6 +3,8 @@
    base dictionaries, so a key here wins over the same key elsewhere. */
 
 export const IT_SELFUSE_EXTRA: Record<string, string> = {
+  'Top 10 most listened': 'I 10 più ascoltati',
+
   'Free': 'Gratis',
 
   'Listen again': 'Ascolta di nuovo',
@@ -172,6 +174,8 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
+  'Top 10 most listened': 'Top 10 mais escutados',
+
   'Free': 'Grátis',
 
   'Listen again': 'Ouvir de novo',

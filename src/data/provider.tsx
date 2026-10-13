@@ -178,6 +178,15 @@ export interface DataProvider {
   listExploreRails(): Promise<ExploreRail[]>
   /** Replace the whole set: what the editor holds IS the shelf. */
   saveExploreRails(rails: ExploreRail[]): Promise<void>
+  /**
+   * The most-listened protocol CODES, ranked, newest 90 days.
+   *
+   * Codes only — no counts and no profiles leave the database, and a
+   * protocol has to clear a five-listener floor before it is named at all
+   * (`top_sessions` in supabase/setup.sql). An empty list is the normal
+   * answer on a young install and means "no shelf", not "failed".
+   */
+  topSessions(limit?: number): Promise<string[]>
 
   // --- Admin: companies (tenants) ---
   listCompanies(): Promise<Company[]>
@@ -350,6 +359,7 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
           ...p,
           listProtocols: () => live.listProtocols(),
           listExploreRails: () => live.listExploreRails(),
+          topSessions: (n?: number) => live.topSessions(n),
           // partner offers are catalogue too: the Partner tab shows the real ones
           listPartnerProducts: () => live.listPartnerProducts(),
         } : p))

@@ -1044,6 +1044,15 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
 
     // --- The Self Use home rails ---
+    async topSessions(limit = 10): Promise<string[]> {
+      const { data, error } = await sb.rpc('top_sessions', { p_limit: limit })
+      /* A missing function (the migration has not been run) or a refusal is
+         not an error worth surfacing: the shelf simply does not appear. */
+      if (error) return []
+      return ((data ?? []) as { protocol_code: string }[])
+        .map((r) => r.protocol_code)
+        .filter((c): c is string => !!c)
+    },
     async listExploreRails(): Promise<ExploreRail[]> {
       /* A database that has not run the migration has no table, and that is
          not an error here: no rails means the app's built-in shelf. */
