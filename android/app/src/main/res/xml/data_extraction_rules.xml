@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splits what `allowBackup` used to cover into two questions:
+  what Google's cloud backup may take, and what a device-to-device transfer
+  may carry. Both are answered no, for the same reason `allowBackup` is
+  false: this app's webview storage holds the Supabase session token, the
+  recorded consents and the addressed-as answer. None of that should land in
+  a cloud backup or ride to a new handset outside the account it belongs to.
+
+  Nothing is lost that matters. The account lives on the server; a new device
+  signs in and gets it back.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>
