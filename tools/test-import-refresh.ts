@@ -20,7 +20,7 @@
    ============================================================================ */
 
 import { entryForPublish, planPlainImport } from '../src/admin/publishPlain'
-import { plainFor, studioFor, type CatalogProtocol } from '../src/data/catalog'
+import { plainFor, studioFor, studioStale, type CatalogProtocol } from '../src/data/catalog'
 import type { StudioProject } from '../src/compose/types'
 import type { PlainClip, PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
 
@@ -123,12 +123,25 @@ assert(
   plainFor(reimported, 24)?.versions[0].clips.find((c) => c.clipId === 'S1')?.ambiente === 'eco-qui-ora-v2',
   'including the renamed file',
 )
-/* The bug. The session was built from the clips that have just been replaced,
-   and `studioFor` prefers it over the sheet, so the Studio reopened on the old
-   configuration and no amount of re-importing could shift it. */
+/* The original bug: the session was built from clips that have just been
+   replaced, and `studioFor` prefers it over the sheet, so the Studio reopened
+   on the old configuration and no amount of re-importing could shift it.
+
+   The session is NOT deleted — deleting it was the first fix and it cost four
+   protocols their rack work. It is marked stale by comparing the import stamp
+   against the session's own savedAt, and the Studio reads the sheet instead
+   while the session stays in the row. */
 assert(
-  !studioFor(reimported, 24),
-  'the Studio session built from the REPLACED timeline is dropped, so the Studio reopens on the new sheet',
+  studioStale(reimported, 24),
+  'the session saved before the re-import is recognised as stale',
+)
+assert(
+  studioFor(reimported, 24) === oldSession,
+  'and is KEPT, not thrown away — the rack work is still recoverable',
+)
+assert(
+  !studioStale(reimported, 6),
+  'the untouched 6-minute session is not stale',
 )
 /* …and the rule that matters more: one time signature never disturbs another. */
 assert(
@@ -148,8 +161,8 @@ const textImported = entryForPublish({
   existing: published, selected: 24, mode: 'text', now: T + 2000,
 })
 assert(
-  studioFor(textImported, 24) === oldSession,
-  'a texts-only import keeps the Studio session — translations cost no Studio work',
+  studioFor(textImported, 24) === oldSession && !studioStale(textImported, 24),
+  'a texts-only import leaves the Studio session alone and does not mark it stale',
 )
 
 console.log(`\n${pass} assertions passed.`)

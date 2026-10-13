@@ -415,6 +415,11 @@ alter table protocols  add column if not exists library jsonb;
 -- keyed "6" / "12" / "24"; `plain` and `studio` stay as the last-written mirror
 -- so a client from before this change still finds something to open.
 alter table protocols  add column if not exists plain_by_duration jsonb;
+-- When each duration's timeline was last replaced by a full import, so a
+-- Studio session saved from the clips it replaced can be recognised as stale
+-- WITHOUT being deleted. The delete came first and destroyed rack work on
+-- four protocols; this is what replaced it.
+alter table protocols  add column if not exists plain_imported_at jsonb;
 alter table protocols  add column if not exists studio_by_duration jsonb;
 
 -- NAMING. `title` is the CLINICAL name (therapist- and admin-facing, it names a

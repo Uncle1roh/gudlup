@@ -144,6 +144,20 @@ export interface CatalogProtocol extends Protocol {
    * discard the 6-minute one.
    */
   studioByDuration?: Partial<Record<Duration, import('../compose/types').StudioProject>>
+  /**
+   * When each time signature's timeline was last REPLACED by a full import.
+   *
+   * This exists so that a re-import can win over a Studio session saved from
+   * the clips it replaced WITHOUT deleting that session. Deleting it was the
+   * first attempt and it was wrong: it threw away hours of rack work to fix
+   * a display problem, and it did so silently, at the one moment an operator
+   * is least able to notice — mid-correction.
+   *
+   * Compared against the session's own `savedAt`. Newer import wins, the
+   * Studio seeds from the sheet, and the old session stays in the row where
+   * it can be looked at, exported, or restored.
+   */
+  plainImportedAt?: Partial<Record<Duration, number>>
   /** Clinical pathway material or self-service library audio. Absent on rows
       written before the split — those are clinical. */
   audience?: Audience
@@ -346,6 +360,23 @@ export function mergedPlain(
     single session ONLY when it is plausibly that duration's — a session saved
     before the split carries no duration, so it is offered to the duration that
     matches its length and to no other. */
+/**
+ * Has this duration's timeline been replaced since its Studio session was
+ * saved? Then the session describes clips that no longer exist and the sheet
+ * is the truth — but the session itself is left alone.
+ */
+export function studioStale(
+  p: Pick<CatalogProtocol, 'studio' | 'studioByDuration' | 'plainImportedAt'> | undefined,
+  duration: Duration,
+): boolean {
+  const session = studioFor(p, duration)
+  if (!session) return false
+  const imported = p?.plainImportedAt?.[duration]
+  if (typeof imported !== 'number') return false
+  const savedAt = typeof session.savedAt === 'number' ? session.savedAt : 0
+  return imported > savedAt
+}
+
 export function studioFor(
   p: Pick<CatalogProtocol, 'studio' | 'studioByDuration'> | undefined,
   duration: Duration,

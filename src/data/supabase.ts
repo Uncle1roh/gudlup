@@ -205,6 +205,7 @@ function mapCatalog(r: any): CatalogProtocol {
     // per-time-signature material: publishing or editing one duration must not
     // disturb the others (see data/catalog.ts)
     plainByDuration: r.plain_by_duration ?? undefined,
+    plainImportedAt: r.plain_imported_at ?? undefined,
     assetMap: r.asset_map ?? undefined,
     studio: r.studio ?? undefined,
     studioByDuration: r.studio_by_duration ?? undefined,
@@ -918,6 +919,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         datasheet: p.datasheet ?? null,
         plain: p.plain ?? null,
         plain_by_duration: p.plainByDuration ?? null,
+        plain_imported_at: p.plainImportedAt ?? null,
         asset_map: p.assetMap ?? null,
         studio: p.studio ?? null,
         studio_by_duration: p.studioByDuration ?? null,

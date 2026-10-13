@@ -27,6 +27,7 @@ import {
   plainDurations,
   plainFor,
   studioFor,
+  studioStale,
   timelinesByDuration,
   type CatalogProtocol,
   type DurationState,
@@ -499,7 +500,10 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
          session does not have yet — a session saved before the Portuguese
          column was imported gets its Portuguese from here. */
       const scripts = buildScriptIndex(slot ?? { ...t, versions: [version] })
-      const saved = dur ? studioFor(row, dur) : undefined
+      /* A session saved BEFORE the sheet it belongs to was last imported
+         describes clips that no longer exist. The sheet wins; the session is
+         left in the row rather than thrown away. */
+      const saved = dur && !studioStale(row, dur) ? studioFor(row, dur) : undefined
       if (saved) {
         setStudioProject(saved, attach, '#admin', { scripts })
         window.location.hash = '#studio'

@@ -19,7 +19,6 @@ import {
   catalogDuration,
   mergeVersions,
   narrowTimeline,
-  studioFor,
   timelinesByDuration,
   type CatalogProtocol,
 } from '../data/catalog'
@@ -133,34 +132,32 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
   const before = timelinesByDuration(existing)
   const plainByDuration = { ...before, ...incoming }
 
-  /* A FULL import replaces a duration's clips, which makes any Studio session
-     saved from the clips it replaced a liar: `studioFor()` prefers the saved
-     session over the sheet, so the Studio reopens on material that no longer
-     exists and re-importing appears to do nothing at all. That is exactly the
-     dead end a PO hit on CALM 1.4 Deep — the only escape was deleting the
-     whole time signature, because that is the one path that also drops the
-     session.
+  /* A FULL import replaces a duration's clips, which makes any Studio
+     session saved from the clips it replaced describe material that no
+     longer exists — `studioFor()` prefers the saved session over the sheet,
+     so the Studio reopened on the old configuration and re-importing
+     appeared to do nothing at all.
 
-     Dropped only where a timeline is genuinely being REPLACED, and only for
-     the durations this import writes:
+     The first fix for that DELETED the session. That was wrong, and wrong in
+     the worst direction: it destroyed hours of rack work to repair a display
+     problem, silently, at the exact moment an operator is mid-correction and
+     least able to notice. Four protocols lost sessions to it before the
+     pattern showed up in a database triage.
 
-       · a duration with no stored timeline had its session built by hand
-         (the audio-only path), so there is nothing to contradict it — keep it;
-       · "solo i testi" changes words, never structure, so the session still
-         describes the right clips — keep it. This is the translation and M/F
-         path, and it must never cost anyone their Studio work;
-       · every other time signature is untouched, which is the standing rule.
+     So nothing is deleted. The import stamps WHEN it replaced each duration,
+     and the Studio compares that against the session's own `savedAt`: a
+     session older than the sheet it belongs to is bypassed in favour of the
+     sheet, and stays in the row, recoverable.
 
-     The legacy single-session mirror has to go the same way or it walks
-     straight back in: `studioFor` falls back to it whenever its length points
-     at the duration we just cleared. */
-  const studioByDuration = { ...(existing?.studioByDuration ?? {}) }
-  let studio = existing?.studio
+     Stamped only where a timeline is genuinely being REPLACED, only for the
+     durations this import writes, and never for "solo i testi" — that
+     changes words, not structure, so the session still describes the right
+     clips. Other time signatures are untouched, as the standing rule
+     requires. */
+  const plainImportedAt = { ...(existing?.plainImportedAt ?? {}) }
   if (mode === 'import') {
     for (const d of durations) {
-      if (!before[d]) continue
-      delete studioByDuration[d]
-      if (studio && studioFor({ studio }, d) === studio) studio = undefined
+      if (before[d]) plainImportedAt[d] = now
     }
   }
 
@@ -193,8 +190,7 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
        home of a duration written before per-duration storage existed. */
     plain: durations.length ? (incoming[selected ?? durations[0]] ?? incoming[durations[0]]) : existing?.plain,
     plainByDuration,
-    studio,
-    studioByDuration,
+    plainImportedAt,
     assetMap: existing?.assetMap,
     updatedAt: now,
   }
