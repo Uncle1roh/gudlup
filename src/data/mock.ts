@@ -528,6 +528,10 @@ export function createMockProvider(): DataProvider {
 
     // --- Protocol catalog ---
     listProtocols: () => delay(catalog.map((p) => ({ ...p }))),
+    findProtocol: async (code) => {
+      const one = catalog.find((p) => p.code === code)
+      return delay(one ? { ...one } : undefined)
+    },
     saveProtocol: async (p) => {
       const i = catalog.findIndex((x) => x.code === p.code)
       const next = { ...p, updatedAt: Date.now() }

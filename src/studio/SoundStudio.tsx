@@ -529,7 +529,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       been published. The rule lives in `publishPlain.ts` so it can be asserted
       — in particular that a protocol born from a Studio save is a draft. */
   async function ensureCatalogProtocol(target: StudioAttachTarget): Promise<CatalogProtocol> {
-    const existing = (await dp.listProtocols()).find((p) => p.code === target.code)
+    const existing = await dp.findProtocol(target.code)
     return entryForStudioSave({
       code: target.code,
       duration: target.duration,

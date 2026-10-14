@@ -199,11 +199,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
        Scheda, no publish state, and no way to remove the Excel. */
     if (!protocolCode) return
     let alive = true
-    void dp.listProtocols()
-      .then((ps) => {
-        const existing = ps.find((p) => p.code === protocolCode)
-        if (alive && existing) setPublished(existing)
-      })
+    void dp.findProtocol(protocolCode)
+      .then((existing) => { if (alive && existing) setPublished(existing) })
       .catch(() => undefined)
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -463,7 +460,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   async function attachTimeline(): Promise<CatalogProtocol | null> {
     if (!t.code) return null
     try {
-      const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
+      const existing = await dp.findProtocol(t.code).catch(() => undefined)
       /* 'keep': the screen's timeline is what the catalog already holds, so
          this only ever FILLS a duration with nothing stored — it never writes
          the screen's merged copy over a stored one. */
@@ -533,7 +530,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
    * already has, and each duration's timeline lands in its own slot.
    */
   async function publishToCatalog(): Promise<CatalogProtocol> {
-    const existing = (await dp.listProtocols().catch(() => [] as CatalogProtocol[])).find((p) => p.code === t.code)
+    const existing = t.code ? await dp.findProtocol(t.code).catch(() => undefined) : undefined
     /* The merge rule lives in `publishPlain.ts` so it can be executed against
        assertions rather than argued about — including the one that matters
        here: every duration written can be read back with `plainFor`, which is

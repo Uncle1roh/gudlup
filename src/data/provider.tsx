@@ -140,8 +140,15 @@ export interface DataProvider {
   deactivateTherapistCode(code: string): Promise<void>
 
   // --- Protocol catalog (shared, admin-managed) ---
-  /** Every protocol in the catalog (enabled + disabled). */
+  /** Every protocol in the catalog (enabled + disabled).
+
+      This is an EXPENSIVE read: a protocol carries its timelines and its
+      Studio sessions for three time signatures and four variants, so the
+      whole catalog is megabytes of jsonb. Use it for a list; never to look
+      one protocol up by code — that is what `findProtocol` is for. */
   listProtocols(): Promise<CatalogProtocol[]>
+  /** ONE protocol by code, or undefined. */
+  findProtocol(code: string): Promise<CatalogProtocol | undefined>
   /** Upsert a protocol by code (used by admin edits and the import pipeline). */
   saveProtocol(p: CatalogProtocol): Promise<void>
   setProtocolEnabled(code: string, enabled: boolean): Promise<void>
@@ -358,6 +365,7 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
         setProvider((p) => (p ? {
           ...p,
           listProtocols: () => live.listProtocols(),
+          findProtocol: (code: string) => live.findProtocol(code),
           listExploreRails: () => live.listExploreRails(),
           topSessions: (n?: number) => live.topSessions(n),
           // partner offers are catalogue too: the Partner tab shows the real ones

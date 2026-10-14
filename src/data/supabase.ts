@@ -910,6 +910,19 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
       return (data ?? []).map(mapCatalog)
     },
+    /* ONE row, by its primary key.
+
+       Every save used to confirm itself by reading the WHOLE catalog back and
+       scanning it for the code it had just written — every timeline, every
+       Studio session, every variant of every other protocol, to look at one
+       row. As the catalogue filled up that read crossed the database's
+       statement timeout, and an import that had SAVED reported "salvato, ma
+       la rilettura del catalogo e fallita". */
+    async findProtocol(code: string): Promise<CatalogProtocol | undefined> {
+      const { data, error } = await sb.from('protocols').select('*').eq('code', code).maybeSingle()
+      if (error) throw error
+      return data ? mapCatalog(data) : undefined
+    },
     async saveProtocol(p: CatalogProtocol): Promise<void> {
       const row = {
         code: p.code, family: p.family, title: p.title, blurb: p.blurb,

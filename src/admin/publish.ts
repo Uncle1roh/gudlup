@@ -32,6 +32,9 @@ export function explainSaveFailure(msg: string): string {
   if (/schema cache|column .* does not exist|PGRST204|42703/i.test(msg)) {
     return 'Lo schema del database è più vecchio dell’app — esegui di nuovo supabase/setup.sql, poi riprova.'
   }
+  if (/statement timeout|57014/i.test(msg)) {
+    return 'Il database ha impiegato troppo tempo a rispondere. Il catalogo è grande: riprova fra qualche secondo — il materiale già salvato non è stato toccato.'
+  }
   return msg
 }
 
@@ -51,9 +54,9 @@ export async function deleteProtocolVerified(dp: DataProvider, code: string): Pr
   }
   let still: CatalogProtocol | undefined
   try {
-    still = (await dp.listProtocols()).find((p) => p.code === code)
+    still = await dp.findProtocol(code)
   } catch (e) {
-    throw new Error(`Eliminato, ma la rilettura del catalogo è fallita: ${(e as Error).message}`)
+    throw new Error(`Eliminato, ma la rilettura del catalogo è fallita: ${explainSaveFailure((e as Error).message)}`)
   }
   if (still) {
     throw new Error(`${code} risulta ancora nel catalogo dopo l’eliminazione. ${explainSaveFailure('row-level security')}`)
@@ -73,9 +76,15 @@ export async function saveProtocolVerified(dp: DataProvider, proto: CatalogProto
   }
   let stored: CatalogProtocol | undefined
   try {
-    stored = (await dp.listProtocols()).find((p) => p.code === proto.code)
+    stored = await dp.findProtocol(proto.code)
   } catch (e) {
-    throw new Error(`Salvato, ma la rilettura del catalogo è fallita: ${(e as Error).message}`)
+    /* The WRITE landed; only the confirmation did not. Say so plainly: this
+       message used to read like the save had failed, and the reflex is to
+       press Publish again. */
+    throw new Error(
+      `Salvato — ma la rilettura di ${proto.code} per confermarlo non è riuscita: ` +
+      `${explainSaveFailure((e as Error).message)} Riapri il protocollo per vedere com’è stato scritto.`,
+    )
   }
   if (!stored) {
     throw new Error(

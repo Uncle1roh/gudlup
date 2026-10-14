@@ -70,8 +70,7 @@ export async function attachRenderedAudio(
      without a migration. */
   to: Addressee = 'm',
 ): Promise<AttachResult> {
-  const protocols = await dp.listProtocols()
-  const proto = protocols.find((p) => p.code === code)
+  const proto = await dp.findProtocol(code)
   if (!proto) throw new Error(`Il protocollo ${code} non è nel catalogo.`)
   if (!proto.versions.some((v) => v.duration === duration)) {
     throw new Error(`${code} non ha una versione da ${duration} minuti a cui collegarlo.`)

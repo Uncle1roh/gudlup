@@ -67,8 +67,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
 
   // pick up an existing asset mapping if this code was already mapped
   useEffect(() => {
-    void dp.listProtocols().then((ps) => {
-      const existing = ps.find((p) => p.code === ds.code)
+    void dp.findProtocol(ds.code).then((existing) => {
       if (existing?.assetMap) setAssetMap(existing.assetMap)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,7 +97,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
       // never clobber a mapping the Asset Library already saved for this code
       let mapToSave = assetMap
       try {
-        const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+        const existing = await dp.findProtocol(ds.code)
         if (!mapToSave && existing?.assetMap) { mapToSave = existing.assetMap; setAssetMap(existing.assetMap) }
       } catch { /* fall through with the in-memory value */ }
       const proto: CatalogProtocol = {
@@ -141,7 +140,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
       // comes back here — the mount-time snapshot would render synth-only.
       let freshMap = assetMap
       try {
-        const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+        const existing = await dp.findProtocol(ds.code)
         if (existing?.assetMap) { freshMap = existing.assetMap; setAssetMap(existing.assetMap) }
       } catch { /* keep the in-memory map */ }
       const result = await renderDatasheetWav(
@@ -186,7 +185,7 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
     // freshest mapping → real sample clips in the Studio
     let freshMap = assetMap
     try {
-      const existing = (await dp.listProtocols()).find((p) => p.code === ds.code)
+      const existing = await dp.findProtocol(ds.code)
       if (existing?.assetMap) { freshMap = existing.assetMap; setAssetMap(existing.assetMap) }
     } catch { /* keep in-memory */ }
     const seed = datasheetToStudioTracks(ds, renderDur, freshMap)
