@@ -965,7 +965,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                 onSave={() => void saveCard()}
               />
             ) : (
-              <p className="b2b-sub">Nome pubblico e tag si impostano dopo la prima pubblicazione.</p>
+              <p className="b2b-sub">Nome, copertina e tag si impostano dopo la prima pubblicazione.</p>
             )}
             <VoiceEnginePanel onChanged={() => setTtsTick((n) => n + 1)} />
             {nonErrors.length > 0 && (

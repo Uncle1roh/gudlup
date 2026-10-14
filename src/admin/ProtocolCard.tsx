@@ -1,71 +1,63 @@
 /* ============================================================================
-   Good Loop — the PUBLIC CARD of a clinical protocol (admin)
+   Good Loop — the DETAILS board of a protocol (admin)
 
-   A clinical protocol has two names and they do different jobs:
+   One protocol, one name. The board used to ask for two — a CLINICAL title
+   for the therapist and the catalogue row, and a PUBLIC name for the person
+   — in three languages each, which meant six fields before anything else and
+   two names that could quietly disagree about what the same session is
+   called. The POs asked for the single name they actually use, so the name
+   written here is BOTH: `applyCardDraft` mirrors it onto `title`, and every
+   reader of either field keeps working unchanged.
 
-     · the CLINICAL title ("Calm and Inner Security") names a therapeutic
-       intent. It is the therapist's and the admin's name for the material and
-       it is what appears on the catalog row, in the plan and in the clinical
-       record. It is editable here so a catalogue imported from several
-       workbooks can be brought to one house style without re-importing —
-       renaming changes the LABEL only: the code, the family, the versions,
-       the timelines, the Studio sessions and the rendered audio are all
-       carried through untouched.
+   What is left on the board, and nothing else:
 
-     · the PUBLIC title ("Un respiro prima di dormire") is what the PERSON
-       reads in the player, on the home card and in their history. It names a
-       moment, never a condition, a diagnosis or a treatment — the same
-       register the library already uses (see data/library.ts).
+     · the CODE, which identifies the material everywhere ("GL-ANX 1.1")
+     · the NAME and the one-line description, per language
+     · the COVER
+     · the TAGS, as free words
+     · CLINICO / NON CLINICO
 
-   Writing a public title changes the LABEL and nothing else: the code, the
-   family, the pathway, the audio and the clinical record are untouched, so a
-   protocol can be offered without clinical vocabulary while remaining exactly
-   the same material. Leaving it empty keeps the clinical title on screen,
-   which is what every entry did before this card existed.
-
-   Tags are the editorial layer on top: what the material is for, when it is
-   used, how it is delivered. They filter lists; they never route a session.
+   What is gone, deliberately: the claims gate, the lexicon linter and the
+   tier rule. They sat between the console and publishing, and a vocabulary
+   list cannot tell a claim from an ordinary Italian word — "recupero" is in
+   Lexicon_Avoid as a care-pathway term and is also simply what a rest
+   session is called, so the gate refused work that was never a claim. Naming
+   stays an editorial judgement made by the people writing it. The stored
+   `tier` and `claimsGate` columns are untouched: nothing written before this
+   is lost, it is just no longer a gate.
    ============================================================================ */
 
 import { useRef, useState } from 'react'
-import {
-  MAX_TAGS,
-  PROTOCOL_TAGS,
-  TAG_GROUPS,
-  normalizeTags,
-  tagLabel,
-  tagSlug,
-  tagsOf,
-  type TagGroup,
-} from '../data/tags'
+import { MAX_TAGS, normalizeTags, tagLabel, tagSlug, tagsOf } from '../data/tags'
 import type { CatalogProtocol } from '../data/catalog'
 import { nameLocales, type ProtocolI18n, type ProtocolText, type TextLocale } from '../types/domain'
 
 import { uploadProtocolCover } from './assets'
-import { lintFields } from '../legal/lexicon'
-import { emptyGate, gateComplete, GATE_QUESTIONS, TIERS, type ClaimsGate, type ContentTier } from '../legal/claims'
+import { emptyGate, TIERS, tierChoice, type ClaimsGate, type ContentTier } from '../legal/claims'
 
 export interface ProtocolCardDraft {
   code: string
-  /** Clinical title. Editable; never allowed to become empty. */
+  /** The one name. Stored on `title` as well, so the catalogue row, the plan
+      and the clinical record read the same words the person reads. */
   title: string
   publicTitle: string
   publicBlurb: string
-  /** The same three names in the other interface languages. */
+  /** The same name and description in the other interface languages. */
   i18n: ProtocolI18n
   tags: string[]
   /** A real cover image. Empty = the generated artwork stands. */
   coverUrl: string
-  /** The application tier and the four-question sign-off (ADM-02/03). */
+  /** Clinico / Non clinico. Editorial only — it routes nothing. */
   tier: ContentTier
+  /** Carried through untouched; no longer edited here. */
   claimsGate: ClaimsGate
 }
 
 /* ---- the languages this card can write ---------------------------------
 
-   The base fields above are written in whatever language the catalogue is
-   authored in; these are the overlays a person reading the app in another one
-   gets. English is on the list because the app offers it and a PO writing in
+   The base field is written in whatever language the catalogue is authored
+   in; these are the overlays a person reading the app in another one gets.
+   English is on the list because the app offers it and a PO writing in
    Italian still has to be able to say what an English reader sees. */
 export const CARD_LOCALES: { id: TextLocale; label: string }[] = [
   { id: 'it', label: 'Italiano' },
@@ -76,84 +68,101 @@ export const CARD_LOCALES: { id: TextLocale; label: string }[] = [
 /**
  * The card as the editor shows it.
  *
- * The ITALIAN public name is the base column — the catalogue is authored in
- * Italian and the base is what every other language falls back to. A row can
- * also carry an `i18n.it` overlay written by the previous editor; its public
- * name and blurb are lifted into the base here (and the overlay's copy dropped
- * on save), so the Italian row of the editor is ONE field, not two that could
- * disagree about what an Italian reader sees.
+ * The ITALIAN name is the base column — the catalogue is authored in Italian
+ * and the base is what every other language falls back to. A row written
+ * before the board was simplified can carry a public name, a clinical title,
+ * or both; the public one wins and the clinical one is the fallback, so a
+ * protocol that only ever had a clinical title arrives here named rather than
+ * blank. The first save makes the two equal.
  */
 export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
-  const i18n: ProtocolI18n = { ...(p.i18n ?? {}) }
-  const it = p.i18n?.it
-  if (it) {
-    const rest: ProtocolText = {}
-    if (it.title) rest.title = it.title
-    if (it.blurb) rest.blurb = it.blurb
-    i18n.it = rest
+  const i18n: ProtocolI18n = {}
+  for (const { id } of CARD_LOCALES) {
+    const one = p.i18n?.[id]
+    if (!one) continue
+    const kept: ProtocolText = {}
+    /* Italian is the BASE, not an overlay: its name is lifted into the base
+       row below. Leaving a copy here would be two fields that can disagree
+       about what an Italian reader sees, and the overlay wins. */
+    if (id !== 'it') {
+      const name = one.publicTitle?.trim() || one.title?.trim()
+      if (name) kept.publicTitle = name
+      const blurb = one.publicBlurb?.trim()
+      if (blurb) kept.publicBlurb = blurb
+    }
+    /* The clinical blurb is not edited here; carry it through. */
+    const clinical = one.blurb?.trim()
+    if (clinical) kept.blurb = clinical
+    if (Object.keys(kept).length) i18n[id] = kept
   }
+  const it = p.i18n?.it
   return {
     code: p.code,
     title: p.title,
-    publicTitle: it?.publicTitle?.trim() || p.publicTitle || '',
+    publicTitle: it?.publicTitle?.trim() || p.publicTitle || p.title || '',
     publicBlurb: it?.publicBlurb?.trim() || p.publicBlurb || '',
     i18n,
     coverUrl: p.coverUrl ?? '',
     tags: tagsOf(p),
-    tier: p.tier ?? 'green',
+    tier: tierChoice(p.tier),
     claimsGate: p.claimsGate ?? emptyGate(),
   }
 }
 
 /** Fold a card onto a catalog entry. Everything the import and the Studio own
     — the timelines, the sessions, the versions, the rendered audio — is
-    carried through untouched: this editor owns naming and tags, nothing else. */
+    carried through untouched: this editor owns naming, the cover and tags. */
 export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtocol): CatalogProtocol {
   const publicTitle = draft.publicTitle.trim()
   const publicBlurb = draft.publicBlurb.trim()
-  const title = draft.title.trim()
   return {
     ...existing,
-    /* An empty clinical title would leave the catalog row, the plan and the
-       clinical record showing nothing but a code, so a blank keeps the
-       previous one rather than clearing it. The editor also refuses to save
-       an empty field, so this is the second line of defence, not the first. */
-    title: title || existing.title,
+    /* One name, written to both fields. A blank keeps the previous title
+       rather than leaving the catalog row showing nothing but a code — the
+       editor also refuses to save an empty name, so this is the second line
+       of defence, not the first. */
+    title: publicTitle || existing.title,
     publicTitle: publicTitle || undefined,
     publicBlurb: publicBlurb || undefined,
     i18n: cleanI18n(draft.i18n),
     coverUrl: draft.coverUrl.trim() || undefined,
     tags: normalizeTags(draft.tags),
-    tier: draft.tier,
+    tier: tierChoice(draft.tier),
     claimsGate: draft.claimsGate,
     updatedAt: Date.now(),
   }
 }
 
 /** Drop blank fields and then blank languages, so a language the PO opened
-    and left empty is not stored as one that has a translation. */
+    and left empty is not stored as one that has a translation. The name is
+    written to `title` as well as `publicTitle` for the same reason the base
+    is: a therapist reading the app in Portuguese sees the Portuguese name. */
 export function cleanI18n(src: ProtocolI18n): ProtocolI18n | undefined {
   const out: ProtocolI18n = {}
   for (const { id } of CARD_LOCALES) {
     const one = src[id]
     if (!one) continue
     const kept: ProtocolText = {}
-    for (const key of ['title', 'publicTitle', 'publicBlurb'] as const) {
-      const v = one[key]?.trim()
-      if (v) kept[key] = v
+    if (id !== 'it') {
+      const name = one.publicTitle?.trim()
+      /* The name goes on `title` too: `protocolTitle` reads the overlay
+         first, so a stale clinical title here is what a therapist reading
+         the app in this language would see instead of the name. */
+      if (name) { kept.publicTitle = name; kept.title = name }
+      const blurb = one.publicBlurb?.trim()
+      if (blurb) kept.publicBlurb = blurb
     }
-    // a clinical blurb is not edited here; carry through whatever was stored
-    const blurb = one.blurb?.trim()
-    if (blurb) kept.blurb = blurb
+    const clinical = one.blurb?.trim()
+    if (clinical) kept.blurb = clinical
     if (Object.keys(kept).length) out[id] = kept
   }
   return Object.keys(out).length ? out : undefined
 }
 
 /**
- * The public name a reader of `loc` actually sees for this draft — the same
- * chain `patientTitle` walks (the language, English → Portuguese, the Italian
- * base, the clinical title), so the editor's "mancante" line tells the truth.
+ * The name a reader of `loc` actually sees for this draft — the same chain
+ * `patientTitle` walks (the language, English → Portuguese, the Italian base,
+ * the stored title), so the editor's "mancante" line tells the truth.
  */
 export function shownName(draft: Pick<ProtocolCardDraft, 'title' | 'publicTitle' | 'i18n'>, loc: TextLocale): string {
   for (const l of nameLocales(loc)) {
@@ -165,23 +174,8 @@ export function shownName(draft: Pick<ProtocolCardDraft, 'title' | 'publicTitle'
 
 /** Whether this draft can be saved, and why not. */
 export function cardDraftError(draft: ProtocolCardDraft): string | null {
-  if (!draft.title.trim()) return 'Il titolo clinico non può restare vuoto.'
+  if (!draft.publicTitle.trim()) return 'Serve un nome — è quello che leggono la persona e il terapeuta.'
   return null
-}
-
-/** What the lexicon finds in the fields a person reads, as they are typed —
-    shown live so a prohibited word is caught while it is being written, not
-    when the row is enabled (ADM-01). */
-export function cardLexiconHits(draft: ProtocolCardDraft) {
-  return lintFields({
-    'nome pubblico': draft.publicTitle,
-    'descrizione pubblica': draft.publicBlurb,
-    tag: draft.tags.map((id) => PROTOCOL_TAGS.find((t) => t.id === id)?.label ?? id),
-    ...Object.fromEntries(Object.entries(draft.i18n).flatMap(([loc, txt]) => [
-      [`nome pubblico (${loc})`, txt?.publicTitle],
-      [`descrizione pubblica (${loc})`, txt?.publicBlurb],
-    ])),
-  })
 }
 
 interface Props {
@@ -189,17 +183,15 @@ interface Props {
   busy?: boolean
   /** Rendered inline inside the workscreen's Details rather than as a card. */
   inline?: boolean
+  /** A protocol being created: the code is still being typed. */
+  codeEditable?: boolean
   onChange: (d: ProtocolCardDraft) => void
   onSave: () => void
   onCancel?: () => void
 }
 
-export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCancel }: Props) {
+export function ProtocolCardEditor({ draft, busy, inline, codeEditable, onChange, onSave, onCancel }: Props) {
   const [custom, setCustom] = useState('')
-  /* Which translation is open. Null = closed: a catalogue that only ever ships
-     in one language should not have to look at an empty second set of fields
-     every time somebody renames something. */
-  const [lang, setLang] = useState<TextLocale | null>(null)
   const [uploading, setUploading] = useState(false)
   const [coverErr, setCoverErr] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -233,18 +225,8 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
   const setText = (loc: TextLocale, key: keyof ProtocolText, value: string) =>
     set({ i18n: { ...draft.i18n, [loc]: { ...(draft.i18n[loc] ?? {}), [key]: value } } })
 
-  /** Languages whose clinical title is written — the chip says so, so a PO can
-      see at a glance which ones are without opening each. */
-  const written = (loc: TextLocale) => Boolean(draft.i18n[loc]?.title?.trim())
-
   const full = draft.tags.length >= MAX_TAGS
   const invalid = cardDraftError(draft)
-  const lexHits = cardLexiconHits(draft)
-
-  function toggle(id: string) {
-    if (draft.tags.includes(id)) set({ tags: draft.tags.filter((x) => x !== id) })
-    else if (!full) set({ tags: [...draft.tags, id] })
-  }
 
   function addCustom() {
     const id = tagSlug(custom)
@@ -253,42 +235,34 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
     set({ tags: [...draft.tags, id] })
   }
 
-  /** Tags the POs invented that are not in the curated vocabulary — shown
-      together so they stay visible (and removable) instead of disappearing. */
-  const extra = draft.tags.filter((id) => !PROTOCOL_TAGS.some((t) => t.id === id))
-
   const body = (
     <>
-      <p className="b2b-sub">
-        Il <b>titolo clinico</b> è il nome del materiale per te e per il terapeuta: sta sulla riga del catalogo,
-        nel percorso e nella cartella clinica. Il <b>nome pubblico</b> è quello che legge la persona: dice il
-        momento, non il disturbo. Lasciandolo vuoto si continua a mostrare il titolo clinico.
-      </p>
-
+      {/* ---- the code ----------------------------------------------------
+          Editable only while the protocol is being created: afterwards it is
+          the key the workbooks, the storage paths and the audio all use. */}
       <label className="pe-field">
-        <span className="pe-label">Titolo clinico <em>il nome per te e per il terapeuta</em></span>
+        <span className="pe-label">Codice <em>{codeEditable ? 'la forma è "GL-ANX 1.1"' : 'identifica il materiale ovunque'}</em></span>
         <input
-          className="b2b-input" value={draft.title} placeholder="es. Calma e sicurezza interiore"
-          onChange={(e) => set({ title: e.target.value })}
+          className="b2b-input adm-mono"
+          value={draft.code}
+          placeholder="GL-ANX 1.1"
+          autoFocus={codeEditable}
+          readOnly={!codeEditable}
+          aria-readonly={!codeEditable}
+          onChange={(e) => set({ code: e.target.value.toUpperCase() })}
         />
-        {invalid && <span className="pe-err">{invalid}</span>}
       </label>
 
-      <p className="b2b-sub">
-        Rinominare cambia solo l’etichetta: codice, famiglia, durate, timeline, sessioni dello Studio e audio
-        collegato restano esattamente com’erano.
-      </p>
-
-      {/* ---- the public name, per language ------------------------------
-          What a person reads is named in THEIR language: "Stress 1" is not one
-          string for everyone. All three languages are on screen at once — an
-          empty one says so, and says what that reader sees instead — because a
-          translation hidden behind a chip is a translation nobody notices is
-          missing. Italian is the base: the other two fall back to it, and
-          English falls back to Portuguese first (an English reader hears the
-          Portuguese session). */}
+      {/* ---- the name, per language --------------------------------------
+          ONE name, read by the person and by the therapist, in THEIR
+          language: "Stress 1" is not one string for everyone. All three are
+          on screen at once — an empty one says so, and says what that reader
+          sees instead — because a translation hidden behind a chip is a
+          translation nobody notices is missing. Italian is the base: the
+          other two fall back to it, and English falls back to Portuguese
+          first (an English reader hears the Portuguese session). */}
       <div className="pe-field">
-        <span className="pe-label">Nome e descrizione pubblici, per lingua <em>quello che legge la persona, nella lingua in cui usa l’app</em></span>
+        <span className="pe-label">Nome e descrizione, per lingua <em>quello che leggono la persona e il terapeuta, nella lingua in cui usano l’app</em></span>
         <div className="pe-names">
           {CARD_LOCALES.map((l) => {
             const isBase = l.id === 'it'
@@ -301,12 +275,12 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
                   {l.label}{isBase && <em> · predefinito</em>}
                 </span>
                 <input
-                  className="b2b-input" value={title} aria-label={`Nome pubblico — ${l.label}`}
-                  placeholder={isBase ? 'es. Un respiro prima di dormire' : `Nome pubblico in ${l.label}`}
+                  className="b2b-input" value={title} aria-label={`Nome — ${l.label}`}
+                  placeholder={isBase ? 'es. Un respiro prima di dormire' : `Nome in ${l.label}`}
                   onChange={(e) => (isBase ? set({ publicTitle: e.target.value }) : setText(l.id, 'publicTitle', e.target.value))}
                 />
                 <input
-                  className="b2b-input" value={blurb} aria-label={`Descrizione pubblica — ${l.label}`}
+                  className="b2b-input" value={blurb} aria-label={`Descrizione — ${l.label}`}
                   placeholder={isBase ? 'es. Da far partire già a letto, luci spente.' : `Una riga in ${l.label}`}
                   onChange={(e) => (isBase ? set({ publicBlurb: e.target.value }) : setText(l.id, 'publicBlurb', e.target.value))}
                 />
@@ -319,100 +293,10 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
             )
           })}
         </div>
-      </div>
-
-      {/* ---- the clinical title in the other languages ---------------------
-          The therapist's name for the material, for a clinician who reads the
-          app in another language. Each field is an overlay on the base: leave
-          it empty and that language shows the title above. */}
-      <div className="pe-field">
-        <span className="pe-label">Titolo clinico in altre lingue <em>per il terapeuta che usa l’app in un’altra lingua</em></span>
-        <div className="pe-langs">
-          {CARD_LOCALES.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              className={`pe-lang${lang === l.id ? ' is-on' : ''}${written(l.id) ? ' is-written' : ''}`}
-              aria-pressed={lang === l.id}
-              onClick={() => setLang(lang === l.id ? null : l.id)}
-            >
-              {l.label}{written(l.id) ? ' ·' : ''}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {lang && (() => {
-        const one = draft.i18n[lang] ?? {}
-        return (
-          <div className="pe-trans">
-            <label className="pe-field">
-              <span className="pe-label">Titolo clinico</span>
-              <input
-                className="b2b-input" value={one.title ?? ''} placeholder={draft.title || 'come sopra'}
-                onChange={(e) => setText(lang, 'title', e.target.value)}
-              />
-            </label>
-            <p className="b2b-sub">
-              Vuoto = si mostra il testo qui sopra. Tradurre non tocca codice, famiglia, durate, audio né cartella
-              clinica: cambia solo l’etichetta, come il nome pubblico.
-            </p>
-          </div>
-        )
-      })()}
-
-      {/* ---- the lexicon, live ---------------------------------------------
-          A condition name in a public label is a claim about the person
-          (Lexicon_Avoid). Said here, while typing, in the language it was
-          typed in — not at publish time. */}
-      {lexHits.length > 0 && (
-        <div className="adm-issues adm-issues--err">
-          <b>Lessico non ammesso</b>
-          <ul>
-            {lexHits.map((h) => <li key={h.field}>{h.field}: {h.hits.map((x) => `“${x.term}”`).join(', ')}</li>)}
-          </ul>
-          <span className="pe-hint">Nomina il momento, non la condizione: “Venti minuti prima dell’imbarco”, non “Paura di volare”.</span>
-        </div>
-      )}
-
-      {/* ---- the tier and the four-question sign-off ---------------------
-          Recorded on the row (ADM-02, ADM-03). The row cannot be enabled
-          without every answer “no”, a name and a date; red never reaches the
-          self-guided library. */}
-      <div className="pe-field">
-        <span className="pe-label">Livello di applicazione <em>quanto la situazione è vicina a una diagnosi o a un percorso di cura</em></span>
-        <div className="pe-row">
-          {TIERS.map((tier) => (
-            <label key={tier.id} className="pe-consent">
-              <input type="radio" name="tier" checked={draft.tier === tier.id} onChange={() => set({ tier: tier.id })} />
-              <span><b>{tier.label}</b> — {tier.hint}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-      <div className="pe-field">
-        <span className="pe-label">Revisione delle affermazioni <em>le quattro domande; ogni “sì” significa riformulare, spostare ai professionisti o non pubblicare</em></span>
-        <div className="pe-consents">
-          {GATE_QUESTIONS.map((q) => (
-            <div key={q.id} className="pe-consent">
-              <span><b>{q.label}.</b> {q.text}</span>
-              <span className="pe-row">
-                <label><input type="radio" name={`gate-${q.id}`} checked={draft.claimsGate.answers[q.id] === 'no'} onChange={() => set({ claimsGate: { ...draft.claimsGate, answers: { ...draft.claimsGate.answers, [q.id]: 'no' } } })} /> No</label>
-                <label><input type="radio" name={`gate-${q.id}`} checked={draft.claimsGate.answers[q.id] === 'yes'} onChange={() => set({ claimsGate: { ...draft.claimsGate, answers: { ...draft.claimsGate.answers, [q.id]: 'yes' } } })} /> Sì</label>
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="pe-row">
-          <input className="b2b-input" placeholder="Approvato da (nome di chi ha l’autorità di fermare una pubblicazione)" value={draft.claimsGate.approvedBy}
-            onChange={(e) => set({ claimsGate: { ...draft.claimsGate, approvedBy: e.target.value, approvedAt: e.target.value.trim() ? (draft.claimsGate.approvedAt ?? Date.now()) : null } })} />
-          <input className="b2b-input" placeholder="Riferimento al fascicolo di sostegno, se si afferma un’efficienza" value={draft.claimsGate.substantiation ?? ''}
-            onChange={(e) => set({ claimsGate: { ...draft.claimsGate, substantiation: e.target.value } })} />
-        </div>
+        {invalid && <span className="pe-err">{invalid}</span>}
         <span className="pe-hint">
-          {gateComplete(draft.claimsGate)
-            ? `Firmata da ${draft.claimsGate.approvedBy} il ${new Date(draft.claimsGate.approvedAt ?? 0).toLocaleDateString('it-IT')}.`
-            : 'Non ancora firmata: la riga non può essere pubblicata.'}
+          Rinominare cambia solo l’etichetta: codice, famiglia, durate, timeline, sessioni dello Studio e audio
+          collegato restano esattamente com’erano.
         </span>
       </div>
 
@@ -460,32 +344,26 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
         </div>
       </div>
 
-      {TAG_GROUPS.map((g: { id: TagGroup; label: string; hint: string }) => (
-        <div key={g.id} style={{ marginTop: 10 }}>
-          <span className="pe-label">{g.label} <em>{g.hint}</em></span>
+      {/* ---- tags, as your own words -------------------------------------
+          The curated vocabulary is gone: four groups of chips were a long
+          read for a field that only has to make the material findable again.
+          Whatever is on the row stays visible and removable. */}
+      <div className="pe-field">
+        <span className="pe-label">Tag <em>una parola vostra, per ritrovare il materiale</em></span>
+        {draft.tags.length > 0 && (
           <div className="mt-seg mt-seg--wrap">
-            {PROTOCOL_TAGS.filter((t) => t.group === g.id).map((t) => {
-              const on = draft.tags.includes(t.id)
-              return (
-                <button
-                  key={t.id} className={on ? 'is-on' : ''} disabled={!on && full}
-                  onClick={() => toggle(t.id)}
-                >
-                  {t.label}
-                </button>
-              )
-            })}
+            {draft.tags.map((id) => (
+              <button
+                key={id}
+                className="is-on"
+                title={`Togli «${tagLabel(id)}»`}
+                onClick={() => set({ tags: draft.tags.filter((x) => x !== id) })}
+              >
+                {tagLabel(id)} ✕
+              </button>
+            ))}
           </div>
-        </div>
-      ))}
-
-      <div style={{ marginTop: 10 }}>
-        <span className="pe-label">Altro <em>una parola vostra, se manca</em></span>
-        <div className="mt-seg mt-seg--wrap">
-          {extra.map((id) => (
-            <button key={id} className="is-on" onClick={() => toggle(id)}>{tagLabel(id)}</button>
-          ))}
-        </div>
+        )}
         <div className="pe-row" style={{ marginTop: 6 }}>
           <input
             className="b2b-input" value={custom} placeholder="es. respiro-lento" disabled={full}
@@ -494,19 +372,36 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
           />
           <button className="b2b-btn" disabled={full || !tagSlug(custom)} onClick={addCustom}>Aggiungi</button>
         </div>
+        <span className="pe-hint">
+          {draft.tags.length}/{MAX_TAGS} tag. I tag servono a ritrovare il materiale nel catalogo — non decidono
+          mai quale sessione parte, e non sono un’indicazione clinica.
+        </span>
       </div>
 
-      <p className="b2b-sub" style={{ marginTop: 6 }}>
-        {draft.tags.length}/{MAX_TAGS} tag. I tag servono a ritrovare il materiale nel catalogo — non decidono
-        mai quale sessione parte, e non sono un’indicazione clinica.
-      </p>
+      {/* ---- clinical or not ---------------------------------------------
+          Two answers where there were three colours. It is a label on the
+          row, read by the people working in the console; it blocks nothing. */}
+      <div className="pe-field">
+        <span className="pe-label">Tipo di contenuto</span>
+        <div className="pe-row">
+          {TIERS.map((tier) => (
+            <label key={tier.id} className="pe-consent">
+              <input
+                type="radio" name={`tier-${draft.code || 'new'}`}
+                checked={tierChoice(draft.tier) === tier.id}
+                onChange={() => set({ tier: tier.id })}
+              />
+              <span><b>{tier.label}</b> — {tier.hint}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="plan-head__cta" style={{ marginTop: 14 }}>
         <button className="b2b-btn b2b-btn--primary" disabled={busy || !!invalid} onClick={onSave}>
           {busy ? 'Salvataggio…' : 'Salva scheda'}
         </button>
         {onCancel && <button className="b2b-btn b2b-btn--ghost" onClick={onCancel}>Annulla</button>}
-        <span className="b2b-sub adm-mono" style={{ alignSelf: 'center' }}>{draft.code}</span>
       </div>
     </>
   )
@@ -514,7 +409,7 @@ export function ProtocolCardEditor({ draft, busy, inline, onChange, onSave, onCa
   if (inline) return <div className="adm-plain__card">{body}</div>
   return (
     <section className="b2b-card b2b-card--wide">
-      <h2 className="b2b-card__title">Scheda pubblica e tag</h2>
+      <h2 className="b2b-card__title">Dettagli</h2>
       {body}
     </section>
   )

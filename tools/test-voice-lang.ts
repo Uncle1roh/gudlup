@@ -22,7 +22,7 @@ import { toCatalogVoice } from '../src/tts/voiceSync'
 import { canonicalVoiceClip, isTextMissing, switchClipLang } from '../src/studio/sessionLang'
 import { audioLangSummary, audioLangs, durationState, plainFor, type CatalogProtocol } from '../src/data/catalog'
 import { audioUrlFor } from '../src/data/liveCatalog'
-import { patientTitle } from '../src/types/domain'
+import { patientTitle, protocolTitle } from '../src/types/domain'
 import { newProtocolEntry } from '../src/admin/CatalogAdmin'
 import { cardDraftFrom, applyCardDraft } from '../src/admin/ProtocolCard'
 import type { SeedClip } from '../src/compose/types'
@@ -253,11 +253,23 @@ async function main() {
   assert(patientTitle({ ...named, i18n: { ...named.i18n, en: { publicTitle: 'Stress One' } } }, 'en') === 'Stress One', 'and its own when there is one')
   const created = newProtocolEntry({ code: 'GL-ANX 9.1', title: 'T', publicTitle: 'Uno', publicBlurb: '', i18n: { 'pt-BR': { publicTitle: 'Um' } }, tags: [], coverUrl: 'https://x/c.jpg', tier: 'green', claimsGate: { answers: {}, approvedBy: '', approvedAt: null } as never })
   assert(created.i18n?.['pt-BR']?.publicTitle === 'Um' && created.coverUrl === 'https://x/c.jpg', 'Crea nuovo keeps the other languages and the cover')
+  assert(created.title === 'Uno', 'Crea nuovo writes ONE name: the catalogue row reads what the person reads')
+
+  /* One name, in every language. The Details board stopped asking for a
+     separate clinical title, so whatever is written here is what the person
+     AND the therapist read — `protocolTitle` must not find an older clinical
+     overlay sitting in front of it. */
   const legacyIt: CatalogProtocol = { ...stored6, publicTitle: 'Base', i18n: { it: { publicTitle: 'Italiano', title: 'Clinico IT' } } }
   const draft = cardDraftFrom(legacyIt)
-  assert(draft.publicTitle === 'Italiano' && !draft.i18n.it?.publicTitle && draft.i18n.it?.title === 'Clinico IT', 'the editor folds an i18n.it public name into the Italian (base) row')
+  assert(draft.publicTitle === 'Italiano', 'the editor folds an i18n.it public name into the Italian (base) row')
+  assert(!draft.i18n.it, 'and leaves no Italian overlay behind to disagree with it')
   const saved = applyCardDraft(draft, legacyIt)
-  assert(saved.publicTitle === 'Italiano' && patientTitle(saved, 'it') === 'Italiano' && saved.i18n?.it?.title === 'Clinico IT', 'and saving keeps what an Italian reader saw')
+  assert(saved.publicTitle === 'Italiano' && patientTitle(saved, 'it') === 'Italiano', 'saving keeps what an Italian reader saw')
+  assert(saved.title === 'Italiano' && protocolTitle(saved, 'it') === 'Italiano', 'and the therapist now reads the same name, not the old clinical one')
+  const ptDraft = cardDraftFrom({ ...stored6, title: 'Base', i18n: { 'pt-BR': { title: 'Clinico PT' } } })
+  const ptSaved = applyCardDraft(ptDraft, stored6)
+  assert(protocolTitle(ptSaved, 'pt-BR') === 'Clinico PT' && patientTitle(ptSaved, 'pt-BR') === 'Clinico PT',
+    'a row that only ever had a Portuguese clinical title keeps it — as the one Portuguese name')
 
   console.log(`\n${pass} passed, ${fails.length} failed`)
   if (fails.length) { for (const f of fails) console.log('  FAIL:', f); process.exit(1) }

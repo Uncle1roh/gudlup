@@ -308,17 +308,17 @@ console.log('\n--- Crea nuovo ---')
 
 /* A protocol starts with a name, not with a spreadsheet. */
 const card = { code: 'gl-anx 3.7', title: 'Calma e sicurezza', publicTitle: 'Un respiro', publicBlurb: 'A letto, luci spente.', tags: ['sera'] }
-assert(newProtocolError(card, []) === null, 'a code and a clinical title are all it takes')
+assert(newProtocolError(card, []) === null, 'a code and a name are all it takes')
 assert(newProtocolError({ ...card, code: '' }, []) !== null, 'a protocol with no code is refused')
 assert(newProtocolError({ ...card, code: 'ANX 1.1' }, []) !== null, 'and so is one whose code is not a GL code')
-assert(newProtocolError({ ...card, title: '  ' }, []) !== null, 'the clinical title cannot be blank')
+assert(newProtocolError({ ...card, publicTitle: '  ' }, []) !== null, 'the name cannot be blank')
 assert(newProtocolError(card, ['GL-ANX 3.7']) !== null, 'a code already in the catalog is refused')
 
 const created = newProtocolEntry(card, T)
 assert(created.code === 'GL-ANX 3.7', 'the code is upper-cased and trimmed')
 assert(created.family === 'GL-ANX', 'the family is read off it')
-assert(created.title === 'Calma e sicurezza', 'the clinical title is kept')
-assert(created.publicTitle === 'Un respiro', 'and the public one')
+assert(created.publicTitle === 'Un respiro', 'the name is kept')
+assert(created.title === 'Un respiro', 'and it is the catalogue row title too — one protocol, one name')
 assert(created.tags?.join() === 'sera', 'and the tags')
 assert(created.versions.length === 0, 'it declares no time signature yet')
 assert(created.enabled === false, 'and it is NOT active — nothing has been published for it')
@@ -404,8 +404,7 @@ const intoNamed = entryForPublish({
   now: T + 1000,
 })
 assert(intoNamed.code === 'GL-ANX 4.2', 'the protocol keeps its own code, not the workbook\'s')
-assert(intoNamed.title === 'Il mio titolo', 'and its own clinical title')
-assert(intoNamed.publicTitle === 'Pubblico', 'and the public name')
+assert(intoNamed.title === 'Pubblico' && intoNamed.publicTitle === 'Pubblico', 'and its own name, not the one the workbook carries')
 assert(intoNamed.tags?.join() === 'sera', 'and the tags')
 assert(!!plainFor(intoNamed, 12), 'while the timeline the workbook carried is filed under 12m')
 assert(durationState(intoNamed, 12) === 'saved', 'which turns 12 red')
@@ -415,7 +414,7 @@ const both = entryForPublish({
   timeline: workbook(24), existing: intoNamed, selected: 24, keepDraft: true, intoExisting: true, now: T + 2000,
 })
 assert(plainDurations(both).join() === '12,24', 'the second import adds its duration')
-assert(both.title === 'Il mio titolo', 'and still does not rename anything')
+assert(both.title === 'Pubblico', 'and still does not rename anything')
 assert(durationState(both, 6) === 'empty', 'the one never imported stays grey')
 
 /* Publishing outside a protocol context still takes the workbook's identity —

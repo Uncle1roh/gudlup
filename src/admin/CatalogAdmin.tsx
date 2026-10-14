@@ -9,7 +9,7 @@ import { DatasheetImport } from './DatasheetImport'
 import { SpecImport } from './SpecImport'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
 import { audienceOf, audioLangSummary, audioLangs, durationState, hasAnyAudio, mergedPlain, plainDurations, studioFor, type CatalogProtocol } from '../data/catalog'
-import { publishBlockers, gateComplete, emptyGate } from '../legal/claims'
+import { emptyGate, tierChoice, tierLabel } from '../legal/claims'
 import { applyDraft, draftFrom, EMPTY_DRAFT, LibraryEditor, type LibraryDraft } from './LibraryEditor'
 import { ProtocolCardEditor, applyCardDraft, cardDraftError, cleanI18n, type ProtocolCardDraft } from './ProtocolCard'
 import { defaultImportMode, describeImportPlan, entryForPublish, familyFromCode, planPlainImport } from './publishPlain'
@@ -79,7 +79,9 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
   return {
     code,
     family: familyFromCode(code),
-    title: draft.title.trim(),
+    /* One name: what the person reads is also the catalogue row's title.
+       See admin/ProtocolCard.tsx. */
+    title: draft.publicTitle.trim() || draft.title.trim(),
     blurb: '',
     phases: [],
     versions: [],
@@ -97,7 +99,7 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
     coverUrl: draft.coverUrl?.trim() || undefined,
     tags: draft.tags,
 
-    tier: draft.tier,
+    tier: tierChoice(draft.tier),
     claimsGate: draft.claimsGate,
     updatedAt: now,
   }
@@ -346,20 +348,14 @@ export function CatalogAdmin({ actor }: { actor: string }) {
   }
 
   async function toggle(p: CatalogProtocol) {
-    /* Enabling is publishing. Nothing goes live without the lexicon pass,
-       the four-question sign-off and the tier rule (M1-14, ADM-01..03);
-       disabling is always allowed. */
-    if (!p.enabled) {
-      const blockers = publishBlockers(p)
-      if (blockers.length) {
-        setImportError(`${p.code}: ` + blockers.map((b) => b.message).join(' · '))
-        return
-      }
-    }
+    /* Enabling is publishing, and nothing stands between the console and it.
+       The lexicon pass, the four-question sign-off and the tier rule used to
+       (M1-14, ADM-01..03); they refused ordinary words and there was no way
+       past them. See legal/claims.ts. */
     setImportError(null)
     setBusyCode(p.code)
     await dp.setProtocolEnabled(p.code, !p.enabled)
-    await dp.logAudit({ actor, action: p.enabled ? 'protocol.disabled' : 'protocol.enabled', target: p.code, detail: p.enabled ? undefined : `revisione: ${p.claimsGate?.approvedBy ?? ''}` })
+    await dp.logAudit({ actor, action: p.enabled ? 'protocol.disabled' : 'protocol.enabled', target: p.code })
     setBusyCode(null)
     refetch()
   }
@@ -526,19 +522,10 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           <div className="adm-scrim" onClick={() => setCreating(null)} role="dialog" aria-modal="true">
             <div className="adm-dialog" onClick={(e) => e.stopPropagation()}>
               <h2 className="b2b-h2">Nuovo protocollo</h2>
-              <label className="pe-field">
-                <span className="pe-label">Codice <em>la forma è "GL-ANX 1.1"</em></span>
-                <input
-                  className="b2b-input adm-mono"
-                  value={creating.code}
-                  placeholder="GL-ANX 1.1"
-                  autoFocus
-                  onChange={(e) => setCreating({ ...creating, code: e.target.value.toUpperCase() })}
-                />
-              </label>
               <ProtocolCardEditor
                 draft={creating}
                 inline
+                codeEditable
                 busy={savingNew}
                 onChange={setCreating}
                 onSave={() => void createProtocol()}
@@ -618,7 +605,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
       {!loading && (
         <div className="adm-table adm-table--catalog">
           <div className="adm-tr adm-tr--head">
-            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Durate</div><div>Disponibilità</div><div>Revisione</div><div className="adm-tr__right">Stato</div>
+            <div>Codice</div><div>Titolo</div><div>{shelf === 'library' ? 'Scaffale' : 'Famiglia'}</div><div>Durate</div><div>Disponibilità</div><div>Tipo</div><div className="adm-tr__right">Stato</div>
           </div>
           {protocols.map((p) => {
             const openable = !!mergedPlain(p)
@@ -686,15 +673,11 @@ export function CatalogAdmin({ actor }: { actor: string }) {
               </div>
               <div>{tenantsLabel(p)}</div>
               <div>
-                {/* The tier and the four-question sign-off (ADM-02/03): what
-                    decides whether the Stato toggle will accept "Attivo". */}
-                <span className={`adm-pill ${(p.tier ?? 'green') === 'red' ? 'adm-pill--bad' : (p.tier ?? 'green') === 'amber' ? 'adm-pill--warn' : 'adm-pill--ok'}`}>
-                  {(p.tier ?? 'green') === 'red' ? 'Rosso' : (p.tier ?? 'green') === 'amber' ? 'Ambra' : 'Verde'}
+                {/* Clinico / Non clinico. A label on the row, nothing more:
+                    it does not decide whether Stato will accept "Attivo". */}
+                <span className={`adm-pill ${tierChoice(p.tier) === 'amber' ? 'adm-pill--warn' : 'adm-pill--ok'}`}>
+                  {tierLabel(p.tier)}
                 </span>{' '}
-                {gateComplete(p.claimsGate)
-                  ? <span className="adm-pill adm-pill--ok" title={`Firmata da ${p.claimsGate?.approvedBy}`}>firmata</span>
-                  : <span className="adm-pill adm-pill--idle">da firmare</span>}
-                {' '}
                 {isDraft(p)
                   ? <span className="adm-pill adm-pill--warn">Bozza</span>
                   : p.source === 'imported'
