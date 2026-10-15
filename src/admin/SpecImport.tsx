@@ -11,6 +11,7 @@ import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { attachRenderedAudio } from './attachAudio'
+import { saveProtocolMerged } from './protectAuthored'
 import { specToStudioTracks } from './specStudio'
 import { setStudioSeed } from '../compose/handoff'
 import type { Duration } from '../types/domain'
@@ -85,11 +86,14 @@ export function SpecImport({ spec, fileName, actor, onCancel, onDone }: Props) {
         spec,
         updatedAt: Date.now(),
       }
-      await dp.saveProtocol(proto)
-      registerProtocol(proto)
-      await dp.logAudit({ actor, action: 'protocol.imported', target: proto.code, detail: `spec doc · ${fileName} · ${spec.versions.length} versions, ${spec.affirmations.length} affirmations` })
+      /* MERGED, not overwritten: this object was built from the document and
+         knows nothing about Studio sessions, timelines or covers the protocol
+         may already have. A plain upsert would null them. */
+      const saved = await saveProtocolMerged(dp, proto)
+      registerProtocol(saved)
+      await dp.logAudit({ actor, action: 'protocol.imported', target: saved.code, detail: `spec doc · ${fileName} · ${spec.versions.length} versions, ${spec.affirmations.length} affirmations` })
         .catch(() => { /* the protocol IS saved — a failed audit write must not block the flow */ })
-      setPublished(proto)
+      setPublished(saved)
       setStage('render')
     } catch (e) {
       const msg = (e as Error)?.message ?? String(e)

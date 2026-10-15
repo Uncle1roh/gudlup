@@ -275,10 +275,19 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     }
   }
 
-  /** The protocol as the catalog holds it right now. */
+  /**
+   * The protocol as the catalog holds it right now.
+   *
+   * One row by code, not the whole catalogue: the whole-table read is what
+   * crossed the statement timeout. And it THROWS rather than falling back to
+   * the copy in the list — the caller is about to merge an import onto this
+   * and save it, so a stale row would write months of Studio work back to
+   * whatever it was when the page loaded.
+   */
   async function freshRow(p: CatalogProtocol): Promise<CatalogProtocol> {
-    const list = await dp.listProtocols().catch(() => [] as CatalogProtocol[])
-    return list.find((x) => x.code === p.code) ?? p
+    const row = await dp.findProtocol(p.code)
+    if (!row) throw new Error(`${p.code} non è più nel catalogo: ricarica la pagina prima di importare.`)
+    return row
   }
 
   /** The admin switched between "everything" and "only the words": the
@@ -453,13 +462,18 @@ export function CatalogAdmin({ actor }: { actor: string }) {
 
   async function saveCard() {
     if (!card) return
-    const existing = all.find((p) => p.code === card.code)
-    if (!existing) return
+    const known = all.find((p) => p.code === card.code)
+    if (!known) return
     setSavingCard(true)
     setImportError(null)
     try {
+      /* Onto the row as it is NOW, not as the list read it when the page
+         loaded. The card holds names, cover and tags; the row also holds the
+         Studio sessions, and someone may have saved one in the Studio while
+         this dialog was open. Writing the stale copy back would undo it. */
+      const existing = (await dp.findProtocol(card.code)) ?? known
       const entry = applyCardDraft(card, existing)
-      await dp.saveProtocol(entry)
+      await saveProtocolVerified(dp, entry)
       await dp.logAudit({ actor, action: 'protocol.card.updated', target: entry.code, detail: entry.publicTitle ?? '(nessun nome pubblico)' }).catch(() => undefined)
       setCard(null)
       refetch()
@@ -475,9 +489,12 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     setSavingDraft(true)
     setImportError(null)
     try {
-      const existing = draft.code ? all.find((p) => p.code === draft.code) : undefined
+      /* Same rule as the card: re-read before merging a dialog onto a row. */
+      const existing = draft.code
+        ? (await dp.findProtocol(draft.code)) ?? all.find((p) => p.code === draft.code)
+        : undefined
       const entry = applyDraft(draft, existing)
-      await dp.saveProtocol(entry)
+      await saveProtocolVerified(dp, entry)
       await dp.logAudit({ actor, action: existing ? 'library.updated' : 'library.created', target: entry.code }).catch(() => undefined)
       setDraft(null)
       refetch()

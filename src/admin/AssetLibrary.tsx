@@ -128,11 +128,14 @@ export function AssetLibrary({ actor }: { actor: string }) {
   }
 
   async function save() {
-    const p = protocols.find((x) => x.code === selCode)
-    if (!p) return
+    const known = protocols.find((x) => x.code === selCode)
+    if (!known) return
     setSaving(true)
     setError(null)
     try {
+      /* Re-read: this screen edits one column of a row that also holds the
+         Studio sessions, and it was last read when the page loaded. */
+      const p = (await dp.findProtocol(known.code)) ?? known
       const next: CatalogProtocol = { ...p, assetMap: draft, updatedAt: Date.now() }
       await dp.saveProtocol(next)
       const cov = assetMapCoverage(draft)
@@ -242,8 +245,9 @@ export function AssetLibrary({ actor }: { actor: string }) {
     try {
       const refs = referencesTo(a.path)
       for (const ref of refs) {
-        const p = allProtocols.find((x) => x.code === ref.code)
-        if (!p) continue
+        const known = allProtocols.find((x) => x.code === ref.code)
+        if (!known) continue
+        const p = (await dp.findProtocol(ref.code)) ?? known
         const next: CatalogProtocol = { ...p, assetMap: withoutAsset(p.assetMap, a.path), updatedAt: Date.now() }
         await dp.saveProtocol(next)
         setAllProtocols((ps) => ps.map((x) => (x.code === next.code ? next : x)))

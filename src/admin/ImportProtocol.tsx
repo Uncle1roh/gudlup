@@ -11,6 +11,7 @@ import { parseDatasheet, type Datasheet } from './datasheet'
 import { DatasheetImport } from './DatasheetImport'
 import { parsePlainTimeline, probePlainTimeline, type PlainTimeline } from './plainTimeline'
 import { PlainImport } from './PlainImport'
+import { saveProtocolMerged } from './protectAuthored'
 import type { CatalogProtocol } from '../data/catalog'
 
 type Step = 'upload' | 'review' | 'done'
@@ -154,8 +155,10 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
         blurb: (edits[i]?.blurb ?? d.protocol.blurb).trim(),
         updatedAt: Date.now(),
       }
-      await dp.saveProtocol(final)
-      registerProtocol(final) // resolvable in-session everywhere getProtocol() is called
+      /* MERGED: a re-import of a code that already exists must not null the
+         Studio sessions, timelines and cover the parsed document never saw. */
+      const saved = await saveProtocolMerged(dp, final)
+      registerProtocol(saved) // resolvable in-session everywhere getProtocol() is called
       await dp.logAudit({ actor, action: 'protocol.imported', target: final.code, detail: `${FAMILY_LABEL[final.family]}${sourceDoc ? ` · src ${sourceDoc}` : ''}` })
       n++
     }

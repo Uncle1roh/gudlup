@@ -430,7 +430,11 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     setSavingCard(true)
     setError(null)
     try {
-      const stored = await saveProtocolVerified(dp, applyCardDraft(card, published))
+      /* Onto the row as it is now. The card knows about names, cover and
+         tags; the row also holds the Studio sessions, and this screen can
+         have been open across a trip to the Studio and back. */
+      const base = (await dp.findProtocol(published.code)) ?? published
+      const stored = await saveProtocolVerified(dp, applyCardDraft(card, base))
       setPublished(stored)
       setCard(cardDraftFrom(stored))
       await dp.logAudit({ actor, action: 'protocol.card.updated', target: stored.code, detail: stored.publicTitle ?? '(nessun nome pubblico)' }).catch(() => undefined)

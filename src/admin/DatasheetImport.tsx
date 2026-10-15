@@ -16,6 +16,7 @@ import { getTtsProvider } from '../tts'
 import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { attachRenderedAudio } from './attachAudio'
+import { saveProtocolMerged } from './protectAuthored'
 import { datasheetToStudioTracks } from './specStudio'
 import { setStudioSeed } from '../compose/handoff'
 import type { Duration } from '../types/domain'
@@ -116,11 +117,13 @@ export function DatasheetImport({ datasheet: ds, fileName, actor, onCancel, onDo
         assetMap: mapToSave,
         updatedAt: Date.now(),
       }
-      await dp.saveProtocol(proto)
-      registerProtocol(proto)
-      await dp.logAudit({ actor, action: 'protocol.datasheet.imported', target: proto.code, detail: `${fileName} · ${ds.versions.length} versions · ${totalRows} timeline rows · ${ds.affirmations.length} affirmations` })
+      /* MERGED: built from the workbook, so it carries no Studio session, no
+         cover and no public naming. Those stay whatever the row already had. */
+      const saved = await saveProtocolMerged(dp, proto)
+      registerProtocol(saved)
+      await dp.logAudit({ actor, action: 'protocol.datasheet.imported', target: saved.code, detail: `${fileName} · ${ds.versions.length} versions · ${totalRows} timeline rows · ${ds.affirmations.length} affirmations` })
         .catch(() => { /* the protocol IS saved — a failed audit write must not block the flow */ })
-      setPublished(proto)
+      setPublished(saved)
       setStage('render')
     } catch (e) {
       setPublishError(explainSaveError(e))
