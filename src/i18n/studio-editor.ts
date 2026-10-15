@@ -18,6 +18,36 @@ export const IT_STUDIO_EDITOR: Record<string, string> = {
   'Saved to {code} · {min} min — reopen it to find exactly this session.': 'Salvato in {code} · {min} min — riaprendolo ritrovi esattamente questa sessione.',
   'It is in the catalogue as a DRAFT: it is not live until you publish the duration from the protocol screen.': 'È nel catalogo come BOZZA: non è attivo finché non pubblichi la durata dalla schermata del protocollo.',
   'Save failed: {error}': 'Salvataggio non riuscito: {error}',
+
+  // ---- the session as a file on your own disk (⬇ Backup / ⬆ Restore) ----
+  '⬇ Backup': '⬇ Backup',
+  '⬆ Restore': '⬆ Ripristina',
+  'Reading…': 'Lettura…',
+  'Write this whole session to a file on your computer — all four versions, every clip and every level. It does not need the database.':
+    'Scrive tutta questa sessione in un file sul tuo computer — tutte e quattro le versioni, ogni clip e ogni livello. Non ha bisogno del database.',
+  'Open a session file saved earlier and load it into the Studio, replacing what is on screen.':
+    'Apre un file di sessione salvato prima e lo carica nello Studio, al posto di quello che è sullo schermo.',
+  'Backup written: {file} — this session in all four versions, outside the database.':
+    'Backup scritto: {file} — questa sessione in tutte e quattro le versioni, fuori dal database.',
+  'Take a copy with ⬇ Backup: a file on your disk does not depend on the database being up.':
+    'Fanne una copia con ⬇ Backup: un file sul tuo disco non dipende dal database.',
+  'Press ⬇ Backup now — this session exists only in this tab until it is written somewhere.':
+    'Premi ⬇ Backup adesso — questa sessione esiste solo in questa scheda finché non viene scritta da qualche parte.',
+  'Load {name} into the Studio?': 'Caricare {name} nello Studio?',
+  '{clips} clips ({voices} voice), backed up {when}.': '{clips} clip ({voices} di voce), backup del {when}.',
+  'What is open now is replaced. Unsaved work in it is lost.':
+    'Quello che è aperto adesso viene sostituito. Le modifiche non salvate vanno perse.',
+  'Restored {clips} clips ({voices} voice) from a backup of {when}.':
+    'Ripristinate {clips} clip ({voices} di voce) da un backup del {when}.',
+  'It is NOT in the database yet — press 💾 Save to put it back.':
+    'NON è ancora nel database — premi 💾 Salva per rimetterlo.',
+  'That file is not readable: check you picked a Studio session file.':
+    'Il file non è leggibile: controlla di aver scelto un file di sessione dello Studio.',
+  'That is not a Good Loop session file.': 'Non è un file di sessione Good Loop.',
+  'That file was written by a newer Studio than this one. Reload the page and open it again — opening it here would silently drop what this version does not know about.':
+    'Il file è stato scritto da uno Studio più recente di questo. Ricarica la pagina e riaprilo — aprirlo qui farebbe cadere in silenzio quello che questa versione non conosce.',
+  'That session file has no tracks in it.': 'Questo file di sessione non contiene tracce.',
+  'Could not read that file: {error}': 'Impossibile leggere il file: {error}',
   'There are unsaved changes to the protocol. Leave anyway?': 'Ci sono modifiche non salvate nel protocollo. Uscire comunque?',
 
   /* pool draws */
@@ -344,6 +374,36 @@ export const PT_STUDIO_EDITOR: Record<string, string> = {
   'Saved to {code} · {min} min — reopen it to find exactly this session.': 'Salvo em {code} · {min} min — ao reabrir, você encontra exatamente esta sessão.',
   'It is in the catalogue as a DRAFT: it is not live until you publish the duration from the protocol screen.': 'Está no catálogo como RASCUNHO: não fica ativo até você publicar a duração na tela do protocolo.',
   'Save failed: {error}': 'Falha ao salvar: {error}',
+
+  // ---- the session as a file on your own disk ----
+  '⬇ Backup': '⬇ Backup',
+  '⬆ Restore': '⬆ Restaurar',
+  'Reading…': 'Lendo…',
+  'Write this whole session to a file on your computer — all four versions, every clip and every level. It does not need the database.':
+    'Grava esta sessão inteira em um arquivo no seu computador — as quatro versões, cada clipe e cada nível. Não depende do banco de dados.',
+  'Open a session file saved earlier and load it into the Studio, replacing what is on screen.':
+    'Abre um arquivo de sessão salvo antes e o carrega no Studio, no lugar do que está na tela.',
+  'Backup written: {file} — this session in all four versions, outside the database.':
+    'Backup gravado: {file} — esta sessão nas quatro versões, fora do banco de dados.',
+  'Take a copy with ⬇ Backup: a file on your disk does not depend on the database being up.':
+    'Faça uma cópia com ⬇ Backup: um arquivo no seu disco não depende do banco de dados estar no ar.',
+  'Press ⬇ Backup now — this session exists only in this tab until it is written somewhere.':
+    'Pressione ⬇ Backup agora — esta sessão existe só nesta aba até ser gravada em algum lugar.',
+  'Load {name} into the Studio?': 'Carregar {name} no Studio?',
+  '{clips} clips ({voices} voice), backed up {when}.': '{clips} clipes ({voices} de voz), backup de {when}.',
+  'What is open now is replaced. Unsaved work in it is lost.':
+    'O que está aberto agora é substituído. As alterações não salvas se perdem.',
+  'Restored {clips} clips ({voices} voice) from a backup of {when}.':
+    'Restaurados {clips} clipes ({voices} de voz) de um backup de {when}.',
+  'It is NOT in the database yet — press 💾 Save to put it back.':
+    'Ainda NÃO está no banco de dados — pressione 💾 Salvar para recolocá-lo.',
+  'That file is not readable: check you picked a Studio session file.':
+    'Não foi possível ler o arquivo: confira se escolheu um arquivo de sessão do Studio.',
+  'That is not a Good Loop session file.': 'Não é um arquivo de sessão do Good Loop.',
+  'That file was written by a newer Studio than this one. Reload the page and open it again — opening it here would silently drop what this version does not know about.':
+    'O arquivo foi gravado por um Studio mais novo que este. Recarregue a página e abra de novo — abri-lo aqui descartaria em silêncio o que esta versão não conhece.',
+  'That session file has no tracks in it.': 'Este arquivo de sessão não contém faixas.',
+  'Could not read that file: {error}': 'Não foi possível ler o arquivo: {error}',
   'There are unsaved changes to the protocol. Leave anyway?': 'Há alterações não salvas no protocolo. Sair mesmo assim?',
 
   /* pool draws */

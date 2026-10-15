@@ -54,6 +54,7 @@ import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../a
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { peekStudioSeed, releaseStudioSeed, setStudioProject, type StudioAttachTarget } from '../compose/handoff'
+import { buildStudioBackup, describeStudioBackup, parseStudioBackup, studioBackupFilename, type ParseFailure, type StudioBackup } from './sessionFile'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import { entryForStudioSave } from '../admin/publishPlain'
@@ -419,7 +420,11 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
      The hand-off holds the session in its canonical form (Italian in the live
      fields). A remount that already had a language chosen comes back in it
      without asking; a protocol opened fresh asks (`langAsk`). */
-  const scripts = handoff?.scripts
+  /* These five came straight off the hand-off and could not be changed once
+     the Studio was mounted. Restoring a session from a file has to be able to
+     set them: a backup can belong to another protocol, another time
+     signature and another version than the one currently open. */
+  const [scripts, setScripts] = useState<ScriptIndex | undefined>(handoff?.scripts)
   const [workingLang, setWorkingLang] = useState<VoiceLang>(handoff?.workingLang ?? 'it')
   /* WHO the session being worked on speaks to. The same timing, levels, fx
      and draws carry both forms; only the words and the rendered voice change,
@@ -446,10 +451,10 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
   /* The six phase windows, when this session came from a PLAIN import. The
      Studio uses them for one thing only: telling the closing apart from the
      middle of a session when two voices overlap. */
-  const [phases] = useState<StudioPhase[]>(() => handoff?.phases ?? [])
-  const attachTarget: StudioAttachTarget | null = handoff?.attach ?? null
+  const [phases, setPhases] = useState<StudioPhase[]>(() => handoff?.phases ?? [])
+  const [attachTarget, setAttachTarget] = useState<StudioAttachTarget | null>(handoff?.attach ?? null)
   const returnTo: string | null = handoff?.returnTo ?? null
-  const sessionFades = { inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 }
+  const [sessionFades, setSessionFades] = useState({ inSec: handoff?.fadeInSec ?? 0, outSec: handoff?.fadeOutSec ?? 0 })
   const dp = useDataProvider()
   const [attachMsg, setAttachMsg] = useState<string | null>(null)
   const [targetOverride, setTargetOverride] = useState<StudioAttachTarget | null>(null)
@@ -569,13 +574,122 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         (draft
           ? ' ' + lt('It is in the catalogue as a DRAFT: it is not live until you publish the duration from the protocol screen.')
           : '') +
+        ' ' + lt('Take a copy with ⬇ Backup: a file on your disk does not depend on the database being up.') +
         (persistenceNote() ?? ''),
       )
+      setBackupHint(true)
     } catch (e) {
-      setAttachMsg(lt('Save failed: {error}', { error: (e as Error).message }))
+      /* The save is the moment the work is most exposed: it is in one browser
+         tab and nowhere else. Say what to do about it. */
+      setAttachMsg(
+        lt('Save failed: {error}', { error: (e as Error).message }) +
+        ' ' + lt('Press ⬇ Backup now — this session exists only in this tab until it is written somewhere.'),
+      )
+      setBackupHint(true)
     } finally {
       setSaving(false)
     }
+  }
+
+  /* ---- the second copy, on your own disk --------------------------------
+
+     The database is the Studio's memory, and on 14 October 2026 it was not
+     reachable: saves failed, and a session that lived only as state in a tab
+     had nowhere to go. ⬇ Backup writes the whole session to a file — all
+     four versions, every clip, every level — and ⬆ Restore reads one back.
+
+     Backup is ALWAYS available, not only after a save. The hour it matters
+     most is the hour saving is failing. */
+  const restoreRef = useRef<HTMLInputElement>(null)
+  const [restoring, setRestoring] = useState(false)
+  /** Pulse the button after a save, and after a save that did not work. */
+  const [backupHint, setBackupHint] = useState(false)
+
+  function onDownloadBackup() {
+    const target = deriveTarget()
+    const backup = buildStudioBackup({
+      project: toStudioProject(),
+      code: target?.code ?? null,
+      duration: target?.duration ?? null,
+      workingLang, workingTo, scripts,
+    })
+    const name = studioBackupFilename(backup)
+    const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000)
+    setBackupHint(false)
+    setAttachMsg(lt('Backup written: {file} — this session in all four versions, outside the database.', { file: name }))
+  }
+
+  const RESTORE_ERROR: Record<ParseFailure, string> = {
+    'not-json': 'That file is not readable: check you picked a Studio session file.',
+    'not-ours': 'That is not a Good Loop session file.',
+    'too-new': 'That file was written by a newer Studio than this one. Reload the page and open it again — opening it here would silently drop what this version does not know about.',
+    empty: 'That session file has no tracks in it.',
+  }
+
+  async function onRestoreFile(file?: File) {
+    if (!file) return
+    setRestoring(true)
+    setAttachMsg(null)
+    try {
+      const parsed = parseStudioBackup(await file.text())
+      if (!parsed.ok) { setAttachMsg(lt(RESTORE_ERROR[parsed.reason])); return }
+      const b = parsed.backup
+      const d = describeStudioBackup(b)
+      /* What is on screen is about to be replaced, and it may be the only
+         copy of it. Say what is arriving and what is going. */
+      const gap = String.fromCharCode(10, 10)
+      const ok = window.confirm(
+        lt('Load {name} into the Studio?', { name: b.code ?? b.project.name }) + gap +
+        lt('{clips} clips ({voices} voice), backed up {when}.', { clips: d.clips, voices: d.voices, when: d.when }) + gap +
+        lt('What is open now is replaced. Unsaved work in it is lost.'),
+      )
+      if (!ok) return
+      applyBackup(b)
+    } catch (e) {
+      setAttachMsg(lt('Could not read that file: {error}', { error: (e as Error).message }))
+    } finally {
+      setRestoring(false)
+    }
+  }
+
+  /** Put a parsed backup on screen. The same steps the Studio takes when it
+      opens a saved session, so a restored file behaves like a reopen and not
+      like a special case — including the canonical-Italian unpacking. */
+  function applyBackup(b: StudioBackup) {
+    const base = b.project.tracks.map(seedTrackToTrack)
+    const unpacked = b.workingLang !== 'it' || b.workingTo !== 'm'
+      ? switchTracksLang(base, { lang: 'it', to: 'm' }, { lang: b.workingLang, to: b.workingTo }, b.scripts).tracks
+      : base
+    setTracks(unpacked)
+    setProjectName(b.project.name)
+    setLengthSec(b.project.lengthSec)
+    setMasterGain(b.project.masterGain)
+    setPhases(b.project.phases ?? [])
+    setSessionFades({ inSec: b.project.fadeInSec ?? 0, outSec: b.project.fadeOutSec ?? 0 })
+    setScripts(b.scripts)
+    setWorkingLang(b.workingLang)
+    setWorkingTo(b.workingTo)
+    setPxPerSec(Math.max(0.6, Math.min(7, 1100 / (b.project.lengthSec || 120))))
+    setLangAsk(false)
+    if (b.code) {
+      const target: StudioAttachTarget = { code: b.code, duration: b.duration ?? nearestDuration(b.project.lengthSec) }
+      setAttachTarget(target)
+      setTargetOverride(target)
+    }
+    /* Restored is NOT saved. The database is exactly what did not have this. */
+    setDirty(true)
+    const d = describeStudioBackup(b)
+    setAttachMsg(
+      lt('Restored {clips} clips ({voices} voice) from a backup of {when}.', { clips: d.clips, voices: d.voices, when: d.when }) +
+      ' ' + lt('It is NOT in the database yet — press 💾 Save to put it back.'),
+    )
   }
 
   function goBack() {
@@ -1752,6 +1866,32 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
             {saving ? lt('Saving…') : dirty ? lt('💾 Save •') : lt('💾 Save')}
           </button>
         }
+        {/* The session as a FILE. The database is the Studio's memory and it
+            can be unreachable; these two make a second copy that is not.
+            Backup is never disabled — the hour it matters is the hour saving
+            is failing. */}
+        <button
+          className={`mt-export mt-export--file${backupHint ? ' is-urgent' : ''}`}
+          onClick={onDownloadBackup}
+          title={lt('Write this whole session to a file on your computer — all four versions, every clip and every level. It does not need the database.')}
+        >
+          {lt('⬇ Backup')}
+        </button>
+        <input
+          ref={restoreRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(e) => { void onRestoreFile(e.target.files?.[0]); e.target.value = '' }}
+        />
+        <button
+          className="mt-export mt-export--file"
+          onClick={() => restoreRef.current?.click()}
+          disabled={restoring}
+          title={lt('Open a session file saved earlier and load it into the Studio, replacing what is on screen.')}
+        >
+          {restoring ? lt('Reading…') : lt('⬆ Restore')}
+        </button>
         {/* Pubblica and Solo audio used to live here. Publishing is one act
             with one home — the protocol workscreen — and having a second door
             into it from the Studio meant two code paths that could disagree

@@ -2439,6 +2439,14 @@ img, svg, video, canvas { max-width: 100%; }
 .mt-back:hover { border-color: var(--mt-accent); }
 .mt-export.is-dirty { border-color: var(--mt-play, #f0c674); color: var(--mt-play, #f0c674); }
 .mt-export--publish { background: var(--mt-accent, #34d399); color: #05231a; font-weight: 700; border-color: var(--mt-accent, #34d399); }
+/* The session as a FILE (⬇ Backup / ⬆ Restore). Deliberately quieter than
+   Save: the database is where the work belongs, and these are the copy of
+   it — three solid green buttons in a row would read as three equal acts.
+   `is-urgent` is the one case they are not quiet: just after a save, and
+   above all just after a save that FAILED. */
+.mt-export--file { background: transparent; color: var(--mt-text); border: 1px solid var(--mt-line); font-weight: 600; }
+.mt-export--file:hover { border-color: var(--mt-accent); color: var(--mt-accent); }
+.mt-export--file.is-urgent { border-color: var(--mt-play, #f0c674); color: var(--mt-play, #f0c674); }
 .mt-export--publish:disabled { opacity: 0.6; }
 /* catalog row: edit-in-studio */
 .adm-editbtn { border: 1px solid var(--line, #dfe7e2); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--aura-deep, #009b77); cursor: pointer; margin-right: 8px; }
