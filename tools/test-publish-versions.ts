@@ -242,7 +242,14 @@ const after = applyCardDraft(
   { ...cardDraftFrom(before), publicTitle: 'Prima di dormire', publicBlurb: 'A letto, luci spente.', tags: ['Sera', 'a-letto', 'sera'] },
   before,
 )
-assert(after.publicTitle === 'Prima di dormire' && after.title === before.title, 'saving the card sets the public name and leaves the clinical one')
+/* ONE protocol, ONE name. The card used to set `publicTitle` and leave the
+   clinical `title` alone, which meant the same material had two names and
+   the therapist and the person listening were reading different ones. Since
+   the Details board was cut down to a single name, that name is written to
+   both fields — `title` is what the catalogue row, the plan and the clinical
+   record print, and it has to be the name everybody is actually using. */
+assert(after.publicTitle === 'Prima di dormire' && after.title === 'Prima di dormire',
+  'saving the card sets the one name, on both fields — therapist and person read the same words')
 assert(after.tags?.join(',') === 'sera,a-letto', 'tags are slugged and de-duplicated on save')
 assert(JSON.stringify(after.versions) === JSON.stringify(before.versions), 'the card never touches versions')
 assert(JSON.stringify(after.plainByDuration) === JSON.stringify(before.plainByDuration), 'the card never touches the timelines')

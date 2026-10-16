@@ -26,3 +26,10 @@ android/local.properties
 android/.idea
 android/app/src/main/assets/public
 android/app/src/main/assets/capacitor.config.json
+
+# Studio session backups. THIS REPOSITORY IS PUBLIC — a saved session holds
+# the protocol's voice scripts in four language variants, which is the
+# material itself. Backups belong in a PRIVATE repository of their own; see
+# docs/STUDIO_BACKUP.md. This line is the net under a stray `git add .`.
+studio-backups/
+*.glstudio.json
