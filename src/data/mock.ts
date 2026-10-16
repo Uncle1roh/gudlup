@@ -11,6 +11,7 @@ import { normalizePromoCode, type PromoCode } from './promo'
 import { sortPartnerProducts, type PartnerProduct } from './partners'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
+import type { AssessmentRecord } from './assessments'
 import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
 import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
@@ -266,6 +267,10 @@ function buildPopulation(): PsychosocialResponse[] {
 }
 
 let psychosocialResponses: PsychosocialResponse[] = buildPopulation()
+
+/* Clinical assessments. Empty to start: a demo that opens with somebody
+   else's DASS-21 already in it is showing a score nobody took. */
+const assessmentRows: AssessmentRecord[] = []
 
 /* B2C→therapist intake queue (one seeded open request so the roster demo shows it) */
 let sessionRequests: SessionRequest[] = [
@@ -710,6 +715,21 @@ export function createMockProvider(): DataProvider {
 
     // --- Employer NR-1 aggregates (computed from the response population) ---
     getPsychosocialAggregates: () => delay(aggregate(psychosocialResponses, { company: NR1_COMPANY, eligible: NR1_ELIGIBLE, minCellSize: NR1_K })),
+    /* The demo keeps them in memory, like everything else here. The live
+       provider puts them in a table the browser cannot clear. */
+    listAssessments: async () => { await wait(); return [...assessmentRows] },
+    saveAssessments: async (records) => {
+      for (const r of records) {
+        const at = assessmentRows.findIndex((x) => x.id === r.id)
+        if (at < 0) { assessmentRows.push(r); continue }
+        if (assessmentRows[at].immutable) {
+          throw new Error(`Assessment ${r.id} is completed and cannot be modified.`)
+        }
+        assessmentRows[at] = r
+      }
+      await wait()
+    },
+
     submitPsychosocialAssessment: async (resp) => {
       // stamp to the current cycle; team defaults to the demo employee's team
       psychosocialResponses = [...psychosocialResponses, { ...resp, period: resp.period || NR1_CURRENT_PERIOD }]

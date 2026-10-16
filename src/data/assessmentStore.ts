@@ -20,13 +20,19 @@
      disagree. In a Supabase build these functions become queries; nothing
      above them changes.
 
-   Transport in this build is localStorage, the same as `therapyStore`. That is
+   Transport is the data provider: the records live in the `assessments`
+   table, where append-only is enforced by a trigger rather than by whichever
+   client happens to be writing, and localStorage is only a cache so the
+   first paint is instant and a lost connection does not blank a screen. The
+   note below described the previous arrangement, and the reasoning it gives
+   is why the move happened. That is
    a demo stand-in for a table, not a claim about where clinical data belongs —
    assessment records are health data and live server-side, under LGPD, with
    the treating therapist as the only reader.
    ============================================================================ */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDataProvider } from './provider'
 import {
   INSTRUMENTS,
   canEdit,
@@ -304,28 +310,82 @@ export function minutesFor(id: InstrumentId): string {
 
 /* --------------------------------------------------------------- hook ---- */
 
+/**
+ * The queue, backed by the database.
+ *
+ * The shape is unchanged — `{ rows, update }`, with `update` taking the whole
+ * array — because every pure function above operates on that array and the
+ * four screens that call this should not have to care where it came from.
+ * What changed is underneath: localStorage went from being the store to being
+ * a cache, so the first paint is instant and a lost connection does not blank
+ * a therapist's screen, but the record itself lives in Postgres where
+ * clearing a browser cannot reach it.
+ *
+ * WRITES GO UP ONE AT A TIME, by difference. `update` hands back a whole
+ * array; sending all of it on every keystroke would re-upsert completed
+ * records, which the append-only trigger correctly refuses. So only rows that
+ * are new or actually changed are sent.
+ */
 export function useAssessments() {
+  const dp = useDataProvider()
   const [rows, setRows] = useState<AssessmentRecord[]>(() => loadRecords())
+  const sent = useRef<Map<string, string>>(new Map())
 
-  /* Another surface in the same build — the therapist desktop — writes the same
-     key. Re-reading on focus keeps the two from drifting inside one demo. */
+  const pull = useCallback(() => {
+    void dp.listAssessments()
+      .then((server) => {
+        /* A record written while offline is in the cache and not on the
+           server. Keep it and push it up, rather than letting a refresh
+           silently delete somebody's answers. */
+        const seen = new Set(server.map((r) => r.id))
+        const unsent = loadRecords().filter((r) => !seen.has(r.id))
+        const merged = [...server, ...unsent]
+        setRows(merged)
+        saveRecords(merged)
+        for (const r of server) sent.current.set(r.id, fingerprint(r))
+        if (unsent.length) void dp.saveAssessments(unsent).catch(() => undefined)
+      })
+      .catch(() => { /* offline: the cache stands */ })
+  }, [dp])
+
+  useEffect(pull, [pull])
+
+  /* The therapist desktop and the patient app can be two tabs of one browser.
+     Re-reading on focus keeps them from drifting inside a single demo, and
+     re-pulling keeps them from drifting across two real devices. */
   useEffect(() => {
-    const reread = () => setRows(loadRecords())
-    window.addEventListener('focus', reread)
-    window.addEventListener('storage', reread)
+    const onFocus = () => pull()
+    const onStorage = () => setRows(loadRecords())
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('storage', onStorage)
     return () => {
-      window.removeEventListener('focus', reread)
-      window.removeEventListener('storage', reread)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('storage', onStorage)
     }
-  }, [])
+  }, [pull])
 
   const update = useCallback((fn: (rows: AssessmentRecord[]) => AssessmentRecord[]) => {
     setRows((prev) => {
       const next = fn(prev)
       saveRecords(next)
+      const changed = next.filter((r) => sent.current.get(r.id) !== fingerprint(r))
+      if (changed.length) {
+        for (const r of changed) sent.current.set(r.id, fingerprint(r))
+        void dp.saveAssessments(changed).catch(() => {
+          /* The cache already has it and `pull` will push it on the next
+             focus, so a failed write is a delay and not a loss. */
+          for (const r of changed) sent.current.delete(r.id)
+        })
+      }
       return next
     })
-  }, [])
+  }, [dp])
 
   return { rows, update }
+}
+
+/** Enough of a record to tell whether it needs sending again. Cheaper than
+    deep equality and, because a completed record is frozen, exact. */
+function fingerprint(r: AssessmentRecord): string {
+  return `${r.status}|${r.completedAt ?? 0}|${r.responses.length}|${r.immutable ? 1 : 0}`
 }

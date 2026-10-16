@@ -98,9 +98,32 @@ function mapProfessional(r: any): ProfessionalRecord {
 
 const DEFAULT_AVATAR = '👩🏻‍⚕️'
 
+import type { AssessmentRecord } from './assessments'
+
 /* ---- small converters ---- */
 const toMs = (t: string | null | undefined): number => (t ? new Date(t).getTime() : 0)
 const toIso = (ms: number): string => new Date(ms).toISOString()
+
+/* A patient key is either a real `patients.id` (the therapist's desktop) or
+   the sentinel the person's own app uses. Only the first is a foreign key. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function mapAssessment(r: any): AssessmentRecord {
+  return {
+    id: r.id,
+    patientId: r.patient_key,
+    instrumentId: r.instrument_id,
+    timepoint: r.timepoint,
+    administeredAt: r.administered_at ? Date.parse(r.administered_at) : 0,
+    completedAt: r.completed_at ? Date.parse(r.completed_at) : null,
+    status: r.status,
+    proposedBy: r.proposed_by ?? 'system',
+    confirmedBy: r.confirmed_by ?? null,
+    responses: Array.isArray(r.responses) ? r.responses : [],
+    scores: r.scores ?? null,
+    immutable: !!r.immutable,
+  }
+}
 const asDuration = (n: number): Duration => (n === 6 || n === 12 || n === 24 ? n : (Math.max(6, Math.min(24, n)) as Duration))
 // the sessions table stores the VAS but not the emoji; reconstruct a MoodCheck
 const moodFromVas = (vas: number | null, atMs: number): MoodCheck | undefined =>
@@ -1237,6 +1260,56 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
 
     /* ---- legal framework (supabase/11-legal-framework.sql) ---- */
+    /* --- clinical assessments -------------------------------------------
+
+       Row-level security does the scoping: a person gets their own rows, a
+       therapist gets their own patients’. Neither needs a filter here, and
+       adding one would be a second, weaker copy of the rule. */
+    async listAssessments(): Promise<AssessmentRecord[]> {
+      const { data, error } = await sb
+        .from('assessments')
+        .select('*')
+        .order('administered_at', { ascending: true })
+      if (error) {
+        /* The table is not there yet (setup.sql not re-run). The queue falls
+           back to its local cache rather than taking the screen down. */
+        if (/relation|does not exist|schema cache/i.test(error.message)) return []
+        throw error
+      }
+      return (data ?? []).map(mapAssessment)
+    },
+
+    async saveAssessments(records: AssessmentRecord[]): Promise<void> {
+      if (!records.length) return
+      const pid = await profileId()
+      /* `patient_key` is what the client indexes by and is kept as-is; when
+         it is a real patient id the column is filled too, which is what lets
+         the therapist policy find the row. */
+      const rows = records.map((r) => ({
+        id: r.id,
+        owner_profile: pid,
+        patient_id: UUID_RE.test(r.patientId) ? r.patientId : null,
+        patient_key: r.patientId,
+        instrument_id: r.instrumentId,
+        timepoint: r.timepoint,
+        administered_at: toIso(r.administeredAt),
+        completed_at: r.completedAt ? toIso(r.completedAt) : null,
+        status: r.status,
+        proposed_by: r.proposedBy,
+        confirmed_by: r.confirmedBy,
+        responses: r.responses,
+        scores: r.scores,
+        immutable: r.immutable,
+      }))
+      const { error } = await sb.from('assessments').upsert(rows, { onConflict: 'id' })
+      if (error) {
+        if (/append-only|cannot be modified/i.test(error.message)) {
+          throw new Error('Questa valutazione e completata: i record clinici non si modificano.')
+        }
+        throw error
+      }
+    },
+
     async getMyLegalProfile(): Promise<LegalProfile> {
       const pid = await profileId()
       const { data, error } = await sb.from('profiles')

@@ -36,6 +36,7 @@ import type { Company, AdminUser, UserRole, CredentialRequest, CredentialDecisio
 import type { CredentialDoc } from '../b2b/credentials'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
+import type { AssessmentRecord } from './assessments'
 import type {
   LegalProfile, ProfilePatch, Acceptance, AcceptanceDoc, ConsentEvent, ConsentPurpose,
   DataRequest, DataRequestKind, Report, ReportKind, LegalVersion,
@@ -261,6 +262,16 @@ export interface DataProvider {
   getPsychosocialAggregates(): Promise<Nr1Report>
   /** Record one employee's periodic psychosocial assessment (feeds the aggregates). */
   submitPsychosocialAssessment(response: PsychosocialResponse): Promise<void>
+
+  // --- Clinical assessments (DASS-21, CBI, the session VAS) ---------------
+  // These are the records a therapist reads a score from, and they may be
+  // used to show efficacy, so they are append-only: the database refuses to
+  // modify or delete one that has been completed. Scoped by row-level
+  // security to the person they are about and to their therapist.
+  /** Every assessment the signed-in person may see. */
+  listAssessments(): Promise<AssessmentRecord[]>
+  /** Create or update the given records. A completed one is refused. */
+  saveAssessments(records: AssessmentRecord[]): Promise<void>
 
   // --- Legal framework (src/legal) ---------------------------------------
   //     Who the person is for legal purposes, what they accepted, what they
