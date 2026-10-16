@@ -33,6 +33,33 @@ const IT_SHELL: Record<string, string> = {
   'Company': 'Azienda',
   'Exit preview': 'Esci dall’anteprima',
 
+  // ---- environment banner ----
+  'Environment': 'Ambiente',
+  'The database this deployment is pointed at': 'Il database a cui punta questo deployment',
+  'STAGING': 'STAGING',
+  'DEMO': 'DEMO',
+  'LOCAL': 'LOCALE',
+  'PRODUCTION': 'PRODUZIONE',
+
+  // ---- an area switched off from the console ----
+  'Temporarily unavailable': 'Temporaneamente non disponibile',
+  'Please try again later.': 'Riprova più tardi.',
+  'Sessions are temporarily unavailable while we fix something. Nothing you have done is lost.':
+    'Le sessioni sono temporaneamente non disponibili mentre sistemiamo una cosa. Niente di quello che hai fatto è andato perso.',
+  'Booking is temporarily unavailable while we fix something. Appointments you already have are unaffected.':
+    'Le prenotazioni sono temporaneamente non disponibili mentre sistemiamo una cosa. Gli appuntamenti che hai già non cambiano.',
+  'Video calls are temporarily unavailable while we fix something. Your appointment is still booked — your therapist will be in touch.':
+    'Le videochiamate sono temporaneamente non disponibili mentre sistemiamo una cosa. Il tuo appuntamento resta prenotato — il tuo terapeuta ti contatterà.',
+  'ENVIRONMENT NOT DECLARED': 'AMBIENTE NON DICHIARATO',
+  'Test environment. Nothing here is real and everything can be wiped.':
+    'Ambiente di test. Niente qui è reale e tutto può essere cancellato.',
+  'Demonstration environment with fictional data. Not a real company.':
+    'Ambiente dimostrativo con dati fittizi. Non è un’azienda reale.',
+  'No database connected — this is mock data that resets when the page reloads.':
+    'Nessun database collegato — sono dati finti che si azzerano al ricaricamento della pagina.',
+  'VITE_APP_ENV is not set on this deployment. Treat the data as real until someone says otherwise.':
+    'VITE_APP_ENV non è impostata su questo deployment. Tratta i dati come reali finché qualcuno non dice il contrario.',
+
   // ---- error screen ----
   'Something was interrupted': 'Qualcosa si è interrotto',
   'This screen could not load. No data has been lost: you can try again, and if that does not work, reload the page.':
@@ -66,6 +93,33 @@ const PT_SHELL: Record<string, string> = {
   'demo data — nothing real is read or written': 'dados de demonstração — nada real é lido ou gravado',
   'Company': 'Empresa',
   'Exit preview': 'Sair da prévia',
+
+  // ---- environment banner ----
+  'Environment': 'Ambiente',
+  'The database this deployment is pointed at': 'O banco de dados ao qual este deployment aponta',
+  'STAGING': 'STAGING',
+  'DEMO': 'DEMO',
+  'LOCAL': 'LOCAL',
+  'PRODUCTION': 'PRODUÇÃO',
+
+  // ---- an area switched off from the console ----
+  'Temporarily unavailable': 'Temporariamente indisponível',
+  'Please try again later.': 'Tente novamente mais tarde.',
+  'Sessions are temporarily unavailable while we fix something. Nothing you have done is lost.':
+    'As sessões estão temporariamente indisponíveis enquanto corrigimos algo. Nada do que você fez foi perdido.',
+  'Booking is temporarily unavailable while we fix something. Appointments you already have are unaffected.':
+    'O agendamento está temporariamente indisponível enquanto corrigimos algo. Os agendamentos que você já tem não mudam.',
+  'Video calls are temporarily unavailable while we fix something. Your appointment is still booked — your therapist will be in touch.':
+    'As videochamadas estão temporariamente indisponíveis enquanto corrigimos algo. Seu agendamento continua marcado — seu terapeuta entrará em contato.',
+  'ENVIRONMENT NOT DECLARED': 'AMBIENTE NÃO DECLARADO',
+  'Test environment. Nothing here is real and everything can be wiped.':
+    'Ambiente de teste. Nada aqui é real e tudo pode ser apagado.',
+  'Demonstration environment with fictional data. Not a real company.':
+    'Ambiente de demonstração com dados fictícios. Não é uma empresa real.',
+  'No database connected — this is mock data that resets when the page reloads.':
+    'Nenhum banco de dados conectado — são dados fictícios que se apagam ao recarregar a página.',
+  'VITE_APP_ENV is not set on this deployment. Treat the data as real until someone says otherwise.':
+    'VITE_APP_ENV não está definida neste deployment. Trate os dados como reais até alguém dizer o contrário.',
 
   // ---- error screen ----
   'Something was interrupted': 'Algo foi interrompido',

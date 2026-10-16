@@ -21,6 +21,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/auth'
+import { FeatureOff } from '../app/FeatureOff'
+import { useFeature } from '../app/useFeature'
 import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
 import { Explore } from './Explore'
@@ -140,6 +142,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
+  const videoOn = useFeature('video')
 
   /* The browser's back, one layer at a time (see backStack.ts). Registered in
      the order they can open, so the most recent is the one a press reaches.
@@ -501,6 +504,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     )
   }
   if (overlay.kind === 'call' && therapy.link) {
+    /* Gated HERE and not inside the component: PatientVideoCall opens the
+       camera and the peer connection from its own hooks, so a switch read
+       after they have run would have started the very thing it is meant to
+       stop. */
+    if (!videoOn) {
+      return <FeatureOff area="video" onBack={() => { setOverlay({ kind: 'none' }); setTab('therapist') }} />
+    }
     return (
       <PatientVideoCall
         addressedAs={state.addressedAs ?? 'm'}

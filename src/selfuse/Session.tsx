@@ -22,6 +22,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
+import { FeatureOff } from '../app/FeatureOff'
+import { useFeature } from '../app/useFeature'
 import { useI18n } from '../i18n'
 import { useLegal } from '../legal/LegalContext'
 import { getProtocol, versionLengthSeconds } from '../data/protocols'
@@ -133,6 +135,10 @@ const SESSION_FRAME = 'app-frame su-studio su-dark'
 
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
+  /* The player kill switch. Checked HERE, above every stage, because this is
+     the one door into playback: the pre-session screen, the stereo check and
+     the player itself are all behind it. */
+  const playerOn = useFeature('player')
   const { locale } = useI18n()
   const [stage, setStage] = useState<Stage>('pre')
   /* Before the audio starts, back is the screen's own back: leave the session.
@@ -151,6 +157,11 @@ export function SessionFlow(props: SessionFlowProps) {
   const flowProtocol = session.entry ?? getProtocol(session.protocolCode)
   const flowPick = flowProtocol ? audioPick(flowProtocol, duration, locale, props.addressedAs) : undefined
   const otherForm = !!flowPick && !flowPick.exact
+
+  /* BELOW every hook, never above one: flipping the switch changes this
+     branch, and a conditional return over a useRef would change the hook
+     count between renders and take the whole screen down with it. */
+  if (!playerOn) return <FeatureOff area="player" onBack={onCancel} />
 
   function begin(pre: number | null) {
     vasPre.current = pre

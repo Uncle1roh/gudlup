@@ -11,6 +11,8 @@
     "build:app": "tsc -b && vite build --mode app",
     "cap:sync": "npm run build:app && cap sync",
     "test": "node tools/run-tests.mjs",
+    "seed": "esbuild tools/seed.ts --bundle --platform=node --format=cjs --define:import.meta.env={} --outfile=node_modules/.cache/gl/seed.cjs --log-level=warning && node node_modules/.cache/gl/seed.cjs",
+    "reset": "esbuild tools/reset.ts --bundle --platform=node --format=cjs --define:import.meta.env={} --outfile=node_modules/.cache/gl/reset.cjs --log-level=warning && node node_modules/.cache/gl/reset.cjs",
     "backup:studio": "esbuild tools/backup-studio.ts --bundle --platform=node --format=cjs --define:import.meta.env={} --outfile=node_modules/.cache/gl/backup.cjs --log-level=warning && node node_modules/.cache/gl/backup.cjs",
     "verify:studio": "esbuild tools/verify-studio-backup.ts --bundle --platform=node --format=cjs --define:import.meta.env={} --outfile=node_modules/.cache/gl/verify.cjs --log-level=warning && node node_modules/.cache/gl/verify.cjs"
   },

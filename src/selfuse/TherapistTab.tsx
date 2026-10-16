@@ -20,6 +20,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
+import { FeatureOff } from '../app/FeatureOff'
+import { useFeature } from '../app/useFeature'
 import { useLegal } from '../legal/LegalContext'
 import { LegalSheet } from '../legal/LegalPage'
 import { registrationLineId } from '../legal/messages'
@@ -626,6 +628,7 @@ function TherapistProfileScreen({
   const dp = useDataProvider()
   const legal = useLegal()
   const { m, market } = legal
+  const bookingOn = useFeature('booking')
   const [therapist, setTherapist] = useState<TherapistProfile | null>(null)
   const [card, setCard] = useState<ProfessionalCard | null>(null)
   const [ack, setAck] = useState(false)
@@ -661,6 +664,12 @@ function TherapistProfileScreen({
   }, [dp, therapistId, t])
 
   useEffect(load, [load])
+
+  /* The booking kill switch, below every hook. Appointments already made are
+     untouched and still listed on the previous screen; what stops here is
+     making a new one, which is the part that writes to a therapist's
+     calendar and cannot be taken back by flipping the switch again. */
+  if (!bookingOn) return <FeatureOff area="booking" onBack={onBack} />
 
   async function book() {
     if (slot == null || !therapist) return

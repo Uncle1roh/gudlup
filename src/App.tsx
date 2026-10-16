@@ -15,6 +15,9 @@ import { PreviewBar } from './admin/PreviewBar'
 import { previewing } from './admin/preview'
 import { LegalProvider } from './legal/LegalContext'
 import { LegalPage } from './legal/LegalPage'
+import { EnvBanner } from './app/EnvBanner'
+import { showsBanner } from './app/environment'
+import { initFeatures } from './app/features'
 
 /* Where the Sound Studio was opened from. Reached from the admin console it
    is part of the console's flow, so it stays in the console's language
@@ -42,6 +45,12 @@ export default function App() {
      pickers instantly, then a background refresh picks up anything the POs
      added since. */
   useEffect(() => { initVoiceSync() }, [])
+
+  /* The feature switches, read once per load. Until the read lands the
+     cached answer stands, so a disabled area does not flash into view and
+     then disappear; with no cache at all everything is on, which is the
+     only safe default for a kill switch. */
+  useEffect(() => { initFeatures() }, [])
 
   useEffect(() => {
     const onHash = () => {
@@ -235,20 +244,29 @@ export default function App() {
      its own height as `--pvw-h`, which the four surface shells subtract from
      their 100dvh so nothing is pushed below the fold. */
   const bar = previewing() && route !== '#admin'
+  /* Every deployment that is not production carries the banner, on every
+     surface and every route — including the console, because the console is
+     where the destructive buttons are. It is above the preview bar: which
+     PLATFORM you are on outranks which surface you are previewing. */
+  const banner = showsBanner()
   const boundary = (
     <ErrorBoundary resetKey={route} label={route || '#home'}>
       {content()}
     </ErrorBoundary>
   )
   const body = isAdmin ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
+  /* The banner is chrome, so on the Italian-pinned console it is Italian too,
+     and anywhere else it follows the surface under it. */
+  const strip = isAdmin ? <FixedLocale locale="it"><EnvBanner /></FixedLocale> : <EnvBanner />
   return (
     <I18nProvider>
-      {bar ? (
-        <div className="pvw-shell">
+      {bar || banner ? (
+        <div className={`pvw-shell${banner ? ' pvw-shell--env' : ''}${bar ? ' pvw-shell--bar' : ''}`}>
+          {banner && strip}
           {/* The bar is the ADMIN's chrome, not the surface's: Italian like the
               rest of the console, while the surface under it follows the
               language being demonstrated. */}
-          <FixedLocale locale="it"><PreviewBar /></FixedLocale>
+          {bar && <FixedLocale locale="it"><PreviewBar /></FixedLocale>}
           <div className="pvw-shell__surface">{body}</div>
         </div>
       ) : body}

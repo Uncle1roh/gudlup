@@ -746,6 +746,24 @@ drop policy if exists app_settings_admin on app_settings;
 create policy app_settings_admin on app_settings
   for all using (is_admin()) with check (is_admin());
 
+-- The feature switches are the one row everybody may READ.
+--
+-- They turn the player, booking or the video call off while the app is
+-- running, without a deployment. A kill switch only an admin can read is not
+-- a kill switch: the person whose player is broken is not an admin. So this
+-- policy grants a select on exactly one key, by name, to everybody including
+-- `anon` — the switches are consulted before sign-in. Every other row, the
+-- voice keys among them, stays admin-only: policies are OR'd, and this one
+-- cannot reach past its own `key =` test.
+drop policy if exists app_settings_read_flags on app_settings;
+create policy app_settings_read_flags on app_settings
+  for select using (key = 'feature_flags');
+
+-- All three areas on. Only ever written by an admin in the console.
+insert into app_settings (key, value)
+values ('feature_flags', '{"player": true, "booking": true, "video": true}'::jsonb)
+on conflict (key) do nothing;
+
 -- companies + audit: admins only ---------------------------------------------
 drop policy if exists companies_admin on companies;
 create policy companies_admin on companies

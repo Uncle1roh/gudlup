@@ -2704,3 +2704,104 @@ td, th { overflow-wrap: anywhere; }
 .adm-plain__mode button.is-on { border-color: var(--aura); box-shadow: inset 0 0 0 1px var(--aura); }
 .adm-plain__mode b { font-size: 13.5px; }
 .adm-plain__mode small { font-size: 12px; color: var(--slate); line-height: 1.4; }
+
+/* ---- the environment banner -------------------------------------------- *
+   Above everything, on every deployment that is not production, and not
+   dismissible. The failure it prevents is somebody demonstrating to a client
+   or running a destructive test on the real platform because the screen
+   looked the same as always.
+
+   Each environment gets its own colour, because the word is read at a glance
+   and rarely twice: amber for staging, blue for the demo, grey for a laptop,
+   red for a deployment that never said what it is. */
+.envb {
+  position: sticky; top: 0; z-index: 950; min-height: 38px;
+  display: flex; align-items: center; gap: 10px 14px;
+  padding: 6px max(12px, env(safe-area-inset-left)) 6px 12px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  font-size: 13px; line-height: 1.3;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+}
+.envb__tag {
+  flex-shrink: 0;
+  font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px;
+  padding: 3px 9px; border-radius: 999px;
+}
+.envb__note { min-width: 0; opacity: 0.92; }
+/* The project ref settles the argument about which environment is on screen,
+   so it sits at the far end in a monospace face where a wrong character is
+   visible rather than merely present. */
+.envb__db {
+  margin-left: auto; flex-shrink: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px; letter-spacing: 0.02em; opacity: 0.8;
+  padding: 2px 8px; border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.envb--staging { background: #4a3410; color: #ffe6b0; }
+.envb--staging .envb__tag { background: #f0b543; color: #2a1d05; }
+
+.envb--demo { background: #10304a; color: #cfe6f7; }
+.envb--demo .envb__tag { background: #58a9e0; color: #04192b; }
+
+.envb--local { background: #2a2d33; color: #d5d9e0; }
+.envb--local .envb__tag { background: #8d95a3; color: #14161a; }
+
+/* A deployment that never declared itself. Loud on purpose: the fix is one
+   environment variable, and nobody fixes what they cannot see. */
+.envb--unknown { background: #4a1414; color: #ffd4d4; }
+.envb--unknown .envb__tag { background: #e05858; color: #2b0606; }
+
+/* One row on a phone, like the preview bar, and for the same reason: the
+   surfaces below are sized against a chrome of a known height. */
+@media (max-width: 560px) {
+  .envb { gap: 8px; padding-inline: 8px; flex-wrap: nowrap; }
+  .envb__note { display: none; }
+}
+
+/* The shell's reserved height depends on which bars are up. The surfaces
+   subtract `--pvw-h` from 100dvh, so it has to be the TOTAL. */
+.pvw-shell--env { --pvw-h: 38px; }
+.pvw-shell--bar { --pvw-h: 44px; }
+.pvw-shell--env.pvw-shell--bar { --pvw-h: 82px; }
+@media (max-width: 560px) {
+  .pvw-shell--env.pvw-shell--bar { --pvw-h: 80px; }
+}
+
+/* ---- admin: the feature switches ---------------------------------------- */
+.adm-note--warn { border-left-color: #b8860b; background: #fffaf0; }
+.adm-note--err  { border-left-color: #a8331f; background: #fff5f3; }
+
+.ftsw { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
+.ftsw__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 16px 18px; background: #fff;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+}
+/* A switched-off area is a state somebody has to notice from across a desk,
+   so the row changes colour rather than only its label. */
+.ftsw__row.is-off { border-color: #d9a441; background: #fffaf0; }
+.ftsw__text { min-width: 0; }
+.ftsw__name { display: flex; align-items: center; gap: 10px; font-weight: 650; color: var(--ink); }
+.ftsw__what { margin: 4px 0 0; font-size: 13px; color: var(--slate); max-width: 62ch; }
+.ftsw__foot { margin-top: 20px; font-size: 13px; color: var(--slate); }
+.ftsw__foot code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px; background: #f2f3f5; padding: 1px 5px; border-radius: 4px;
+}
+@media (max-width: 640px) {
+  .ftsw__row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .ftsw__row > .b2b-btn { width: 100%; }
+}
+
+/* ---- the "temporarily unavailable" screen ------------------------------- *
+   Not an error screen. An error invites a retry; this says an area is off on
+   purpose and retrying will not help. Calm, centred, no red. */
+.ftoff { display: flex; align-items: center; justify-content: center; padding: 32px 20px; min-height: 60vh; }
+.ftoff__box { max-width: 42ch; text-align: center; }
+.ftoff__mark { font-size: 34px; line-height: 1; opacity: 0.55; margin-bottom: 14px; }
+.ftoff__title { font-family: var(--display); font-size: 21px; margin: 0 0 10px; }
+.ftoff__note { margin: 0 0 8px; font-size: 15px; line-height: 1.5; }
+.ftoff__sub { margin: 0; font-size: 13.5px; opacity: 0.7; }
+.ftoff__back { margin-top: 22px; }
