@@ -16,6 +16,10 @@
      · the per-language maps (`textByLang`, `ttsByLang`, `voiceByLang`) hold
        the others. Switching folds the live fields into the maps ("stash") and
        lifts the other language out of them ("load");
+     · between the two ADDRESS FORMS of one language, a line that is word
+       for word the same keeps the render already paid for — renders are
+       content-addressed, so it is the same stored object, and only the
+       lines that really change need synthesizing a second time;
      · a SAVED session is canonical: its live fields are the ITALIAN ones,
        which is what every session saved before this module existed holds, and
        what any older reader expects.
@@ -96,6 +100,85 @@ export interface LoadResult<C> {
   missing: boolean
   /** The text was found in the stored timeline (the session had none). */
   filled: boolean
+  /** The render came from the OTHER address form: the line is word for word
+      the same, so the audio already paid for is this version's audio too. */
+  carried: boolean
+}
+
+/* ---- the same line, in both address forms --------------------------------
+
+   "Sei al sicuro" is the same sentence whether it is said to a man or to a
+   woman; "sei pronto" is not. In a real protocol most lines are the first
+   kind — the gendered ones are a minority, and they are the only ones that
+   need a second ElevenLabs render.
+
+   Until now switching form threw every render away and the PO re-synthesized
+   the whole protocol to change a handful of words. What follows is the one
+   question that avoids it: did this line actually change? */
+
+/** Two texts that are the same line — spacing, case and ellipsis aside. */
+function sameLine(a: string | undefined, b: string | undefined): boolean {
+  return nonEmpty(a) && nonEmpty(b) && scriptKey(a) === scriptKey(b)
+}
+
+/** The other address form of the same language. */
+export function otherForm(v: Variant): Variant {
+  return { lang: v.lang, to: v.to === 'f' ? 'm' : 'f' }
+}
+
+/** The text a clip holds in one variant, or undefined. */
+export function textOfVariant(c: LangClip, v: Variant): string | undefined {
+  const s = c.textByLang?.[keyOf(v)]
+  return nonEmpty(s) ? s : undefined
+}
+
+/** How a clip's line relates to the same clip in the other address form. */
+export type FormDiff =
+  /** Word for word the same: one render serves both. */
+  | 'same'
+  /** Really different words: this form needs its own render. */
+  | 'different'
+  /** Only one of the two forms is written, so there is nothing to compare. */
+  | 'alone'
+
+/**
+ * `working` is the form being EDITED, when there is one.
+ *
+ * The maps are only written when the version is switched or the session is
+ * saved — while somebody is typing, the working form's line is on `text`
+ * and the map still holds what it was before. Comparing the maps alone
+ * therefore answers a question about the past: a line just made different
+ * went on reading "the same", which is exactly the wrong way round for a
+ * mark whose job is to say "this one needs its own recording".
+ */
+export function compareForms(c: LangClip, lang: VoiceLang, working?: Addressee): FormDiff {
+  const read = (to: Addressee) => {
+    if (working === to) return nonEmpty(c.text) ? c.text : undefined
+    return textOfVariant(c, { lang, to })
+  }
+  const m = read('m')
+  const f = read('f')
+  if (!m || !f) return 'alone'
+  return sameLine(m, f) ? 'same' : 'different'
+}
+
+/**
+ * The render of the OTHER address form, when it speaks this form's words.
+ *
+ * Renders are content-addressed on {text, voice, language, context}, so an
+ * identical line in the same voice IS the same stored object — carrying the
+ * path over is not an approximation, it is the same file.
+ *
+ * The voice has to match too: the same sentence in another voice is another
+ * recording, and handing it over would quietly change who is speaking.
+ */
+function carriedRender(c: LangClip, v: Variant, text: string, voice: VoiceChoice): { path: string; text: string } | undefined {
+  const k = keyOf(otherForm(v))
+  const alt = c.ttsByLang?.[k]
+  if (!alt?.path || !sameLine(alt.text, text)) return undefined
+  const altVoice = c.voiceByLang?.[k]
+  if (altVoice && altVoice.voiceId !== voice.voiceId) return undefined
+  return { path: alt.path, text: text.trim() }
 }
 
 /**
@@ -118,7 +201,6 @@ export function loadLang<C extends LangClip>(c: C, v: Variant, scripts?: ScriptI
   const others = VOICE_VARIANTS.map(keyOf).some((k) => k !== lang && nonEmpty(c.textByLang?.[k]))
   const missing = !nonEmpty(text) && (others || !!c.sourceId)
 
-  const tts = c.ttsByLang?.[lang]
   /* The voice this language was left with; else the counterpart of the voice
      the clip has now — the same archetype and gender, in `lang`. */
   let voice = c.voiceByLang?.[lang]
@@ -134,6 +216,16 @@ export function loadLang<C extends LangClip>(c: C, v: Variant, scripts?: ScriptI
       voice = { voiceId: alt.id, voiceArchetype: alt.archetype, voiceGender: alt.gender }
     }
   }
+  /* The render: this form's own, or the other form's when the line is word
+     for word the same. Nothing synthesized is thrown away for a word that
+     did not change. */
+  let tts = c.ttsByLang?.[lang]
+  let carried = false
+  if (!tts?.path && nonEmpty(text)) {
+    const over = carriedRender(c, v, text, voice)
+    if (over) { tts = over; carried = true }
+  }
+
   const textByLang = filled ? { ...(c.textByLang ?? {}), [lang]: text } : c.textByLang
   return {
     clip: {
@@ -146,6 +238,7 @@ export function loadLang<C extends LangClip>(c: C, v: Variant, scripts?: ScriptI
     },
     missing,
     filled,
+    carried,
   }
 }
 

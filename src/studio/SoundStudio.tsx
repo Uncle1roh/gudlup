@@ -47,8 +47,8 @@ import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, hasVoicesFor, resolveVoiceId, voiceById, voiceLangOf, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
-import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, ADDRESSEES, ADDRESSEE_LABEL, type Addressee, type VoiceLang } from '../tts/voiceLang'
-import { canonicalVoiceClip, isTextMissing, switchClipLang, type Variant } from './sessionLang'
+import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, ADDRESSEES, ADDRESSEE_LABEL, scriptKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { canonicalVoiceClip, compareForms, isTextMissing, otherForm, switchClipLang, textOfVariant, type Variant } from './sessionLang'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
@@ -326,13 +326,44 @@ function seedTrackToTrack(t: SeedTrack): Track {
 /**
  * Every voice clip of a session switched from one language to another. The
  * counts are for the message the switch leaves: how many lines found their
- * text in the stored timeline, how many have none, and how many cut pieces
- * keep audio in the language they were cut in (their audio is frozen).
+ * text in the stored timeline, how many have none, how many cut pieces keep
+ * audio in the language they were cut in (their audio is frozen), and how
+ * many KEPT the voice already synthesized.
+ *
+ * That last one is the point of the whole function now. Switching from the
+ * male to the female version used to silence every clip, because the female
+ * form had no render of its own — and most of its lines are word for word
+ * the male ones. A render is content-addressed, so an unchanged line in the
+ * same voice is the same stored object: the clip keeps its path, and the
+ * buffer already decoded is still exactly its audio. Only a clip whose words
+ * really changed goes back to the placeholder and asks to be synthesized.
  */
-function switchTracksLang(tracks: Track[], from: Variant, to: Variant, scripts?: ScriptIndex): { tracks: Track[]; missing: number; filled: number; frozen: number } {
+/* ---- every line synthesized in this tab, by what it IS --------------------
+
+   A render is identified by the words, the voice and the language — not by
+   the clip it happens to sit on. Two clips with the same line in the same
+   voice are the same recording, and so is the same clip before and after a
+   switch of address form.
+
+   Kept for the life of the Studio and never saved: this is a memory of what
+   this tab has already paid for, which is what makes switching back and
+   forth free. Opening a project still starts with every line unrendered —
+   loading renders at open time was tried and reverted (c07f13b). */
+function memoKey(voiceId: string | undefined, lang: VoiceLang, text: string | undefined): string | null {
+  const t = (text ?? '').trim()
+  if (!t) return null
+  return `${voiceId ?? ''}|${lang}|${scriptKey(t)}`
+}
+
+/** One line already synthesized: the decoded audio, and where it is stored. */
+interface MemoRender { source: AudioBuffer; path?: string }
+
+function switchTracksLang(tracks: Track[], from: Variant, to: Variant, scripts: ScriptIndex | undefined, memo: Map<string, MemoRender> = new Map()): { tracks: Track[]; missing: number; filled: number; frozen: number; kept: number; redo: number } {
   let missing = 0
   let filled = 0
   let frozen = 0
+  let kept = 0
+  let redo = 0
   const next = tracks.map((t) => (t.type !== 'voice' ? t : {
     ...t,
     clips: t.clips.map((c) => {
@@ -340,11 +371,25 @@ function switchTracksLang(tracks: Track[], from: Variant, to: Variant, scripts?:
       if (r.missing) missing++
       if (r.filled) filled++
       if (c.frozen) { frozen++; return r.clip }
-      // the audio in the clip is the OTHER language's: it re-renders on demand
+      /* Same stored object = same bytes = the decoded buffer still speaks
+         this clip's line. Covers both the form that had its own identical
+         render and the one that just carried the other form's. */
+      if (c.ttsSource && r.clip.ttsPath && r.clip.ttsPath === c.ttsPath) { kept++; return r.clip }
+      /* Not this clip's audio any more — but the line it now shows may be
+         one this tab has already synthesized, here or on its way back from
+         the other version. */
+      const k = memoKey(effectiveVoice(r.clip.params as VoiceParams).id, to.lang, r.clip.text)
+      const held = k ? memo.get(k) : undefined
+      if (held) {
+        kept++
+        return { ...r.clip, ttsSource: held.source, ttsText: (r.clip.text ?? '').trim(), ttsPath: held.path ?? r.clip.ttsPath }
+      }
+      // the audio in the clip is the OTHER version's: it re-renders on demand
+      if (c.ttsSource) redo++
       return { ...r.clip, ttsSource: null }
     }),
   }))
-  return { tracks: next, missing, filled, frozen }
+  return { tracks: next, missing, filled, frozen, kept, redo }
 }
 
 /* seed = the GL-ANX 1.1 bed, so the studio opens with something to hear + edit */
@@ -731,6 +776,16 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
      ask ElevenLabs for a genuinely different take instead of resampling the
      same deterministic seed. */
   const rerollRef = useRef<Map<string, number>>(new Map())
+  /* Every line this tab has synthesized, by `memoKey`. Switching between the
+     male and the female version used to empty every voice clip, including
+     the lines that are word for word identical in both — the PO then paid
+     ElevenLabs a second time for the same recording. Nothing here is saved;
+     it is only the tab remembering what it already has. */
+  const renderMemo = useRef<Map<string, MemoRender>>(new Map())
+  const rememberRender = useCallback((p: VoiceParams, lang: VoiceLang, text: string, buf: AudioBuffer, path?: string) => {
+    const k = memoKey(effectiveVoice(p).id, lang, text)
+    if (k) renderMemo.current.set(k, { source: buf, path })
+  }, [])
   const dragRef = useRef<{ mode: 'move' | 'trim-l' | 'trim-r'; trackId: string; trackType: TrackType; clipId: string; startClientX: number; origStart: number; origDur: number } | null>(null)
   const lanesRef = useRef<HTMLDivElement | null>(null)
 
@@ -1078,6 +1133,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
       buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
       if (renderTokens.current.get(clipId) !== token) return
+      rememberRender(vp, key.lang as VoiceLang, text, decoded, storedPath ?? undefined)
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, durationSec: buf.duration })
       /* The clip is now as long as the voice really is, which may be longer
          than the window the sheet gave it — queued AFTER the buffer update, so
@@ -1089,7 +1145,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       ttsInFlight.current.delete(clipId)
       setTtsBusy(null)
     }
-  }, [setClipBuffer])
+  }, [setClipBuffer, rememberRender])
 
   /** Synthesize EVERY voice clip that has text and no rendered voice yet —
       one TTS render per unique line (cached), sequential to respect rate
@@ -1113,6 +1169,8 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     setTtsError(null)
     const lang = workingLangRef.current
     const cache = new Map<string, AudioBuffer>()
+    /** Where each of those renders is stored, so the clip keeps the path. */
+    const paths = new Map<string, string>()
     /* One joined render serves every clip in its block, and repeats of the same
        block (a LOOP lane cycles the same four words all phase) reuse it — so the
        whole ostinato costs ONE request and every cycle is identical. */
@@ -1123,12 +1181,14 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     let failed = 0
 
     /** Bake one job from already-decoded audio and put it in its clip. */
-    const place = async (j: VoiceJob, source: AudioBuffer, token: number): Promise<boolean> => {
+    const place = async (j: VoiceJob, source: AudioBuffer, token: number, storedPath?: string): Promise<boolean> => {
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - j.startSec)
       let buf = await bakeVoiceBuffer(source, j.pan, maxDur, j.speed)
       if (j.shape) buf = shapeClipBuffer(buf, j.shape)
       if (renderTokens.current.get(j.clipId) !== token) return false
-      setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: source, ttsText: j.text, durationSec: buf.duration })
+      const k = memoKey(j.voiceId, lang, j.text)
+      if (k) renderMemo.current.set(k, { source, path: storedPath })
+      setClipBuffer(j.trackId, j.clipId, buf, { ttsSource: source, ttsText: j.text, ...(storedPath ? { ttsPath: storedPath } : {}), durationSec: buf.duration })
       return true
     }
 
@@ -1152,6 +1212,10 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
           const texts = group.map((j) => j.text)
           const key = `BLOCK|${group[0].voiceId ?? ''}|${lang}|${texts.join('')}`
           let block = blockCache.get(key)
+          /* No storage path for a block member: each clip is a SLICE of one
+             joined render, and the content-addressed store holds whole
+             renders. The tab remembers them (`place` → renderMemo), so a
+             switch of version does not lose them; a reload does. */
           if (!block) {
             const r = await provider.renderJoined!(texts, { lang, voiceId: group[0].voiceId })
             block = { decoded: await player.decode(r.bytes), spans: r.spans }
@@ -1173,12 +1237,31 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
              of a loop block. */
           const key = `${j.voiceId ?? ''}|${lang}|${j.text}|${j.previousText ?? ''}|${j.nextText ?? ''}`
           let decoded = cache.get(key)
+          let path = paths.get(key)
           if (!decoded) {
-            const bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
+            /* Storage first, exactly as the per-clip ♪ does. This is the run
+               that bills a whole protocol, and it used to bill it again
+               every time — a line already rendered here, in another version
+               of this protocol, or in another protocol altogether, costs a
+               download instead of credits. */
+            const tk: TtsKey = {
+              text: j.text,
+              voiceId: j.voiceId ?? '',
+              lang,
+              context: `${j.previousText ?? ''}|${j.nextText ?? ''}`,
+            }
+            let bytes = await ttsLookup(tk)
+            if (bytes) path = (await ttsPathFor(tk)) ?? undefined
+            else {
+              bytes = await provider.render(j.text, { lang, voiceId: j.voiceId, previousText: j.previousText, nextText: j.nextText })
+              /* …and keep it, so the NEXT run is the cheap one. */
+              path = (await ttsStore(tk, bytes)) ?? undefined
+            }
             decoded = await player.decode(bytes)
             cache.set(key, decoded)
+            if (path) paths.set(key, path)
           }
-          if (await place(j, decoded, tokens.get(j.clipId)!)) done++
+          if (await place(j, decoded, tokens.get(j.clipId)!, path)) done++
         }
       } catch (e) {
         failed += group.length
@@ -1192,7 +1275,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     // grew into the next one is pulled apart — in the field, or in time
     resolveVoiceOverlaps()
     if (!failed) setTtsError(null)
-  }, [setClipBuffer])
+  }, [setClipBuffer, rememberRender])
 
   /* What the connected ElevenLabs account can answer for. Recomputed when the
      tracks change or the key does (ttsTick), which is exactly when it moves. */
@@ -1239,14 +1322,25 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       setLangMsg(lt('Wait for the voices being synthesized to finish, then switch.'))
       return
     }
-    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: workingLang, to: next }, scripts)
+    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: workingLang, to: next }, scripts, renderMemo.current)
     versionSwitch.current = true
     setTracks(r.tracks)
     setWorkingTo(next)
     const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this version.', { lang: `${LANG_LABEL[workingLang]} · ${ADDRESSEE_LABEL[next]}` })]
     if (r.filled) bits.push(lt('{n} texts filled from the stored Excel.', { n: r.filled }))
+    if (r.kept) bits.push(lt('{n} voices kept: those lines are word for word the same in both versions.', { n: r.kept }))
+    if (r.redo) bits.push(lt('{n} lines really change between the two versions — marked ⚥, synthesize those.', { n: r.redo }))
     if (r.missing) bits.push(lt('{n} voice clips have no text in this version yet — marked ⚠, they stay silent.', { n: r.missing }))
     setLangMsg(bits.join(' '))
+    /* Re-bake every voice clip against the audio it now holds: the ones that
+       kept their render keep their waveform, the ones that lost it go back
+       to the placeholder tone. */
+    window.setTimeout(() => {
+      for (const t of tracksRef.current) {
+        if (t.type !== 'voice') continue
+        for (const c of t.clips) if (!c.frozen) scheduleRender(t.id, c.id)
+      }
+    }, 0)
   }
 
   function switchLang(next: VoiceLang) {
@@ -1256,12 +1350,13 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       setLangMsg(lt('Wait for the voices being synthesized to finish, then switch language.'))
       return
     }
-    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: next, to: workingTo }, scripts)
+    const r = switchTracksLang(tracksRef.current, { lang: workingLang, to: workingTo }, { lang: next, to: workingTo }, scripts, renderMemo.current)
     versionSwitch.current = true
     setTracks(r.tracks)
     setWorkingLang(next)
     const bits: string[] = [lt('Working in {lang}: the voice clips show and speak this language; everything else is shared.', { lang: LANG_LABEL[next] })]
     if (r.filled) bits.push(lt('{n} texts filled from the stored Excel.', { n: r.filled }))
+    if (r.kept) bits.push(lt('{n} voices already synthesized in this language are kept.', { n: r.kept }))
     if (r.missing) bits.push(lt('{n} voice clips have no text in {lang} yet — marked ⚠, they stay silent in this language.', { n: r.missing, lang: LANG_LABEL[next] }))
     if (r.frozen) bits.push(lt('{n} cut pieces keep the audio they were cut from (frozen audio).', { n: r.frozen }))
     if (!hasVoicesFor(next)) bits.push(lt('The ElevenLabs account has no {lang} voices: the default voice is used.', { lang: LANG_LABEL[next] }))
@@ -1275,6 +1370,24 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       }
     }, 0)
   }
+  /** The lines that really change between the male and the female version,
+      and how many of those still have no voice in the version on screen.
+      This is the number that replaces "re-synthesize everything". */
+  const formWork = useMemo(() => {
+    let differ = 0
+    let todo = 0
+    for (const t of tracks) {
+      if (t.type !== 'voice') continue
+      for (const c of t.clips) {
+        if (compareForms(c, workingLang, workingTo) !== 'different') continue
+        differ++
+        const txt = (c.text ?? '').trim()
+        if (txt && (!c.ttsSource || c.ttsText !== txt)) todo++
+      }
+    }
+    return { differ, todo }
+  }, [tracks, workingLang, workingTo])
+
   /** Voice clips with no text in the working language, for the top bar. */
   const missingInLang = useMemo(
     () => tracks.reduce((n, t) => n + (t.type === 'voice' ? t.clips.filter((c) => isTextMissing(c)).length : 0), 0),
@@ -1922,6 +2035,16 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
               {ADDRESSEE_LABEL[to][0]}
             </button>
           ))}
+          {formWork.differ > 0 && (
+            <span
+              className={`mt-worklang__diff${formWork.todo ? ' is-todo' : ''}`}
+              title={formWork.todo
+                ? lt('{todo} of the {differ} lines that change between the two versions still have no voice here. Everything else kept the voice already synthesized. Synthesize them one by one (♪) or all at once with “All voices”.', { todo: formWork.todo, differ: formWork.differ })
+                : lt('{differ} lines are different in this version, and all of them are synthesized.', { differ: formWork.differ })}
+            >
+              ⚥ {formWork.todo || formWork.differ}
+            </span>
+          )}
         </div>
         {languagePicker && <LanguagePicker label={false} className="mt-lang" />}
         <button className="mt-back" onClick={goBack} title={returnTo ? lt('Back to the previous screen') : lt('Leave the studio')}>
@@ -2036,6 +2159,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
                 pxPerSec={pxPerSec}
                 lengthSec={lengthSec}
                 selected={selected}
+                variant={workingVariant}
                 onSelectClip={(tid, cid) => setSelected({ trackId: tid, clipId: cid })}
                 onBeginDrag={beginDrag}
                 onAddClipAt={(sec) => addClip(t.id, sec)}
@@ -2065,6 +2189,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         onVoiceSynthesize={() => selected && synthesizeVoice(selected.trackId, selected.clipId)}
         onVoiceChange={(v) => selected && setClipVoice(selected.trackId, selected.clipId, v)}
         workingLang={workingLang}
+        workingTo={workingTo}
         onEq={(eq) => selected && setClipEq(selected.trackId, selected.clipId, eq)}
         onDrawClip={() => selected && void drawForClip(selected.trackId, selected.clipId)}
         onDrawAllMissing={() => void drawAllMissing()}
@@ -2204,11 +2329,13 @@ function Ruler({ lengthSec, pxPerSec, onSeek }: { lengthSec: number; pxPerSec: n
 }
 
 /* ============================ lane ============================ */
-function Lane({ track, pxPerSec, lengthSec, selected, onSelectClip, onBeginDrag, onAddClipAt, onDeselect }: {
+function Lane({ track, pxPerSec, lengthSec, selected, variant, onSelectClip, onBeginDrag, onAddClipAt, onDeselect }: {
   track: Track
   pxPerSec: number
   lengthSec: number
   selected: { trackId: string; clipId: string } | null
+  /** Which version is on screen — the clips mark the lines it changes. */
+  variant: Variant
   onSelectClip: (trackId: string, clipId: string) => void
   onBeginDrag: (mode: 'move' | 'trim-l' | 'trim-r', trackId: string, clipId: string, e: ReactPointerEvent) => void
   onAddClipAt: (sec: number) => void
@@ -2228,6 +2355,7 @@ function Lane({ track, pxPerSec, lengthSec, selected, onSelectClip, onBeginDrag,
           clip={c}
           pxPerSec={pxPerSec}
           selected={selected?.trackId === track.id && selected?.clipId === c.id}
+          variant={variant}
           onSelect={() => onSelectClip(track.id, c.id)}
           onBeginDrag={(mode, e) => onBeginDrag(mode, track.id, c.id, e)}
         />
@@ -2260,11 +2388,12 @@ function drawWave(canvas: HTMLCanvasElement | null, peaks: Float32Array | null, 
   }
 }
 
-function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
+function ClipView({ track, clip, pxPerSec, selected, variant, onSelect, onBeginDrag }: {
   track: Track
   clip: Clip
   pxPerSec: number
   selected: boolean
+  variant: Variant
   onSelect: () => void
   onBeginDrag: (mode: 'move' | 'trim-l' | 'trim-r', e: ReactPointerEvent) => void
 }) {
@@ -2275,6 +2404,9 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
   const waveH = LANE_H - 26
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   useEffect(() => { drawWave(canvasRef.current, clip.peaks, width, waveH, meta.color) }, [clip.peaks, width, waveH, meta.color, selected])
+  const changesWithForm = track.type === 'voice' && compareForms(clip, variant.lang, variant.to) === 'different'
+  const liveText = (clip.text ?? '').trim()
+  const needsForm = changesWithForm && (!clip.ttsSource || clip.ttsText !== liveText)
   return (
     <div
       className={`mt-clip${selected ? ' is-sel' : ''}`}
@@ -2286,6 +2418,19 @@ function ClipView({ track, clip, pxPerSec, selected, onSelect, onBeginDrag }: {
         {meta.icon} {lt(trackText(track.type).label)}{clip.peaks ? '' : ' …'}
         {track.type === 'voice' && isTextMissing(clip) && (
           <span className="mt-clip__missing" title={lt('No text in the working language — this clip stays silent')}> ⚠ {lt('no text')}</span>
+        )}
+        {/* The line REALLY changes between the male and the female version,
+            so one recording cannot serve both. Every other line keeps the
+            voice already synthesized when the version is switched; these are
+            the ones to synthesize by hand, and they say so here rather than
+            being discovered by listening. */}
+        {track.type === 'voice' && changesWithForm && (
+          <span
+            className={`mt-clip__form${needsForm ? ' is-todo' : ''}`}
+            title={needsForm
+              ? lt('This line is different in the {form} version and has not been synthesized yet', { form: ADDRESSEE_LABEL[variant.to] })
+              : lt('This line is different in the {form} version — synthesized', { form: ADDRESSEE_LABEL[variant.to] })}
+          > ⚥ {needsForm ? lt('to synthesize') : ''}</span>
         )}
       </div>
       <canvas ref={canvasRef} className="mt-clip__wave" />
@@ -2487,7 +2632,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg, workingLang }: {
+function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg, workingLang, workingTo }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
@@ -2510,6 +2655,8 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
   drawMsg: string | null
   /** The session's working language: which text the box edits. */
   workingLang: VoiceLang
+  /** …and which of the two address forms, for the comparison below. */
+  workingTo: Addressee
 }) {
   const { t: lt } = useI18n()
   if (!track || !clip) {
@@ -2682,6 +2829,26 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
                 {lt('⚠ No text in {lang} for this clip yet — it stays silent in this language. Write it here, or add it to the Excel (testo_pt) and import it again: nothing else is lost.', { lang: LANG_LABEL[workingLang] })}
               </div>
             )}
+            {/* The same line in the OTHER address form, read-only. Whether a
+                line really changes between "pronto" and "pronta" is the one
+                thing that decides if this version needs its own recording,
+                and it was invisible: the Studio simply dropped every render
+                on a switch and left the PO to re-synthesize the lot. */}
+            {(() => {
+              const other = otherForm({ lang: workingLang, to: workingTo })
+              const theirs = textOfVariant(clip, other)
+              if (!theirs) return null
+              const differs = compareForms(clip, workingLang, workingTo) === 'different'
+              return (
+                <div className={`mt-tts__other${differs ? ' mt-tts__other--diff' : ''}`}>
+                  <span>{ADDRESSEE_LABEL[other.to]}:</span> «{theirs}»
+                  {' '}
+                  <i>{differs
+                    ? lt('— a different line: this version needs its own render')
+                    : lt('— the same line: one render serves both versions')}</i>
+                </div>
+              )
+            })()}
             {/* The same line in the other language, read-only: what is being
                 translated, and what the other language will say. */}
             {VOICE_LANGS.filter((l) => l !== workingLang && clip.textByLang?.[l]?.trim()).map((l) => (

@@ -361,6 +361,37 @@ export const IT_STUDIO_EDITOR: Record<string, string> = {
   'no text': 'senza testo',
   '⚠ No text in {lang} for this clip yet — it stays silent in this language. Write it here, or add it to the Excel (testo_pt) and import it again: nothing else is lost.': '⚠ Questa clip non ha ancora il testo in {lang} — in questa lingua resta muta. Scrivilo qui, oppure aggiungilo all’Excel (testo_pt) e reimportalo: nient’altro va perso.',
   'Other language — {lang}': 'Altra lingua — {lang}',
+
+  /* WHO the session speaks to (maschile / femminile), and the one thing that
+     decides whether a line needs its own recording: whether it changed. */
+  'Who it speaks to': 'A chi parla',
+  'Who it speaks to: the same session, in the words that address a man or a woman':
+    'A chi parla: la stessa sessione, con le parole che si rivolgono a un uomo o a una donna',
+  'Wait for the voices being synthesized to finish, then switch.':
+    'Aspetta che finisca la sintesi delle voci, poi cambia versione.',
+  'Working in {lang}: the voice clips show and speak this version.':
+    'Lavori in {lang}: le clip vocali mostrano e parlano questa versione.',
+  '{n} voice clips have no text in this version yet — marked ⚠, they stay silent.':
+    '{n} clip vocali non hanno ancora il testo in questa versione — segnate con ⚠, restano mute.',
+  '{n} voices kept: those lines are word for word the same in both versions.':
+    '{n} voci conservate: quelle righe sono parola per parola identiche nelle due versioni.',
+  '{n} lines really change between the two versions — marked ⚥, synthesize those.':
+    '{n} righe cambiano davvero tra le due versioni — segnate con ⚥, sintetizza quelle.',
+  '{n} voices already synthesized in this language are kept.':
+    '{n} voci già sintetizzate in questa lingua sono conservate.',
+  'This line is different in the {form} version and has not been synthesized yet':
+    'Questa riga è diversa nella versione {form} e non è ancora stata sintetizzata',
+  'This line is different in the {form} version — synthesized':
+    'Questa riga è diversa nella versione {form} — sintetizzata',
+  'to synthesize': 'da sintetizzare',
+  '{todo} of the {differ} lines that change between the two versions still have no voice here. Everything else kept the voice already synthesized. Synthesize them one by one (♪) or all at once with “All voices”.':
+    '{todo} delle {differ} righe che cambiano tra le due versioni non hanno ancora voce qui. Tutto il resto ha conservato la voce già sintetizzata. Sintetizzale una a una (♪) o tutte insieme con “Tutte le voci”.',
+  '{differ} lines are different in this version, and all of them are synthesized.':
+    '{differ} righe sono diverse in questa versione, e sono tutte sintetizzate.',
+  '— a different line: this version needs its own render':
+    '— riga diversa: questa versione ha bisogno della sua sintesi',
+  '— the same line: one render serves both versions':
+    '— stessa riga: una sola sintesi vale per entrambe le versioni',
 }
 
 export const PT_STUDIO_EDITOR: Record<string, string> = {
@@ -717,4 +748,35 @@ export const PT_STUDIO_EDITOR: Record<string, string> = {
   'no text': 'sem texto',
   '⚠ No text in {lang} for this clip yet — it stays silent in this language. Write it here, or add it to the Excel (testo_pt) and import it again: nothing else is lost.': '⚠ Este clipe ainda não tem texto em {lang} — fica mudo neste idioma. Escreva-o aqui, ou adicione-o ao Excel (testo_pt) e importe de novo: nada mais se perde.',
   'Other language — {lang}': 'Outro idioma — {lang}',
+
+  /* a quem a sessão fala, e o que decide se uma linha precisa da própria
+     gravação: se ela mudou */
+  'Who it speaks to': 'A quem fala',
+  'Who it speaks to: the same session, in the words that address a man or a woman':
+    'A quem fala: a mesma sessão, com as palavras que se dirigem a um homem ou a uma mulher',
+  'Wait for the voices being synthesized to finish, then switch.':
+    'Espere a síntese das vozes terminar e depois troque de versão.',
+  'Working in {lang}: the voice clips show and speak this version.':
+    'Trabalhando em {lang}: os clipes de voz mostram e falam esta versão.',
+  '{n} voice clips have no text in this version yet — marked ⚠, they stay silent.':
+    '{n} clipes de voz ainda não têm texto nesta versão — marcados com ⚠, ficam mudos.',
+  '{n} voices kept: those lines are word for word the same in both versions.':
+    '{n} vozes mantidas: essas linhas são palavra por palavra iguais nas duas versões.',
+  '{n} lines really change between the two versions — marked ⚥, synthesize those.':
+    '{n} linhas realmente mudam entre as duas versões — marcadas com ⚥, sintetize essas.',
+  '{n} voices already synthesized in this language are kept.':
+    '{n} vozes já sintetizadas neste idioma são mantidas.',
+  'This line is different in the {form} version and has not been synthesized yet':
+    'Esta linha é diferente na versão {form} e ainda não foi sintetizada',
+  'This line is different in the {form} version — synthesized':
+    'Esta linha é diferente na versão {form} — sintetizada',
+  'to synthesize': 'a sintetizar',
+  '{todo} of the {differ} lines that change between the two versions still have no voice here. Everything else kept the voice already synthesized. Synthesize them one by one (♪) or all at once with “All voices”.':
+    '{todo} das {differ} linhas que mudam entre as duas versões ainda não têm voz aqui. Todo o resto manteve a voz já sintetizada. Sintetize uma a uma (♪) ou todas de uma vez com “Todas as vozes”.',
+  '{differ} lines are different in this version, and all of them are synthesized.':
+    '{differ} linhas são diferentes nesta versão, e todas estão sintetizadas.',
+  '— a different line: this version needs its own render':
+    '— linha diferente: esta versão precisa da própria síntese',
+  '— the same line: one render serves both versions':
+    '— mesma linha: uma só síntese serve as duas versões',
 }

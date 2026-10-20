@@ -53,3 +53,24 @@
 .mt-tts__hint--missing { color: #ffd98a; }
 .mt-tts__other { font-size: 11.5px; line-height: 1.4; color: var(--mt-sub, #9fb3aa); margin-top: 4px; }
 .mt-tts__other span { font-weight: 700; }
+
+/* ============================================================================
+   The lines that really change between the male and the female version
+
+   Switching version keeps every voice already synthesized whose line is word
+   for word the same, so what is left to do is a handful of clips rather than
+   the whole protocol. These mark exactly those — amber while they still have
+   no voice in this version, quiet once they have one.
+   ============================================================================ */
+.mt-worklang__diff {
+  padding: 0 6px 0 4px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  color: var(--mt-sub, #9fb3aa);
+}
+.mt-worklang__diff.is-todo { color: #ffd98a; }
+
+.mt-clip__form { font-weight: 700; color: var(--mt-sub, #9fb3aa); }
+.mt-clip__form.is-todo { color: #ffd98a; }
+
+.mt-tts__other--diff { color: #ffd98a; }
+.mt-tts__other i { font-style: normal; opacity: 0.75; }
