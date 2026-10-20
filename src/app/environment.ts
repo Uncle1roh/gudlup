@@ -25,6 +25,19 @@
    reading "ENVIRONMENT NOT DECLARED" goes and sets the variable; an
    operator reading nothing assumes production. The loud default is the
    safe one, and docs/ENVIRONMENTS.md says to set it.
+
+   WHO THAT WARNING IS ADDRESSED TO. The first version of this showed the
+   undeclared banner on every surface, and the first production deploy put a
+   red "AMBIENTE NON DICHIARATO" across the login page of the real app. A
+   person signing in cannot set a build variable; all that strip does is
+   tell them something is broken, on the one screen that has to look like it
+   works. So the undeclared warning now goes to the surfaces where somebody
+   can act on it — the console, the Studio, the therapist workspace, the
+   company dashboard — and to the browser console on every surface.
+
+   A DECLARED non-production environment still shows everywhere, which is
+   the whole point of declaring it: a demo to a prospect happens in the
+   consumer app, and that is exactly where the DEMO strip belongs.
    ============================================================================ */
 
 import { hasSupabaseEnv } from '../auth/supabaseClient'
@@ -56,6 +69,7 @@ export function appEnv(): AppEnv {
 /** Tests and the preview bar need to put it back. Nothing else should. */
 export function resetAppEnvCache(): void {
   cached = null
+  warned = false
 }
 
 export function isProduction(): boolean {
@@ -90,11 +104,40 @@ export function envNote(e: AppEnv = appEnv()): string {
   }
 }
 
-/** Production shows nothing: a banner that is always there is a banner
-    nobody reads, and the one state that must be unmistakable is the one
-    where the data is NOT real. */
-export function showsBanner(e: AppEnv = appEnv()): boolean {
-  return e !== 'production'
+/** Where the banner would be drawn. The console, the Studio, the therapist
+    workspace and the company dashboard are `team`; the app a person signs
+    into is `public`. */
+export type Surface = 'team' | 'public'
+
+/**
+ * Production shows nothing: a banner that is always there is a banner
+ * nobody reads, and the one state that must be unmistakable is the one
+ * where the data is NOT real.
+ *
+ * `unknown` is not that state — it is the state of not knowing, and the
+ * person who can end it is on a team surface. See the header.
+ */
+export function showsBanner(e: AppEnv = appEnv(), surface: Surface = 'team'): boolean {
+  if (e === 'production') return false
+  if (e === 'unknown') return surface === 'team'
+  return true
+}
+
+/**
+ * Say it once in the browser console, on every surface.
+ *
+ * The strip is gone from the public app, so this is what is left for
+ * whoever opens devtools on a deployment that never declared itself — and
+ * it costs nothing on a deployment that did.
+ */
+let warned = false
+export function warnIfUndeclared(): void {
+  if (warned || appEnv() !== 'unknown') return
+  warned = true
+  console.warn(
+    `[Good Loop] VITE_APP_ENV is not set on this deployment (database ${databaseRef() ?? 'none'}). ` +
+    'Set it to production, staging or demo — see docs/ENVIRONMENTS.md.',
+  )
 }
 
 /** Which Supabase project this build points at, for the banner's tooltip and

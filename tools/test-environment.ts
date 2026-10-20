@@ -28,6 +28,18 @@ for (const e of NON_PRODUCTION) {
 }
 assert(NON_PRODUCTION.length === 4, 'four non-production environments: staging, demo, local, unknown')
 
+/* The first production deploy put a red "ENVIRONMENT NOT DECLARED" across
+   the login page of the real app. A person signing in cannot set a build
+   variable, so all it told them was that something was broken. The warning
+   goes to the people who can end it. */
+assert(showsBanner('unknown', 'team'), 'an undeclared deployment warns the console, the Studio and the workspaces')
+assert(!showsBanner('unknown', 'public'), 'and says nothing on the app a person signs in to')
+for (const e of ['staging', 'demo', 'local'] as AppEnv[]) {
+  assert(showsBanner(e, 'public'), `${e} still shows everywhere — a demo to a prospect happens in the consumer app`)
+}
+assert(!showsBanner('production', 'team') && !showsBanner('production', 'public'), 'production shows nothing anywhere')
+assert(showsBanner('unknown') === showsBanner('unknown', 'team'), 'the default surface is the one that gets told')
+
 console.log('')
 console.log('--- what it says ---')
 const envs: AppEnv[] = ['production', 'staging', 'demo', 'local', 'unknown']

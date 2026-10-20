@@ -16,7 +16,7 @@ import { previewing } from './admin/preview'
 import { LegalProvider } from './legal/LegalContext'
 import { LegalPage } from './legal/LegalPage'
 import { EnvBanner } from './app/EnvBanner'
-import { showsBanner } from './app/environment'
+import { appEnv, showsBanner, warnIfUndeclared, type Surface } from './app/environment'
 import { initFeatures } from './app/features'
 
 /* Where the Sound Studio was opened from. Reached from the admin console it
@@ -244,11 +244,19 @@ export default function App() {
      its own height as `--pvw-h`, which the four surface shells subtract from
      their 100dvh so nothing is pushed below the fold. */
   const bar = previewing() && route !== '#admin'
-  /* Every deployment that is not production carries the banner, on every
-     surface and every route — including the console, because the console is
-     where the destructive buttons are. It is above the preview bar: which
-     PLATFORM you are on outranks which surface you are previewing. */
-  const banner = showsBanner()
+  /* Every deployment that DECLARES itself as not production carries the
+     banner, on every surface and every route — including the console,
+     because the console is where the destructive buttons are. It is above
+     the preview bar: which PLATFORM you are on outranks which surface you
+     are previewing.
+
+     A deployment that declared nothing is a different message with a
+     different audience: it asks for a build variable to be set, so it goes
+     to the surfaces whose people can set one, and never across the login
+     page of the app. */
+  const surface: Surface = isAdmin || route === '#studio' || isWorkspace || isCorporate ? 'team' : 'public'
+  const banner = showsBanner(appEnv(), surface)
+  useEffect(() => { warnIfUndeclared() }, [])
   const boundary = (
     <ErrorBoundary resetKey={route} label={route || '#home'}>
       {content()}
@@ -257,7 +265,9 @@ export default function App() {
   const body = isAdmin ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
   /* The banner is chrome, so on the Italian-pinned console it is Italian too,
      and anywhere else it follows the surface under it. */
-  const strip = isAdmin ? <FixedLocale locale="it"><EnvBanner /></FixedLocale> : <EnvBanner />
+  const strip = isAdmin
+    ? <FixedLocale locale="it"><EnvBanner surface={surface} /></FixedLocale>
+    : <EnvBanner surface={surface} />
   return (
     <I18nProvider>
       {bar || banner ? (

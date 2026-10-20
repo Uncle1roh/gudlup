@@ -10,6 +10,10 @@
    can be closed is closed on the first day and absent on the day it would
    have mattered.
 
+   One exception, and it is about WHO is being told: a deployment that never
+   declared itself warns the team surfaces and the browser console, not the
+   person signing in to the app. See src/app/environment.ts.
+
    It speaks the language of the surface under it, like the preview bar, and
    carries the database it is pointed at — which is the detail that actually
    settles the argument when two people disagree about which environment
@@ -17,12 +21,12 @@
    ============================================================================ */
 
 import { useI18n } from '../i18n'
-import { appEnv, databaseRef, envLabel, envNote, showsBanner } from './environment'
+import { appEnv, databaseRef, envLabel, envNote, showsBanner, type Surface } from './environment'
 
-export function EnvBanner() {
+export function EnvBanner({ surface = 'team' }: { surface?: Surface }) {
   const { t } = useI18n()
   const env = appEnv()
-  if (!showsBanner(env)) return null
+  if (!showsBanner(env, surface)) return null
 
   const ref = databaseRef()
   return (

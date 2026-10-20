@@ -15,9 +15,31 @@ data-residency reasons production does.
 
 Every environment except production carries a coloured banner across the top
 of every screen with the word (STAGING / DEMO / LOCAL) and the database ref
-it is pointed at. A deployment that does not set `VITE_APP_ENV` shows a red
-**ENVIRONMENT NOT DECLARED** banner. That is deliberate: the alternative is
-staging that looks exactly like the real thing.
+it is pointed at. That is deliberate and it is not dismissible: the
+alternative is staging that looks exactly like the real thing.
+
+A deployment that does not set `VITE_APP_ENV` shows a red **ENVIRONMENT NOT
+DECLARED** banner — but only on the console, the Studio, the therapist
+workspace and the company dashboard, plus a line in the browser console.
+Never on the app a person signs in to: somebody logging in cannot set a build
+variable, so all that strip tells them is that something is broken, on the
+one screen that has to look like it works.
+
+So the undeclared banner is a message to you, and the way to clear it is to
+set the variable. **Set it on production too** — a production deployment with
+no `VITE_APP_ENV` is undeclared like any other, and your team will see the
+red strip every time they open the console.
+
+> ### Setting it on the existing production project
+>
+> 1. [vercel.com](https://vercel.com) → the **goodloop** project →
+>    **Settings → Environment Variables**
+> 2. Add `VITE_APP_ENV` = `production`, scope **Production** only.
+> 3. **Deployments → ⋯ → Redeploy.** It has to be a *rebuild*: Vite bakes
+>    these variables into the bundle at build time, so adding a variable
+>    changes nothing until something is built with it. Instant Rollback does
+>    not rebuild, and neither does changing the variable on its own.
+> 4. Open `#admin`. No banner means it took.
 
 ---
 
@@ -62,7 +84,9 @@ Everything below is yours; the rest is already in the repo.
    | `VITE_DEFAULT_LOCALE` | `it` |
 
 4. Deploy. Check the banner says **STAGING** and shows the staging ref. If it
-   says ENVIRONMENT NOT DECLARED, `VITE_APP_ENV` did not get set.
+   says ENVIRONMENT NOT DECLARED, `VITE_APP_ENV` did not get set — and
+   remember these are baked in at build time, so it needs a rebuild and not
+   just a redeploy of the build that already exists.
 
 Repeat both for the demo, with `demo` everywhere and the production branch
 left as `main`.
