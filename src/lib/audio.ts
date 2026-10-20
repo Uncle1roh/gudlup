@@ -94,6 +94,15 @@ export interface SessionPlayerOptions {
    * so two players cannot leave a stale title behind.
    */
   nowPlaying?: NowPlaying
+  /**
+   * Called when the LOCK SCREEN asks to move to a position, in seconds.
+   *
+   * The player cannot move its own timeline: the elapsed clock, the phase
+   * the person is in and the veil all live in the UI, and the audio element
+   * is only one of the things that have to agree. So the request is handed
+   * up to whoever owns the clock, which then calls `seek` back down.
+   */
+  onSeekRequest?: (sec: number) => void
 }
 
 /**
@@ -111,6 +120,7 @@ export class SessionPlayer {
   private audioUrl?: string
   private onFallback?: (reason: string) => void
   private nowPlaying?: NowPlaying
+  private onSeekRequest?: (sec: number) => void
 
   // file mode
   private el?: HTMLAudioElement
@@ -126,6 +136,7 @@ export class SessionPlayer {
     this.volume = opts.volume ?? 0.5
     this.onFallback = opts.onFallback
     this.nowPlaying = opts.nowPlaying
+    this.onSeekRequest = opts.onSeekRequest
   }
 
   /** Put this session on the lock screen and wire its buttons to us. */
@@ -136,6 +147,7 @@ export class SessionPlayer {
       onPlay: () => { void this.resume() },
       onPause: () => this.pause(),
       onStop: () => this.stop(),
+      onSeek: this.onSeekRequest ? (sec) => this.onSeekRequest?.(sec) : undefined,
     })
   }
 
@@ -144,6 +156,31 @@ export class SessionPlayer {
   reportPosition(elapsedSec: number): void {
     if (!this.nowPlaying?.durationSec) return
     setPosition(elapsedSec, this.nowPlaying.durationSec)
+  }
+
+  /**
+   * Move the audio to `sec`.
+   *
+   * Returns false when there is nothing to move — the synthesized bed has no
+   * position, it is a generated drone. The session's TIMELINE still moves in
+   * that case, which is what the person sees; the caller is told so it can
+   * decide whether to say anything, not so it can refuse.
+   *
+   * A seek past the end is clamped by the element itself; a seek before zero
+   * is clamped here, because a negative currentTime throws.
+   */
+  seek(sec: number): boolean {
+    const at = Math.max(0, sec)
+    if (!this.el) return false
+    try {
+      this.el.currentTime = at
+    } catch {
+      /* The element is not seekable yet (metadata still loading). Nothing to
+         recover: the timeline moved, and the audio catches up at the next
+         one. */
+      return false
+    }
+    return true
   }
 
   async play(): Promise<void> {

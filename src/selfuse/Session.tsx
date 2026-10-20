@@ -19,7 +19,7 @@
    post-session screen fades in only after the audio has finished.
    ============================================================================ */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
 import { FeatureOff } from '../app/FeatureOff'
@@ -513,6 +513,11 @@ function ImmersiveSession({
     setConfirmExit((open) => !open)
   })
 
+  /* While a finger (or the keyboard) is on the position control, the clock
+     shows where it is being moved TO, not where the audio still is. Null
+     when nobody is holding it. */
+  const [scrubTo, setScrubTo] = useState<number | null>(null)
+
   const playerRef = useRef<SessionPlayer | null>(null)
   const tickRef = useRef<number | null>(null)
   const lastRef = useRef(0)
@@ -521,7 +526,10 @@ function ImmersiveSession({
   const endedRef = useRef(false)
   const fadeRef = useRef<number | null>(null)
 
-  const { index: phaseIdx, within } = phaseAt(elapsed, total, fractions)
+  /* The position the screen is showing: where the session is, or where it is
+     being dragged to. */
+  const shown = scrubTo ?? elapsed
+  const { index: phaseIdx, within } = phaseAt(shown, total, fractions)
   const isBreath = phaseIdx === 1
   const isClosing = phaseIdx === fractions.length - 1
 
@@ -578,6 +586,7 @@ function ImmersiveSession({
         artist: 'Good Loop',
         durationSec: total,
       },
+      onSeekRequest: (sec) => seekRef.current(sec),
     })
     playerRef.current = p
     await p.play()
@@ -586,6 +595,79 @@ function ImmersiveSession({
     lastRef.current = Date.now()
     tickRef.current = window.setInterval(loop, 200)
     armFade()
+  }
+
+  /* ---- moving within the session ----
+     A guided protocol has a shape, and for a long time this had no position
+     control at all for that reason: you started at the beginning and you
+     listened. What that meant in practice was that a person who fell asleep,
+     or was interrupted at minute nine, had one option — begin again. The
+     shape survives being re-entered; twelve minutes of a person's evening
+     does not survive being spent twice.
+
+     So: the bar is draggable, and it ends one second short of the end. A
+     drag is a way to move inside a session, never a way to finish one — the
+     session completes by being listened to, or not at all. */
+  const SKIP_SEC = 15
+  const seekTo = useCallback((sec: number) => {
+    const at = Math.max(0, Math.min(total - 1, sec))
+    elapsedRef.current = at
+    setElapsed(at)
+    /* The audio element moves if there is one; the synthesized bed has no
+       position, and the timeline moving is the whole of what happens. */
+    playerRef.current?.seek(at)
+    playerRef.current?.reportPosition(at)
+    /* A seek while paused must not be undone by the tick that follows the
+       resume: the clock advances from NOW, not from before the drag. */
+    lastRef.current = Date.now()
+    armFade()
+  }, [total, armFade])
+
+  /* The lock screen's own scrubber and its ±15s buttons land here too — the
+     surface a person has with the screen dark should not be the poorer one. */
+  const seekRef = useRef(seekTo)
+  seekRef.current = seekTo
+
+  /** Where on the bar a point is, in seconds. */
+  function railSec(rail: HTMLElement, clientX: number): number {
+    const r = rail.getBoundingClientRect()
+    if (r.width <= 0) return 0
+    return Math.max(0, Math.min(total - 1, ((clientX - r.left) / r.width) * total))
+  }
+
+  /* Press anywhere on the bar to go there, and keep the finger down to drag.
+     The pointer is captured, so the drag survives leaving the bar — which,
+     on a 6px-tall control held with a thumb, it does constantly. */
+  function beginScrub(e: ReactPointerEvent<HTMLDivElement>) {
+    e.stopPropagation()
+    const rail = e.currentTarget
+    try { rail.setPointerCapture(e.pointerId) } catch { /* no capture: the drag still works over the bar */ }
+    setScrubTo(railSec(rail, e.clientX))
+    const move = (ev: globalThis.PointerEvent) => setScrubTo(railSec(rail, ev.clientX))
+    const end = (ev: globalThis.PointerEvent) => {
+      rail.removeEventListener('pointermove', move)
+      rail.removeEventListener('pointerup', end)
+      rail.removeEventListener('pointercancel', end)
+      seekTo(railSec(rail, ev.clientX))
+      setScrubTo(null)
+    }
+    rail.addEventListener('pointermove', move)
+    rail.addEventListener('pointerup', end)
+    rail.addEventListener('pointercancel', end)
+  }
+
+  function onScrubKey(e: ReactKeyboardEvent<HTMLDivElement>) {
+    let next: number | null = null
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = elapsedRef.current - SKIP_SEC
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = elapsedRef.current + SKIP_SEC
+    else if (e.key === 'PageDown') next = elapsedRef.current - SKIP_SEC * 4
+    else if (e.key === 'PageUp') next = elapsedRef.current + SKIP_SEC * 4
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = total
+    else return
+    e.preventDefault()
+    e.stopPropagation()
+    seekTo(next)
   }
 
   function toggle() {
@@ -664,7 +746,8 @@ function ImmersiveSession({
     )
   }
 
-  const showControls = controls || !playing
+  const showControls = controls || !playing || scrubTo !== null
+  const pct = total > 0 ? Math.max(0, Math.min(100, (shown / total) * 100)) : 0
 
   return (
     <div className={SESSION_FRAME}>
@@ -712,20 +795,43 @@ function ImmersiveSession({
               phase label, where a 46px numeral has nowhere to go. */}
           <div className="hud__foot">
             <div className="hud__meta">
-              <span className="hud__time">{fmt(elapsed)}</span>
+              <span className="hud__time">{fmt(shown)}</span>
               <span className="hud__sub">{t(session.name)} · {t('{n} min', { n: duration })}</span>
             </div>
 
             {/* Every phase at once, so the shape of the session is visible
-                rather than only the one it is in. */}
-            <div className="hud__ticks" aria-hidden="true">
-              {fractions.map((f, i) => (
-                <i
-                  key={i}
-                  style={{ flex: f }}
-                  className={i < phaseIdx ? 'is-done' : i === phaseIdx ? 'is-now' : undefined}
-                />
-              ))}
+                rather than only the one it is in — and now a control, not a
+                readout: press anywhere on it to go there, or hold and drag.
+                The row is 28px tall for a thumb; the bar drawn inside it
+                stays the thin line the screen was designed around. */}
+            <div
+              className={`hud__seek${scrubTo !== null ? ' is-scrubbing' : ''}`}
+              role="slider"
+              tabIndex={0}
+              aria-label={t('Position in the session')}
+              aria-valuemin={0}
+              aria-valuemax={Math.round(total)}
+              aria-valuenow={Math.round(shown)}
+              aria-valuetext={`${fmt(shown)} / ${fmt(total)}`}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={beginScrub}
+              onKeyDown={onScrubKey}
+            >
+              <div className="hud__ticks" aria-hidden="true">
+                {fractions.map((f, i) => (
+                  <i
+                    key={i}
+                    style={i === phaseIdx
+                      ? ({ flex: f, '--within': `${Math.round(within * 100)}%` } as CSSProperties)
+                      : { flex: f }}
+                    className={i < phaseIdx ? 'is-done' : i === phaseIdx ? 'is-now' : undefined}
+                  />
+                ))}
+              </div>
+              {/* The line that says where the audio is — the thing a person
+                  was already looking for, now with something to take hold
+                  of. */}
+              <div className="hud__knob" style={{ '--pos': `${pct}%` } as CSSProperties} aria-hidden="true" />
             </div>
 
             <div className="hud__controls">

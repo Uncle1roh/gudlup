@@ -799,6 +799,7 @@ export const PT: Record<string, string> = {
   'Phase {n}': 'Fase {n}',
   'Volume down': 'Diminuir o volume',
   'Volume up': 'Aumentar o volume',
+  'Position in the session': 'Ponto da sessão',
   'Keep listening': 'Continuar ouvindo',
   'Well done': 'Muito bem',
   'Take a moment before moving on.': 'Fique um momento aqui antes de seguir.',

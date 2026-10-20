@@ -42,6 +42,15 @@ export interface TransportHandlers {
   onPlay: () => void
   onPause: () => void
   onStop: () => void
+  /**
+   * Move to a position, in seconds from the start.
+   *
+   * Optional: a player that cannot seek simply does not pass it, and the
+   * platform goes on hiding the controls it would draw for it.
+   */
+  onSeek?: (sec: number) => void
+  /** How far one press of the OS skip buttons moves. */
+  skipSec?: number
 }
 
 /* ---- which implementation -------------------------------------------- */
@@ -133,34 +142,48 @@ export function showNowPlaying(now: NowPlaying): void {
 /**
  * Route the OS transport back into the player.
  *
- * Only the actions this product HAS are claimed. Seek and track-skip are
- * deliberately left unhandled: a guided protocol is a sequence with a
- * clinical shape, and scrubbing into the middle of it is not a feature —
- * leaving them unset makes the platform hide those buttons rather than draw
- * controls that do nothing.
+ * Only the actions this product HAS are claimed. Track-skip stays unhandled
+ * — there is no next track, and leaving it unset makes the platform hide the
+ * button rather than draw one that does nothing.
+ *
+ * SEEK used to be unset for a stronger reason: a guided protocol is a
+ * sequence with a clinical shape, and scrubbing into the middle of it was
+ * not meant to be a feature. In use that turned out to be the wrong call —
+ * a person who drifts off, or who is interrupted and comes back, has no way
+ * to return to where they were and has to restart twelve minutes. So the
+ * player now offers a position control, and the lock screen offers the same
+ * one: the surface a person actually has when the screen is dark should not
+ * be the poorer of the two. It is still only claimed when a player passes a
+ * handler.
  */
 export function bindTransport(h: TransportHandlers): void {
+  const skip = h.skipSec ?? 15
   if (onNative(async (p) => {
     await p.setActionHandler({ action: 'play' }, () => h.onPlay())
     await p.setActionHandler({ action: 'pause' }, () => h.onPause())
     await p.setActionHandler({ action: 'stop' }, () => h.onStop())
-    /* Unset for the same reason as on the web: a guided protocol is not a
-       track to scrub through. */
-    for (const a of ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack']) {
-      await p.setActionHandler({ action: a }, null)
+    const seek = h.onSeek
+    if (seek) {
+      await p.setActionHandler({ action: 'seekto' }, (d) => { if (typeof d.seekTime === 'number') seek(d.seekTime) })
+      await p.setActionHandler({ action: 'seekbackward' }, () => seek(lastPosition - skip))
+      await p.setActionHandler({ action: 'seekforward' }, () => seek(lastPosition + skip))
+    } else {
+      for (const a of ['seekbackward', 'seekforward', 'seekto']) await p.setActionHandler({ action: a }, null)
     }
+    for (const a of ['previoustrack', 'nexttrack']) await p.setActionHandler({ action: a }, null)
   })) return
   const ms = session()
   if (!ms) return
-  const set = (action: MediaSessionAction, fn: (() => void) | null) => {
+  const set = (action: MediaSessionAction, fn: ((d: MediaSessionActionDetails) => void) | null) => {
     try { ms.setActionHandler(action, fn) } catch { /* unsupported action */ }
   }
   set('play', h.onPlay)
   set('pause', h.onPause)
   set('stop', h.onStop)
-  set('seekbackward', null)
-  set('seekforward', null)
-  set('seekto', null)
+  const seek = h.onSeek
+  set('seekbackward', seek ? (d) => seek(lastPosition - (d.seekOffset ?? skip)) : null)
+  set('seekforward', seek ? (d) => seek(lastPosition + (d.seekOffset ?? skip)) : null)
+  set('seekto', seek ? (d) => { if (typeof d.seekTime === 'number') seek(d.seekTime) } : null)
   set('previoustrack', null)
   set('nexttrack', null)
 }
@@ -173,9 +196,15 @@ export function setPlaybackState(state: 'playing' | 'paused'): void {
   try { ms.playbackState = state } catch { /* fine */ }
 }
 
+/* Where the session last reported itself to be. The OS skip buttons say
+   "back" and "forward", not "to 7:30", so answering them needs a position —
+   and the player already sends one on every tick. */
+let lastPosition = 0
+
 /** How far through, so the OS can draw a progress bar that is not a lie. */
 export function setPosition(elapsedSec: number, durationSec: number): void {
   if (!Number.isFinite(durationSec) || durationSec <= 0) return
+  lastPosition = Math.max(0, Math.min(elapsedSec, durationSec))
   if (onNative((p) => p.setPositionState({
     duration: durationSec,
     position: Math.max(0, Math.min(elapsedSec, durationSec)),

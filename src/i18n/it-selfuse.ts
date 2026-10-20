@@ -271,6 +271,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Phase {n}': 'Fase {n}',
   'Volume down': 'Abbassa il volume',
   'Volume up': 'Alza il volume',
+  'Position in the session': 'Punto della sessione',
   "End session early? Your progress won't be saved.":
     'Vuoi terminare prima? I progressi di questa sessione non verranno salvati.',
   'Keep listening': 'Continua ad ascoltare',

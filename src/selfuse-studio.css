@@ -526,15 +526,67 @@ body:has(.su-studio) { background: var(--su-void); }
   color: var(--su-muted);
 }
 
-/* the phase rail — 4px segments, done emerald, now cream, rest hairline */
+/* the phase rail — 4px segments, done emerald, now cream, rest hairline.
+   `display: flex` was missing, which is why the segments never appeared: the
+   children are inline <i> carrying `flex: <fraction>`, and without a flex
+   container that is ignored. The rail has been an empty 4px strip. */
 .su-studio .player__ticks,
-.su-studio .hud__ticks { gap: 3px; height: 4px; }
+.su-studio .hud__ticks { display: flex; width: 100%; gap: 3px; height: 4px; }
 .su-studio .player__ticks > *,
-.su-studio .hud__ticks > * { border-radius: 2px; background: var(--su-fill); }
+.su-studio .hud__ticks > * { border-radius: 2px; background: var(--su-fill); min-width: 2px; }
 .su-studio .player__ticks > .is-done,
 .su-studio .hud__ticks > .is-done { background: var(--su-accent); }
+/* The phase being listened to fills as it goes, rather than lighting up
+   whole: with a position handle on the bar, a block of cream that means
+   "somewhere in these two minutes" reads as a position and is a lie. */
 .su-studio .player__ticks > .is-now,
-.su-studio .hud__ticks > .is-now { background: var(--su-cream); }
+.su-studio .hud__ticks > .is-now {
+  background: linear-gradient(to right, var(--su-cream) var(--within, 0%), var(--su-fill) var(--within, 0%));
+}
+
+/* ---- the position control ------------------------------------------------
+   The rail is the thin line the screen was designed around; the ROW around
+   it is 28px, because the line is 4px and a thumb is not. Press anywhere to
+   go there, or take hold of the handle and drag. */
+.su-studio .hud__seek {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+  cursor: pointer;
+  /* the drag belongs to this control, not to the page under it */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.su-studio .hud__seek:focus-visible {
+  outline: 2px solid var(--su-cream);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.su-studio .hud__knob {
+  position: absolute;
+  top: 50%;
+  /* Held inside the bar at both ends: at 0:00 the handle sits ON the start,
+     not half off the side of it. */
+  left: clamp(10px, var(--pos, 0%), calc(100% - 10px));
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--su-cream);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+  transition: width 120ms var(--ease), height 120ms var(--ease);
+  pointer-events: none;
+}
+.su-studio .hud__seek:hover .hud__knob,
+.su-studio .hud__seek.is-scrubbing .hud__knob { width: 20px; height: 20px; }
+/* While dragging, the bar itself thickens: on a phone the handle is under a
+   finger and the bar is the only part still visible. */
+.su-studio .hud__seek.is-scrubbing .hud__ticks { height: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .su-studio .hud__knob { transition: none; }
+}
 
 /* ========================================================= 03 · LIBRERIA ==
    Search field, filter pills, then covers at 138px on a 14px radius with the
