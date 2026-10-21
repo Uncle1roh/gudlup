@@ -2463,6 +2463,44 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 }
 .su-studio .gam-code__copy { width: auto; min-height: 44px; }
 
+/* Challenges (§5.5): the one Home card and the detail. */
+.su-studio .gam-challenge { display: flex; flex-direction: row; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer; }
+.su-studio .gam-challenge .gam-badge { flex: none; }
+.su-studio .gam-challenge__body { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.su-studio .gam-challenge__title { font-size: 18px; font-weight: 600; color: var(--su-fg); }
+.su-studio .gam-challenge__reward { color: var(--su-accent-2); font-weight: 600; }
+.su-studio .gam-challenge--company { border-color: rgba(36, 101, 171, 0.55); }
+.su-studio .gam-chip--live { background: var(--su-accent); color: var(--su-on-accent); }
+.su-studio .gam-detail { display: flex; flex-direction: column; gap: var(--su-gap-sm); padding-bottom: 96px; }
+.su-studio .gam-detail__back {
+  align-self: flex-start; min-height: 44px;
+  background: transparent; border-color: var(--su-hair-2); color: var(--su-fg); backdrop-filter: none;
+}
+.su-studio .gam-detail__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.su-studio .gam-detail__head .gam-chip { background: var(--su-on); color: var(--su-fg); }
+.su-studio .gam-detail__head .gam-chip--live { background: var(--su-accent); color: var(--su-on-accent); }
+.su-studio .gam-detail__head .gam-chip--company { background: #2465AB; color: #FFFFFF; }
+.su-studio .gam-ring { display: flex; flex-direction: row; align-items: center; gap: 18px; }
+.su-studio .gam-ring svg { flex: none; }
+.su-studio .gam-ring__track { fill: none; stroke: var(--su-fill); stroke-width: 10; }
+.su-studio .gam-ring__fill { fill: none; stroke: var(--su-accent); stroke-width: 10; stroke-linecap: round; transition: stroke-dasharray 500ms ease; }
+.su-studio .gam-ring__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.su-studio .gam-ring__pct { font-size: 30px; font-weight: 700; color: var(--su-fg); line-height: 1; }
+.su-studio .gam-ring__done { color: var(--su-accent-2); font-weight: 600; }
+.su-studio .gam-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-checklist li { display: flex; align-items: flex-start; gap: 10px; color: var(--su-fg-2); }
+.su-studio .gam-checklist li svg { flex: none; margin-top: 2px; color: var(--su-accent-2); }
+.su-studio .gam-reward { border-color: rgba(232, 157, 100, 0.55); }
+.su-studio .gam-reward__text { margin: 0; font-size: 18px; font-weight: 600; color: var(--su-fg); }
+.su-studio .gam-sticky {
+  position: sticky; bottom: 0; padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--su-ground) 70%, transparent);
+}
+.su-studio .gam-sticky .btn { min-height: 52px; }
+@media (prefers-reduced-motion: reduce) {
+  .su-studio .gam-ring__fill { transition: none; }
+}
+
 /* The locked fill is a light paper grey (§9). On the night ground it would
    outshine the badges that ARE unlocked, so there it steps back. */
 .su-studio .gam-badge--locked { opacity: 0.5; }

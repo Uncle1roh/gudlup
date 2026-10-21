@@ -3,6 +3,7 @@ import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/econom
 import type { AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { Benefit, BenefitTag, BenefitView, RedeemResult as BenefitRedeemResult, Redemption } from '../gamification/benefits'
+import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -384,6 +385,24 @@ export interface DataProvider {
   adminBenefitCodeCounts(): Promise<Record<string, { total: number; free: number }>>
   adminListRedemptions(): Promise<AdminRedemption[]>
   adminRefundRedemption(redemptionId: string): Promise<void>
+
+  // --- Gamification: challenges (SPEC §5) ---
+  /** The challenges this person is in scope for, with their own part only. */
+  listMyChallenges(): Promise<ChallengeView[]>
+  adminListChallenges(): Promise<ChallengeAdminRow[]>
+  /** Admin: a Good Loop challenge, saved as a draft (or edited while not live). */
+  adminSaveChallenge(c: Challenge): Promise<string>
+  adminChallengeAction(id: string, action: 'publish' | 'schedule' | 'end' | 'cancel' | 'duplicate'): Promise<string>
+  /** "População ativa suficiente" and the estimated reach. */
+  adminChallengeReach(scope: ChallengeScope, ref: string | null): Promise<ChallengeReach>
+  adminSettleChallenges(): Promise<number>
+}
+
+export interface ChallengeReach {
+  people: number
+  activeLastMonth: number
+  threshold: number
+  enough: boolean
 }
 
 export interface AdminRedemption extends Redemption {

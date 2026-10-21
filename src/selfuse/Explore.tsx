@@ -12,7 +12,7 @@
    session has a clinical identity, and the person listening never sees it.
    ============================================================================ */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { useLegal } from '../legal/LegalContext'
 import { LibraryNotice } from '../legal/LibraryNotice'
@@ -55,6 +55,8 @@ interface ExploreProps {
   /** Slugs listened to before, newest first, already deduped. */
   recent?: string[]
   onToggleSave?: (slug: string) => void
+  /** At most one challenge card, under the greeting (docs/gamification/SPEC.md §5.5). */
+  topCard?: ReactNode
 }
 
 type View =
@@ -64,7 +66,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [] }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard }: ExploreProps) {
   const { t } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
@@ -175,6 +177,8 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
           one tap away. Both static: the same for everyone, on the same
           trigger (D-17). */}
       <LibraryNotice sponsored={sponsored} />
+
+      {topCard}
 
       {/* No search field on this screen below the desktop breakpoint. The
           narrow layout has no top bar to hold one and an in-page copy sat in

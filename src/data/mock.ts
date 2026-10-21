@@ -17,6 +17,7 @@ import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
 import { MockBenefits } from '../gamification/mockBenefits'
+import { MockChallenges } from '../gamification/mockChallenges'
 import { hasConsent } from '../legal/records'
 import {
   DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
@@ -316,6 +317,7 @@ const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 export function createMockProvider(): DataProvider {
   const ledger = new MockLedger()
   const benefits = new MockBenefits(ledger)
+  const challenges = new MockChallenges(ledger, benefits)
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -1015,6 +1017,20 @@ export function createMockProvider(): DataProvider {
     adminBenefitCodeCounts: async () => delay(benefits.codeCounts(), 40),
     adminListRedemptions: async () => delay(benefits.all(), 40),
     adminRefundRedemption: async (id) => { await wait(60); benefits.refund(id) },
+
+    // gamification: challenges
+    listMyChallenges: async () => delay(challenges.mine(), 40),
+    adminListChallenges: async () => delay(challenges.adminRows(), 40),
+    adminSaveChallenge: async (c) => { await wait(80); return challenges.save(c) },
+    adminChallengeAction: async (id, action) => { await wait(80); return challenges.action(id, action) },
+    adminChallengeReach: async (scope, ref) => {
+      await wait(60)
+      const unit = scope === 'city' ? DEMO_CITY_MONTH.find((c) => c.ref === ref) : undefined
+      const active = scope === 'national' ? DEMO_CITY_MONTH.reduce((a, c) => a + c.activeUsers, 0) : unit?.activeUsers ?? (scope === 'city' ? 0 : 400)
+      const threshold = scope === 'city' ? ledger.settings.geoMinActiveUsers : ledger.settings.hrMinCohort
+      return { people: Math.round(active * 1.4), activeLastMonth: active, threshold, enough: scope === 'national' || active >= threshold }
+    },
+    adminSettleChallenges: async () => { await wait(80); return 0 },
     saveEconomySettings: async (next) => {
       if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
       ledger.settings = { ...next }

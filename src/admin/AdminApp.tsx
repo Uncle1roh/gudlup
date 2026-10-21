@@ -12,6 +12,7 @@ import { Companies } from './Companies'
 import { PromoCodes } from './PromoCodes'
 import { Benefits } from './Benefits'
 import { Tags } from './Tags'
+import { Challenges } from './Challenges'
 import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
@@ -20,7 +21,7 @@ import { Compliance } from './Compliance'
 import { HelpNowButton } from '../legal/HelpNow'
 import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'challenges' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -32,6 +33,7 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'promo', label: 'Codici promo', icon: '%' },
   { id: 'benefits', label: 'Benefici', icon: '❖' },
   { id: 'tags', label: 'Tag', icon: '#' },
+  { id: 'challenges', label: 'Sfide', icon: '⚑' },
   { id: 'economy', label: 'Economia', icon: '∞' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
   { id: 'compliance', label: 'Conformità', icon: '§' },
@@ -135,6 +137,7 @@ export function AdminApp() {
         {section === 'promo' && <PromoCodes actor={actor} />}
         {section === 'benefits' && <Benefits actor={actor} />}
         {section === 'tags' && <Tags actor={actor} />}
+        {section === 'challenges' && <Challenges actor={actor} />}
         {section === 'users' && <Users actor={actor} />}
         {section === 'compliance' && <Compliance actor={actor} />}
         {section === 'switches' && <FeatureSwitches actor={actor} />}

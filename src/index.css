@@ -1539,6 +1539,25 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-benefit__tags .adm-tag input { margin: 0; }
 button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; color: var(--ink); cursor: pointer; }
 .adm-tag.is-on { background: var(--aura); color: #fff; border-color: var(--aura); }
+/* Sfide (gamification) */
+.adm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.adm-kpis > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: #fff; }
+.adm-kpis strong { font-family: var(--display); font-size: 26px; color: var(--ink); }
+.adm-kpis span { font-size: 13px; color: var(--slate); }
+.adm-challenges__search { max-width: 260px; margin-left: auto; }
+.adm-table--challenges .adm-tr { grid-template-columns: 1.5fr 170px 1.1fr 1.2fr 1fr 110px 100px 330px; }
+.adm-challenge__name { display: flex; align-items: center; gap: 10px; }
+.adm-challenges__info { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px; }
+.adm-challenges__locked { margin: 0; }
+.adm-stepper { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-challenges__edit { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 960px) { .adm-challenges__edit { grid-template-columns: 1fr; } }
+.adm-challenges__side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 16px; }
+.adm-challenges__preview { padding: 16px; border-radius: var(--r-md); background: var(--su-ground, #0a1211); }
+.adm-rules { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.adm-rules .is-ok { color: var(--aura-deep); }
+.adm-rules .is-bad { color: #a3341f; font-weight: 600; }
+.adm-icon-pick { padding: 4px; min-height: 0; }
 /* Economia (gamification): a two-column read-out, narrow enough for a phone */
 .adm-econ { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0 0 28px; }
 .adm-econ .adm-table { width: 100%; }

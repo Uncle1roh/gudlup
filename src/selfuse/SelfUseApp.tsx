@@ -57,6 +57,9 @@ import { useSuTheme } from './theme'
 import { useBackLayer } from './backStack'
 import { UnlockSheet } from './UnlockSheet'
 import { unseenUnlocks, type AchievementView } from '../gamification/achievements'
+import { pickHomeChallenge, type ChallengeView } from '../gamification/challenges'
+import { ChallengeCard } from './ChallengeCard'
+import { ChallengeDetail } from './ChallengeDetail'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -186,6 +189,18 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
   const unlockSheetUp = unlocks.length > 0 && tab === 'home' && !launch && overlay.kind === 'none'
   useBackLayer(unlockSheetUp, closeUnlocks)
+
+  /* Challenges (SPEC §5.5): read when the app opens and again after a
+     session, for the one card on Home and its detail. */
+  const [challenges, setChallenges] = useState<ChallengeView[]>([])
+  const [challengeOpen, setChallengeOpen] = useState<string | null>(null)
+  const loadChallenges = useCallback(() => {
+    void dp.listMyChallenges().then(setChallenges).catch(() => setChallenges([]))
+  }, [dp])
+  useEffect(() => { loadChallenges() }, [loadChallenges, storeId])
+  useBackLayer(challengeOpen !== null, () => setChallengeOpen(null))
+  const homeChallenge = pickHomeChallenge(challenges, Date.now())
+  const openChallenge = challenges.find((c) => c.id === challengeOpen) ?? null
 
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
   const eap = convention?.eap ?? null
@@ -524,6 +539,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     }
 
     setTab(l?.prescriptionId ? 'therapist' : 'home')
+    loadChallenges()
   }
 
   /* --------------------------------------------------------- overlays --- */
@@ -651,8 +667,12 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   return (
     <div className="app-frame app-frame--tabs su-studio">
       <div className="tabview" key={`${tab}:${tabReset}`}>
-        {tab === 'home' && (
+        {tab === 'home' && openChallenge && (
+          <ChallengeDetail c={openChallenge} onBack={() => setChallengeOpen(null)} onStart={() => setChallengeOpen(null)} />
+        )}
+        {tab === 'home' && !openChallenge && (
           <Explore
+            topCard={homeChallenge ? <ChallengeCard c={homeChallenge} onOpen={() => setChallengeOpen(homeChallenge.id)} /> : null}
             name={displayName(user?.email)}
             pathway={state.pathway}
             completed={state.completedPathways.map((c) => c.id)}

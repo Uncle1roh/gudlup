@@ -32,7 +32,8 @@ import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, t
 import type { AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import { RedeemError, type Benefit, type BenefitTag, type BenefitView, type RedeemRefusal, type RedeemResult as BenefitRedeemResult, type Redemption } from '../gamification/benefits'
-import type { AdminRedemption } from './provider'
+import type { AdminRedemption, ChallengeReach } from './provider'
+import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -1774,6 +1775,67 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     async adminRefundRedemption(redemptionId: string): Promise<void> {
       const { error } = await sb.rpc('admin_refund_redemption', { p_redemption: redemptionId })
       if (error) throw error
+    },
+
+    // gamification: challenges
+    async listMyChallenges(): Promise<ChallengeView[]> {
+      const { data, error } = await sb.rpc('get_my_challenges')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): ChallengeView => ({
+        id: r.id, companyId: r.companyId ?? null, companyName: r.companyName ?? null, title: r.title,
+        description: r.description ?? null, badgeIcon: r.badgeIcon ?? 'flag', format: r.format, scope: r.scope,
+        scopeRef: r.scopeRef ?? null, metric: r.metric, goalValue: Number(r.goalValue), goalKind: r.goalKind ?? 'total',
+        perPersonMin: r.perPersonMin == null ? null : Number(r.perPersonMin),
+        windowStartHour: r.windowStartHour ?? null, windowEndHour: r.windowEndHour ?? null,
+        startsAt: toMs(r.startsAt), endsAt: toMs(r.endsAt), status: r.status,
+        rewardBonusLoopsCenti: r.rewardBonusLoopsCenti ?? null, rewardBenefit: r.rewardBenefit ?? null,
+        myProgress: Number(r.myProgress ?? 0), myCompletedAt: r.myCompletedAt ? toMs(r.myCompletedAt) : null,
+        myRewardedAt: r.myRewardedAt ? toMs(r.myRewardedAt) : null, myBenefitGranted: !!r.myBenefitGranted,
+        collectiveValue: r.collectiveValue == null ? null : Number(r.collectiveValue),
+        participants: r.participants == null ? null : Number(r.participants),
+        goalReachedAt: r.goalReachedAt ? toMs(r.goalReachedAt) : null,
+      }))
+    },
+    async adminListChallenges(): Promise<ChallengeAdminRow[]> {
+      const { data, error } = await sb.rpc('admin_list_challenges')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): ChallengeAdminRow => ({
+        id: r.id, companyId: null, title: r.title, description: r.description ?? null, badgeIcon: r.badgeIcon ?? 'flag',
+        format: r.format, scope: r.scope, scopeRef: r.scopeRef ?? null, metric: r.metric, goalValue: Number(r.goalValue),
+        goalKind: 'total', perPersonMin: r.perPersonMin == null ? null : Number(r.perPersonMin),
+        windowStartHour: r.windowStartHour ?? null, windowEndHour: r.windowEndHour ?? null,
+        startsAt: toMs(r.startsAt), endsAt: toMs(r.endsAt), status: r.status,
+        rewardBonusLoopsCenti: r.rewardBonusLoopsCenti ?? null, rewardBenefitId: r.rewardBenefitId ?? null,
+        rewardRule: r.rewardRule ?? 'first_to_complete', announceInApp: r.announceInApp !== false, templateSlug: null,
+        participants: Number(r.participants ?? 0), completed: Number(r.completed ?? 0), rewarded: Number(r.rewarded ?? 0),
+        collectiveValue: r.collectiveValue == null ? null : Number(r.collectiveValue),
+      }))
+    },
+    async adminSaveChallenge(c: Challenge): Promise<string> {
+      const { data, error } = await sb.rpc('admin_save_challenge', {
+        p: {
+          ...c, id: c.id || null, rewardRule: c.rewardRule,
+          startsAt: new Date(c.startsAt).toISOString(), endsAt: new Date(c.endsAt).toISOString(),
+        },
+      })
+      if (error) throw error
+      return String(data)
+    },
+    async adminChallengeAction(id: string, action: 'publish' | 'schedule' | 'end' | 'cancel' | 'duplicate'): Promise<string> {
+      const { data, error } = await sb.rpc('admin_challenge_action', { p_id: id, p_action: action })
+      if (error) throw error
+      return String(data)
+    },
+    async adminChallengeReach(scope: ChallengeScope, ref: string | null): Promise<ChallengeReach> {
+      const { data, error } = await sb.rpc('admin_challenge_reach', { p_scope: scope, p_ref: ref })
+      if (error) throw error
+      const r = data as any
+      return { people: Number(r.people ?? 0), activeLastMonth: Number(r.activeLastMonth ?? 0), threshold: Number(r.threshold ?? 0), enough: !!r.enough }
+    },
+    async adminSettleChallenges(): Promise<number> {
+      const { data, error } = await sb.rpc('admin_settle_challenges')
+      if (error) throw error
+      return Number(data ?? 0)
     },
     async saveEconomySettings(next: EconomySettings): Promise<void> {
       // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)

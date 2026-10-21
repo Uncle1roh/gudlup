@@ -9,7 +9,9 @@
    3. applies supabase/setup.sql — fresh,
    4. applies it AGAIN to the same database — it must be idempotent,
    5. checks the file ends with `notify pgrst, 'reload schema';`,
-   6. runs every supabase/tests/*.sql against it. A test fails by raising;
+   6. runs every supabase/tests/*.sql, each against its own copy of that
+      database (create database … template), so proofs stay independent.
+      A test fails by raising;
       fixtures named in a test's first line (`-- fixtures: path.json`) are
       loaded first into a temp table `fixtures(j jsonb)`,
    7. drops the database.
@@ -72,7 +74,12 @@ try {
       writeFileSync(pre, `create temp table fixtures(j jsonb);\ninsert into fixtures values ($gl_fx$${json}$gl_fx$::jsonb);\n`)
       files.push('-f', pre)
     }
-    ok = psql(DB, [...files, '-f', path], `SQL proof ${t}`) && ok
+    /* Each proof on its own copy of the freshly built database: proofs write
+       freely, and one proof's people must never move another's counts. */
+    const copy = `${DB}_${tests.indexOf(t)}`
+    if (!psql('postgres', ['-c', `create database ${copy} template ${DB}`], `copy for ${t}`)) { ok = false; continue }
+    ok = psql(copy, [...files, '-f', path], `SQL proof ${t}`) && ok
+    psql('postgres', ['-c', `drop database if exists ${copy} with (force)`], `drop ${copy}`)
   }
 } finally {
   psql('postgres', ['-c', `drop database if exists ${DB} with (force)`], `drop ${DB}`)

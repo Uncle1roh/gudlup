@@ -30,8 +30,12 @@ export class MockLedger {
   private credited: CreditedSession[] = []
   private pathways = new Set<string>()
   private unlocked = new Map<string, { unlockedAt: number; seenAt: number | null }>()
-  /** Completed challenges, until slice 5 keeps its own record. */
+  /** Completed challenges — kept by the demo's challenges (mockChallenges.ts). */
   challengesCompleted = 0
+  /** What update_challenge_progress() hears: each credited session, before
+      achievements are evaluated (the server's order). */
+  onCredit: ((rec: SessionRecord, points: number, at: number) => void) | null = null
+  onPathway: ((slug: string, at: number) => void) | null = null
 
   /** Credit one recorded session. Idempotent on the record id. */
   creditSession(rec: SessionRecord, now = Date.now()): void {
@@ -72,13 +76,26 @@ export class MockLedger {
         companyId: company?.companyId ?? null, multiplierApplied: credit.multiplier, sourceType: 'session', sourceId: rec.id, createdAt: now,
       })
     }
+    this.onCredit?.(rec, credit.points, at)
     this.evaluate(now)
   }
 
   /** A finished pathway (record_pathway_completed). */
   recordPathwayCompleted(slug: string, now = Date.now()): void {
     this.pathways.add(slug)
+    this.onPathway?.(slug, now)
     this.evaluate(now)
+  }
+
+  /** A challenge's bonus — gam_credit_bonus(): never multiplied, funded by
+      whoever owns the challenge, once per challenge. */
+  postChallengeBonus(challengeId: string, centi: number, companyId: string | null, now = Date.now()): void {
+    if (centi <= 0) return
+    if (this.loops.some((e) => e.entryType === 'challenge_bonus' && e.sourceId === challengeId)) return
+    this.loops.push({
+      id: this.id(), entryType: 'challenge_bonus', amountCenti: centi, fundingSource: companyId ? 'company' : 'goodloop',
+      companyId, multiplierApplied: null, sourceType: 'challenge', sourceId: challengeId, createdAt: now,
+    })
   }
 
   /** evaluate_achievements(): unlock what is reached, pay each bonus once. */
