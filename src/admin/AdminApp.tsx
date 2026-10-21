@@ -10,7 +10,8 @@ import { CredentialQueue } from './CredentialQueue'
 import { ExploreRails } from './ExploreRails'
 import { Companies } from './Companies'
 import { PromoCodes } from './PromoCodes'
-import { PartnerProducts } from './PartnerProducts'
+import { Benefits } from './Benefits'
+import { Tags } from './Tags'
 import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
@@ -19,7 +20,7 @@ import { Compliance } from './Compliance'
 import { HelpNowButton } from '../legal/HelpNow'
 import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'partners' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -29,7 +30,8 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
   { id: 'companies', label: 'Aziende', icon: '◭' },
   { id: 'promo', label: 'Codici promo', icon: '%' },
-  { id: 'partners', label: 'Partner', icon: '❖' },
+  { id: 'benefits', label: 'Benefici', icon: '❖' },
+  { id: 'tags', label: 'Tag', icon: '#' },
   { id: 'economy', label: 'Economia', icon: '∞' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
   { id: 'compliance', label: 'Conformità', icon: '§' },
@@ -131,7 +133,8 @@ export function AdminApp() {
         {section === 'credentials' && <CredentialQueue actor={actor} />}
         {section === 'companies' && <Companies actor={actor} />}
         {section === 'promo' && <PromoCodes actor={actor} />}
-        {section === 'partners' && <PartnerProducts actor={actor} />}
+        {section === 'benefits' && <Benefits actor={actor} />}
+        {section === 'tags' && <Tags actor={actor} />}
         {section === 'users' && <Users actor={actor} />}
         {section === 'compliance' && <Compliance actor={actor} />}
         {section === 'switches' && <FeatureSwitches actor={actor} />}

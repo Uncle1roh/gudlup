@@ -2410,6 +2410,59 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 .su-studio .gam-rank__name em { font-style: normal; color: var(--su-muted); }
 .su-studio .gam-foot { margin: 0; }
 
+/* Benefícios (§6.2): the care first — a calm green card — then the
+   pillars. No price badge, no strikethrough, no countdown, anywhere. */
+.su-studio .gam-care {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 20px; border-radius: 20px;
+  background: #0E3527; color: #FAF8DF;
+}
+.su-studio .gam-care .eyebrow { color: #B7DBAD; }
+.su-studio .gam-care .small { color: #E3EDC6; }
+.su-studio .gam-care__time { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.25; }
+.su-studio .gam-care__loops { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-size: 20px; font-weight: 700; color: #F4F0BE; }
+.su-studio .gam-care__mult { color: #F4F0BE; }
+.su-studio .gam-care__start { align-self: flex-start; width: auto; min-height: 44px; margin-top: 6px; color: #FAF8DF; border-color: rgba(250, 248, 223, 0.4); }
+
+.su-studio .gam-milestone { display: flex; flex-direction: row; align-items: center; gap: 14px; width: 100%; text-align: left; min-height: 64px; cursor: pointer; }
+.su-studio .gam-milestone .gam-badge,
+.su-studio .gam-next__row .gam-badge { flex: none; }
+.su-studio .gam-milestone__body { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.su-studio .gam-milestone__name { font-weight: 600; color: var(--su-fg); }
+
+.su-studio .gam-pillar { display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-pillar__title { display: flex; align-items: center; gap: 10px; }
+.su-studio .gam-pillar__tile,
+.su-studio .gam-benefit__tile {
+  display: inline-grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--su-on); color: var(--su-accent-2);
+}
+.su-studio .gam-benefit__tile { width: 44px; height: 44px; border-radius: 12px; }
+.su-studio .gam-benefits, .su-studio .gam-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-benefit { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; width: 100%; text-align: left; cursor: pointer; }
+.su-studio .gam-benefit__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.su-studio .gam-benefit__title { margin: 0; font-weight: 600; font-size: 17px; color: var(--su-fg); }
+.su-studio .gam-benefit__why { color: var(--su-fg-2); }
+.su-studio .gam-benefit__price { margin-top: 4px; font-size: 14px; font-weight: 600; color: var(--su-muted); }
+.su-studio .gam-benefit__price.is-ready { color: var(--su-accent-2); }
+.su-studio .gam-chip { align-self: flex-start; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.su-studio .gam-chip--company { background: #2465AB; color: #FFFFFF; }
+.su-studio .gam-mine__item.is-refunded { opacity: 0.6; }
+
+.su-studio .gam-sheet { gap: 10px; }
+.su-studio .gam-sheet .btn { min-height: 48px; }
+.su-studio .gam-sheet__title { margin: 0; font-size: 24px; color: var(--su-fg); }
+.su-studio .gam-sheet__h { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: var(--su-fg); }
+.su-studio .gam-sheet__ask { margin: 6px 0; font-size: 18px; font-weight: 600; color: var(--su-fg); }
+.su-studio .gam-code { display: flex; flex-direction: column; gap: 8px; }
+.su-studio .gam-code__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.su-studio .gam-code__value {
+  padding: 10px 14px; border-radius: 10px; border: 1px dashed var(--su-hair-2);
+  font-family: var(--mono); font-size: 18px; letter-spacing: 0.06em; color: var(--su-fg); user-select: all;
+}
+.su-studio .gam-code__copy { width: auto; min-height: 44px; }
+
 /* The locked fill is a light paper grey (§9). On the night ground it would
    outshine the badges that ARE unlocked, so there it steps back. */
 .su-studio .gam-badge--locked { opacity: 0.5; }

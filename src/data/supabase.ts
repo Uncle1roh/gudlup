@@ -31,6 +31,8 @@ import type { PartnerProduct } from './partners'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
 import type { AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
+import { RedeemError, type Benefit, type BenefitTag, type BenefitView, type RedeemRefusal, type RedeemResult as BenefitRedeemResult, type Redemption } from '../gamification/benefits'
+import type { AdminRedemption } from './provider'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -1669,6 +1671,109 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       const { data, error } = await sb.rpc('admin_refresh_geo')
       if (error) throw error
       return Number(data ?? 0)
+    },
+
+    // gamification: benefits
+    async getAvailableBenefits(): Promise<BenefitView[]> {
+      const { data, error } = await sb.rpc('get_available_benefits')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): BenefitView => ({
+        id: r.id, companyId: r.companyId ?? null, companyName: r.companyName ?? null, title: r.title,
+        description: r.description ?? null, careRationale: r.careRationale ?? null, partnerName: r.partnerName ?? null,
+        pillar: r.pillar, priceLoopsCenti: r.priceLoopsCenti ?? null, perUserLimit: r.perUserLimit ?? 1,
+        validTo: r.validTo ? toMs(r.validTo) : null, codeValidityDays: r.codeValidityDays ?? null,
+        deliveryType: r.deliveryType, terms: r.terms ?? null, imageAsset: r.imageAsset ?? null,
+        challengeExclusive: !!r.challengeExclusive, tags: r.tags ?? [], myRedemptions: Number(r.myRedemptions ?? 0),
+        inStock: r.inStock !== false,
+      }))
+    },
+    async redeemBenefit(benefitId: string, consentIdentified = false): Promise<BenefitRedeemResult> {
+      const { data, error } = await sb.rpc('redeem_benefit', { p_benefit: benefitId, p_consent_identified: consentIdentified })
+      if (error) {
+        const hint = (error as { hint?: string }).hint as RedeemRefusal | undefined
+        if (hint && hint.startsWith('BENEFIT_')) throw new RedeemError(hint)
+        throw error
+      }
+      const r = data as any
+      return {
+        redemptionId: r.redemptionId, code: r.code ?? null, link: r.link ?? null,
+        expiresAt: r.expiresAt ? toMs(r.expiresAt) : null, loopsSpentCenti: Number(r.loopsSpentCenti ?? 0),
+      }
+    },
+    async listMyRedemptions(): Promise<Redemption[]> {
+      const { data, error } = await sb.rpc('list_my_redemptions')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): Redemption => ({
+        id: r.id, benefitId: r.benefitId, title: r.title, partnerName: r.partnerName ?? null, pillar: r.pillar,
+        deliveryType: r.deliveryType, terms: r.terms ?? null, code: r.code ?? null, link: r.link ?? null,
+        loopsSpentCenti: Number(r.loopsSpentCenti ?? 0), status: r.status,
+        createdAt: toMs(r.createdAt), expiresAt: r.expiresAt ? toMs(r.expiresAt) : null,
+      }))
+    },
+    async listBenefitTags(): Promise<BenefitTag[]> {
+      const { data, error } = await sb.from('benefit_tags').select('*').order('tag_group').order('label')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((t) => ({ id: t.id, slug: t.slug, label: t.label, group: t.tag_group, description: t.description ?? null, active: !!t.active }))
+    },
+    async adminListBenefits(): Promise<Benefit[]> {
+      const { data, error } = await sb.from('benefits').select('*, benefit_tag_map(tag_id)').order('pillar').order('sort_order')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): Benefit => ({
+        id: r.id, companyId: r.company_id ?? null, title: r.title, description: r.description ?? null,
+        careRationale: r.care_rationale ?? null, partnerName: r.partner_name ?? null, pillar: r.pillar,
+        priceLoopsCenti: r.price_loops_centi ?? null, stockTotal: r.stock_total ?? null, stockRemaining: r.stock_remaining ?? null,
+        perUserLimit: r.per_user_limit ?? 1, validFrom: r.valid_from ? toMs(r.valid_from) : null, validTo: r.valid_to ? toMs(r.valid_to) : null,
+        codeValidityDays: r.code_validity_days ?? null, deliveryType: r.delivery_type, staticCode: r.static_code ?? null,
+        linkUrl: r.link_url ?? null, terms: r.terms ?? null, imageAsset: r.image_asset ?? null, status: r.status,
+        challengeExclusiveId: r.challenge_exclusive_id ?? null, sortOrder: r.sort_order ?? 0,
+        tagIds: ((r.benefit_tag_map ?? []) as { tag_id: string }[]).map((m) => m.tag_id),
+      }))
+    },
+    async adminSaveBenefit(b: Benefit): Promise<string> {
+      const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString())
+      const { data, error } = await sb.rpc('admin_save_benefit', {
+        p: { ...b, id: b.id || null, validFrom: iso(b.validFrom), validTo: iso(b.validTo) },
+        p_tag_ids: b.tagIds,
+      })
+      if (error) {
+        if ((error as { hint?: string }).hint === 'BENEFIT_NEEDS_TAG') throw new Error('Un beneficio Good Loop ha bisogno di almeno un tag.')
+        throw error
+      }
+      return String(data)
+    },
+    async adminSaveTag(t: BenefitTag): Promise<void> {
+      const row = { slug: t.slug, label: t.label, tag_group: t.group, description: t.description, active: t.active }
+      const { error } = t.id ? await sb.from('benefit_tags').update(row).eq('id', t.id) : await sb.from('benefit_tags').insert(row)
+      if (error) throw error
+    },
+    async adminUploadCodes(benefitId: string, codes: string[]): Promise<number> {
+      const { data, error } = await sb.rpc('admin_upload_codes', { p_benefit: benefitId, p_codes: codes })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    async adminBenefitCodeCounts(): Promise<Record<string, { total: number; free: number }>> {
+      const { data, error } = await sb.rpc('admin_benefit_code_counts')
+      if (error) throw error
+      const out: Record<string, { total: number; free: number }> = {}
+      for (const [k, v] of Object.entries((data ?? {}) as Record<string, { total: number; free: number }>)) out[k] = { total: Number(v.total), free: Number(v.free) }
+      return out
+    },
+    async adminListRedemptions(): Promise<AdminRedemption[]> {
+      const { data, error } = await sb.from('benefit_redemptions')
+        .select('*, benefits(title, partner_name, pillar, delivery_type, terms), profiles(name)')
+        .order('created_at', { ascending: false }).limit(500)
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): AdminRedemption => ({
+        id: r.id, benefitId: r.benefit_id, title: r.benefits?.title ?? '', partnerName: r.benefits?.partner_name ?? null,
+        pillar: r.benefits?.pillar, deliveryType: r.benefits?.delivery_type, terms: r.benefits?.terms ?? null,
+        code: null, link: null, loopsSpentCenti: r.loops_spent_centi, status: r.status,
+        createdAt: toMs(r.created_at), expiresAt: r.expires_at ? toMs(r.expires_at) : null,
+        userLabel: r.profiles?.name ?? '—',
+      }))
+    },
+    async adminRefundRedemption(redemptionId: string): Promise<void> {
+      const { error } = await sb.rpc('admin_refund_redemption', { p_redemption: redemptionId })
+      if (error) throw error
     },
     async saveEconomySettings(next: EconomySettings): Promise<void> {
       // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)

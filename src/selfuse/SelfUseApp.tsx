@@ -32,7 +32,7 @@ import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
 import { ProgressTab } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
-import { PartnersTab } from './PartnersTab'
+import { BenefitsTab } from './BenefitsTab'
 import { GlCheckFlow, DailyMoodFlow } from './Measures'
 import { SafetyLevel3 } from './Safety'
 import { HelpNowButton } from '../legal/HelpNow'
@@ -62,14 +62,15 @@ import { unseenUnlocks, type AchievementView } from '../gamification/achievement
    pathways and the continue card are one screen, because a person opening the
    app wants to choose something, and a Home that only linked to the place
    where you choose was a hop with nothing in it. */
-type Tab = 'home' | 'therapist' | 'progress' | 'partners' | 'profile'
+type Tab = 'home' | 'therapist' | 'progress' | 'benefits' | 'profile'
 
 const TABS: { id: Tab; icon: IconName; label: string }[] = [
   { id: 'home', icon: 'library', label: 'Home' },
   { id: 'therapist', icon: 'therapist', label: 'Therapist' },
   { id: 'progress', icon: 'progress', label: 'Progress' },
-  /* Partner offers — ADMIN accounts only for now (see `tabs` below). */
-  { id: 'partners', icon: 'partners', label: 'Partners' },
+  /* Benefits (docs/gamification/SPEC.md §6) — where the partner offers were,
+     for everyone: care that comes back to you, exchanged for Loops. */
+  { id: 'benefits', icon: 'loop', label: 'Benefits' },
   { id: 'profile', icon: 'profile', label: 'Profile' },
 ]
 
@@ -138,7 +139,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   /* The Partner tab is for admin accounts only while the offers are being
      put together — an admin reaches it through the console's preview. Any
      other account never sees the tab, and cannot land on it. */
-  const tabs = role === 'admin' ? TABS : TABS.filter((tb) => tb.id !== 'partners')
+  const tabs = TABS
   /* One search, shared by the top bar and the library's own header, so a
      query typed in either place is the same query. */
   const [query, setQuery] = useState('')
@@ -704,7 +705,12 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           />
         )}
 
-        {tab === 'partners' && role === 'admin' && <PartnersTab />}
+        {tab === 'benefits' && (
+          <BenefitsTab
+            onStartSession={() => setTab('home')}
+            onSeeAchievements={() => { setProgressView('achievements'); setTab('progress') }}
+          />
+        )}
 
         {tab === 'profile' && (
           <ProfileTab

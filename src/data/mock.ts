@@ -16,6 +16,7 @@ import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, d
 import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
+import { MockBenefits } from '../gamification/mockBenefits'
 import { hasConsent } from '../legal/records'
 import {
   DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
@@ -314,6 +315,7 @@ const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 
 export function createMockProvider(): DataProvider {
   const ledger = new MockLedger()
+  const benefits = new MockBenefits(ledger)
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -985,6 +987,34 @@ export function createMockProvider(): DataProvider {
       }
     },
     adminRefreshGeo: async () => { await wait(200); return 0 },
+
+    // gamification: benefits
+    getAvailableBenefits: async () => delay(benefits.available(), 60),
+    redeemBenefit: async (id, consent = false) => { await wait(120); return benefits.redeem(id, consent) },
+    listMyRedemptions: async () => delay(benefits.mine(), 40),
+    listBenefitTags: async () => delay(benefits.tags.map((t) => ({ ...t })), 40),
+    adminListBenefits: async () => delay(benefits.catalog.map((b) => ({ ...b, tagIds: [...b.tagIds] })), 40),
+    adminSaveBenefit: async (b) => {
+      await wait(80)
+      if (b.companyId === null && b.status !== 'draft' && !b.tagIds.length) throw new Error('Un beneficio Good Loop ha bisogno di almeno un tag.')
+      const id = b.id || `ben-${Date.now()}`
+      const i = benefits.catalog.findIndex((x) => x.id === id)
+      const row = { ...b, id, tagIds: [...b.tagIds] }
+      if (i >= 0) benefits.catalog[i] = row
+      else benefits.catalog.push(row)
+      return id
+    },
+    adminSaveTag: async (t) => {
+      await wait(40)
+      const id = t.id || `tag-${t.slug}`
+      const i = benefits.tags.findIndex((x) => x.id === id)
+      if (i >= 0) benefits.tags[i] = { ...t, id }
+      else benefits.tags.push({ ...t, id })
+    },
+    adminUploadCodes: async (id, codes) => { await wait(60); return benefits.uploadCodes(id, codes) },
+    adminBenefitCodeCounts: async () => delay(benefits.codeCounts(), 40),
+    adminListRedemptions: async () => delay(benefits.all(), 40),
+    adminRefundRedemption: async (id) => { await wait(60); benefits.refund(id) },
     saveEconomySettings: async (next) => {
       if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
       ledger.settings = { ...next }

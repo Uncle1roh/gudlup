@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
 import type { AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
+import type { Benefit, BenefitTag, BenefitView, RedeemResult as BenefitRedeemResult, Redemption } from '../gamification/benefits'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -363,6 +364,31 @@ export interface DataProvider {
   getMyCityCard(): Promise<CityCard | null>
   /** Admin: refresh the roll-up and evaluate collective achievements. */
   adminRefreshGeo(): Promise<number>
+
+  // --- Gamification: benefits (SPEC §6) ---
+  /** What this person may see now — decided server-side, company filter included. */
+  getAvailableBenefits(): Promise<BenefitView[]>
+  /** The one way to redeem. Throws RedeemError with the refusal. */
+  redeemBenefit(benefitId: string, consentIdentified?: boolean): Promise<BenefitRedeemResult>
+  /** "Meus benefícios", codes included. */
+  listMyRedemptions(): Promise<Redemption[]>
+  listBenefitTags(): Promise<BenefitTag[]>
+  /** Admin: the whole catalogue, drafts included. */
+  adminListBenefits(): Promise<Benefit[]>
+  /** Admin: a benefit and its tags in one step (a Good Loop benefit needs ≥ 1). */
+  adminSaveBenefit(b: Benefit): Promise<string>
+  adminSaveTag(t: BenefitTag): Promise<void>
+  /** Admin: codes from a CSV; returns how many were new. */
+  adminUploadCodes(benefitId: string, codes: string[]): Promise<number>
+  /** Admin: code counts per benefit — never the codes. */
+  adminBenefitCodeCounts(): Promise<Record<string, { total: number; free: number }>>
+  adminListRedemptions(): Promise<AdminRedemption[]>
+  adminRefundRedemption(redemptionId: string): Promise<void>
+}
+
+export interface AdminRedemption extends Redemption {
+  /** Who redeemed — the admin sees it; HR never does (§7.4). */
+  userLabel: string
 }
 
 const DataCtx = createContext<DataProvider | null>(null)

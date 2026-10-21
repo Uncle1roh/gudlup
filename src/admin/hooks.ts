@@ -5,7 +5,6 @@ import { useDataProvider } from '../data/provider'
 import type { CatalogProtocol } from '../data/catalog'
 import type { Company, AdminUser, CredentialRequest, AuditEvent } from './types'
 import type { PromoCode } from '../data/promo'
-import type { PartnerProduct } from '../data/partners'
 
 interface AsyncState<T> {
   data?: T
@@ -59,10 +58,6 @@ export function useAuditEvents() {
 export function usePromoCodes() {
   const dp = useDataProvider()
   return useAsync<PromoCode[]>(() => dp.listPromoCodes(), [dp])
-}
-export function usePartnerProducts() {
-  const dp = useDataProvider()
-  return useAsync<PartnerProduct[]>(() => dp.listPartnerProducts(), [dp])
 }
 export function useDataRequests() {
   const dp = useDataProvider()

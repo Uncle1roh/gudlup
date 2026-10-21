@@ -117,6 +117,21 @@ export class MockLedger {
       })
   }
 
+  balanceCenti(): number {
+    return this.loops.reduce((a, e) => a + e.amountCenti, 0)
+  }
+
+  /** A redemption's debit or its refund — what redeem_benefit() and
+      admin_refund_redemption() write. Idempotent on the redemption. */
+  postRedemption(type: 'redemption' | 'redemption_refund', centi: number, redemptionId: string, now = Date.now()): void {
+    if (centi <= 0) return
+    if (this.loops.some((e) => e.entryType === type && e.sourceId === redemptionId)) return
+    this.loops.push({
+      id: this.id(), entryType: type, amountCenti: type === 'redemption' ? -centi : centi, fundingSource: 'goodloop',
+      companyId: null, multiplierApplied: null, sourceType: 'redemption', sourceId: redemptionId, createdAt: now,
+    })
+  }
+
   markSeen(ids: string[], now = Date.now()): void {
     for (const id of ids) {
       const u = this.unlocked.get(id)

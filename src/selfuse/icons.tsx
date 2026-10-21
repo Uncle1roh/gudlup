@@ -53,6 +53,8 @@ export type IconName =
   /* gamification — achievement badges and the Loops currency */
   | 'compass' | 'calendar' | 'moon' | 'sun' | 'route' | 'flag'
   | 'pin' | 'map' | 'globe' | 'building' | 'loop'
+  /* the benefit pillars, and copying a code */
+  | 'heart' | 'run' | 'leaf' | 'coffee' | 'copy'
 
 const PATHS: Record<IconName, JSX.Element> = {
   /* graphic_eq — the app's own subject: sound. */
@@ -379,6 +381,28 @@ const PATHS: Record<IconName, JSX.Element> = {
   building: (<>
       <path d="M4.5 20.5V6.5l7-3v17" /><path d="M11.5 9.5h8v11" /><path d="M3 20.5h18" />
       <path d="M8 9v.01" /><path d="M8 12.5v.01" /><path d="M8 16v.01" /><path d="M15.5 13v.01" /><path d="M15.5 16.5v.01" />
+    </>),
+  /* favorite — Corpo */
+  heart: (<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z" />),
+  /* directions_run — Movimento */
+  run: (<>
+      <circle cx="14.5" cy="4.8" r="1.8" />
+      <path d="M9 21l2.6-5.4 2.9 2.4V22" /><path d="M7 12.2l2.6-3.4 4.2-.4 2.2 3.2 2.5 1" /><path d="M11.6 15.6l1.2-5.6" />
+    </>),
+  /* eco — Alimentação */
+  leaf: (<>
+      <path d="M5 19c0-8 5-13.5 14-14-.4 9.3-6 14-14 14z" />
+      <path d="M5 19l8-8" />
+    </>),
+  /* local_cafe — Pausas e lazer */
+  coffee: (<>
+      <path d="M4.5 9h12v5.5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z" />
+      <path d="M16.5 10.5h1.5a2.5 2.5 0 0 1 0 5h-1.8" /><path d="M8 3.5v2.5" /><path d="M12 3.5v2.5" />
+    </>),
+  /* content_copy */
+  copy: (<>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2.2" />
+      <path d="M15.5 8.5V6.7a2.2 2.2 0 0 0-2.2-2.2H6.7a2.2 2.2 0 0 0-2.2 2.2v6.6a2.2 2.2 0 0 0 2.2 2.2h1.8" />
     </>),
   /* the Loop — the logo's two crossing orbits; the app's currency */
   loop: (<>
