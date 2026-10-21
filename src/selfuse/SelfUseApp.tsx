@@ -44,7 +44,7 @@ import { accountName, displayName } from './greeting'
 import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import { resolveCompanyCode, hasProfessionalSupport } from '../data/convention'
-import { LiveCatalogProvider, useCatalog, findPathway } from '../data/liveCatalog'
+import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
 import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
@@ -126,6 +126,10 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      admin's own Self Use record, and must not read one either. */
   const storeId = previewing() ? PREVIEW_USER_ID : user?.id
   const { state, update, reset } = useSelfUseStore(storeId)
+  /* The catalog offers this person only what is recorded in their language
+     and their form (owner's rule, 2026-10-21): tell it who is listening. */
+  const setListener = useSetListener()
+  useEffect(() => { setListener(state.addressedAs) }, [setListener, state.addressedAs])
   const { update: updateAssessments } = useAssessments()
   const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 

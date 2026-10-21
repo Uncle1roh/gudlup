@@ -293,7 +293,6 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
 
   /* ---- the session flow ---- */
   "Let's check your headphones": 'Vamos verificar seus fones',
-  'This session is not recorded in your language yet — you will hear it in {lang}.': 'Esta sessão ainda não foi gravada no seu idioma — você vai ouvi-la em {lang}.',
   'German': 'Alemão',
   'End session early? The minutes you listened still count.': 'Encerrar a sessão antes? Os minutos que você ouviu continuam valendo.',
 

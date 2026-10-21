@@ -64,8 +64,8 @@ console.log('\n--- which recording plays ---')
 const proto = { versions: [{ duration: 12, audioUrl: { it: 'IT_M.mp3' } }] } as unknown as CatalogProtocol
 assert(audioPick(proto, 12, 'it', 'm')?.url === 'IT_M.mp3', 'a man gets the file that is there')
 assert(audioPick(proto, 12, 'it', 'm')?.exact === true, '…as the exact form')
-assert(audioPick(proto, 12, 'it', 'f')?.url === 'IT_M.mp3', 'a woman gets it too rather than an empty library')
-assert(audioPick(proto, 12, 'it', 'f')?.exact === false, '…but it is marked as NOT her form, which is what the screen says')
+/* Owner's rule, 2026-10-21: a man's recording never plays for a woman. */
+assert(audioPick(proto, 12, 'it', 'f') === undefined, 'a woman never gets the male recording — the version is simply not offered to her')
 
 const bothAudio = { versions: [{ duration: 12, audioUrl: { it: 'IT_M.mp3', 'it:f': 'IT_F.mp3' } }] } as unknown as CatalogProtocol
 assert(audioPick(bothAudio, 12, 'it', 'f')?.url === 'IT_F.mp3', 'once hers exists she gets hers')

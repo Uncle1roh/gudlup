@@ -42,8 +42,6 @@ const STANDARD_FRACTIONS = [0.11, 0.16, 0.16, 0.38, 0.1, 0.09]
 
 export type PostFeedback = 'relaxed' | 'neutral' | 'restless' | 'support'
 
-/** How a spoken language is named in the pre-session notice ("you will hear it in Portuguese"). */
-const SPOKEN_NAME: Record<string, string> = { 'pt-BR': 'Portuguese', it: 'Italian', en: 'English', es: 'Spanish', de: 'German' }
 
 export interface SessionOutcome {
   slug: string
@@ -151,7 +149,6 @@ export function SessionFlow(props: SessionFlowProps) {
      the one door into playback: the pre-session screen, the stereo check and
      the player itself are all behind it. */
   const playerOn = useFeature('player')
-  const { locale } = useI18n()
   const [stage, setStage] = useState<Stage>('pre')
   /* Before the audio starts, back is the screen's own back: leave the session.
      While it plays, the player catches it (below). Afterwards there is nothing
@@ -166,19 +163,9 @@ export function SessionFlow(props: SessionFlowProps) {
   const listenedSec = useRef(0)
   const stereoChecked = useRef(false)
   const vasPre = useRef<number | null>(null)
-  /* Whether the recording about to play addresses this person the way they
-     asked. Resolved here, so the pre-session screen can say it BEFORE the
-     audio starts rather than after. */
-  const flowProtocol = session.entry ?? getProtocol(session.protocolCode)
-  const flowPick = flowProtocol ? audioPick(flowProtocol, duration, locale, props.addressedAs) : undefined
-  const otherForm = !!flowPick && !flowPick.formMatch
-  /* The language the person READS (English included) against the one the
-     file speaks. English is not voiced yet, so an English reader hears the
-     Portuguese session — by decision (docs/PLAIN_LANGUAGES.md §5) — and is
-     now told so, like anyone sent to another language. */
-  const readLang = locale === 'it' ? 'it' : locale === 'en' ? 'en' : 'pt-BR'
-  const otherLang = !!flowPick && !!flowPick.spokenLang && flowPick.spokenLang !== readLang ? flowPick.spokenLang : null
-
+  /* No "other language / other form" notice any more: a person is offered
+     only versions recorded in their language and their form (owner's rule,
+     2026-10-21; playableDurations + audioPick in data/liveCatalog). */
   /* BELOW every hook, never above one: flipping the switch changes this
      branch, and a conditional return over a useRef would change the hook
      count between renders and take the whole screen down with it. */
@@ -197,9 +184,6 @@ export function SessionFlow(props: SessionFlowProps) {
         duration={duration}
         onBegin={begin}
         onCancel={onCancel}
-        addressedAs={props.addressedAs}
-        otherForm={otherForm}
-        otherLang={otherLang}
       />
     )
   }
@@ -260,20 +244,11 @@ function PreSession({
   duration,
   onBegin,
   onCancel,
-  otherForm,
-  otherLang,
-  addressedAs,
 }: {
   session: ResolvedSession
   duration: Duration
   onBegin: (vasPre: number | null) => void
   onCancel: () => void
-  /** True when this protocol has not been voiced in the listener's form yet
-      and they are about to hear the other one. */
-  otherForm?: boolean
-  /** The language the recording speaks when it is not the one the person reads. */
-  otherLang?: string | null
-  addressedAs?: Addressee
 }) {
   const { t } = useI18n()
   const { m } = useLegal()
@@ -295,19 +270,6 @@ function PreSession({
           {/* Said before it plays, not discovered during it. A protocol gets
               its second recording when it is made; until then this is the
               honest version of "we only have one". */}
-          {otherLang && (
-            <p className="small muted pre-session__form">
-              {t('This session is not recorded in your language yet — you will hear it in {lang}.', { lang: t(SPOKEN_NAME[otherLang] ?? otherLang) })}
-            </p>
-          )}
-          {otherForm && (
-            <p className="small muted pre-session__form">
-              {addressedAs === 'f'
-                ? t('This session is only recorded in the male form for now — it will say “pronto”.')
-                : t('This session is only recorded in the female form for now — it will say “pronta”.')}
-            </p>
-          )}
-
           {/* PLY-1 — once, before the first audio session (Tier C). */}
           {safeNote && (
             <div className="legal-note legal-note--safety" role="note">

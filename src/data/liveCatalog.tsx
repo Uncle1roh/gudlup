@@ -50,30 +50,46 @@ import {
 } from './selfuse'
 import { nameLocales, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Protocol } from '../types/domain'
 import { useI18n, type Locale } from '../i18n'
-import { otherVoiceLang, variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { tierChoice } from '../legal/claims'
 
 /* ------------------------------------------------------------- audio ----- */
 
 /**
- * The app's locale → the SPOKEN language to play.
+ * The app's locale → the SPOKEN language a person may hear.
  *
- * Italian and Portuguese are voiced; English is not yet (the Excel has no
- * English column in use), and the owner's decision is that an English reader
- * hears the Portuguese session until it is. When English is voiced this is
- * the one line to change.
+ * The owner's rule (2026-10-21): a person linked to a language is offered
+ * protocols in THAT language only, never another. English is not voiced yet,
+ * so an English reader is offered nothing until it is — which replaces the
+ * earlier decision that English readers hear Portuguese.
  */
-export function audioLanguage(locale: Locale): VoiceLang {
-  return locale === 'it' ? 'it' : 'pt-BR'
+export function audioLanguage(locale: Locale): VoiceLang | 'en' {
+  return locale === 'it' ? 'it' : locale === 'en' ? 'en' : 'pt-BR'
+}
+
+/** Who is listening: their language and how they are addressed. A surface
+    that is not one person's (the therapist workspace, the console) has no
+    listener and sees every rendered duration. */
+export interface Listener {
+  locale: Locale
+  to: Addressee
+}
+
+/** The one file a listener may hear for a version: their language AND their
+    form. Nothing else — a man's recording never plays for a woman, a
+    Portuguese one never for an Italian reader (owner's rule, 2026-10-21). */
+export function listenerKey(l: Listener): string {
+  return variantKey(audioLanguage(l.locale), l.to)
 }
 
 /**
- * The rendered audio for one version, in the best language available.
+ * The rendered audio for one version, for one listener — or nothing.
  *
- * The wanted language, then the other voiced one, then anything at all. Most
- * durations exist in ONE language for a while after publishing, and a voice in
- * the other language is still a guided session — silence is not, and the
- * synthesized placeholder bed is the honest last resort. `locale` can also be
- * a spoken language directly, for callers that know which file they want.
+ * Strict (owner's rule, 2026-10-21): the listener's language and form, and
+ * no fallback to another language or the other form. With per-listener
+ * durations (`playableDurations`) a person is never offered a version they
+ * have no file for, so "nothing" here means the version cannot be played
+ * for them, and the player says so rather than playing someone else's.
  */
 export function audioUrlFor(
   p: Pick<Protocol, 'versions'> | undefined,
@@ -84,29 +100,11 @@ export function audioUrlFor(
   return audioPick(p, duration, locale, to)?.url
 }
 
-/**
- * The rendered audio AND how it differs from what the listener asked for.
- *
- * A catalogue mid-recording has protocols voiced in one language before the
- * other, and for a man before a woman. Hiding those would empty libraries the
- * day a protocol ships, so the person gets the recording that exists — and is
- * TOLD, before it plays, which of the two differs: the language
- * (`spokenLang` ≠ what they read) or the form (`formMatch: false`). The
- * pre-session screen used to treat every fallback as a form fallback, so an
- * Italian reader sent to the Portuguese file was told about "pronto/pronta"
- * and never about the language.
- *
- * Order: her language and her form, then her language in the other form, then
- * the other language in her form, then anything at all.
- */
 export interface AudioPick {
   url: string
-  /** Her language AND her form. */
-  exact: boolean
-  /** Addressed the way she asked (masculine/feminine). */
-  formMatch: boolean
-  /** The language the file speaks, when known. */
-  spokenLang: string | null
+  /** Always true: only the listener's own language and form is ever picked. */
+  exact: true
+  spokenLang: string
 }
 
 export function audioPick(
@@ -117,26 +115,8 @@ export function audioPick(
 ): AudioPick | undefined {
   const version = p?.versions.find((v) => v.duration === duration)
   const urls = version?.audioUrl as Record<string, string | undefined> | undefined
-  if (!urls) return undefined
-  const want = audioLanguage(locale)
-  const other = otherVoiceLang(want)
-  const flip: Addressee = to === 'f' ? 'm' : 'f'
-  const tries: { key: string; lang: string; form: boolean }[] = [
-    { key: variantKey(want, to), lang: want, form: true },
-    { key: variantKey(want, flip), lang: want, form: false },
-    { key: variantKey(other, to), lang: other, form: true },
-    { key: variantKey(other, flip), lang: other, form: false },
-    ...(['en', 'es', 'de'] as const).map((l) => ({ key: l, lang: l as string, form: to === 'm' })),
-  ]
-  for (const t of tries) {
-    const url = urls[t.key]
-    if (url) return { url, exact: t.lang === want && t.form, formMatch: t.form, spokenLang: t.lang }
-  }
-  const first = Object.entries(urls).find(([, u]) => Boolean(u))
-  if (!first) return undefined
-  const [key] = first
-  const isF = key.endsWith(':f')
-  return { url: first[1] as string, exact: false, formMatch: (to === 'f') === isF, spokenLang: key.replace(/:f$/, '') || null }
+  const url = urls?.[listenerKey({ locale, to })]
+  return url ? { url, exact: true, spokenLang: audioLanguage(locale) } : undefined
 }
 
 /**
@@ -164,13 +144,20 @@ export function audioPick(
  * by any path that did not set the column explicitly claimed the demo
  * exemption — and offered 6 / 12 / 24 buttons with no file behind any of them.
  */
-export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
+export function playableDurations(p: CatalogProtocol | undefined, listener?: Listener | null): Duration[] {
   if (!p) return []
   const rendered = new Set<Duration>()
+  const key = listener ? listenerKey(listener) : null
   for (const v of p.versions) {
     if (!CATALOG_DURATIONS.includes(v.duration)) continue
-    if (v.audioUrl && Object.values(v.audioUrl).some((u) => Boolean(u))) rendered.add(v.duration)
+    const urls = (v.audioUrl ?? {}) as Record<string, string | undefined>
+    /* For a person: only a file in their language and form makes a duration
+       playable. For a surface with no listener: any file. */
+    if (key ? Boolean(urls[key]) : Object.values(urls).some((u) => Boolean(u))) rendered.add(v.duration)
   }
+  if (rendered.size) return CATALOG_DURATIONS.filter((d) => rendered.has(d))
+  /* Files exist, just none in this person's language and form: nothing to offer. */
+  if (key && p.versions.some((v) => v.audioUrl && Object.values(v.audioUrl).some((u) => Boolean(u)))) return []
   if (rendered.size) return CATALOG_DURATIONS.filter((d) => rendered.has(d))
   /* A preview reads the real catalogue now, so it tells the same truth a
      customer's app would: a length is offered when audio exists for it, and
@@ -183,10 +170,25 @@ export function playableDurations(p: CatalogProtocol | undefined): Duration[] {
   return CATALOG_DURATIONS.filter((d) => declared.has(d))
 }
 
-/** True when at least one duration has real rendered audio. */
-export function hasRenderedAudio(p: CatalogProtocol | undefined, locale: Locale): boolean {
+/** True when at least one duration has real rendered audio for this listener
+    (or, with no listener, at all). */
+export function hasRenderedAudio(p: CatalogProtocol | undefined, listener?: Listener | null): boolean {
   if (!p) return false
-  return playableDurations(p).some((d) => Boolean(audioUrlFor(p, d, locale)))
+  return p.versions.some((v) => {
+    const urls = (v.audioUrl ?? {}) as Record<string, string | undefined>
+    return listener ? Boolean(urls[listenerKey(listener)]) : Object.values(urls).some((u) => Boolean(u))
+  })
+}
+
+/** A protocol a person may never choose on their own: one of the six
+    clinical-only codes, or any protocol the console labels "Clinico" (made to
+    be used together with a professional). It is still played when a
+    therapist prescribes it or leads it in a session — never picked from the
+    library, search, shelves, pathways or mood cards (owner's rule,
+    2026-10-21). */
+export function isTherapistOnly(p: Pick<CatalogProtocol, 'code' | 'tier'> | undefined): boolean {
+  if (!p) return false
+  return isClinicalOnly(p.code) || tierChoice(p.tier) === 'amber'
 }
 
 /* ------------------------------------------------- resolved Self Use ----- */
@@ -203,6 +205,8 @@ export interface ResolvedSession extends SelfUseSession {
   entry?: CatalogProtocol
   /** Set when this session came from the CATALOG rather than the spine. */
   fromCatalog?: boolean
+  /** Clinical: playable only when a therapist prescribes or leads it. */
+  therapistOnly?: boolean
 }
 
 const THEME_BY_LIBRARY_CATEGORY: Record<string, SelfUseTheme> = {
@@ -243,7 +247,7 @@ function publicLine(p: CatalogProtocol, locale: Locale): string {
   return (p.publicBlurb ?? '').trim()
 }
 
-export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): ResolvedSession[] {
+export function resolveSessions(catalog: CatalogProtocol[], locale: Locale, listener?: Listener | null): ResolvedSession[] {
   const byCode = new Map(catalog.map((p) => [p.code, p]))
 
   const spine: ResolvedSession[] = SELF_USE_SESSIONS.map((s) => {
@@ -251,9 +255,10 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
     if (!entry || !entry.enabled) {
       return { ...s, available: false, audioReady: false, entry }
     }
-    const durations = playableDurations(entry)
+    const durations = playableDurations(entry, listener)
     return {
       ...s,
+      therapistOnly: isTherapistOnly(entry),
       /* CLAUDE.md: a patient-facing screen prints patientTitle(). Where no PO
          has written a public name, that resolves to the clinical title — which
          is NOT what a person should read, so the editorial name stays instead.
@@ -270,7 +275,7 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
          led to the placeholder bed instead of one. */
       durations,
       available: durations.length > 0,
-      audioReady: hasRenderedAudio(entry, locale),
+      audioReady: hasRenderedAudio(entry, listener),
       coverUrl: entry.coverUrl,
       entry,
     }
@@ -288,20 +293,27 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale): Res
       series: 'standalone' as const,
       theme: THEME_BY_LIBRARY_CATEGORY[p.library?.category ?? ''] ?? 'calm',
       protocolCode: p.code,
-      durations: playableDurations(p),
+      durations: playableDurations(p, listener),
       available: true,
-      audioReady: hasRenderedAudio(p, locale),
+      audioReady: hasRenderedAudio(p, listener),
       coverUrl: p.coverUrl,
       entry: p,
       fromCatalog: true,
+      therapistOnly: isTherapistOnly(p),
     }))
     .filter((s) => s.durations.length > 0)
 
   return [...spine, ...extra]
 }
 
-/** Only what a person may browse and start right now. */
+/** Only what a person may browse and start ON THEIR OWN right now: playable
+    for them, and not a therapist-only protocol. */
 export function browsableSessions(sessions: ResolvedSession[]): ResolvedSession[] {
+  return sessions.filter((s) => s.available && s.durations.length > 0 && !s.therapistOnly)
+}
+
+/** What can be played at all (a prescription included), therapist-only or not. */
+export function playableSessions(sessions: ResolvedSession[]): ResolvedSession[] {
   return sessions.filter((s) => s.available && s.durations.length > 0)
 }
 
@@ -398,7 +410,7 @@ export function resolveClinical(catalog: CatalogProtocol[], locale: Locale, sess
       blurb: protocolBlurb(p, locale),
       durations: playableDurations(p),
       clinicalOnly: isClinicalOnly(p.code),
-      audioReady: hasRenderedAudio(p, locale),
+      audioReady: hasRenderedAudio(p),
       patientName: nameOf.get(p.code) ?? patientTitle(p, locale),
       entry: p,
     }))
@@ -412,8 +424,10 @@ export function resolveClinical(catalog: CatalogProtocol[], locale: Locale, sess
  * cannot be bypassed by a caller that forgets it.
  */
 export function prescribableEntries(clinical: ClinicalEntry[], sessions: ResolvedSession[]): ClinicalEntry[] {
-  const browsable = new Set(browsableSessions(sessions).map((s) => s.protocolCode))
-  return clinical.filter((c) => !c.clinicalOnly && browsable.has(c.code))
+  /* A therapist may prescribe a "Clinico" protocol — that is what it is for —
+     so this reads what is PLAYABLE, not what a person may browse alone. */
+  const playable = new Set(playableSessions(sessions).map((s) => s.protocolCode))
+  return clinical.filter((c) => !c.clinicalOnly && playable.has(c.code))
 }
 
 /* --------------------------------------------------------------- hook ---- */
@@ -440,7 +454,7 @@ export interface LiveCatalog {
  * published while the app is open plays correctly on the next session without
  * a reload.
  */
-export function useLiveCatalog(locale: Locale): LiveCatalog {
+export function useLiveCatalog(locale: Locale, listener: Listener | null = null): LiveCatalog {
   const dp = useDataProvider()
   const [all, setAll] = useState<CatalogProtocol[]>([])
   const [loading, setLoading] = useState(true)
@@ -465,7 +479,7 @@ export function useLiveCatalog(locale: Locale): LiveCatalog {
     return () => { active = false }
   }, [dp, tick])
 
-  const sessions = useMemo(() => resolveSessions(all, locale), [all, locale])
+  const sessions = useMemo(() => resolveSessions(all, locale, listener), [all, locale, listener?.locale, listener?.to])
   const browsable = useMemo(() => browsableSessions(sessions), [sessions])
   const pathways = useMemo(() => resolvePathways(sessions), [sessions])
   const moodCards = useMemo(() => resolveMoodCards(sessions), [sessions])
@@ -494,20 +508,36 @@ export function findPathway(pathways: ResolvedPathway[], id: PathwayId | null | 
  * levels invites one of them being handed a stale copy.
  */
 const CatalogCtx = createContext<LiveCatalog | null>(null)
+/* The person surface tells the catalog who is listening, once it knows how
+   they are addressed (AddressedAsGate makes that an answer before anything
+   plays). Until then, and on surfaces that are not one person's, there is
+   no listener and no per-person filter. */
+const ListenerCtx = createContext<(to: Addressee | null) => void>(() => undefined)
+
+/** Called by the Self Use surface with the person's form. */
+export function useSetListener(): (to: Addressee | null) => void {
+  return useContext(ListenerCtx)
+}
 
 export function LiveCatalogProvider({ children, value }: { children: ReactNode; value?: LiveCatalog }) {
   const { locale } = useI18n()
-  const loaded = useLiveCatalog(locale)
+  const [to, setTo] = useState<Addressee | null>(null)
+  const listener = useMemo(() => (to ? { locale, to } : null), [locale, to])
+  const loaded = useLiveCatalog(locale, listener)
   // `value` lets a harness (or a storybook) render a screen against a KNOWN
   // catalog rather than waiting on a provider round-trip. Production never
   // passes it, so the loaded one is what every real surface sees.
-  return <CatalogCtx.Provider value={value ?? loaded}>{children}</CatalogCtx.Provider>
+  return (
+    <ListenerCtx.Provider value={setTo}>
+      <CatalogCtx.Provider value={value ?? loaded}>{children}</CatalogCtx.Provider>
+    </ListenerCtx.Provider>
+  )
 }
 
 /** Resolve a catalog synchronously — for harnesses and for server rendering,
     where there is no provider round-trip to wait on. */
-export function resolveCatalog(all: CatalogProtocol[], locale: Locale): LiveCatalog {
-  const sessions = resolveSessions(all, locale)
+export function resolveCatalog(all: CatalogProtocol[], locale: Locale, listener: Listener | null = null): LiveCatalog {
+  const sessions = resolveSessions(all, locale, listener)
   const clinical = resolveClinical(all, locale, sessions)
   return {
     loading: false,

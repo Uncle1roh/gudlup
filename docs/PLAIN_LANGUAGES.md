@@ -90,9 +90,13 @@ stored at `<code>/<duration>min-<lang>.mp3`, written **only** into
 `versions[].audioUrl[<lang>]` — the other language's file stays. A duration is
 "published" when any language has a file; the console shows which (`IT ✓ · PT —`).
 
-Playback follows the person's app language: `it` → Italian, `pt-BR` →
-Portuguese, `en` → Portuguese. When the wanted language has no file the other
-one plays, so nobody loses a session that exists in only one language.
+Playback follows the person's app language and form, **strictly** (owner's
+rule, 2026-10-21): `it` → Italian, `pt-BR` → Portuguese, `en` → English, and
+the file in the form the person chose (`<lang>` male, `<lang>:f` female).
+There is no fallback to another language or the other form: a duration is
+offered to a person only when their own file exists (`playableDurations`
+with a listener, `audioPick` in `src/data/liveCatalog.tsx`). English is not
+voiced yet, so an English reader is offered no session until it is.
 
 Everything published before this change was Italian but filed under `pt-BR`;
 `supabase/12-audio-language.sql` moves it to `it` (idempotent).

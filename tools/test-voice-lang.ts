@@ -239,10 +239,11 @@ async function main() {
   console.log('\n--- 8. which file a person hears ---')
   assert(audioUrlFor(pub, 6, 'it') === 'https://x/6-it.mp3', 'it → the Italian file')
   assert(audioUrlFor(pub, 6, 'pt-BR') === 'https://x/6-pt.mp3', 'pt-BR → the Portuguese file')
-  assert(audioUrlFor(pub, 6, 'en') === 'https://x/6-pt.mp3', 'en → the Portuguese file')
-  assert(audioUrlFor(itOnlyRow, 6, 'pt-BR') === 'https://x/6-it.mp3' && audioUrlFor(itOnlyRow, 6, 'en') === 'https://x/6-it.mp3', 'only Italian exists: everyone still gets a session')
+  /* Owner's rule, 2026-10-21: only the person's own language, never another. */
+  assert(audioUrlFor(pub, 6, 'en') === undefined, 'en → nothing until English is voiced')
+  assert(audioUrlFor(itOnlyRow, 6, 'pt-BR') === undefined && audioUrlFor(itOnlyRow, 6, 'en') === undefined, 'only Italian exists: nobody else hears it')
   const ptOnly = withAudioUrl({ ...stored6, versions: [{ duration: 6 }] }, 6, 'pt-BR', 'https://x/6-pt.mp3')
-  assert(audioUrlFor(ptOnly, 6, 'it') === 'https://x/6-pt.mp3', 'only Portuguese exists: the Italian reader gets it too')
+  assert(audioUrlFor(ptOnly, 6, 'it') === undefined, 'only Portuguese exists: the Italian reader is not given it')
 
   /* ------------------------------------------------------------ 9. names */
   console.log('\n--- 9. names follow the reader ---')
