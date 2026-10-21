@@ -24,9 +24,14 @@
    time given and milestones that, once reached, stay reached — no streaks,
    no counts of what was missed, no points (PLAN A6), nothing ranked against
    anyone, and never a clinical value.
+
+   On a desk the summary is a bento grid (docs/desktop-mockups, proposal C):
+   the week beside your care, the mood calendar beside the next milestone and
+   the live challenge. Those three are the desk's extra — below 1100px they
+   are hidden and the phone keeps its two cards.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import {
   GL_CHECK_QUESTIONS,
@@ -42,6 +47,14 @@ import { type TherapyState } from './therapyStore'
 import { Conquistas } from './Conquistas'
 import { RankingsTab } from './Coletivas'
 import { ChallengesTab } from './ChallengesTab'
+import { ChallengeCard } from './ChallengeCard'
+import { Icon } from './icons'
+import { useDataProvider } from '../data/provider'
+import { Badge } from '../gamification/ui/Badge'
+import { copyFor } from '../gamification/copy'
+import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
+import { isLive, type ChallengeView } from '../gamification/challenges'
+import type { Wallet } from '../gamification/economy'
 
 export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges'
 
@@ -88,70 +101,113 @@ export function ProgressTab(props: ProgressProps) {
   )
 }
 
-function Summary({ state, onGlCheck, onMood, onExportSelfUse }: ProgressProps) {
+function Summary({ state, onGlCheck, onMood, onExportSelfUse, onStartSession, onView }: ProgressProps) {
   const { t } = useI18n()
+  const dp = useDataProvider()
+  const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [next, setNext] = useState<AchievementView | null>(null)
+  const [challenge, setChallenge] = useState<ChallengeView | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    // Each block stays away if its read fails; the summary never waits on them.
+    dp.getWallet().then((w) => { if (alive) setWallet(w) }).catch(() => {})
+    dp.listMyAchievements().then((a) => { if (alive) setNext(nextAchievement(a)) }).catch(() => {})
+    dp.listMyChallenges().then((list) => {
+      if (!alive) return
+      const live = list.filter((c) => isLive(c, Date.now()))
+      setChallenge(live.find((c) => c.companyId) ?? live[0] ?? null)
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [dp])
 
   const last = state.glChecks[state.glChecks.length - 1] ?? null
   const prev = state.glChecks[state.glChecks.length - 2] ?? null
+  const blank = !state.glChecks.length && !state.moods.length
 
-  if (!state.glChecks.length && !state.moods.length) {
-    return (
-      <>
-        <div className="empty">
+  return (
+    <>
+      {/* The phone's empty state. On a desk each block of the grid carries
+          its own instead — one empty card across the screen read as broken. */}
+      {blank && (
+        <div className="empty prog-phone">
           <p>{t('Nothing here yet.')}</p>
           <p className="small muted">
             {t('Your check-in and your mood calendar appear here once you start filling them in.')}
           </p>
           <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
         </div>
-      </>
-    )
-  }
+      )}
 
-  return (
-    <>
-      {/* How the week felt, set against the week before it. */}
-      <section className="card">
-        <h3 className="home__sect">{t('This week')}</h3>
-        {last ? (
-          <>
-            <p className="small muted">{t('This week vs. last')}</p>
-            <div className="msr-bars">
-              {GL_CHECK_QUESTIONS.map((d) => {
-                const cur = last.scores[d.id]
-                const before = prev?.scores[d.id] ?? null
-                const tr = trend(cur, before, 0.01, 1)
-                return (
-                  <div key={d.id} className="msr-bar">
-                    <span className="msr-bar__label">{t(d.label)}</span>
-                    <span className="msr-bar__track" aria-hidden="true"><span style={{ width: `${(cur / 5) * 100}%` }} /></span>
-                    <span className="msr-bar__val">{cur}{tr && ` ${trendArrow(tr.direction)}`}</span>
-                  </div>
-                )
-              })}
-            </div>
-            <p className="small muted">
-              {t('Average')} {glCheckAverage(last)} · {t('scale 1–5')}
-            </p>
-          </>
-        ) : (
-          <p className="small muted">{t('No check-in yet.')}</p>
-        )}
-        {glCheckDue(state) && (
-          <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
-        )}
-      </section>
+      <div className={`prog-bento${blank ? ' prog-desk' : ''}`}>
+        {/* How the week felt, set against the week before it. */}
+        <section className="card prog-b8">
+          <h3 className="home__sect">{t('This week')}</h3>
+          {last ? (
+            <>
+              <p className="small muted">{t('This week vs. last')}</p>
+              <div className="msr-bars">
+                {GL_CHECK_QUESTIONS.map((d) => {
+                  const cur = last.scores[d.id]
+                  const before = prev?.scores[d.id] ?? null
+                  const tr = trend(cur, before, 0.01, 1)
+                  return (
+                    <div key={d.id} className="msr-bar">
+                      <span className="msr-bar__label">{t(d.label)}</span>
+                      <span className="msr-bar__track" aria-hidden="true"><span style={{ width: `${(cur / 5) * 100}%` }} /></span>
+                      <span className="msr-bar__val">{cur}{tr && ` ${trendArrow(tr.direction)}`}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="small muted">
+                {t('Average')} {glCheckAverage(last)} · {t('scale 1–5')}
+              </p>
+            </>
+          ) : (
+            <p className="small muted">{t('No check-in yet.')}</p>
+          )}
+          {glCheckDue(state) && (
+            <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
+          )}
+        </section>
 
-      {/* The one thing on this tab a person writes rather than is told. */}
-      <section className="card">
-        <h3 className="home__sect">{t('Mood calendar')}</h3>
-        {state.moods.length ? (
-          <MoodCalendar moods={state.moods} />
-        ) : (
-          <p className="small muted">{t('Track your daily mood — it takes 1 second.')}</p>
+        {wallet && (
+          <section className="gam-care prog-b4 prog-desk" aria-label={t('Your care')}>
+            <p className="eyebrow">{t('Your care')}</p>
+            <p className="gam-care__time">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</p>
+            <p className="gam-care__loops"><Icon name="loop" size={22} /> {t('= {n} Loops', { n: String(wallet.loops) })}</p>
+            <button className="btn btn--ghost gam-care__start" onClick={onStartSession}>{t('Start a session')}</button>
+          </section>
         )}
-        <button className="btn btn--ghost" onClick={onMood}>{t('How was your day?')}</button>
-      </section>
+
+        {/* The one thing on this tab a person writes rather than is told. */}
+        <section className="card prog-b6">
+          <h3 className="home__sect">{t('Mood calendar')}</h3>
+          {state.moods.length ? (
+            <MoodCalendar moods={state.moods} />
+          ) : (
+            <p className="small muted">{t('Track your daily mood — it takes 1 second.')}</p>
+          )}
+          <button className="btn btn--ghost" onClick={onMood}>{t('How was your day?')}</button>
+        </section>
+
+        {(next || challenge) && (
+          <div className="prog-b6 prog-col prog-desk">
+            {next && (
+              <button className="card gam-milestone" onClick={() => onView('achievements')}>
+                <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
+                <span className="gam-milestone__body">
+                  <span className="eyebrow">{t('Next milestone of care')}</span>
+                  <span className="gam-milestone__name">{t(copyFor(next.slug).name)}</span>
+                  <span className="gam-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, ((next.value ?? 0) / next.threshold) * 100)}%` }} /></span>
+                </span>
+              </button>
+            )}
+            {challenge && <ChallengeCard c={challenge} onOpen={() => onView('challenges')} />}
+          </div>
+        )}
+      </div>
 
       {/* The WHO-5 monthly snapshot is gone from self-guided use: a validated
           instrument scored back to the person is a clinical measurement

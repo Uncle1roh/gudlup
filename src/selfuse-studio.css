@@ -2650,3 +2650,65 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
 .su-studio .gam-seg--4 { display: flex; gap: 6px; }
 .su-studio .gam-seg--4 button { flex: 1 1 auto; min-width: 0; padding-inline: 8px; font-size: 13.5px; overflow: visible; text-overflow: clip; }
 @media (min-width: 900px) { .su-studio .gam-seg--4 button { font-size: 15px; padding-inline: 16px; } }
+
+/* ======================================== the desk: one centred column ===
+
+   Proposal A of docs/desktop-mockups. Every block used to take whatever
+   width the window had, so at 1920px a progress bar ran 1,800px and a rail
+   of three cards ended in the middle of the screen. The content now lives in
+   one 1200px column, centred, and the top bar's logo, search, tabs and Help
+   now line up with it. Done with padding rather than a max-width so the page
+   is still the scroll surface edge to edge — the wheel works over the
+   margins too. The phone and the tablet do not change. */
+@media (min-width: 1100px) {
+  .su-studio { --su-col: 1200px; }
+  .su-studio .su-page { padding-inline: max(var(--su-inset), calc((100% - var(--su-col)) / 2)); }
+  .su-studio .tabbar { padding-inline: max(32px, calc((100% - var(--su-col)) / 2)); }
+
+  /* Benefits: your care beside the next milestone, then cards three across. */
+  .su-studio .benefits {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    align-content: start;
+  }
+  .su-studio .benefits > * { grid-column: 1 / -1; }
+  .su-studio .benefits > .gam-care:has(+ .gam-milestone) { grid-column: 1; }
+  .su-studio .benefits > .gam-milestone { grid-column: 2; align-self: stretch; }
+  .su-studio .benefits .gam-benefits { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ===================================== Progress › Resumo, as a bento ===
+
+   Proposal C. Twelve columns: the week (8) beside your care (4), the mood
+   calendar (6) beside the next milestone and the live challenge (6). Every
+   block has its natural size and its own empty line, never one empty card
+   across the screen. `.prog-desk` blocks are the desk's extra; `.prog-phone`
+   is the phone's own empty state. */
+.su-studio .prog-bento { display: flex; flex-direction: column; gap: var(--su-gap); flex: none; }
+.su-studio .prog-bento > * { flex: none; margin: 0; }
+@media (max-width: 1099px) {
+  .su-studio .su-page .prog-desk { display: none; }
+}
+@media (min-width: 1100px) {
+  .su-studio .su-page .prog-phone { display: none; }
+  .su-studio .prog-bento {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: stretch;
+  }
+  .su-studio .prog-b8 { grid-column: span 8; }
+  .su-studio .prog-b4 { grid-column: span 4; }
+  .su-studio .prog-b6 { grid-column: span 6; }
+  /* a block whose partner did not load takes the row */
+  .su-studio .prog-b8:not(:has(+ .prog-b4)),
+  .su-studio .prog-b6:not(.prog-col):not(:has(+ .prog-col)) { grid-column: 1 / -1; }
+  .su-studio .prog-col { display: flex; flex-direction: column; gap: var(--su-gap); min-width: 0; }
+  .su-studio .prog-col > * { flex: 1 1 auto; margin: 0; }
+  .su-studio .prog-bento .gam-care { justify-content: center; }
+  .su-studio .prog-bento .card > .btn,
+  .su-studio .prog-bento .gam-care > .btn { align-self: flex-start; width: auto; min-width: 200px; }
+  /* the calendar keeps a calendar's proportions in a 580px block */
+  .su-studio .prog-bento .cal__day,
+  .su-studio .prog-bento .cal__pad { aspect-ratio: auto; height: 46px; }
+  .su-studio .progress > .btn--quiet { align-self: flex-start; }
+}
