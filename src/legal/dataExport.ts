@@ -17,6 +17,7 @@
 import type { SelfUseState } from '../data/selfUseStore'
 import type { Acceptance, ConsentEvent, LegalProfile } from './records'
 import { LEGAL_VERSION } from './types'
+import type { LoopsEntry, Wallet } from '../gamification/economy'
 
 export interface ExportInput {
   requestId: string | null
@@ -32,6 +33,9 @@ export interface ExportInput {
     sessions: unknown[]
     selected: unknown[]
   } | null
+  /** Points and Loops (docs/gamification/SPEC.md §2.5). Later slices add
+      achievements and redemptions here. null when it could not be read. */
+  gamification: { wallet: Wallet; loops: LoopsEntry[] } | null
 }
 
 const NIL = 'none — Good Loop holds no data in this domain for you'
@@ -78,6 +82,17 @@ export function buildDataExport(i: ExportInput) {
         /* The person's own saved list. It is data we hold about them, so it
            belongs in the copy they can ask for. */
         savedList: nil(i.state.saved),
+        pointsAndLoops: i.gamification
+          ? {
+              note: 'Points count the minutes you listened and the sessions you completed; Loops come from Points and from bonuses, and are what you exchange for benefits. They are a tally of use — never a score about you or your health.',
+              pointsTotal: i.gamification.wallet.pointsTotal,
+              loopsBalance: i.gamification.wallet.loops,
+              loopsLedger: nil(i.gamification.loops.map((e) => ({
+                at: iso(e.createdAt), type: e.entryType, loops: e.amountCenti / 100,
+                fundedBy: e.fundingSource, multiplier: e.multiplierApplied,
+              }))),
+            }
+          : NIL,
       },
       E_user_created_content: NIL,
       F_communications_with_good_loop: NIL,

@@ -49,6 +49,15 @@ export interface SessionOutcome {
   completedAt: number
   /** false when the person ended it early from the player. */
   completed: boolean
+  /** When the audio stopped — the end of listening, not the moment the
+      post-session screen was answered. */
+  endedAt: number
+  /** Seconds the audio actually played: pauses, the background and seeks
+      add nothing. What the server credits Points from (capped there at the
+      nominal length). */
+  listenedSec: number
+  /** The stereo check ran and passed before this session. */
+  stereoChecked: boolean
   feedback?: PostFeedback
   /**
    * The VAS pair, 1–5, tapped before and after.
@@ -150,6 +159,9 @@ export function SessionFlow(props: SessionFlowProps) {
   })
   const startedAt = useRef(Date.now())
   const completed = useRef(true)
+  const endedAt = useRef(0)
+  const listenedSec = useRef(0)
+  const stereoChecked = useRef(false)
   const vasPre = useRef<number | null>(null)
   /* Whether the recording about to play addresses this person the way they
      asked. Resolved here, so the pre-session screen can say it BEFORE the
@@ -184,7 +196,7 @@ export function SessionFlow(props: SessionFlowProps) {
   if (stage === 'stereo') {
     return (
       <StereoCheck
-        onDone={(passed) => { props.onStereoChecked(passed); setStage('play') }}
+        onDone={(passed) => { stereoChecked.current = passed; props.onStereoChecked(passed); setStage('play') }}
         onBack={onCancel}
       />
     )
@@ -196,7 +208,12 @@ export function SessionFlow(props: SessionFlowProps) {
         duration={duration}
         addressedAs={props.addressedAs}
         demoSeconds={props.demoSeconds ?? null}
-        onEnd={(finished) => { completed.current = finished; setStage('post') }}
+        onEnd={(finished, listened) => {
+          completed.current = finished
+          endedAt.current = Date.now()
+          listenedSec.current = listened
+          setStage('post')
+        }}
       />
     )
   }
@@ -213,6 +230,9 @@ export function SessionFlow(props: SessionFlowProps) {
           startedAt: startedAt.current,
           completedAt: Date.now(),
           completed: completed.current,
+          endedAt: endedAt.current || Date.now(),
+          listenedSec: Math.round(listenedSec.current),
+          stereoChecked: stereoChecked.current,
           feedback: f ?? undefined,
           vasPre: vasPre.current ?? undefined,
           vasPost: post ?? undefined,
@@ -464,7 +484,7 @@ function ImmersiveSession({
   duration: Duration
   demoSeconds: number | null
   addressedAs: Addressee
-  onEnd: (completed: boolean) => void
+  onEnd: (completed: boolean, listenedSec: number) => void
 }) {
   const { t, locale } = useI18n()
   /*
@@ -509,7 +529,7 @@ function ImmersiveSession({
   useBackLayer(true, () => {
     /* Nothing has started yet (the "Begin" screen, or a session that cannot
        play): there is nothing to interrupt, so back is that screen's Back. */
-    if (!startedRef.current) { onEnd(false); return }
+    if (!startedRef.current) { onEnd(false, 0); return }
     setConfirmExit((open) => !open)
   })
 
@@ -522,6 +542,10 @@ function ImmersiveSession({
   const tickRef = useRef<number | null>(null)
   const lastRef = useRef(0)
   const elapsedRef = useRef(0)
+  /* Seconds of audio actually heard. Not elapsedRef: a seek moves that, and
+     skipping to the end is not listening to the end. One tick never counts
+     for more than a second, so a stalled timer cannot credit the stall. */
+  const listenedRef = useRef(0)
   const playingRef = useRef(false)
   const endedRef = useRef(false)
   const fadeRef = useRef<number | null>(null)
@@ -559,10 +583,11 @@ function ImmersiveSession({
     lastRef.current = now
     if (!playingRef.current) return
     elapsedRef.current += dt
+    listenedRef.current += Math.min(dt, 1)
     if (elapsedRef.current >= total && !endedRef.current) {
       endedRef.current = true
       cleanup()
-      onEnd(true)
+      onEnd(true, listenedRef.current)
       return
     }
     setElapsed(elapsedRef.current)
@@ -691,7 +716,7 @@ function ImmersiveSession({
     if (endedRef.current) return
     endedRef.current = true
     cleanup()
-    onEnd(false)
+    onEnd(false, listenedRef.current)
   }
 
   // Backgrounding the app pauses rather than races the timer on.
@@ -718,7 +743,7 @@ function ImmersiveSession({
             <p className="lead player__readytext">
               {t('This session is not available at the moment. Your therapist or the Good Loop team can restore it.')}
             </p>
-            <button className="btn btn--light player__begin" onClick={() => onEnd(false)}>{t('Back')}</button>
+            <button className="btn btn--light player__begin" onClick={() => onEnd(false, 0)}>{t('Back')}</button>
           </div>
         </div>
       </div>

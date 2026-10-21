@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -328,6 +329,17 @@ export interface DataProvider {
   /** The only figures a sponsor receives: totals, suppressed below the cohort
       threshold, no categories, no professionally-guided split (SPN-01..04). */
   getSponsorTotals(): Promise<SponsorTotals>
+
+  // --- Gamification: the Loops economy (docs/gamification/SPEC.md §2) ---
+  /** The signed-in person's wallet. Credits are computed server-side from
+      recorded sessions; the client never sends an amount (GAM-R8). */
+  getWallet(): Promise<Wallet>
+  /** The person's Loops entries, newest first. */
+  listLoopsLedger(): Promise<LoopsEntry[]>
+  /** The economy settings (Admin › Economia reads and writes them). */
+  getEconomySettings(): Promise<EconomySettings>
+  /** Admin only. */
+  saveEconomySettings(next: EconomySettings): Promise<void>
 }
 
 const DataCtx = createContext<DataProvider | null>(null)

@@ -1,0 +1,126 @@
+{
+  "about": "Parity fixtures for the Loops economy (SPEC §2.6). tools/test-gam-economy.ts runs them through src/gamification/economy.ts; supabase/tests/economy_parity.sql inserts each as a real session and reads the ledgers credit_session() wrote. Both must produce `expected` exactly. Times are absolute and in the past so the server's least(ended_at, now()) never moves them. `usage` is what the session's São Paulo day had already used. `company` is null for a person with no company. `settings` overrides the defaults for that case only.",
+  "cases": [
+    { "name": "standard 12 min completed (SPEC §2.4, no company)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "Ana at Aurora, Premium 1.5x (SPEC §2.4)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.5, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 110 } },
+
+    { "name": "multiplier 1.0 (Essencial) adds nothing",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.0, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "multiplier 1.25 (Plus)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.25, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 55 } },
+
+    { "name": "multiplier 2.0 (Max)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 2.0, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 220 } },
+
+    { "name": "subscription expired before the session ended",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.5, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-01-01T00:00:00Z", "subscriptionEndsAt": "2026-10-01T00:00:00Z" },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "left the company before the session (base Loops stay, multiplier stops)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.5, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": "2026-10-15T00:00:00Z", "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "paused subscription",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.5, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "paused", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "SOS earns nothing, even with a multiplier (GAM-R3)",
+      "session": { "kind": "b2c", "durationMin": 6, "listenedSec": 360, "completed": true, "sos": true, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 2.0, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 0, "baseCenti": 0, "companyCenti": 0 } },
+
+    { "name": "therapist-console session earns nothing (count_clinical_sessions = false)",
+      "session": { "kind": "b2b", "durationMin": 24, "listenedSec": 1440, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 0, "baseCenti": 0, "companyCenti": 0 } },
+
+    { "name": "completed after seeking: only the minutes heard count, bonus stays",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 431, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 17, "baseCenti": 170, "companyCenti": 0 } },
+
+    { "name": "partial listen, not completed: minutes, no bonus",
+      "session": { "kind": "b2c", "durationMin": 24, "listenedSec": 359, "completed": false, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 5, "baseCenti": 50, "companyCenti": 0 } },
+
+    { "name": "listened beyond nominal is capped at nominal",
+      "session": { "kind": "b2c", "durationMin": 6, "listenedSec": 900, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 16, "baseCenti": 160, "companyCenti": 0 } },
+
+    { "name": "no listened seconds reported: completion bonus only",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": null, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 10, "baseCenti": 100, "companyCenti": 0 } },
+
+    { "name": "daily minutes cap partly used (115 of 120)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": { "day": "2026-10-20", "eligibleMinutes": 115, "completionBonuses": 1 }, "company": null,
+      "expected": { "points": 15, "baseCenti": 150, "companyCenti": 0 } },
+
+    { "name": "daily minutes cap fully used: bonus still counts",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": { "day": "2026-10-20", "eligibleMinutes": 120, "completionBonuses": 2 }, "company": null,
+      "expected": { "points": 10, "baseCenti": 100, "companyCenti": 0 } },
+
+    { "name": "completion bonus cap hit (4 already today)",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": { "day": "2026-10-20", "eligibleMinutes": 40, "completionBonuses": 4 }, "company": null,
+      "expected": { "points": 12, "baseCenti": 120, "companyCenti": 0 } },
+
+    { "name": "23:30 in São Paulo is still the 20th: that day's caps apply",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-21T02:30:00Z" },
+      "usage": { "day": "2026-10-20", "eligibleMinutes": 120, "completionBonuses": 4 }, "company": null,
+      "expected": { "points": 0, "baseCenti": 0, "companyCenti": 0 } },
+
+    { "name": "usage from another day does not cap this one",
+      "session": { "kind": "b2c", "durationMin": 12, "listenedSec": 720, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": { "day": "2026-10-19", "eligibleMinutes": 120, "completionBonuses": 4 }, "company": null,
+      "expected": { "points": 22, "baseCenti": 220, "companyCenti": 0 } },
+
+    { "name": "rounding: deep 33 points at 1.25x, 82.5 rounds half up to 83",
+      "session": { "kind": "b2c", "durationMin": 24, "listenedSec": 1439, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.25, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 33, "baseCenti": 330, "companyCenti": 83 } },
+
+    { "name": "rounding with a custom rate: 6 points x 0.0333 x 100 = 19.98 -> 20; x0.5 -> 10",
+      "settings": { "loopsPerPoint": 0.0333 },
+      "session": { "kind": "b2c", "durationMin": 6, "listenedSec": 420, "completed": false, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null,
+      "company": { "multiplier": 1.5, "affiliationStartsAt": "2026-01-01T00:00:00Z", "affiliationEndsAt": null, "subscriptionStatus": "active", "subscriptionStartsAt": "2026-09-01T00:00:00Z", "subscriptionEndsAt": null },
+      "expected": { "points": 6, "baseCenti": 20, "companyCenti": 10 } },
+
+    { "name": "clinical sessions switched on by an admin",
+      "settings": { "countClinicalSessions": true },
+      "session": { "kind": "b2b", "durationMin": 24, "listenedSec": 1440, "completed": true, "sos": false, "endedAt": "2026-10-20T15:00:00Z" },
+      "usage": null, "company": null,
+      "expected": { "points": 34, "baseCenti": 340, "companyCenti": 0 } }
+  ]
+}

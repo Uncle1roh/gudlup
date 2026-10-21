@@ -28,6 +28,7 @@ import { generateConnectionCode } from './link'
 import { normalizeTags } from './tags'
 import { normalizePromoCode, type PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
+import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -340,6 +341,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       .from('sessions')
       .select('b2c_profile_id, protocol_code, duration_min, started_at, ended_at, vas_pre, vas_post')
       .eq('kind', 'b2c')
+      .eq('completed', true)
       .in('b2c_profile_id', linked.map((x) => x.profileId))
       .order('started_at')
     if (error || !data) return // no consent / no access → the record shows none
@@ -538,7 +540,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
     async listSessions(): Promise<SessionRecord[]> {
       // RLS limits rows to the signed-in B2C user's own sessions
-      const { data, error } = await sb.from('sessions').select('*').eq('kind', 'b2c').order('started_at', { ascending: true })
+      const { data, error } = await sb.from('sessions').select('*').eq('kind', 'b2c').eq('completed', true).order('started_at', { ascending: true })
       if (error) throw error
       return (data ?? []).map((r: any): SessionRecord => ({
         id: r.id,
@@ -562,7 +564,12 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         ended_at: rec.completedAt ? toIso(rec.completedAt) : null,
         vas_pre: rec.vasPre?.vas ?? null,
         vas_post: rec.vasPost?.vas ?? null,
-        completed: !!rec.completedAt,
+        completed: rec.completed ?? !!rec.completedAt,
+        /* What the economy credits from (SPEC §2). The amounts are worked out
+           by the sessions_credit trigger, never sent from here (GAM-R8). */
+        listened_sec: rec.listenedSec == null ? null : Math.max(0, Math.round(rec.listenedSec)),
+        is_sos: !!rec.sos,
+        stereo_checked: !!rec.stereoChecked,
       })
       if (error) throw error
     },
@@ -1535,6 +1542,77 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
          Sessions are not counted here because the sponsor role has no grant
          on the sessions table — and that is the point. */
       return { companyId, minCohort: k, eligible: c.seats ?? 0, registered: suppress(c.active_users), active30d: null, sessions30d: null }
+    },
+
+    // gamification: the Loops economy
+    async getWallet(): Promise<Wallet> {
+      const { data, error } = await sb.rpc('get_wallet')
+      if (error) throw error
+      const w = (data ?? {}) as Record<string, number | null>
+      const balanceCenti = Number(w.balance_centi ?? 0)
+      return {
+        balanceCenti,
+        loops: displayLoops(balanceCenti),
+        pointsTotal: Number(w.points_total ?? 0),
+        pointsMonth: Number(w.points_month ?? 0),
+        minutesMonth: Number(w.minutes_month ?? 0),
+        sessionsMonth: Number(w.sessions_month ?? 0),
+        multiplier: w.multiplier == null ? null : Number(w.multiplier),
+      }
+    },
+    async listLoopsLedger(): Promise<LoopsEntry[]> {
+      // RLS: the signed-in person's own entries only
+      const { data, error } = await sb.from('loops_ledger').select('*').order('created_at', { ascending: false }).limit(500)
+      if (error) throw error
+      return (data ?? []).map((r: any): LoopsEntry => ({
+        id: r.id,
+        entryType: r.entry_type,
+        amountCenti: r.amount_centi,
+        fundingSource: r.funding_source,
+        companyId: r.company_id,
+        multiplierApplied: r.multiplier_applied == null ? null : Number(r.multiplier_applied),
+        sourceType: r.source_type,
+        sourceId: r.source_id,
+        createdAt: toMs(r.created_at),
+      }))
+    },
+    async getEconomySettings(): Promise<EconomySettings> {
+      const { data, error } = await sb.from('economy_settings').select('*').eq('id', true).maybeSingle()
+      if (error) throw error
+      const r = data as any
+      if (!r) return { ...DEFAULT_ECONOMY }
+      return {
+        pointsPerMinute: r.points_per_minute,
+        pointsPerCompletedSession: r.points_per_completed_session,
+        dailyMinutesCap: r.daily_minutes_cap,
+        dailyCompletionBonusCap: r.daily_completion_bonus_cap,
+        loopsPerPoint: Number(r.loops_per_point),
+        minContributionPoints: r.min_contribution_points,
+        countClinicalSessions: r.count_clinical_sessions,
+        loopsExpiryMonths: r.loops_expiry_months,
+        geoMinActiveUsers: r.geo_min_active_users,
+        hrMinCohort: r.hr_min_cohort,
+        maxBackdateHours: r.max_backdate_hours,
+      }
+    },
+    async saveEconomySettings(next: EconomySettings): Promise<void> {
+      // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)
+      const { error } = await sb.from('economy_settings').update({
+        points_per_minute: next.pointsPerMinute,
+        points_per_completed_session: next.pointsPerCompletedSession,
+        daily_minutes_cap: next.dailyMinutesCap,
+        daily_completion_bonus_cap: next.dailyCompletionBonusCap,
+        loops_per_point: next.loopsPerPoint,
+        min_contribution_points: next.minContributionPoints,
+        count_clinical_sessions: next.countClinicalSessions,
+        loops_expiry_months: next.loopsExpiryMonths,
+        geo_min_active_users: next.geoMinActiveUsers,
+        hr_min_cohort: next.hrMinCohort,
+        max_backdate_hours: next.maxBackdateHours,
+        updated_at: new Date().toISOString(),
+        updated_by: await profileId(),
+      }).eq('id', true)
+      if (error) throw error
     },
   }
 }

@@ -207,6 +207,16 @@ export interface SessionRecord {
   completedAt?: number
   vasPre?: MoodCheck
   vasPost?: MoodCheck
+  /** Defaults to `!!completedAt`. The self-use app records completed sessions
+      only (leaving early promises "your progress won't be saved"). */
+  completed?: boolean
+  /** Seconds the audio actually played. The server caps it at the nominal
+      duration and credits Points from it; absent = nothing to credit. */
+  listenedSec?: number
+  /** An SOS session: it earns nothing and counts for nothing (GAM-R3). */
+  sos?: boolean
+  /** The stereo check passed before this session. */
+  stereoChecked?: boolean
 }
 
 /** VAS delta = post - pre, the efficacy metric shown to the user. */

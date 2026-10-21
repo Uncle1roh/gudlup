@@ -15,6 +15,7 @@ import type { AssessmentRecord } from './assessments'
 import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
 import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
+import { MockLedger } from '../gamification/mockLedger'
 
 /* ---- what an admin edits survives a reload, in DEMO mode only -----------
 
@@ -294,6 +295,7 @@ function mockTherapistName(therapistId: string): string {
 const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 
 export function createMockProvider(): DataProvider {
+  const ledger = new MockLedger()
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -383,9 +385,12 @@ export function createMockProvider(): DataProvider {
       try { localStorage.setItem('gl.mock.avatar', url) } catch { /* private mode */ }
       return url
     },
-    listSessions: () => delay([...sessions]),
+    listSessions: () => delay(sessions.filter((s) => s.completed ?? !!s.completedAt)),
     recordSession: async (rec) => {
       sessions = [...sessions, rec]
+      // the trigger's job on the server: credit Points and Loops (SPEC §2)
+      ledger.creditSession(rec)
+      if (!(rec.completed ?? !!rec.completedAt)) { await wait(); return }
       // bridge the self-use session into the linked patient's record (B2C↔B2B)
       const linked = patients.find((p) => p.id === LINKED_PATIENT_ID)
       if (linked) {
@@ -913,6 +918,16 @@ export function createMockProvider(): DataProvider {
       const eligible = 150
       const suppress = (n: number) => (n < MIN_COHORT ? null : n)
       return { companyId: 'AURORA-2026-Z5', minCohort: MIN_COHORT, eligible, registered: suppress(112), active30d: suppress(64), sessions30d: suppress(418) }
+    },
+
+    // gamification: the Loops economy
+    getWallet: async () => delay(ledger.wallet(), 40),
+    listLoopsLedger: async () => delay(ledger.loopsEntries(), 40),
+    getEconomySettings: async () => delay({ ...ledger.settings }, 40),
+    saveEconomySettings: async (next) => {
+      if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
+      ledger.settings = { ...next }
+      await wait(40)
     },
   }
 }

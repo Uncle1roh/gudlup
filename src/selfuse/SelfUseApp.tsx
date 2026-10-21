@@ -429,7 +429,10 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           protocolCode: session.protocolCode,
           duration: o.duration,
           startedAt: o.startedAt,
-          completedAt: o.completedAt,
+          completedAt: o.endedAt,
+          completed: true,
+          listenedSec: o.listenedSec,
+          stereoChecked: o.stereoChecked,
         })
         .catch(() => { /* offline — the local log below still holds */ })
     }
@@ -568,9 +571,11 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       const req = await dp.createDataRequest('portability')
       requestId = req.id
     } catch { /* offline — the copy is still produced */ }
-    const [acceptances, consents] = await Promise.all([
+    const [acceptances, consents, wallet, loops] = await Promise.all([
       dp.listMyAcceptances().catch(() => []),
       dp.listMyConsents().catch(() => []),
+      dp.getWallet().catch(() => null),
+      dp.listLoopsLedger().catch(() => null),
     ])
     const pkg = buildDataExport({
       requestId,
@@ -588,6 +593,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             selected: therapy.link.prescriptions,
           }
         : null,
+      gamification: wallet && loops ? { wallet, loops } : null,
     })
     downloadJson(`good-loop-my-data-${dayKey(Date.now())}.json`, pkg)
   }
