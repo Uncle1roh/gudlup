@@ -272,6 +272,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Volume down': 'Abbassa il volume',
   'Volume up': 'Alza il volume',
   'Position in the session': 'Punto della sessione',
+  'This session is not recorded in your language yet — you will hear it in {lang}.': 'Questa sessione non è ancora registrata nella tua lingua — la ascolterai in {lang}.',
+  'German': 'Tedesco',
   'End session early? The minutes you listened still count.':
     'Terminare la sessione prima? I minuti che hai ascoltato contano comunque.',
   'Keep listening': 'Continua ad ascoltare',

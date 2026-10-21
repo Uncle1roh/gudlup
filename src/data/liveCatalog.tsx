@@ -85,42 +85,58 @@ export function audioUrlFor(
 }
 
 /**
- * The rendered audio AND whether it addresses the listener the way they asked.
+ * The rendered audio AND how it differs from what the listener asked for.
  *
- * A catalogue mid-recording has protocols voiced for a man and not yet for a
- * woman. Hiding those would empty her library on the day this ships, so she
- * gets the recording that exists and `exact: false` — which is what the card
- * prints as "versione al maschile". Being addressed in the wrong form is a
- * small thing; being addressed in the wrong form with no warning is not.
+ * A catalogue mid-recording has protocols voiced in one language before the
+ * other, and for a man before a woman. Hiding those would empty libraries the
+ * day a protocol ships, so the person gets the recording that exists — and is
+ * TOLD, before it plays, which of the two differs: the language
+ * (`spokenLang` ≠ what they read) or the form (`formMatch: false`). The
+ * pre-session screen used to treat every fallback as a form fallback, so an
+ * Italian reader sent to the Portuguese file was told about "pronto/pronta"
+ * and never about the language.
  *
  * Order: her language and her form, then her language in the other form, then
  * the other language in her form, then anything at all.
  */
+export interface AudioPick {
+  url: string
+  /** Her language AND her form. */
+  exact: boolean
+  /** Addressed the way she asked (masculine/feminine). */
+  formMatch: boolean
+  /** The language the file speaks, when known. */
+  spokenLang: string | null
+}
+
 export function audioPick(
   p: Pick<Protocol, 'versions'> | undefined,
   duration: Duration,
   locale: Locale,
   to: Addressee = 'm',
-): { url: string; exact: boolean } | undefined {
+): AudioPick | undefined {
   const version = p?.versions.find((v) => v.duration === duration)
   const urls = version?.audioUrl as Record<string, string | undefined> | undefined
   if (!urls) return undefined
   const want = audioLanguage(locale)
   const other = otherVoiceLang(want)
   const flip: Addressee = to === 'f' ? 'm' : 'f'
-  const tries: { key: string; exact: boolean }[] = [
-    { key: variantKey(want, to), exact: true },
-    { key: variantKey(want, flip), exact: false },
-    { key: variantKey(other, to), exact: false },
-    { key: variantKey(other, flip), exact: false },
-    ...(['en', 'es', 'de'] as const).map((l) => ({ key: l, exact: false })),
+  const tries: { key: string; lang: string; form: boolean }[] = [
+    { key: variantKey(want, to), lang: want, form: true },
+    { key: variantKey(want, flip), lang: want, form: false },
+    { key: variantKey(other, to), lang: other, form: true },
+    { key: variantKey(other, flip), lang: other, form: false },
+    ...(['en', 'es', 'de'] as const).map((l) => ({ key: l, lang: l as string, form: to === 'm' })),
   ]
   for (const t of tries) {
     const url = urls[t.key]
-    if (url) return { url, exact: t.exact }
+    if (url) return { url, exact: t.lang === want && t.form, formMatch: t.form, spokenLang: t.lang }
   }
   const first = Object.entries(urls).find(([, u]) => Boolean(u))
-  return first ? { url: first[1] as string, exact: false } : undefined
+  if (!first) return undefined
+  const [key] = first
+  const isF = key.endsWith(':f')
+  return { url: first[1] as string, exact: false, formMatch: (to === 'f') === isF, spokenLang: key.replace(/:f$/, '') || null }
 }
 
 /**
