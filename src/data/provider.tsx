@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
+import type { AchievementView } from '../gamification/achievements'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -340,6 +341,14 @@ export interface DataProvider {
   getEconomySettings(): Promise<EconomySettings>
   /** Admin only. */
   saveEconomySettings(next: EconomySettings): Promise<void>
+
+  // --- Gamification: achievements (SPEC §3) ---
+  /** Active definitions (plus any the person unlocked), with their value. */
+  listMyAchievements(): Promise<AchievementView[]>
+  /** The unlock sheet closed on these. */
+  markAchievementsSeen(ids: string[]): Promise<void>
+  /** A pathway reached its end; the server evaluates achievements. */
+  recordPathwayCompleted(slug: string): Promise<void>
 }
 
 const DataCtx = createContext<DataProvider | null>(null)

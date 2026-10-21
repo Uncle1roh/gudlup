@@ -1,0 +1,57 @@
+{
+  "about": "Parity fixtures for individual achievements (SPEC §3.2). tools/test-gam-achievements.ts runs each scenario through the mock ledger (economy.ts + achievements.ts); supabase/tests/achievements_parity.sql inserts the same sessions as real rows and lets the triggers credit and evaluate them. Both must reach the same metrics, the same unlocked slugs and the same bonus total. Times are UTC; São Paulo is UTC-3. `pathways` are finished pathway slugs.",
+  "scenarios": [
+    {
+      "name": "a first 6-minute session at 21:30 with the stereo check",
+      "sessions": [
+        { "startedAt": "2026-10-20T00:30:00Z", "durationMin": 6, "listenedSec": 360, "completed": true, "stereoChecked": true, "sos": false }
+      ],
+      "pathways": [],
+      "expected": {
+        "metrics": { "sessions_completed": 1, "stereo_sessions_completed": 1, "minutes_listened": 6, "night_sessions": 1, "midday_weekday_sessions": 0, "distinct_weeks": 1 },
+        "unlocked": ["first_loop", "stereo_ready"],
+        "bonusCenti": 4000
+      }
+    },
+    {
+      "name": "five weeks of practice: lunch breaks, nights, every length, a pathway",
+      "sessions": [
+        { "startedAt": "2026-09-28T15:30:00Z", "durationMin": 12, "listenedSec": 720,  "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-09-29T15:10:00Z", "durationMin": 6,  "listenedSec": 360,  "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-05T16:05:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-06T15:45:00Z", "durationMin": 12, "listenedSec": 720,  "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-07T16:30:00Z", "durationMin": 12, "listenedSec": 720,  "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-13T00:30:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-14T01:00:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-15T00:00:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-20T02:15:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-21T00:45:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-20T15:00:00Z", "durationMin": 6,  "listenedSec": 360,  "completed": true,  "stereoChecked": true,  "sos": true },
+        { "startedAt": "2026-10-18T13:00:00Z", "durationMin": 24, "listenedSec": 600,  "completed": false, "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-18T23:59:00Z", "durationMin": 6,  "listenedSec": 360,  "completed": true,  "stereoChecked": false, "sos": false },
+        { "startedAt": "2026-10-17T15:30:00Z", "durationMin": 6,  "listenedSec": 360,  "completed": true,  "stereoChecked": false, "sos": false }
+      ],
+      "pathways": ["calm-30"],
+      "expected": {
+        "metrics": { "sessions_completed": 12, "stereo_sessions_completed": 0, "minutes_listened": 208, "deep_sessions_completed": 6, "durations_completed": 3, "distinct_weeks": 4, "night_sessions": 5, "midday_weekday_sessions": 5, "pathways_completed": 1 },
+        "unlocked": ["first_loop", "listen_1h", "deep_dive", "explorer", "own_rhythm", "serene_nights", "work_pause", "month1_done"],
+        "bonusCenti": 39000
+      }
+    },
+    {
+      "name": "SOS sessions and an early stop unlock nothing",
+      "sessions": [
+        { "startedAt": "2026-10-10T15:00:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": true,  "sos": true },
+        { "startedAt": "2026-10-11T15:00:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": true,  "sos": true },
+        { "startedAt": "2026-10-12T15:00:00Z", "durationMin": 24, "listenedSec": 1440, "completed": true,  "stereoChecked": false, "sos": true },
+        { "startedAt": "2026-10-13T15:00:00Z", "durationMin": 12, "listenedSec": 300,  "completed": false, "stereoChecked": true,  "sos": false }
+      ],
+      "pathways": [],
+      "expected": {
+        "metrics": { "sessions_completed": 0, "stereo_sessions_completed": 0, "minutes_listened": 5, "deep_sessions_completed": 0 },
+        "unlocked": [],
+        "bonusCenti": 0
+      }
+    }
+  ]
+}

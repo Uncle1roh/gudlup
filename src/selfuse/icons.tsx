@@ -50,6 +50,9 @@ export type IconName =
   | 'target' | 'wave' | 'battery' | 'sprout' | 'thought'
   /* the five-point VAS face scale, before and after every session */
   | 'vas1' | 'vas2' | 'vas3' | 'vas4' | 'vas5'
+  /* gamification — achievement badges and the Loops currency */
+  | 'compass' | 'calendar' | 'moon' | 'sun' | 'route' | 'flag'
+  | 'pin' | 'map' | 'globe' | 'building' | 'loop'
 
 const PATHS: Record<IconName, JSX.Element> = {
   /* graphic_eq — the app's own subject: sound. */
@@ -328,6 +331,60 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M8.8 16.2c.9-1.2 2-1.2 3-.3s2.1.9 3-.3" />
     </>
   ),
+  /* explore — Quick, Standard and Deep, each tried once */
+  compass: (<>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M15.2 8.8l-1.9 4.5-4.5 1.9 1.9-4.5z" />
+    </>),
+  /* calendar_month — sessions in different weeks, never in a row */
+  calendar: (<>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+      <path d="M4 10h16" /><path d="M8.5 3.5v4" /><path d="M15.5 3.5v4" />
+    </>),
+  /* bedtime */
+  moon: (<path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" />),
+  /* light_mode — the midday pause */
+  sun: (<>
+      <circle cx="12" cy="12" r="3.8" />
+      <path d="M12 3v1.8" /><path d="M12 19.2V21" /><path d="M3 12h1.8" /><path d="M19.2 12H21" />
+      <path d="M5.6 5.6l1.3 1.3" /><path d="M17.1 17.1l1.3 1.3" /><path d="M5.6 18.4l1.3-1.3" /><path d="M17.1 6.9l1.3-1.3" />
+    </>),
+  /* route — a pathway walked to its end */
+  route: (<>
+      <circle cx="6" cy="18" r="2.2" /><circle cx="18" cy="6" r="2.2" />
+      <path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8" />
+    </>),
+  /* flag — a challenge */
+  flag: (<>
+      <path d="M6 21V4" />
+      <path d="M6 4.5h10.5l-2 4 2 4H6" />
+    </>),
+  /* location_on — the city a person chose, never where they are */
+  pin: (<>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </>),
+  /* map — a state */
+  map: (<>
+      <path d="M9 4.5L3.5 6.5v13L9 17.5l6 2 5.5-2v-13L15 6.5z" />
+      <path d="M9 4.5v13" /><path d="M15 6.5v13" />
+    </>),
+  /* public — a region, the country */
+  globe: (<>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17" />
+      <path d="M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5s1.2-6.1 3.6-8.5z" />
+    </>),
+  /* apartment — the whole company, never a part of it */
+  building: (<>
+      <path d="M4.5 20.5V6.5l7-3v17" /><path d="M11.5 9.5h8v11" /><path d="M3 20.5h18" />
+      <path d="M8 9v.01" /><path d="M8 12.5v.01" /><path d="M8 16v.01" /><path d="M15.5 13v.01" /><path d="M15.5 16.5v.01" />
+    </>),
+  /* the Loop — the logo's two crossing orbits; the app's currency */
+  loop: (<>
+      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(-30 12 12)" />
+      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(30 12 12)" />
+    </>),
 }
 
 /**

@@ -5,7 +5,7 @@
    one in economy.ts; this only keeps the state those rules need between
    sessions (the day's usage, the entries, the company windows) and enforces
    what the database enforces: a session is credited once, entries are never
-   edited, SOS earns nothing.
+   edited, SOS earns nothing, an achievement unlocks once and pays once.
    ============================================================================ */
 
 import type { SessionRecord } from '../types/domain'
@@ -13,6 +13,10 @@ import {
   DEFAULT_ECONOMY, addUsage, computeSessionCredit, creditInstant, dayKeySaoPaulo, monthKeySaoPaulo, multiplierAt, walletFrom,
   type CompanyWindow, type DailyUsage, type EconomySettings, type LoopsEntry, type PointsEntry, type Wallet,
 } from './economy'
+import {
+  ACHIEVEMENTS, individualMetrics, newlyUnlocked,
+  type AchievementDef, type AchievementView, type CreditedSession,
+} from './achievements'
 
 export class MockLedger {
   settings: EconomySettings = { ...DEFAULT_ECONOMY }
@@ -22,6 +26,12 @@ export class MockLedger {
   private loops: LoopsEntry[] = []
   private usage = new Map<string, DailyUsage>()
   private seq = 0
+  defs: AchievementDef[] = ACHIEVEMENTS.map((x) => ({ ...x }))
+  private credited: CreditedSession[] = []
+  private pathways = new Set<string>()
+  private unlocked = new Map<string, { unlockedAt: number; seenAt: number | null }>()
+  /** Completed challenges, until slice 5 keeps its own record. */
+  challengesCompleted = 0
 
   /** Credit one recorded session. Idempotent on the record id. */
   creditSession(rec: SessionRecord, now = Date.now()): void {
@@ -44,6 +54,7 @@ export class MockLedger {
       multiplier,
     )
     this.usage.set(credit.day, addUsage(usage, credit))
+    this.credited.push({ startedAt: rec.startedAt, durationMin: rec.duration, completed: rec.completed ?? !!rec.completedAt, stereoChecked: !!rec.stereoChecked })
     this.points.push({
       id: this.id(), sourceType: 'session', sourceId: rec.id, points: credit.points,
       periodMonth: `${credit.day.slice(0, 7)}-01`, cityIbgeCode: null, createdAt: now,
@@ -60,6 +71,56 @@ export class MockLedger {
         id: this.id(), entryType: 'earn_company_multiplier', amountCenti: credit.companyCenti, fundingSource: 'company',
         companyId: company?.companyId ?? null, multiplierApplied: credit.multiplier, sourceType: 'session', sourceId: rec.id, createdAt: now,
       })
+    }
+    this.evaluate(now)
+  }
+
+  /** A finished pathway (record_pathway_completed). */
+  recordPathwayCompleted(slug: string, now = Date.now()): void {
+    this.pathways.add(slug)
+    this.evaluate(now)
+  }
+
+  /** evaluate_achievements(): unlock what is reached, pay each bonus once. */
+  evaluate(now = Date.now()): AchievementDef[] {
+    const minutes = [...this.usage.values()].reduce((a, u) => a + u.eligibleMinutes, 0)
+    const metrics = individualMetrics(this.credited, minutes, this.pathways.size, this.challengesCompleted)
+    const fresh = newlyUnlocked(this.defs, metrics, new Set(this.unlocked.keys()))
+    for (const a of fresh) {
+      this.unlocked.set(a.slug, { unlockedAt: now, seenAt: null })
+      if (a.bonusLoopsCenti > 0) {
+        this.loops.push({
+          id: this.id(), entryType: 'achievement_bonus', amountCenti: a.bonusLoopsCenti, fundingSource: 'goodloop',
+          companyId: null, multiplierApplied: null, sourceType: 'achievement', sourceId: a.slug, createdAt: now,
+        })
+      }
+    }
+    return fresh
+  }
+
+  /** get_my_achievements(): active definitions plus any unlocked one. */
+  achievements(): AchievementView[] {
+    const minutes = [...this.usage.values()].reduce((a, u) => a + u.eligibleMinutes, 0)
+    const metrics = individualMetrics(this.credited, minutes, this.pathways.size, this.challengesCompleted)
+    return this.defs
+      .filter((x) => x.active || this.unlocked.has(x.slug))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((x) => {
+        const u = this.unlocked.get(x.slug)
+        return {
+          ...x,
+          id: x.slug,
+          value: x.kind === 'individual' ? metrics[x.metric as keyof typeof metrics] ?? 0 : null,
+          unlockedAt: u?.unlockedAt ?? null,
+          seenAt: u?.seenAt ?? null,
+        }
+      })
+  }
+
+  markSeen(ids: string[], now = Date.now()): void {
+    for (const id of ids) {
+      const u = this.unlocked.get(id)
+      if (u && u.seenAt === null) u.seenAt = now
     }
   }
 

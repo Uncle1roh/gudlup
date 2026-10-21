@@ -924,6 +924,9 @@ export function createMockProvider(): DataProvider {
     getWallet: async () => delay(ledger.wallet(), 40),
     listLoopsLedger: async () => delay(ledger.loopsEntries(), 40),
     getEconomySettings: async () => delay({ ...ledger.settings }, 40),
+    listMyAchievements: async () => delay(ledger.achievements(), 40),
+    markAchievementsSeen: async (ids) => { ledger.markSeen(ids); await wait(20) },
+    recordPathwayCompleted: async (slug) => { ledger.recordPathwayCompleted(slug); await wait(20) },
     saveEconomySettings: async (next) => {
       if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
       ledger.settings = { ...next }

@@ -18,6 +18,12 @@
 
    Two rules the copy here still follows without exception: nothing guilts,
    and no number is ever given a clinical reading.
+
+   Conquistas (docs/gamification/SPEC.md §3.4) sits beside that summary as
+   its own view, not inside it. It does not reopen the scoreboard: it shows
+   time given and milestones that, once reached, stay reached — no streaks,
+   no counts of what was missed, no points (PLAN A6), nothing ranked against
+   anyone, and never a clinical value.
    ============================================================================ */
 
 import { useState } from 'react'
@@ -33,10 +39,15 @@ import {
 } from '../data/measures'
 import { glCheckDue, type SelfUseState } from '../data/selfUseStore'
 import { type TherapyState } from './therapyStore'
+import { Conquistas } from './Conquistas'
+
+export type ProgressView = 'summary' | 'achievements'
 
 interface ProgressProps {
   state: SelfUseState
   therapy: TherapyState
+  view: ProgressView
+  onView: (v: ProgressView) => void
   onGlCheck: () => void
   onMood: () => void
   onGoTherapist: () => void
@@ -44,7 +55,22 @@ interface ProgressProps {
   onExportTherapy: () => void
 }
 
-export function ProgressTab({ state, onGlCheck, onMood, onExportSelfUse }: ProgressProps) {
+export function ProgressTab(props: ProgressProps) {
+  const { t } = useI18n()
+  const { view, onView } = props
+  return (
+    <div className="su-page progress">
+      <h1 className="display su-h1">{t('Progress')}</h1>
+      <div className="segmented gam-seg" role="group" aria-label={t('Progress')}>
+        <button aria-pressed={view === 'summary'} onClick={() => onView('summary')}>{t('Summary')}</button>
+        <button aria-pressed={view === 'achievements'} onClick={() => onView('achievements')}>{t('Achievements')}</button>
+      </div>
+      {view === 'achievements' ? <Conquistas /> : <Summary {...props} />}
+    </div>
+  )
+}
+
+function Summary({ state, onGlCheck, onMood, onExportSelfUse }: ProgressProps) {
   const { t } = useI18n()
 
   const last = state.glChecks[state.glChecks.length - 1] ?? null
@@ -52,8 +78,7 @@ export function ProgressTab({ state, onGlCheck, onMood, onExportSelfUse }: Progr
 
   if (!state.glChecks.length && !state.moods.length) {
     return (
-      <div className="su-page progress">
-        <h1 className="display su-h1">{t('Progress')}</h1>
+      <>
         <div className="empty">
           <p>{t('Nothing here yet.')}</p>
           <p className="small muted">
@@ -61,14 +86,12 @@ export function ProgressTab({ state, onGlCheck, onMood, onExportSelfUse }: Progr
           </p>
           <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="su-page progress">
-      <h1 className="display su-h1">{t('Progress')}</h1>
-
+    <>
       {/* How the week felt, set against the week before it. */}
       <section className="card">
         <h3 className="home__sect">{t('This week')}</h3>
@@ -121,7 +144,7 @@ export function ProgressTab({ state, onGlCheck, onMood, onExportSelfUse }: Progr
           {t('View your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}
         </button>
       )}
-    </div>
+    </>
   )
 }
 

@@ -1,0 +1,265 @@
+/* ============================================================================
+   Gamification strings — docs/gamification/SPEC.md
+
+   English is the key and the fallback (src/i18n/index.tsx). pt-BR is the
+   authoritative copy for the person-facing screens; the Italian is a first
+   pass. Keys shared with other surfaces ('Next', 'Previous', 'Not now',
+   'Loading…') are not repeated here, so this dictionary never overrides
+   another screen's wording.
+
+   The copy glossary of SPEC §6.5 applies: Trocar / Resgatar, Benefício,
+   Cuidado — never Comprar, Loja, Oferta, Promoção. And PLAN A6: the person
+   reads Loops, time and sessions, never points, never "pontuação" or "nível".
+   tools/test-gam-copy.ts (slice 4) checks every pt-BR value here.
+   ============================================================================ */
+
+export const PT_GAMIFICATION: Record<string, string> = {
+  // Progress › Conquistas
+  'Summary': 'Resumo',
+  'Achievements': 'Conquistas',
+  'Your achievements could not be loaded right now.': 'Não foi possível carregar suas conquistas agora.',
+  'Individual · {n} of {total}': 'Individuais · {n} de {total}',
+  'Collective · {n} of {total}': 'Coletivas · {n} de {total}',
+  'Collective achievements happen when a city, a state, the whole country or your whole company take care of themselves together.':
+    'Conquistas coletivas acontecem quando uma cidade, um estado, o país inteiro ou a sua empresa inteira cuidam de si juntos.',
+  'Locked': 'Bloqueada',
+  'Show fewer': 'Mostrar menos',
+  'See all {n} achievements': 'Ver todas as {n} conquistas',
+  'Next achievement': 'Próxima conquista',
+  '{value} of {goal}': '{value} de {goal}',
+  '{value} of {goal} sessions': '{value} de {goal} sessões',
+  '{value} of {goal} weeks': '{value} de {goal} semanas',
+  '{value} of {goal} lengths': '{value} de {goal} durações',
+  '{value} of {goal} pathways': '{value} de {goal} percursos',
+  '{value} of {goal} challenges': '{value} de {goal} desafios',
+  '{left} to go': 'faltam {left}',
+  '+{n} Loops bonus': '+{n} Loops de bônus',
+
+  // the unlock sheet
+  'Achievement unlocked': 'Conquista desbloqueada',
+  '{i} of {n}': '{i} de {n}',
+  'See my achievements': 'Ver minhas conquistas',
+
+  // tiers
+  'Seed': 'Semente', 'Sprout': 'Broto', 'Root': 'Raiz', 'Canopy': 'Copa',
+  'Collective': 'Coletiva', 'National': 'Nacional', 'Company': 'Empresa',
+
+  // the achievements
+  'First Loop': 'Primeiro Loop',
+  'Complete your first session.': 'Conclua sua primeira sessão.',
+  'You completed your first session. What a good thing to give yourself this time.':
+    'Você concluiu sua primeira sessão. Que bom ter dedicado esse tempo a você.',
+  'Headphones ready': 'Fones a postos',
+  'Pass the stereo check and complete a session with headphones.': 'Faça o teste de som estéreo e conclua uma sessão com fones.',
+  'You set up your headphones and listened all the way through. The sound was made for exactly this.':
+    'Você ajustou seus fones e ouviu até o fim. O som foi feito exatamente para isso.',
+  'Knowing yourself': 'Conhecer-se',
+  'Complete the initial self-assessment.': 'Conclua a autoavaliação inicial.',
+  'You took a moment to look at how you are. That moment is yours.':
+    'Você tirou um momento para olhar como está. Esse momento é seu.',
+  'Listening hours I': 'Horas de escuta I',
+  'Listening hours II': 'Horas de escuta II',
+  'Listening hours III': 'Horas de escuta III',
+  'Listening hours IV': 'Horas de escuta IV',
+  'Listen for 1 hour in total.': 'Ouça 1 hora no total.',
+  'Listen for 5 hours in total.': 'Ouça 5 horas no total.',
+  'Listen for 20 hours in total.': 'Ouça 20 horas no total.',
+  'Listen for 50 hours in total.': 'Ouça 50 horas no total.',
+  'One hour of listening, given to yourself. It adds up, a little at a time.':
+    'Uma hora de escuta dedicada a você. Pouco a pouco, isso soma.',
+  'Five hours of care that were yours alone. Good to have you here.':
+    'Cinco horas de cuidado só suas. Que bom ter você aqui.',
+  'Twenty hours of listening. Taking care of yourself has become part of your time.':
+    'Vinte horas de escuta. Cuidar de você virou parte do seu tempo.',
+  'Fifty hours given to your own mind. That is a lot of care.':
+    'Cinquenta horas dedicadas à sua mente. É muito cuidado.',
+  'Deep dive': 'Mergulho profundo',
+  'Complete one Deep session (24 min).': 'Conclua uma sessão Deep (24 min).',
+  'You completed your first 24-minute Deep session. How good to have given that time to yourself.':
+    'Você concluiu sua primeira sessão Deep de 24 minutos. Que bom ter dedicado esse tempo a você.',
+  'Explorer': 'Explorador',
+  'Complete a Quick, a Standard and a Deep session at least once each.':
+    'Conclua ao menos uma sessão Quick, uma Standard e uma Deep.',
+  'Six, twelve and twenty-four minutes — you have tried every length. Now you know what fits your day.':
+    'Seis, doze e vinte e quatro minutos — você experimentou todas as durações. Agora sabe o que cabe no seu dia.',
+  'Your own rhythm': 'Ritmo próprio',
+  'Listen in 4 different weeks — any weeks, they do not need to be in a row.':
+    'Ouça em 4 semanas diferentes — quaisquer semanas, não precisam ser seguidas.',
+  'Four different weeks with time for you, at your own pace.':
+    'Quatro semanas diferentes com tempo para você, no seu ritmo.',
+  'Serene nights': 'Noites serenas',
+  'Complete 5 sessions started after 21:00.': 'Conclua 5 sessões iniciadas depois das 21h.',
+  'Five evenings that ended with a moment of calm. Sleep well.':
+    'Cinco noites que terminaram com um momento de calma. Durma bem.',
+  'A pause in the workday': 'Pausa no expediente',
+  'Complete 5 sessions on weekdays between 12:00 and 14:00.': 'Conclua 5 sessões em dias úteis entre 12h e 14h.',
+  'Five pauses in the middle of the day. A break that is really a break.':
+    'Cinco pausas no meio do dia. Uma pausa que é pausa de verdade.',
+  'First pathway complete': 'Primeiro percurso completo',
+  'Finish a pathway from beginning to end.': 'Conclua um percurso do início ao fim.',
+  'You walked a whole pathway, week by week. That was your time, well kept.':
+    'Você percorreu um percurso inteiro, semana a semana. Foi um tempo seu, bem cuidado.',
+  'Journey complete': 'Jornada completa',
+  'Finish the 12-week journey.': 'Conclua a jornada de 12 semanas.',
+  'Twelve weeks of taking care of yourself. Thank you for staying with you.':
+    'Doze semanas cuidando de você. Obrigado por ficar com você.',
+  'First challenge': 'Primeiro desafio',
+  'Complete a challenge — a Good Loop one or your company’s.': 'Conclua um desafio — do Good Loop ou da sua empresa.',
+  'You completed your first challenge, at your own pace.': 'Você concluiu seu primeiro desafio, no seu ritmo.',
+  'Challenger': 'Desafiante',
+  'Complete 5 challenges.': 'Conclua 5 desafios.',
+  'Five challenges completed. Each one was time for you.': 'Cinco desafios concluídos. Cada um foi um tempo para você.',
+  'City in Loop': 'Cidade em Loop',
+  'Your city reaches its month of care together.': 'Sua cidade alcança, junta, a meta de cuidado do mês.',
+  'Your city took care of itself together this month — and you were part of it.':
+    'Sua cidade se cuidou junta este mês — e você fez parte disso.',
+  'Capital of calm': 'Capital da calma',
+  'Your city is the one where each person listened most this month.': 'Sua cidade é aquela em que cada pessoa mais ouviu este mês.',
+  'Your city was where people gave themselves the most time this month. You were part of it.':
+    'Sua cidade foi onde as pessoas mais dedicaram tempo a si este mês. Você fez parte disso.',
+  'Collective serene night': 'Noite serena coletiva',
+  'Your city reaches 1,000 evening sessions in a month.': 'Sua cidade chega a 1.000 sessões noturnas em um mês.',
+  'A thousand calm evenings in your city this month, yours among them.':
+    'Mil noites de calma na sua cidade este mês, a sua entre elas.',
+  'State in tune': 'Estado em sintonia',
+  '20 cities in your state with people listening in the same month.': '20 cidades do seu estado com pessoas ouvindo no mesmo mês.',
+  'Twenty cities in your state took time for themselves this month. You were part of it.':
+    'Vinte cidades do seu estado dedicaram tempo a si este mês. Você fez parte disso.',
+  'Region in Loop': 'Região em Loop',
+  'Your region reaches its month of care together.': 'Sua região alcança, junta, a meta de cuidado do mês.',
+  'Your region reached its month of care together — and you were part of it.':
+    'Sua região alcançou, junta, a meta de cuidado do mês — e você fez parte disso.',
+  'Brazil in Loop': 'Brasil em Loop',
+  'One million hours of listening across the country.': 'Um milhão de horas de escuta no país inteiro.',
+  'One million hours of care across Brazil. Some of them are yours.': 'Um milhão de horas de cuidado pelo Brasil. Algumas delas são suas.',
+  'Company in Loop': 'Empresa em Loop',
+  '60% of your company takes at least one session in a month.': '60% da sua empresa faz ao menos uma sessão em um mês.',
+  'Most of your company took time for themselves this month — you among them.':
+    'A maior parte da sua empresa dedicou tempo a si este mês — você entre eles.',
+  'Company in tune': 'Empresa em sintonia',
+  'The whole company completes a company challenge together.': 'A empresa inteira conclui junta um desafio da empresa.',
+  'The whole company reached its challenge together. You were part of it.':
+    'A empresa inteira alcançou junta o seu desafio. Você fez parte disso.',
+}
+
+export const IT_GAMIFICATION: Record<string, string> = {
+  'Summary': 'Riepilogo',
+  'Achievements': 'Traguardi',
+  'Your achievements could not be loaded right now.': 'Non è stato possibile caricare i tuoi traguardi.',
+  'Individual · {n} of {total}': 'Individuali · {n} di {total}',
+  'Collective · {n} of {total}': 'Collettivi · {n} di {total}',
+  'Collective achievements happen when a city, a state, the whole country or your whole company take care of themselves together.':
+    'I traguardi collettivi arrivano quando una città, uno stato, il paese intero o tutta la tua azienda si prendono cura di sé insieme.',
+  'Locked': 'Bloccato',
+  'Show fewer': 'Mostra meno',
+  'See all {n} achievements': 'Vedi tutti i {n} traguardi',
+  'Next achievement': 'Prossimo traguardo',
+  '{value} of {goal}': '{value} di {goal}',
+  '{value} of {goal} sessions': '{value} di {goal} sessioni',
+  '{value} of {goal} weeks': '{value} di {goal} settimane',
+  '{value} of {goal} lengths': '{value} di {goal} durate',
+  '{value} of {goal} pathways': '{value} di {goal} percorsi',
+  '{value} of {goal} challenges': '{value} di {goal} sfide',
+  '{left} to go': 'mancano {left}',
+  '+{n} Loops bonus': '+{n} Loops di bonus',
+  'Achievement unlocked': 'Traguardo sbloccato',
+  '{i} of {n}': '{i} di {n}',
+  'See my achievements': 'Vedi i miei traguardi',
+  'Seed': 'Seme', 'Sprout': 'Germoglio', 'Root': 'Radice', 'Canopy': 'Chioma',
+  'Collective': 'Collettivo', 'National': 'Nazionale', 'Company': 'Azienda',
+  'First Loop': 'Primo Loop',
+  'Complete your first session.': 'Completa la tua prima sessione.',
+  'You completed your first session. What a good thing to give yourself this time.':
+    'Hai completato la tua prima sessione. Che bello esserti dedicato questo tempo.',
+  'Headphones ready': 'Cuffie pronte',
+  'Pass the stereo check and complete a session with headphones.': 'Supera il test stereo e completa una sessione in cuffia.',
+  'You set up your headphones and listened all the way through. The sound was made for exactly this.':
+    'Hai sistemato le cuffie e ascoltato fino alla fine. Il suono è fatto proprio per questo.',
+  'Knowing yourself': 'Conoscersi',
+  'Complete the initial self-assessment.': 'Completa l’autovalutazione iniziale.',
+  'You took a moment to look at how you are. That moment is yours.':
+    'Ti sei preso un momento per guardare come stai. Quel momento è tuo.',
+  'Listening hours I': 'Ore di ascolto I',
+  'Listening hours II': 'Ore di ascolto II',
+  'Listening hours III': 'Ore di ascolto III',
+  'Listening hours IV': 'Ore di ascolto IV',
+  'Listen for 1 hour in total.': 'Ascolta 1 ora in tutto.',
+  'Listen for 5 hours in total.': 'Ascolta 5 ore in tutto.',
+  'Listen for 20 hours in total.': 'Ascolta 20 ore in tutto.',
+  'Listen for 50 hours in total.': 'Ascolta 50 ore in tutto.',
+  'One hour of listening, given to yourself. It adds up, a little at a time.':
+    'Un’ora di ascolto dedicata a te. Un poco alla volta, si somma.',
+  'Five hours of care that were yours alone. Good to have you here.':
+    'Cinque ore di cura tutte tue. Che bello averti qui.',
+  'Twenty hours of listening. Taking care of yourself has become part of your time.':
+    'Venti ore di ascolto. Prenderti cura di te è diventato parte del tuo tempo.',
+  'Fifty hours given to your own mind. That is a lot of care.':
+    'Cinquanta ore dedicate alla tua mente. È tanta cura.',
+  'Deep dive': 'Immersione profonda',
+  'Complete one Deep session (24 min).': 'Completa una sessione Deep (24 min).',
+  'You completed your first 24-minute Deep session. How good to have given that time to yourself.':
+    'Hai completato la tua prima sessione Deep da 24 minuti. Che bello esserti dedicato questo tempo.',
+  'Explorer': 'Esploratore',
+  'Complete a Quick, a Standard and a Deep session at least once each.':
+    'Completa almeno una sessione Quick, una Standard e una Deep.',
+  'Six, twelve and twenty-four minutes — you have tried every length. Now you know what fits your day.':
+    'Sei, dodici e ventiquattro minuti — hai provato ogni durata. Ora sai cosa sta nella tua giornata.',
+  'Your own rhythm': 'Il tuo ritmo',
+  'Listen in 4 different weeks — any weeks, they do not need to be in a row.':
+    'Ascolta in 4 settimane diverse — qualsiasi, non serve che siano di fila.',
+  'Four different weeks with time for you, at your own pace.':
+    'Quattro settimane diverse con del tempo per te, al tuo ritmo.',
+  'Serene nights': 'Notti serene',
+  'Complete 5 sessions started after 21:00.': 'Completa 5 sessioni iniziate dopo le 21.',
+  'Five evenings that ended with a moment of calm. Sleep well.':
+    'Cinque sere finite con un momento di calma. Dormi bene.',
+  'A pause in the workday': 'Pausa dal lavoro',
+  'Complete 5 sessions on weekdays between 12:00 and 14:00.': 'Completa 5 sessioni nei giorni feriali tra le 12 e le 14.',
+  'Five pauses in the middle of the day. A break that is really a break.':
+    'Cinque pause a metà giornata. Una pausa che è davvero una pausa.',
+  'First pathway complete': 'Primo percorso completato',
+  'Finish a pathway from beginning to end.': 'Completa un percorso dall’inizio alla fine.',
+  'You walked a whole pathway, week by week. That was your time, well kept.':
+    'Hai fatto un intero percorso, settimana dopo settimana. È stato tempo tuo, ben custodito.',
+  'Journey complete': 'Viaggio completato',
+  'Finish the 12-week journey.': 'Completa il viaggio di 12 settimane.',
+  'Twelve weeks of taking care of yourself. Thank you for staying with you.':
+    'Dodici settimane di cura per te. Grazie di essere rimasto con te.',
+  'First challenge': 'Prima sfida',
+  'Complete a challenge — a Good Loop one or your company’s.': 'Completa una sfida — di Good Loop o della tua azienda.',
+  'You completed your first challenge, at your own pace.': 'Hai completato la tua prima sfida, al tuo ritmo.',
+  'Challenger': 'Sfidante',
+  'Complete 5 challenges.': 'Completa 5 sfide.',
+  'Five challenges completed. Each one was time for you.': 'Cinque sfide completate. Ognuna è stata tempo per te.',
+  'City in Loop': 'Città in Loop',
+  'Your city reaches its month of care together.': 'La tua città raggiunge insieme il suo mese di cura.',
+  'Your city took care of itself together this month — and you were part of it.':
+    'Questo mese la tua città si è presa cura di sé insieme — e tu ne hai fatto parte.',
+  'Capital of calm': 'Capitale della calma',
+  'Your city is the one where each person listened most this month.': 'La tua città è quella in cui ogni persona ha ascoltato di più questo mese.',
+  'Your city was where people gave themselves the most time this month. You were part of it.':
+    'Questo mese la tua città è stata quella in cui le persone si sono dedicate più tempo. Tu ne hai fatto parte.',
+  'Collective serene night': 'Notte serena collettiva',
+  'Your city reaches 1,000 evening sessions in a month.': 'La tua città arriva a 1.000 sessioni serali in un mese.',
+  'A thousand calm evenings in your city this month, yours among them.':
+    'Mille sere di calma nella tua città questo mese, la tua tra queste.',
+  'State in tune': 'Stato in sintonia',
+  '20 cities in your state with people listening in the same month.': '20 città del tuo stato con persone in ascolto nello stesso mese.',
+  'Twenty cities in your state took time for themselves this month. You were part of it.':
+    'Venti città del tuo stato si sono dedicate del tempo questo mese. Tu ne hai fatto parte.',
+  'Region in Loop': 'Regione in Loop',
+  'Your region reaches its month of care together.': 'La tua regione raggiunge insieme il suo mese di cura.',
+  'Your region reached its month of care together — and you were part of it.':
+    'La tua regione ha raggiunto insieme il suo mese di cura — e tu ne hai fatto parte.',
+  'Brazil in Loop': 'Brasile in Loop',
+  'One million hours of listening across the country.': 'Un milione di ore di ascolto in tutto il paese.',
+  'One million hours of care across Brazil. Some of them are yours.': 'Un milione di ore di cura in tutto il Brasile. Alcune sono tue.',
+  'Company in Loop': 'Azienda in Loop',
+  '60% of your company takes at least one session in a month.': 'Il 60% della tua azienda fa almeno una sessione in un mese.',
+  'Most of your company took time for themselves this month — you among them.':
+    'Questo mese gran parte della tua azienda si è dedicata del tempo — tu compreso.',
+  'Company in tune': 'Azienda in sintonia',
+  'The whole company completes a company challenge together.': 'Tutta l’azienda completa insieme una sfida aziendale.',
+  'The whole company reached its challenge together. You were part of it.':
+    'Tutta l’azienda ha raggiunto insieme la sua sfida. Tu ne hai fatto parte.',
+}

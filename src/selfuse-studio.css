@@ -2320,3 +2320,56 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 .su-studio .adr__choice span { color: var(--su-muted); }
 .su-studio .adr__choice:hover { border-color: var(--su-accent); background: var(--su-hover); }
 .su-studio .adr .fr__fine { max-width: 36ch; }
+
+/* ===================================================== GAMIFICATION ======
+   docs/gamification/SPEC.md §3.4 · §9. The badges carry their own tier
+   colours (src/gamification/ui/Badge.tsx); everything around them is the
+   surface's tokens, so both themes hold. Touch targets ≥ 44px. */
+
+.su-studio .gam-seg { margin: 4px 0 var(--su-gap-sm); }
+.su-studio .gam-seg button { min-height: 44px; flex: 1; }
+
+.su-studio .gam-conquistas { display: flex; flex-direction: column; gap: var(--su-gap-sm); }
+.su-studio .gam-chips .chip { min-height: 44px; padding: 8px 14px; }
+
+.su-studio .gam-next { display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-next__row { display: flex; align-items: center; gap: 14px; }
+.su-studio .gam-next__body { min-width: 0; }
+.su-studio .gam-next__name { margin: 0; font-size: 19px; font-weight: 600; color: var(--su-fg); }
+.su-studio .gam-next__body p { margin: 2px 0 0; }
+
+.su-studio .gam-bar { height: 8px; border-radius: 999px; background: var(--su-fill); overflow: hidden; }
+.su-studio .gam-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--su-accent); transition: width 400ms ease; }
+
+.su-studio .gam-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 10px;
+}
+.su-studio .gam-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.su-studio .gam-cell__name { font-size: 14px; font-weight: 600; line-height: 1.25; color: var(--su-fg-2); }
+.su-studio .gam-cell--locked .gam-cell__name { color: var(--su-muted); }
+.su-studio .gam-cell__state { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--su-faint); }
+
+.su-studio .gam-unlock { align-items: center; text-align: center; gap: 8px; }
+.su-studio .gam-unlock .btn { width: 100%; min-height: 48px; }
+.su-studio .gam-unlock__art { position: relative; display: grid; place-items: center; width: 200px; height: 140px; }
+.su-studio .gam-unlock__art > * { grid-area: 1 / 1; }
+.su-studio .gam-unlock__orbits { fill: none; stroke: var(--su-accent); stroke-width: 1; opacity: 0.28; }
+.su-studio .gam-unlock__name { margin: 0; font-size: 26px; color: var(--su-fg); }
+.su-studio .gam-unlock__line { margin: 0 0 4px; max-width: 34ch; color: var(--su-fg-2); }
+.su-studio .gam-pill {
+  margin: 2px 0 6px; padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  background: #E89D64; color: #2b1606;       /* sandy, the rewards accent (§9) */
+}
+.su-studio .gam-pager { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.su-studio .gam-pager .btn { width: auto; min-height: 44px; }
+
+/* The locked fill is a light paper grey (§9). On the night ground it would
+   outshine the badges that ARE unlocked, so there it steps back. */
+.su-studio .gam-badge--locked { opacity: 0.5; }
+html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .su-studio .gam-bar > span { transition: none; }
+}

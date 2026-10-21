@@ -29,6 +29,7 @@ import { normalizeTags } from './tags'
 import { normalizePromoCode, type PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
+import type { AchievementView } from '../gamification/achievements'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -1594,6 +1595,36 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         hrMinCohort: r.hr_min_cohort,
         maxBackdateHours: r.max_backdate_hours,
       }
+    },
+    async listMyAchievements(): Promise<AchievementView[]> {
+      const { data, error } = await sb.rpc('get_my_achievements')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): AchievementView => ({
+        id: r.id,
+        slug: r.slug,
+        kind: r.kind,
+        scope: r.scope,
+        metric: r.metric,
+        threshold: Number(r.threshold),
+        period: r.period,
+        tier: r.tier,
+        icon: r.icon,
+        bonusLoopsCenti: r.bonusLoopsCenti,
+        active: r.active !== false,
+        sortOrder: r.sortOrder,
+        value: r.value == null ? null : Number(r.value),
+        unlockedAt: r.unlockedAt ? toMs(r.unlockedAt) : null,
+        seenAt: r.seenAt ? toMs(r.seenAt) : null,
+      }))
+    },
+    async markAchievementsSeen(ids: string[]): Promise<void> {
+      if (!ids.length) return
+      const { error } = await sb.rpc('mark_achievements_seen', { p_ids: ids })
+      if (error) throw error
+    },
+    async recordPathwayCompleted(slug: string): Promise<void> {
+      const { error } = await sb.rpc('record_pathway_completed', { p_slug: slug })
+      if (error) throw error
     },
     async saveEconomySettings(next: EconomySettings): Promise<void> {
       // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)

@@ -55,6 +55,8 @@ import type { Duration } from '../types/domain'
 import { BrandLogo } from '../components/Brand'
 import { useSuTheme } from './theme'
 import { useBackLayer } from './backStack'
+import { UnlockSheet } from './UnlockSheet'
+import { unseenUnlocks, type AchievementView } from '../gamification/achievements'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -157,6 +159,32 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     if (overlay.kind === 'call') return
     setOverlay({ kind: 'none' })
   })
+
+  /* Achievements unlocked since the app was last opened (SPEC §3.4). Read
+     when the app opens and when it comes back to the foreground — never
+     when a session ends: the post-session screen keeps its one metric and
+     two actions (GAM-R6), and the sheet only ever opens over Home. */
+  const [unlocks, setUnlocks] = useState<AchievementView[]>([])
+  const [progressView, setProgressView] = useState<'summary' | 'achievements'>('summary')
+  useEffect(() => {
+    let alive = true
+    const check = () => {
+      if (document.visibilityState !== 'visible') return
+      void dp.listMyAchievements()
+        .then((rows) => { if (alive) setUnlocks(unseenUnlocks(rows)) })
+        .catch(() => { /* offline — they wait for the next open */ })
+    }
+    check()
+    document.addEventListener('visibilitychange', check)
+    return () => { alive = false; document.removeEventListener('visibilitychange', check) }
+  }, [dp, storeId])
+  const closeUnlocks = () => {
+    const ids = unlocks.map((a) => a.id)
+    setUnlocks([])
+    if (ids.length) void dp.markAchievementsSeen(ids).catch(() => { /* shown again next open */ })
+  }
+  const unlockSheetUp = unlocks.length > 0 && tab === 'home' && !launch && overlay.kind === 'none'
+  useBackLayer(unlockSheetUp, closeUnlocks)
 
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
   const eap = convention?.eap ?? null
@@ -437,6 +465,20 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         .catch(() => { /* offline — the local log below still holds */ })
     }
 
+    /* The same completion test the update below makes, read from the state
+       this session started from, so the server hears of a pathway the moment
+       it is finished — and only then: pathways finished before this build
+       never reach it, which is what keeps achievements from paying out
+       retroactively. Outside the updater, because an updater must not have
+       side effects. */
+    if (!l?.prescriptionId && l?.pathwayWeek && state.pathway && !state.pathway.completedAt) {
+      const p = findPathway(catalog.pathways, state.pathway.id)
+      const done = { ...state.pathway.done, [l.pathwayWeek]: (state.pathway.done[l.pathwayWeek] ?? 0) + 1 }
+      if (p && p.plan.every((w) => (done[w.week] ?? 0) >= weekCount(w))) {
+        void dp.recordPathwayCompleted(p.id).catch(() => { /* offline — the pathway is still finished locally */ })
+      }
+    }
+
     update((s) => {
       const log = {
         at: o.completedAt,
@@ -652,6 +694,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           <ProgressTab
             state={state}
             therapy={therapy}
+            view={progressView}
+            onView={setProgressView}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
             onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}
@@ -677,6 +721,14 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           />
         )}
       </div>
+
+      {unlockSheetUp && (
+        <UnlockSheet
+          queue={unlocks}
+          onSeeAll={() => { closeUnlocks(); setProgressView('achievements'); setTab('progress') }}
+          onClose={closeUnlocks}
+        />
+      )}
 
       <nav className={`tabbar${tabs.length > 4 ? ' tabbar--5' : ''}`}>
         {/* The wordmark was a `::before` on this nav — fine while it was
