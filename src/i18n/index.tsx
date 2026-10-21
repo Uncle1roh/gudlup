@@ -35,15 +35,22 @@ const DICTS: Partial<Record<Locale, Record<string, string>>> = {
   'pt-BR': { ...PT, ...PT_LEGAL, ...PT_WORKSPACE, ...PT_CORPORATE, ...PT_SELFUSE_EXTRA, ...PT_STUDIO, ...PT_GAMIFICATION },
 }
 
-/** Options shown in Profile → Language. */
+/** Options shown in every language picker (Profile, the legal page, the
+    company dashboard). English is withdrawn for now (owner, 2026-10-21): a
+    person is offered sessions in their own language only, and none are
+    voiced in English yet, so an English reader would open an empty library.
+    The type keeps 'en' — English is still the source text of every string
+    and the console still stores English protocol texts for later. Put it
+    back here when English sessions are published. */
 export const LOCALES: { code: Locale; label: string }[] = [
   { code: 'pt-BR', label: 'Português' },
-  { code: 'en', label: 'English' },
   { code: 'it', label: 'Italiano' },
 ]
 
+/** A locale a person may be in: one of the offered ones. A saved 'en' from
+    before English was withdrawn falls back to the default. */
 function isLocale(v: unknown): v is Locale {
-  return v === 'en' || v === 'it' || v === 'pt-BR'
+  return LOCALES.some((l) => l.code === v)
 }
 
 function defaultLocale(): Locale {
@@ -140,6 +147,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   })
 
   function setLocale(l: Locale) {
+    if (!isLocale(l)) return
     current = l
     setLocaleState(l)
     try { localStorage.setItem(STORAGE_KEY, l) } catch { /* storage unavailable */ }

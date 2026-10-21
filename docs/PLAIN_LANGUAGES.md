@@ -96,7 +96,8 @@ the file in the form the person chose (`<lang>` male, `<lang>:f` female).
 There is no fallback to another language or the other form: a duration is
 offered to a person only when their own file exists (`playableDurations`
 with a listener, `audioPick` in `src/data/liveCatalog.tsx`). English is not
-voiced yet, so an English reader is offered no session until it is.
+voiced yet, so English is withdrawn from every language picker for now
+(`LOCALES` in `src/i18n/index.tsx`); a saved `en` falls back to the default.
 
 Everything published before this change was Italian but filed under `pt-BR`;
 `supabase/12-audio-language.sql` moves it to `it` (idempotent).
