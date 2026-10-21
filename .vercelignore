@@ -1,0 +1,7 @@
+# Local working files never go up with a deploy (vercel deploy uploads the
+# folder, not the git tree).
+/*.wav
+/*.mp3
+/Legal Framework/
+/Suggestions/
+/docs/gamification/Mocks/
