@@ -10,7 +10,7 @@
    through kCell()/kShare(): the same suppression the database applies.
    ============================================================================ */
 
-import { TEMPLATE_SEED, kCell, kShare, type AddonDashboard, type AddonInfo, type AddonPlan, type CompanyBenefitRow, type CompanyChallengeDraft, type CompanySubscription, type TagFilterRow } from './company'
+import { TEMPLATE_SEED, kCell, kShare, type ChallengeTemplate, type AddonDashboard, type AddonInfo, type AddonPlan, type CompanyBenefitRow, type CompanyChallengeDraft, type CompanySubscription, type TagFilterRow } from './company'
 import type { Benefit } from './benefits'
 import type { MockLedger } from './mockLedger'
 import type { MockBenefits } from './mockBenefits'
@@ -29,6 +29,8 @@ export class MockCompany {
   ]
   subscriptions: CompanySubscription[]
   history: { label: string; disabledAt: number; enabledAt: number | null }[] = []
+  /** Editable in the console (Sfide › Modelli aziendali). */
+  templates: ChallengeTemplate[] = TEMPLATE_SEED.map((t, i) => ({ ...t, active: true, sortOrder: (i + 1) * 10 }))
   /** The company's people, a fixture: what eligibility counts. */
   eligible = 150
 
@@ -50,7 +52,7 @@ export class MockCompany {
       own('co-cafe', { title: 'Café da manhã da empresa', careRationale: 'Uma pausa juntos, sem pressa.', pillar: 'alimentacao', priceLoopsCenti: 0, deliveryType: 'collective' }),
     )
 
-    const tpl = TEMPLATE_SEED.find((t) => t.slug === 'empresa_em_sintonia')!
+    const tpl = this.templates.find((t) => t.slug === 'empresa_em_sintonia')!
     challenges.list.push({
       id: 'novembro-em-loop', companyId: DEMO_COMPANY_ID, title: 'Novembro em Loop', description: tpl.description, badgeIcon: tpl.badgeIcon,
       format: 'collective', scope: 'company', scopeRef: DEMO_COMPANY_ID, metric: 'sessions_completed', goalValue: 60, goalKind: 'share_reaching_min',
@@ -128,7 +130,7 @@ export class MockCompany {
 
   /* ---- c) company challenges ---- */
   saveCompanyChallenge(d: CompanyChallengeDraft): string {
-    const tpl = TEMPLATE_SEED.find((t) => t.slug === d.templateSlug)
+    const tpl = this.templates.find((t) => t.slug === d.templateSlug && t.active !== false)
     if (!tpl) throw new Error('Choose a template.')
     if (d.rewardBenefitId && !this.benefits.catalog.some((b) => b.id === d.rewardBenefitId && b.companyId === DEMO_COMPANY_ID)) {
       throw new Error('The reward must be one of your company’s benefits.')

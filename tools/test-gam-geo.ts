@@ -75,7 +75,7 @@ assert(cityLabel({ name: 'Campinas', uf: 'SP' }) === 'Campinas · SP', 'labels r
 /* ---- the demo provider keeps the promises ------------------------------------------ */
 async function demo() {
   store.clear()
-  const dp = createMockProvider()
+  const dp = createMockProvider({ gamificationHistory: false })
   let r = await dp.getGeoRankings('city', 'month', 5)
   assert(r.mine === null, 'no consent: the person has no place in any ranking')
   assert(!r.rows.some((x) => x.ref === '1721000'), 'Palmas (31 active people) never appears')

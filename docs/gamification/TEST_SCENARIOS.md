@@ -21,7 +21,7 @@ O que saber sobre a demonstração:
 - `npm test`: as suítes `gam-*`.
 - `node tools/db-gate.mjs`: monta um banco Postgres 16 novo, aplica o `setup.sql`, aplica de novo e roda as provas em SQL. Tem que terminar em `db gate: PASS`.
 
-**Banco de demonstração (opcional).** Num banco de demonstração, nunca no de produção, rode `supabase/seed_gamification_demo.sql`. Ele cria a Aurora Alimentos, 40 pessoas em 5 cidades, os três desafios de exemplo e 15 benefícios.
+**Dados de demonstração só na demonstração.** Os dados de exemplo existem apenas no modo demonstração: sem servidor configurado, ou quando um admin abre o app, a área do terapeuta ou a da empresa pela **prévia do console**. Ali a pessoa de demonstração já tem três semanas de história. No app real, com o banco de produção, não existe nenhum dado de demonstração.
 
 ---
 
@@ -43,7 +43,7 @@ O que saber sobre a demonstração:
   - Aparece a frase "Sua empresa multiplica seus Loops em 1,5×".
 - **Esperado também:**
   - **Pontos não aparecem em lugar nenhum.** A pessoa só vê Loops.
-  - Sair da sessão no meio continua não registrando nada, como o app promete hoje ("Seu progresso não será salvo").
+  - **Sair da sessão no meio rende pontos reduzidos:** contam os minutos realmente ouvidos, sem o bônus de conclusão. O aviso de saída diz "Os minutos que você ouviu continuam valendo." Menos de um minuto não conta.
 - **O que a tela não mostra** (`gam-economy` e `economy_parity`):
   - Sessões SOS e sessões feitas no console do terapeuta não geram nada.
   - Vale no máximo 120 minutos e 4 bônus de conclusão por dia, no horário de São Paulo.
@@ -180,6 +180,15 @@ O que saber sobre a demonstração:
   - o bônus é pago uma vez;
   - com estoque limitado, "primeiro a concluir" e "sorteio" funcionam, e o sorteio acontece uma vez só.
 
+### 5.2a Modelos dos desafios de empresa
+- **Onde:** `/#admin`, em **Modelli di sfida**.
+- **Esperado:**
+  - A lista mostra os quatro modelos (Boas-vindas, Sono em dia, Pausa consciente, Empresa em sintonia).
+  - Em "Modifica" dá para mudar o nome e o texto em português, a meta proposta, a duração e a ícone, e desligar a oferta às empresas.
+  - À direita aparece a prévia do cartão como o funcionário vai ver.
+  - "+ Nuovo modello" cria um modelo novo, que aparece para o RH.
+- **No RH:** um desafio em rascunho ou agendado tem o botão **Editar** (datas, meta, recompensa). O nome e o texto continuam os do modelo.
+
 ### 5.2 Criar um desafio no console
 - **Onde:** `/#admin`, em Sfide.
 - **Esperado:**
@@ -265,15 +274,19 @@ O que saber sobre a demonstração:
 - **Tag:** permite criar e editar tags e mostra quantos benefícios usam cada uma.
 - **Report:** mostra Punti e Loops emessi per origine, Loops riscattati, riscatti per beneficio, moltiplicatore per azienda (CSV) e risultati delle sfide. São só totais, nunca uma pessoa.
 
-### 7.2 Dados de demonstração
-- **Como:** num banco de demonstração, rode `supabase/seed_gamification_demo.sql`. Pode rodar mais de uma vez.
-- **Esperado:**
-  - A Aurora Alimentos tem Premium 1,5× e "Alimentos e bebidas" desligada.
-  - São 40 pessoas em São Paulo, Florianópolis, Curitiba, Recife e Belo Horizonte, 12 delas da Aurora.
-  - Existem "Outubro Sereno" (ativo), "Semana do Sono" (agendado) e "Novembro em Loop" (da Aurora).
-  - São 15 benefícios com parceiro "[PARCEIRO]".
-- **Atenção:** com 8 pessoas por cidade, nenhuma cidade chega a 50. Os rankings mostram o estado "reunindo pessoas", que é o comportamento correto. Para *ver* rankings num banco de demonstração, o próprio arquivo traz, comentado, como baixar o limite temporariamente.
-- **Prova:** `demo_seed.sql` aplica o seed duas vezes e confere que nada foi duplicado.
+### 7.2 Dados de demonstração, só na prévia
+- **Onde:** `/#admin`, na barra de prévia. Abra **App**, **Azienda** ou **Terapeuta**.
+- **Esperado no App:**
+  - Já há Loops e tempo dedicado no mês, e o Outubro Sereno está em andamento.
+  - Ao abrir, uma conquista recente aparece na folha de desbloqueio.
+  - Em Coletivas a pessoa já participa por São Paulo.
+  - Em Meus benefícios há um ingresso de cinema resgatado.
+- **Esperado na Azienda:** a Aurora com Premium 1,5×, "Alimentos e bebidas" desligada e o "Novembro em Loop" em andamento.
+- **Esperado também:**
+  - Mudar o plano no console ou desligar uma tag no RH aparece no App da mesma prévia.
+  - Recarregar a página volta ao estado inicial da demonstração.
+- **No app real** (banco de produção), nada disso existe.
+- **Prova:** `gam-demo` falha se uma empresa, pessoa ou parceiro de demonstração aparecer no `setup.sql` ou no provedor real.
 
 ### 7.3 Este roteiro
 - Um cenário por critério de aceite das sete fatias.

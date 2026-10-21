@@ -150,10 +150,10 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
 
       {draft && (
         <div className="c-card c-form">
-          <h3 className="c-h3">{t('New company challenge')}</h3>
+          <h3 className="c-h3">{draft.id ? t('Edit company challenge') : t('New company challenge')}</h3>
           <p className="c-small">{t('Start from a template. Its name and text are what your people read — they are written by Good Loop, so every company challenge speaks the same careful language.')}</p>
           <div className="c-addon-templates">
-            {templates.map((x) => (
+            {templates.filter((x) => !draft.id || x.slug === draft.templateSlug).map((x) => (
               <button key={x.slug} className={`c-card c-addon-template${draft.templateSlug === x.slug ? ' is-on' : ''}`}
                       onClick={() => setDraft({ ...draft, templateSlug: x.slug, goalValue: x.goalValue, perPersonMin: x.perPersonMin, endsAt: draft.startsAt + x.defaultDays * DAY })}>
                 <strong>{x.title}</strong>
@@ -207,6 +207,13 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
               {c.goalKind === 'share_reaching_min' && <><dt>{t('Of the company at the goal')}</dt><dd>{c.collectivePct != null ? `${Math.floor(c.collectivePct)}% / ${c.goalValue}%` : <Hidden k={k} />}</dd></>}
             </dl>
             <div className="c-actions">
+              {['draft', 'scheduled'].includes(c.status) && c.templateSlug && (
+                <button className="c-btn c-btn--ghost" disabled={busy} onClick={() => {
+                  setDraft({ id: c.id, templateSlug: c.templateSlug!, goalValue: c.goalValue, perPersonMin: c.perPersonMin, startsAt: c.startsAt, endsAt: c.endsAt,
+                             rewardBonusLoopsCenti: c.rewardBonusLoopsCenti, rewardBenefitId: c.rewardBenefitId, rewardRule: 'first_to_complete' })
+                  window.scrollTo({ top: 0 })
+                }}>{t('Edit')}</button>
+              )}
               {c.status === 'draft' && <button className="c-btn c-btn--primary" disabled={busy} onClick={() => void act(c.id, 'publish')}>{t('Publish')}</button>}
               {['scheduled', 'active'].includes(c.status) && <button className="c-btn c-btn--ghost" disabled={busy} onClick={() => void act(c.id, 'end')}>{t('End')}</button>}
               {['draft', 'scheduled', 'active'].includes(c.status) && <button className="c-link c-link--danger" disabled={busy} onClick={() => void act(c.id, 'cancel')}>{t('Cancel')}</button>}

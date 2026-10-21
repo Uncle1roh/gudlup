@@ -1908,6 +1908,25 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         windowStartHour: t.window_start_hour ?? null, windowEndHour: t.window_end_hour ?? null, defaultDays: t.default_days,
       }))
     },
+    async adminListChallengeTemplates(): Promise<ChallengeTemplate[]> {
+      const { data, error } = await sb.from('challenge_templates').select('*').order('sort_order')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((t): ChallengeTemplate => ({
+        slug: t.slug, title: t.title, description: t.description, badgeIcon: t.badge_icon, format: t.format, metric: t.metric,
+        goalValue: Number(t.goal_value), goalKind: t.goal_kind, perPersonMin: t.per_person_min == null ? null : Number(t.per_person_min),
+        windowStartHour: t.window_start_hour ?? null, windowEndHour: t.window_end_hour ?? null, defaultDays: t.default_days,
+        active: !!t.active, sortOrder: t.sort_order,
+      }))
+    },
+    async adminSaveChallengeTemplate(tp: ChallengeTemplate): Promise<void> {
+      const { error } = await sb.from('challenge_templates').upsert({
+        slug: tp.slug, title: tp.title, description: tp.description, badge_icon: tp.badgeIcon, format: tp.format, metric: tp.metric,
+        goal_value: tp.goalValue, goal_kind: tp.goalKind, per_person_min: tp.perPersonMin,
+        window_start_hour: tp.windowStartHour, window_end_hour: tp.windowEndHour, default_days: tp.defaultDays,
+        active: tp.active !== false, sort_order: tp.sortOrder ?? 0,
+      })
+      if (error) throw error
+    },
     async hrSaveCompanyChallenge(d: CompanyChallengeDraft): Promise<string> {
       const { data, error } = await sb.rpc('hr_save_company_challenge', {
         p: { ...d, id: d.id || null, startsAt: new Date(d.startsAt).toISOString(), endsAt: new Date(d.endsAt).toISOString() },

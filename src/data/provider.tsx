@@ -416,6 +416,10 @@ export interface DataProvider {
   /** The only names HR ever sees: identified redemptions, each consented. */
   hrIdentifiedRedemptions(): Promise<IdentifiedRedemption[]>
   listChallengeTemplates(): Promise<ChallengeTemplate[]>
+  /** Admin: every template, offered or not. */
+  adminListChallengeTemplates(): Promise<ChallengeTemplate[]>
+  /** Admin: a template's text, goal and defaults — the only words of a company challenge. */
+  adminSaveChallengeTemplate(t: ChallengeTemplate): Promise<void>
   hrSaveCompanyChallenge(d: CompanyChallengeDraft): Promise<string>
   hrCompanyChallengeAction(id: string, action: 'publish' | 'end' | 'cancel'): Promise<void>
   /** Company-wide aggregates only, k-guarded with complementary suppression. */

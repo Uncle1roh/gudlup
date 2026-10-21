@@ -453,7 +453,23 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   async function finishSession(o: SessionOutcome) {
     const l = launch
     setLaunch(null)
-    if (!o.completed) return // ended early — nothing is recorded, as promised
+    /* Ended early: the minutes actually heard still count, at a reduced rate
+       — no completion bonus (docs/gamification/SPEC.md §2.2, PLAN A24). It
+       goes to the server only: the local log, the pathway, the "recent"
+       shelf and the VAS stay what they were, completed sessions only. Under
+       a minute there is nothing to credit, so nothing is sent. */
+    if (!o.completed) {
+      const s = catalog.sessions.find((x) => x.slug === o.slug)
+      if (s && o.listenedSec >= 60) {
+        await dp.recordSession({
+          id: `s-${o.startedAt}`, protocolCode: s.protocolCode, duration: o.duration,
+          startedAt: o.startedAt, completedAt: o.endedAt, completed: false,
+          listenedSec: o.listenedSec, stereoChecked: o.stereoChecked,
+        }).catch(() => { /* offline — nothing else depends on it */ })
+        loadChallenges()
+      }
+      return
+    }
 
     /* The session VAS. It runs in this channel as well as the therapist one and
        lands in the same series, so a person who does both produces one trend
@@ -684,7 +700,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             professionalOffered={hasProfessionalSupport(convention)}
             onFindProfessional={() => setTab('therapist')}
             /* Completed sessions, newest first, one entry per session. Not
-               "continue listening": nothing is recorded when a session is
+               "continue listening": nothing is logged here when a session is
                ended early, so there is no position to resume — this is the
                honest version of that shelf, built from data that exists. */
             recent={[...new Set([...state.logs].sort((a, b) => b.at - a.at).map((l) => l.slug))].filter(Boolean).slice(0, 12)}

@@ -1559,6 +1559,7 @@ button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px
 .adm-rules .is-bad { color: #a3341f; font-weight: 600; }
 .adm-icon-pick { padding: 4px; min-height: 0; }
 .adm-econ__mult { display: inline-block; width: auto; min-height: 32px; padding: 2px 8px; }
+.adm-table--templates .adm-tr { grid-template-columns: 2fr 120px 1.3fr 90px 110px; }
 .adm-table--achievements .adm-tr { grid-template-columns: 52px 1.6fr 1.3fr 110px 110px 60px 100px; }
 .adm-table--plans .adm-tr { grid-template-columns: 1.4fr 120px 1.4fr 90px 120px; }
 .adm-table--plan-companies .adm-tr { grid-template-columns: 1.6fr 1fr 120px 240px; }

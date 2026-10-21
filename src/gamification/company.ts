@@ -93,6 +93,9 @@ export interface ChallengeTemplate {
   windowStartHour: number | null
   windowEndHour: number | null
   defaultDays: number
+  /** Offered to HR. Off = kept, not offered (challenges made from it stay). */
+  active?: boolean
+  sortOrder?: number
 }
 
 /** The first set (PLAN A4) — identical to the seed in setup.sql. */

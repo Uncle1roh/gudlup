@@ -293,7 +293,7 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
 
   /* ---- the session flow ---- */
   "Let's check your headphones": 'Vamos verificar seus fones',
-  "End session early? Your progress won't be saved.": 'Encerrar a sessão antes? Seu progresso não será salvo.',
+  'End session early? The minutes you listened still count.': 'Encerrar a sessão antes? Os minutos que você ouviu continuam valendo.',
 
   /* ---- support ---- */
   "We're here to help you find support": 'Estamos aqui para ajudar você a encontrar apoio',

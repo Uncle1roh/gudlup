@@ -13,6 +13,7 @@ import { PromoCodes } from './PromoCodes'
 import { Benefits } from './Benefits'
 import { Tags } from './Tags'
 import { Challenges } from './Challenges'
+import { ChallengeTemplates } from './ChallengeTemplates'
 import { Achievements } from './Achievements'
 import { Plans } from './Plans'
 import { GamReports } from './GamReports'
@@ -24,7 +25,7 @@ import { Compliance } from './Compliance'
 import { HelpNowButton } from '../legal/HelpNow'
 import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'challenges' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'plans' | 'gamreports'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'challenges' | 'templates' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'plans' | 'gamreports'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -38,6 +39,7 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'economy', label: 'Economia', icon: '∞' },
   { id: 'achievements', label: 'Traguardi', icon: '◎' },
   { id: 'challenges', label: 'Sfide', icon: '⚑' },
+  { id: 'templates', label: 'Modelli di sfida', icon: '⚐' },
   { id: 'benefits', label: 'Benefici', icon: '❖' },
   { id: 'tags', label: 'Tag', icon: '#' },
   { id: 'plans', label: 'Piani e aziende', icon: '×' },
@@ -145,6 +147,7 @@ export function AdminApp() {
         {section === 'benefits' && <Benefits actor={actor} />}
         {section === 'tags' && <Tags actor={actor} />}
         {section === 'challenges' && <Challenges actor={actor} />}
+        {section === 'templates' && <ChallengeTemplates actor={actor} />}
         {section === 'users' && <Users actor={actor} />}
         {section === 'compliance' && <Compliance actor={actor} />}
         {section === 'switches' && <FeatureSwitches actor={actor} />}

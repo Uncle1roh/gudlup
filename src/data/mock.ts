@@ -19,7 +19,7 @@ import { MockLedger } from '../gamification/mockLedger'
 import { MockBenefits } from '../gamification/mockBenefits'
 import { MockChallenges } from '../gamification/mockChallenges'
 import { MockCompany, DEMO_COMPANY_ID as GAM_COMPANY_ID } from '../gamification/mockCompany'
-import { TEMPLATE_SEED } from '../gamification/company'
+import { seedDemoHistory } from '../gamification/mockDemo'
 import { hasConsent } from '../legal/records'
 import {
   DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
@@ -321,19 +321,36 @@ const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
    console, a tag switched off by HR and a session in the app all see the
    same company while the demo moves between surfaces. */
 let gamState: { ledger: MockLedger; benefits: MockBenefits; challenges: MockChallenges; company: MockCompany } | null = null
-function gamification() {
+function gamification(history: boolean) {
   if (!gamState) {
     const ledger = new MockLedger()
     const benefits = new MockBenefits(ledger)
     const challenges = new MockChallenges(ledger, benefits)
     const company = new MockCompany(ledger, benefits, challenges, companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? 'Aurora')
     gamState = { ledger, benefits, challenges, company }
+    /* A lived-in walkthrough: three weeks of listening, a city chosen, one
+       benefit redeemed (src/gamification/mockDemo.ts). Demo data only — the
+       live database never carries any of it. */
+    if (history) {
+      seedDemoHistory(ledger, benefits)
+      try { if (!localStorage.getItem(MOCK_CITY_KEY)) localStorage.setItem(MOCK_CITY_KEY, '3550308') } catch { /* fine */ }
+      if (!loadMockLegal().consents.some((c) => c.purpose === 'geo_ranking')) {
+        mutateMockLegal((st) => {
+          st.consents = [...st.consents, {
+            id: nextMockLegalId('cns'), profileId: st.profile.id, purpose: 'geo_ranking', granted: true,
+            wording: 'Participar dos rankings — demonstração', locale: 'pt-BR', channel: 'app', at: Date.now() - 20 * 86_400_000,
+          }]
+        })
+      }
+    }
   }
   return gamState
 }
 
-export function createMockProvider(): DataProvider {
-  const { ledger, benefits, challenges, company } = gamification()
+/** `gamificationHistory: false` starts the demo person with no history —
+    for the proofs in tools/, which build their own. */
+export function createMockProvider(opts: { gamificationHistory?: boolean } = {}): DataProvider {
+  const { ledger, benefits, challenges, company } = gamification(opts.gamificationHistory !== false)
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -1058,7 +1075,16 @@ export function createMockProvider(): DataProvider {
     hrSaveCompanyBenefit: async (b) => { await wait(80); return company.saveCompanyBenefit(b) },
     hrUploadCodes: async (id, codes) => { await wait(60); return benefits.uploadCodes(id, codes) },
     hrIdentifiedRedemptions: async () => delay(benefits.identified(GAM_COMPANY_ID).map((r) => ({ ...r, name: 'Mariana Alves' })), 40),
-    listChallengeTemplates: async () => delay(TEMPLATE_SEED.map((t) => ({ ...t })), 40),
+    listChallengeTemplates: async () => delay(company.templates.filter((t) => t.active !== false).map((t) => ({ ...t })), 40),
+    adminListChallengeTemplates: async () => delay(company.templates.map((t) => ({ ...t })), 40),
+    adminSaveChallengeTemplate: async (tp) => {
+      await wait(60)
+      if (!/^[a-z0-9_]+$/.test(tp.slug)) throw new Error('Lo slug usa solo lettere minuscole, cifre e _.')
+      if (tp.goalKind === 'share_reaching_min' && (tp.format !== 'collective' || tp.goalValue > 100 || !tp.perPersonMin)) throw new Error('Una quota dell’azienda è collettiva, fino a 100%, con un minimo a persona.')
+      const i = company.templates.findIndex((x) => x.slug === tp.slug)
+      if (i >= 0) company.templates[i] = { ...tp }
+      else company.templates.push({ ...tp, sortOrder: tp.sortOrder ?? (company.templates.length + 1) * 10 })
+    },
     hrSaveCompanyChallenge: async (d) => { await wait(80); return company.saveCompanyChallenge(d) },
     hrCompanyChallengeAction: async (id, action) => { await wait(60); company.challengeAction(id, action) },
     hrAddonDashboard: async () => delay(company.dashboard(), 60),

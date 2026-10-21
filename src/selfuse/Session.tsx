@@ -888,7 +888,7 @@ function ImmersiveSession({
         {confirmExit && (
           <div className="player__confirm" onClick={(e) => e.stopPropagation()}>
             <div className="player__confirmbox fade-in">
-              <p>{t("End session early? Your progress won't be saved.")}</p>
+              <p>{t('End session early? The minutes you listened still count.')}</p>
               <div className="chip-row">
                 <button className="btn btn--light" onClick={() => setConfirmExit(false)}>{t('Keep listening')}</button>
                 <button className="btn btn--light" onClick={exitNow}>{t('End session')}</button>

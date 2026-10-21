@@ -207,8 +207,9 @@ export interface SessionRecord {
   completedAt?: number
   vasPre?: MoodCheck
   vasPost?: MoodCheck
-  /** Defaults to `!!completedAt`. The self-use app records completed sessions
-      only (leaving early promises "your progress won't be saved"). */
+  /** Defaults to `!!completedAt`. A session ended early is recorded with
+      `completed: false`: its minutes heard still earn, without the
+      completion bonus (gamification, PLAN A24). */
   completed?: boolean
   /** Seconds the audio actually played. The server caps it at the nominal
       duration and credits Points from it; absent = nothing to credit. */

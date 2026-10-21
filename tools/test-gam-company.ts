@@ -37,7 +37,7 @@ assert(kShare(30, 60, 25) === 50 && kShare(10, 60, 25) === null && kShare(20, 20
 
 async function run() {
   store.clear()
-  const dp = createMockProvider()
+  const dp = createMockProvider({ gamificationHistory: false })
 
   /* the plan */
   const addon = await dp.hrGetAddon()
