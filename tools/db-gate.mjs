@@ -61,6 +61,24 @@ try {
   ok = psql(DB, ['-f', 'tools/db/local-stubs.sql'], 'Supabase stubs') && ok
   ok = ok && psql(DB, ['-f', 'supabase/setup.sql'], 'setup.sql on a fresh database')
   ok = ok && psql(DB, ['-f', 'supabase/setup.sql'], 'setup.sql re-applied (idempotent)')
+  /* The way the Supabase SQL editor runs it: the whole file as ONE
+     transaction, on a database that already has everything before the
+     gamification blocks and some live rows (a partner offer, which block 19
+     migrates). Pending deferred checks inside one transaction fail a later
+     ALTER TABLE (55006) — invisible statement by statement. */
+  if (ok) {
+    const live = `${DB}_live`
+    const cut = setup.indexOf('-- GAMIFICATION · 1')
+    const pre = join(CACHE, 'pre-gamification.sql')
+    writeFileSync(pre, setup.slice(0, setup.lastIndexOf('\n', setup.lastIndexOf('-- ====', cut))))
+    const offers = join(CACHE, 'live-rows.sql')
+    writeFileSync(offers, "insert into partner_products (partner, title, promo_code, active) values ('P', 'Oferta', 'CODE', true), ('Q', 'Link', null, true);\n")
+    ok = psql('postgres', ['-c', `create database ${live}`], `create live-like database`)
+      && psql(live, ['-f', 'tools/db/local-stubs.sql', '-f', pre, '-f', offers], 'live-like: the schema before gamification, with offers')
+      && psql(live, ['-1', '-f', 'supabase/setup.sql'], 'setup.sql as ONE transaction on a live-like database (Supabase editor)')
+      && psql(live, ['-1', '-f', 'supabase/setup.sql'], 'setup.sql as ONE transaction, again')
+    psql('postgres', ['-c', `drop database if exists ${live} with (force)`], `drop ${live}`)
+  }
   const dir = join('supabase', 'tests')
   const tests = ok && existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.sql')).sort() : []
   for (const t of tests) {

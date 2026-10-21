@@ -8987,6 +8987,13 @@ insert into benefit_tag_map (benefit_id, tag_id)
 select b.id, t.id from benefits b, benefit_tags t
  where b.legacy_partner_product_id is not null and t.slug = 'desconto'
 on conflict do nothing;
+-- The Supabase SQL editor runs a whole file as ONE transaction. The inserts
+-- above leave the "a benefit needs a tag" check pending until commit, and a
+-- pending check makes any later ALTER TABLE benefits fail (55006). Run the
+-- checks now, then put them back to deferred. Outside a transaction both
+-- lines are no-ops.
+set constraints all immediate;
+set constraints all deferred;
 
 -- ============================================================================
 -- GAMIFICATION · 5 — CHALLENGES                  (docs/gamification/SPEC.md §5)
