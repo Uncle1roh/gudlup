@@ -31,7 +31,10 @@ export type PreviewSurface = 'app' | 'therapist' | 'company' | 'admin'
 
 const KEY = 'gl.admin.preview'
 /** Set when preview created the company dashboard's local state itself. */
+import { FALLBACK_TENANT, slotKey } from '../corporate/data'
+
 const SEEDED = 'gl.admin.preview.seeded-corporate'
+const CORPORATE_SLOT = slotKey(FALLBACK_TENANT)
 
 /** Where each surface lives, and what to call it in the bar. */
 export const SURFACES: { id: PreviewSurface; hash: string; label: string }[] = [
@@ -91,8 +94,10 @@ function seedSelfUse(): void {
    exit with everything else. */
 function seedCompany(): void {
   try {
-    if (localStorage.getItem('gl.corporate')) return
-    localStorage.setItem('gl.corporate', JSON.stringify({ setupDoneAt: Date.now() - 86_400_000 }))
+    /* The dashboard keeps one slot per tenant (corporate/data.ts slotKey);
+       the preview's company is the demo tenant, Acme. */
+    if (localStorage.getItem(CORPORATE_SLOT)) return
+    localStorage.setItem(CORPORATE_SLOT, JSON.stringify({ setupDoneAt: Date.now() - 86_400_000 }))
     /* Marked as ours. The dashboard's state is shared with a real HR account
        signing in on this same browser, so leaving preview removes it only if
        preview is what created it. */
@@ -132,7 +137,7 @@ export function clearPreview(): void {
     localStorage.removeItem(`gl.therapy.${PREVIEW_USER_ID}`)
     localStorage.removeItem(`gl.workspace.${PREVIEW_USER_ID}`)
     if (localStorage.getItem(SEEDED)) {
-      localStorage.removeItem('gl.corporate')
+      localStorage.removeItem(CORPORATE_SLOT)
       localStorage.removeItem(SEEDED)
     }
   } catch {
@@ -148,7 +153,7 @@ export function endPreview(): void {
     localStorage.removeItem(`gl.therapy.${PREVIEW_USER_ID}`)
     localStorage.removeItem(`gl.workspace.${PREVIEW_USER_ID}`)
     if (localStorage.getItem(SEEDED)) {
-      localStorage.removeItem('gl.corporate')
+      localStorage.removeItem(CORPORATE_SLOT)
       localStorage.removeItem(SEEDED)
     }
   } catch {

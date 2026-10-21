@@ -19,34 +19,49 @@ import { useLegal } from '../legal/LegalContext'
 import { Icon } from './icons'
 import { CityPicker } from './CityPicker'
 import { copyFor } from '../gamification/copy'
-import { fmtMinutes } from '../gamification/achievements'
+import { fmtMinutes, type RankingPart } from '../gamification/achievements'
 import { cityLabel, REGION_NAMES, UF_NAMES, type CityCard, type GeoRanking, type GeoScope, type Municipality } from '../gamification/geo'
 
 /** The consent wording, recorded with the choice exactly as the person read it. */
 export const GEO_CONSENT_LABEL = 'Take part in the rankings'
 export const GEO_CONSENT_NOTE = 'Your listening counts toward the city you choose. We only use the city you tell us — never your location.'
 
-export function Coletivas() {
+/** Progress › Rankings: the city goal, the person's own part, and the
+    rankings by city, state and region — a tab of its own, apart from the
+    achievements, so the two kinds of information never mix. */
+export function RankingsTab() {
   const { t } = useI18n()
   const dp = useDataProvider()
   const legal = useLegal()
   const [card, setCard] = useState<CityCard | null | undefined>(undefined)
+  const [part, setPart] = useState<RankingPart | null>(null)
   const reload = useCallback(() => {
     dp.getMyCityCard().then((c) => setCard(c)).catch(() => setCard(null))
+    dp.getMyRankingPart().then(setPart).catch(() => setPart(null))
   }, [dp])
   useEffect(() => { reload() }, [reload])
 
-  if (card === undefined) return null
+  if (card === undefined) return <p className="small muted" aria-busy="true">{t('Loading…')}</p>
   const joined = legal.consented('geo_ranking') && !!card?.city
 
   return (
-    <>
+    <div className="gam-stack">
       {joined && card ? <CityGoal card={card} /> : <OptIn initial={card?.city ?? null} onJoined={reload} />}
+      {joined && part && (
+        <section className="card gam-part" aria-label={t('Your part')}>
+          <p className="eyebrow">{t('Your part')}</p>
+          <div className="gam-part__figs">
+            <div><span className="gam-part__value">{fmtMinutes(part.monthMinutes)}</span><span className="small muted">{t('this month')}</span></div>
+            <div><span className="gam-part__value">{fmtMinutes(part.lifetimeMinutes)}</span><span className="small muted">{t('since you joined')}</span></div>
+          </div>
+          <p className="small muted">{t('Every minute you listen counts for your city, your state, your region and the whole country at once.')}</p>
+        </section>
+      )}
       {joined && <Rankings />}
       <p className="small muted gam-foot">
         {t('We use the city in your profile, never your location. You can leave the rankings in Profile.')}
       </p>
-    </>
+    </div>
   )
 }
 
@@ -103,7 +118,6 @@ function CityGoal({ card }: { card: CityCard }) {
       ) : (
         <p className="gam-city__wait">{t('Your city joins the rankings once enough people take part in the same month.')}</p>
       )}
-      <p className="small">{t('Your part: {time} this month', { time: fmtMinutes(card.myMinutesMonth) })}</p>
     </section>
   )
 }

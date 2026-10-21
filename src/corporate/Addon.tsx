@@ -46,7 +46,7 @@ export function AddonPlan({ addon }: { addon: AddonInfo }) {
   const { t } = useI18n()
   const yes = (b: boolean) => (b ? t('Included') : t('Not included'))
   return (
-    <section className="c-panel">
+    <section className="c-panel c-addon">
       <h2 className="c-h2">{t('Plan')}</h2>
       <PrivacyBanner />
       <div className="c-card">
@@ -115,7 +115,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
   }
 
   if (!addon.companyChallenges) {
-    return <section className="c-panel"><h2 className="c-h2">{t('Challenges (Add-on)')}</h2><p className="c-small">{t('Company challenges are not included in your plan.')}</p></section>
+    return <section className="c-panel c-addon"><h2 className="c-h2">{t('Challenges (Add-on)')}</h2><p className="c-small">{t('Company challenges are not included in your plan.')}</p></section>
   }
 
   const k = dash?.minCohort ?? 25
@@ -128,7 +128,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
   }) : []
 
   return (
-    <section className="c-panel">
+    <section className="c-panel c-addon">
       <div className="c-row c-row--between">
         <h2 className="c-h2">{t('Challenges (Add-on)')}</h2>
         {!draft && <button className="c-btn c-btn--primary" onClick={() => setDraft({ id: '', templateSlug: templates[0]?.slug ?? '', goalValue: templates[0]?.goalValue ?? 3, perPersonMin: templates[0]?.perPersonMin ?? null, startsAt: Date.now(), endsAt: Date.now() + (templates[0]?.defaultDays ?? 30) * DAY, rewardBonusLoopsCenti: 2000, rewardBenefitId: null, rewardRule: 'first_to_complete' })}>{t('New challenge')}</button>}
@@ -234,7 +234,7 @@ export function AddonBenefits({ addon }: { addon: AddonInfo }) {
   const { t } = useI18n()
   const [view, setView] = useState<BenefitsView>(addon.tagFilter ? 'open' : 'own')
   return (
-    <section className="c-panel">
+    <section className="c-panel c-addon">
       <h2 className="c-h2">{t('Benefits (Add-on)')}</h2>
       <PrivacyBanner />
       <div className="c-tabs" role="tablist">

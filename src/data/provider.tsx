@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
-import type { AchievementDef, AchievementView } from '../gamification/achievements'
+import type { AchievementDef, AchievementView, CollectiveProgress, RankingPart } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { Benefit, BenefitTag, BenefitView, RedeemResult as BenefitRedeemResult, Redemption } from '../gamification/benefits'
 import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
@@ -356,6 +356,10 @@ export interface DataProvider {
   markAchievementsSeen(ids: string[]): Promise<void>
   /** A pathway reached its end; the server evaluates achievements. */
   recordPathwayCompleted(slug: string): Promise<void>
+  /** The person's part in every collective achievement, and their unit's progress. */
+  getMyCollectiveProgress(): Promise<CollectiveProgress[]>
+  /** Rankings › the person's own minutes, this month and since joining. */
+  getMyRankingPart(): Promise<RankingPart>
 
   // --- Gamification: geographic ranks (SPEC §4) ---
   /** The city picker: "Campinas · SP". */

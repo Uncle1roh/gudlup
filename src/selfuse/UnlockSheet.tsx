@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { Badge } from '../gamification/ui/Badge'
+import { GamDialog } from '../gamification/ui/Dialog'
 import { copyFor } from '../gamification/copy'
 import { displayLoops } from '../gamification/economy'
 import type { AchievementView } from '../gamification/achievements'
@@ -33,9 +34,7 @@ export function UnlockSheet({
   const many = queue.length > 1
 
   return (
-    <div className="sheet-scrim" role="dialog" aria-modal="true" aria-labelledby="gam-unlock-title" onClick={onClose}>
-      <div className="sheet gam-unlock" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__grip" aria-hidden="true" />
+    <GamDialog labelledBy="gam-unlock-title" onClose={onClose} className="gam-unlock" ownBack={false}>
         <div className="gam-unlock__art" aria-hidden="true">
           <svg className="gam-unlock__orbits" viewBox="0 0 200 120" width="200" height="120">
             <ellipse cx="100" cy="60" rx="96" ry="34" transform="rotate(-12 100 60)" />
@@ -58,7 +57,6 @@ export function UnlockSheet({
         )}
         <button className="btn btn--primary" onClick={onSeeAll}>{t('See my achievements')}</button>
         <button className="btn btn--ghost" onClick={onClose}>{t('Not now')}</button>
-      </div>
-    </div>
+    </GamDialog>
   )
 }

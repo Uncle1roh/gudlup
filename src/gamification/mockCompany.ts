@@ -60,6 +60,13 @@ export class MockCompany {
       rewardBonusLoopsCenti: 3000, rewardBenefitId: null, rewardRule: 'first_to_complete', announceInApp: true, templateSlug: tpl.slug,
     })
     challenges.others.set('novembro-em-loop', 41)
+    /* Last quarter's company challenge, completed — for the history. */
+    challenges.addHistory({
+      id: 'setembro-em-sintonia', companyId: DEMO_COMPANY_ID, title: 'Pausa consciente', description: this.templates.find((t) => t.slug === 'pausa_consciente')!.description,
+      badgeIcon: 'sun', format: 'individual', scope: 'company', scopeRef: DEMO_COMPANY_ID, metric: 'sessions_in_time_window', goalValue: 5, goalKind: 'total',
+      perPersonMin: null, windowStartHour: 12, windowEndHour: 14, startsAt: now - 52 * DAY, endsAt: now - 22 * DAY, status: 'settled',
+      rewardBonusLoopsCenti: 2000, rewardBenefitId: null, rewardRule: 'first_to_complete', announceInApp: true, templateSlug: 'pausa_consciente',
+    }, 5, true, now - 30 * DAY)
   }
 
   /** The add-on in force, pushed into the person's wallet and catalogue. */

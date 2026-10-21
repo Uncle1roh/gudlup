@@ -134,6 +134,11 @@ export class MockLedger {
       })
   }
 
+  /** Every eligible minute ever credited. */
+  lifetimeMinutes(): number {
+    return [...this.usage.values()].reduce((a, u) => a + u.eligibleMinutes, 0)
+  }
+
   balanceCenti(): number {
     return this.loops.reduce((a, e) => a + e.amountCenti, 0)
   }

@@ -152,6 +152,26 @@ export function newlyUnlocked(defs: AchievementDef[], metrics: IndividualMetrics
     .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+/** The person's part in one collective achievement — in minutes, never
+    points (PLAN A6) — and how far their unit is toward the goal. `unitShare`
+    is null when the unit is below its threshold: no figure about it then. */
+export interface CollectiveProgress {
+  slug: string
+  unit: GamScope
+  unitRef: string | null
+  unitName: string | null
+  canTakePart: boolean
+  myMinutes: number
+  neededMinutes: number
+  unitShare: number | null
+}
+
+/** Rankings › your part. */
+export interface RankingPart {
+  monthMinutes: number
+  lifetimeMinutes: number
+}
+
 /* ---- for the screens ---------------------------------------------------- */
 
 /** The locked individual achievement the person is closest to: the highest

@@ -983,6 +983,42 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     markAchievementsSeen: async (ids) => { ledger.markSeen(ids); await wait(20) },
     recordPathwayCompleted: async (slug) => { ledger.recordPathwayCompleted(slug); await wait(20) },
 
+    getMyCollectiveProgress: async () => {
+      await wait(40)
+      const consented = hasConsent(loadMockLegal().consents, 'geo_ranking')
+      const city = DEMO_MUNICIPALITIES.find((m) => m.ibgeCode === mockCity()) ?? null
+      const w = ledger.wallet()
+      const lifetime = ledger.pointsEntries().length ? ledger.lifetimeMinutes() : 0
+      const unit = city ? DEMO_CITY_MONTH.find((c) => c.ref === city.ibgeCode) : undefined
+      const cityOk = !!unit && unit.activeUsers >= ledger.settings.geoMinActiveUsers
+      /* The demo's units: São Paulo's real fixture for the city goal, plain
+         fixtures for the rest. Demo data only. */
+      const share: Record<string, number | null> = {
+        city_in_loop: cityOk && unit ? Math.min(1, unit.points / 100000) : null,
+        calm_capital: null,
+        collective_nights: cityOk ? 0.62 : null,
+        state_in_tune: city ? 0.75 : null,
+        region_in_loop: city ? 0.58 : null,
+        brazil_in_loop: 0.31,
+        company_in_loop: company.addon() ? Math.min(1, 41 / 60) : null,
+        company_in_tune: company.addon() ? 0.68 : null,
+      }
+      return ledger.defs.filter((d) => d.kind === 'collective' && d.active).map((d) => ({
+        slug: d.slug, unit: d.scope,
+        unitRef: d.scope === 'company' ? GAM_COMPANY_ID : d.scope === 'national' ? 'BR' : d.scope === 'city' ? city?.ibgeCode ?? null : d.scope === 'state' ? city?.uf ?? null : city ? REGION_OF_UF[city.uf] : null,
+        unitName: d.scope === 'city' ? city?.name ?? null : d.scope === 'company' ? companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? null : null,
+        canTakePart: d.scope === 'company' ? !!company.addon() : consented && !!city,
+        myMinutes: d.period === 'lifetime' ? lifetime : w.minutesMonth,
+        neededMinutes: ledger.settings.minContributionPoints,
+        unitShare: share[d.slug] ?? null,
+      }))
+    },
+    getMyRankingPart: async () => {
+      await wait(30)
+      const consented = hasConsent(loadMockLegal().consents, 'geo_ranking')
+      return consented ? { monthMinutes: ledger.wallet().minutesMonth, lifetimeMinutes: ledger.lifetimeMinutes() } : { monthMinutes: 0, lifetimeMinutes: 0 }
+    },
+
     // gamification: geographic ranks
     searchMunicipalities: async (q) => delay(searchCities(DEMO_MUNICIPALITIES, q), 60),
     setMyCity: async (code) => {

@@ -30,7 +30,7 @@ import { FirstRun } from './FirstRun'
 import { AddressedAsGate } from './AddressedAsGate'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
-import { ProgressTab } from './ProgressTab'
+import { ProgressTab, type ProgressView } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
 import { BenefitsTab } from './BenefitsTab'
 import { GlCheckFlow, DailyMoodFlow } from './Measures'
@@ -173,7 +173,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      when a session ends: the post-session screen keeps its one metric and
      two actions (GAM-R6), and the sheet only ever opens over Home. */
   const [unlocks, setUnlocks] = useState<AchievementView[]>([])
-  const [progressView, setProgressView] = useState<'summary' | 'achievements'>('summary')
+  const [progressView, setProgressView] = useState<ProgressView>('summary')
   useEffect(() => {
     let alive = true
     const check = () => {
@@ -737,6 +737,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             therapy={therapy}
             view={progressView}
             onView={setProgressView}
+            onStartSession={() => setTab('home')}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
             onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}

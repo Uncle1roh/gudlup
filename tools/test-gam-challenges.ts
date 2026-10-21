@@ -104,7 +104,9 @@ assert(PUBLIC_SCOPES.join() === 'national,region,state,city', 'public scopes: na
   assert(sono.myProgress === 0, 'a scheduled challenge counted nothing')
   assert(!JSON.stringify(ch.mine(NOW)).match(/"(name|email|userId)"/), 'the person reads no one else’s identity')
 
-  assert(ch.adminRows().length === 2, 'the console lists the Good Loop challenges')
+  assert(ch.adminRows().length === 3, 'the console lists the Good Loop challenges')
+  assert(ch.mine(NOW).some((c) => c.id === 'agosto-de-pausas' && c.myProgress === 3 && c.myCompletedAt === null),
+    'the history keeps a challenge taken part in, long ended and not finished')
   let threw = false
   try { ch.save({ ...ch.list[0] }) } catch { threw = true }
   assert(threw, 'a live challenge cannot be edited')

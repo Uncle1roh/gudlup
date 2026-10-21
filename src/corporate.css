@@ -538,3 +538,27 @@
 .c-addon-mode { display: flex; gap: 10px; align-items: flex-start; margin: 0; cursor: pointer; }
 .c-addon-mode > span { display: flex; flex-direction: column; gap: 4px; }
 .c-field--wide { grid-column: 1 / -1; }
+
+/* Add-on pages: the same air as the rest of the dashboard. A panel's
+   blocks are a column with one gap; no block brings its own margin. */
+.c-addon { display: flex; flex-direction: column; gap: 20px; padding: 28px 32px 32px; }
+.c-addon > * { margin: 0; }
+.c-addon > .c-row,
+.c-addon > .c-h2 + .c-addon-banner { margin-top: -12px; }
+.c-addon .c-grid { gap: 16px; }
+.c-addon .c-card { padding: 20px 22px 22px; }
+.c-addon .c-addon-kpis .c-card { gap: 8px; }
+.c-addon .c-addon-card { gap: 12px; }
+.c-addon .c-addon-card .c-actions { margin-top: auto; padding-top: 8px; }
+.c-addon .c-tabs { margin: 0; }
+.c-addon .c-h3 { margin: 8px 0 0; }
+.c-addon .c-addon-tags { margin: 0; }
+.c-addon .c-addon-tags > li { padding: 14px 0; }
+.c-addon .c-addon-templates { margin: 0; gap: 14px; }
+.c-addon .c-addon-modes { margin: 0; gap: 14px; }
+.c-addon .c-addon-check { margin: 0; padding: 16px 18px; }
+.c-addon .c-form { display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 720px) { .c-addon { padding: 20px 18px 24px; gap: 16px; } }
+.c-addon > .c-card:not(.c-addon-card) { display: flex; flex-direction: column; gap: 14px; }
+.c-addon > .c-card > * { margin: 0; }
+.c-addon .c-card > .c-btn { align-self: flex-start; }

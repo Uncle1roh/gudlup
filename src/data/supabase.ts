@@ -29,7 +29,7 @@ import { normalizeTags } from './tags'
 import { normalizePromoCode, type PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
-import type { AchievementDef, AchievementView } from '../gamification/achievements'
+import type { AchievementDef, AchievementView, CollectiveProgress, RankingPart } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import { RedeemError, type Benefit, type BenefitTag, type BenefitView, type RedeemRefusal, type RedeemResult as BenefitRedeemResult, type Redemption } from '../gamification/benefits'
 import type { AdminRedemption, ChallengeReach, GamificationReport } from './provider'
@@ -1633,6 +1633,21 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     async recordPathwayCompleted(slug: string): Promise<void> {
       const { error } = await sb.rpc('record_pathway_completed', { p_slug: slug })
       if (error) throw error
+    },
+    async getMyCollectiveProgress(): Promise<CollectiveProgress[]> {
+      const { data, error } = await sb.rpc('get_my_collective_progress')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): CollectiveProgress => ({
+        slug: r.slug, unit: r.unit, unitRef: r.unitRef ?? null, unitName: r.unitName ?? null, canTakePart: !!r.canTakePart,
+        myMinutes: Number(r.myMinutes ?? 0), neededMinutes: Number(r.neededMinutes ?? 0),
+        unitShare: r.unitShare == null ? null : Number(r.unitShare),
+      }))
+    },
+    async getMyRankingPart(): Promise<RankingPart> {
+      const { data, error } = await sb.rpc('get_my_ranking_part')
+      if (error) throw error
+      const r = (data ?? {}) as { monthMinutes?: number; lifetimeMinutes?: number }
+      return { monthMinutes: Number(r.monthMinutes ?? 0), lifetimeMinutes: Number(r.lifetimeMinutes ?? 0) }
     },
     async searchMunicipalities(q: string): Promise<Municipality[]> {
       const { data, error } = await sb.rpc('search_municipalities', { p_q: q, p_limit: 12 })

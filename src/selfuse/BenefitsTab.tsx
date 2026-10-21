@@ -20,6 +20,7 @@ import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { Icon } from './icons'
 import { Badge } from '../gamification/ui/Badge'
+import { GamDialog } from '../gamification/ui/Dialog'
 import { copyFor } from '../gamification/copy'
 import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type Wallet } from '../gamification/economy'
@@ -229,9 +230,7 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
   }
 
   return (
-    <div className="sheet-scrim" role="dialog" aria-modal="true" aria-labelledby="gam-benefit-title" onClick={onClose}>
-      <div className="sheet gam-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__grip" aria-hidden="true" />
+    <GamDialog labelledBy="gam-benefit-title" onClose={onClose} className="gam-sheet">
         <h2 id="gam-benefit-title" className="display gam-sheet__title">{b.title}</h2>
         {b.partnerName && <p className="small muted">{b.partnerName}</p>}
 
@@ -290,8 +289,7 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
             <button className="btn btn--primary" onClick={onClose}>{t('Done')}</button>
           </>
         )}
-      </div>
-    </div>
+    </GamDialog>
   )
 }
 

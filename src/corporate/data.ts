@@ -150,7 +150,7 @@ export function defaultState(tenant: Tenant = FALLBACK_TENANT): CorporateState {
   }
 }
 
-function slotKey(tenant: Tenant): string {
+export function slotKey(tenant: Tenant): string {
   return `${KEY}.${tenant.code}`
 }
 

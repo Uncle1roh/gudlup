@@ -2517,3 +2517,136 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
 .su-studio .gam-shared__what dd { margin: 0; color: var(--su-fg); font-weight: 600; }
 .su-studio .gam-shared__field { display: flex; flex-direction: column; gap: 4px; }
 .su-studio .gam-shared__field input { min-height: 44px; }
+
+/* --- gamification · spacing on the design system's rhythm ---------------
+   Every gamification block sits on --su-gap between blocks and
+   --su-gap-sm inside one, cards carry the shared 20px inset, and nothing
+   keeps the base .card's bottom margin (a list's gap does that job). */
+.su-studio .gam-stack,
+.su-studio .gam-conquistas { display: flex; flex-direction: column; gap: var(--su-gap); }
+.su-studio .gam-stack > * { margin: 0; }
+.su-studio .gam-section { display: flex; flex-direction: column; gap: var(--su-gap-sm); }
+.su-studio .gam-section > * { margin: 0; }
+.su-studio .gam-list,
+.su-studio .gam-benefits,
+.su-studio .gam-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--su-gap-sm); }
+.su-studio .gam-list .card,
+.su-studio .gam-benefits .card,
+.su-studio .gam-mine .card,
+.su-studio .gam-stack > .card,
+.su-studio .benefits .card { margin: 0; }
+.su-studio .gam-pillar { gap: var(--su-gap-sm); }
+.su-studio .gam-seg { margin: 0; }
+.su-studio .gam-seg--4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.su-studio .gam-seg--4 button { padding-inline: 6px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.su-studio .gam-next,
+.su-studio .gam-milestone,
+.su-studio .gam-benefit,
+.su-studio .gam-challenge,
+.su-studio .gam-history,
+.su-studio .gam-optin,
+.su-studio .gam-rank,
+.su-studio .gam-part,
+.su-studio .gam-note { padding: 20px 20px 22px; gap: 14px; }
+.su-studio .gam-next { text-align: left; width: 100%; cursor: pointer; }
+.su-studio .gam-next__body { display: flex; flex-direction: column; gap: 4px; }
+.su-studio .gam-progress { display: flex; flex-direction: column; gap: 8px; }
+.su-studio .gam-city,
+.su-studio .gam-care { padding: 22px 22px 24px; gap: 10px; }
+.su-studio .gam-care__start { margin-top: 8px; }
+.su-studio .gam-grid { gap: var(--su-gap) var(--su-gap-sm); }
+.su-studio .gam-cell {
+  width: 100%; padding: 14px 6px 12px; border-radius: 16px; gap: 8px;
+  background: transparent; border: 1px solid transparent; cursor: pointer; color: inherit; font: inherit;
+}
+.su-studio .gam-cell:hover { background: var(--su-on); }
+.su-studio .gam-cell:focus-visible { outline: 2px solid var(--su-accent); outline-offset: 2px; }
+.su-studio .gam-inline-btn { align-self: flex-start; width: auto; min-height: 44px; }
+.su-studio .gam-rank__list li { padding: 8px 12px; }
+
+/* Rankings › your part */
+.su-studio .gam-part__figs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--su-gap-sm); }
+.su-studio .gam-part__figs > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 14px; background: var(--su-on); }
+.su-studio .gam-part__value { font-size: 22px; font-weight: 700; color: var(--su-fg); }
+
+/* Challenges › history */
+.su-studio .gam-history { display: flex; flex-direction: row; align-items: center; gap: 16px; width: 100%; text-align: left; cursor: pointer; }
+.su-studio .gam-history .gam-badge { flex: none; }
+.su-studio .gam-history__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.su-studio .gam-history__title { font-size: 17px; font-weight: 600; color: var(--su-fg); }
+
+/* --- the dialog: a bottom sheet on a phone, a centred dialog on desktop -- */
+.su-studio .gam-dialog {
+  position: relative;
+  padding: 14px var(--su-inset) max(28px, env(safe-area-inset-bottom));
+  gap: var(--su-gap-sm);
+}
+.su-studio .gam-dialog > * { margin: 0; }
+.su-studio .gam-dialog__x {
+  position: absolute; top: 12px; right: 12px;
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px;
+  background: transparent; border: 0; color: var(--su-muted); cursor: pointer;
+}
+.su-studio .gam-dialog__x:hover { background: var(--su-on); color: var(--su-fg); }
+.su-studio .gam-dialog .gam-sheet__title,
+.su-studio .gam-dialog .gam-ach__name { padding-right: 40px; }
+.su-studio .gam-unlock .gam-unlock__name,
+.su-studio .gam-ach__head .gam-ach__name { padding-inline: 40px; }
+.su-studio .gam-sheet { gap: 14px; }
+.su-studio .gam-sheet .btn + .btn { margin-top: -4px; }
+.su-studio .gam-unlock { gap: 14px; padding-top: 18px; }
+
+@media (min-width: 900px) {
+  .su-studio .gam-scrim { align-items: center; justify-content: center; padding: 32px; }
+  .su-studio .gam-dialog {
+    max-width: 520px; max-height: calc(100dvh - 64px); overflow-y: auto;
+    border-radius: 24px;
+    padding: 36px 40px 36px;
+    gap: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  }
+  .su-studio .gam-dialog > .sheet__grip { display: none; }
+  .su-studio .gam-dialog__x { top: 16px; right: 16px; }
+  .su-studio .gam-sheet .btn + .btn { margin-top: 0; }
+
+  /* the wide screens: lists breathe in two columns, badges in more */
+  .su-studio .gam-benefits,
+  .su-studio .gam-mine,
+  .su-studio .gam-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--su-gap-sm) var(--su-gap); }
+  .su-studio .gam-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .su-studio .gam-seg--4 { max-width: 640px; }
+  .su-studio .gam-seg--4 button { font-size: 15px; }
+}
+
+/* --- an achievement's detail -------------------------------------------- */
+.su-studio .gam-ach__head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-top: 8px; }
+.su-studio .gam-ach__head > * { margin: 0; }
+.su-studio .gam-ach__name { font-size: 26px; color: var(--su-fg); }
+.su-studio .gam-ach__rule { color: var(--su-fg-2); max-width: 36ch; }
+.su-studio .gam-ach__status { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+.su-studio .gam-ach__status .gam-pill { margin: 0; }
+.su-studio .gam-chip--muted { background: var(--su-on); color: var(--su-muted); align-self: auto; }
+.su-studio .gam-chip--done { background: var(--su-accent); color: var(--su-on-accent); align-self: auto; }
+.su-studio .gam-ach__line { text-align: center; color: var(--su-fg-2); }
+.su-studio .gam-ach__collective { display: flex; flex-direction: column; gap: var(--su-gap-sm); }
+.su-studio .gam-ach__block { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--su-hair-2); }
+.su-studio .gam-ach__block > * { margin: 0; }
+.su-studio .gam-ach__label { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--su-muted); }
+.su-studio .gam-ach__mine { font-size: 20px; font-weight: 700; color: var(--su-fg); }
+.su-studio .gam-ach__foot { text-align: center; }
+.su-studio .gam-bar--violet > span { background: #9C6FB0; }
+
+/* A page is a flex column; its gamification blocks keep their own height
+   instead of being squeezed to their min-height. */
+.su-studio .su-page > .gam-milestone,
+.su-studio .su-page > .gam-care,
+.su-studio .su-page > .gam-stack,
+.su-studio .su-page > .gam-seg,
+.su-studio .su-page > .gam-pillar,
+.su-studio .gam-stack > * { flex: none; }
+
+/* Four views on a phone: each tab takes the width its word needs. */
+.su-studio .gam-seg--4 { display: flex; gap: 6px; }
+.su-studio .gam-seg--4 button { flex: 1 1 auto; min-width: 0; padding-inline: 8px; font-size: 13.5px; overflow: visible; text-overflow: clip; }
+@media (min-width: 900px) { .su-studio .gam-seg--4 button { font-size: 15px; padding-inline: 16px; } }

@@ -32,6 +32,14 @@ export function demoChallenges(now: number): Challenge[] {
       rewardBonusLoopsCenti: null, rewardBenefitId: 'corpo3', rewardRule: 'first_to_complete', announceInApp: true, templateSlug: null,
     },
     {
+      id: 'agosto-de-pausas', companyId: null, title: 'Agosto de Pausas',
+      description: 'Cinco pausas no meio do dia ao longo do mês.', badgeIcon: 'sun',
+      format: 'individual', scope: 'national', scopeRef: null, metric: 'sessions_in_time_window', goalValue: 5, goalKind: 'total',
+      perPersonMin: null, windowStartHour: 12, windowEndHour: 14,
+      startsAt: now - 80 * DAY, endsAt: now - 50 * DAY, status: 'settled',
+      rewardBonusLoopsCenti: 3000, rewardBenefitId: null, rewardRule: 'first_to_complete', announceInApp: true, templateSlug: null,
+    },
+    {
       id: 'semana-do-sono', companyId: null, title: 'Semana do Sono',
       description: 'Cinco sessões depois das 21h em uma semana, para chegar à cama mais calmo.', badgeIcon: 'moon',
       format: 'individual', scope: 'national', scopeRef: null, metric: 'sessions_in_time_window', goalValue: 5, goalKind: 'total',
@@ -52,6 +60,15 @@ export class MockChallenges {
   constructor(private ledger: MockLedger, private benefits: MockBenefits, now = Date.now()) {
     this.list = demoChallenges(now)
     ledger.onCredit = (rec, points, at) => this.count(rec, points, at)
+    /* History, for Progress › Desafios: an old challenge the demo person
+       took part in and did not finish — nothing is lost, it just shows. */
+    this.parts.set('agosto-de-pausas', { progress: 3, points: 60, completedAt: null, rewardedAt: null, granted: false })
+  }
+
+  /** A past challenge with the person's result — demo history (mockCompany). */
+  addHistory(c: Challenge, progress: number, completed: boolean, at: number): void {
+    this.list.push(c)
+    this.parts.set(c.id, { progress, points: progress * 22, completedAt: completed ? at : null, rewardedAt: completed ? at : null, granted: false })
   }
 
   private part(id: string): Part {
@@ -117,7 +134,8 @@ export class MockChallenges {
 
   mine(now = Date.now()): ChallengeView[] {
     return this.list
-      .filter((c) => c.status !== 'draft' && c.status !== 'cancelled' && c.endsAt > now - 14 * DAY)
+      .filter((c) => c.status !== 'draft' && c.status !== 'cancelled'
+        && (c.endsAt > now - 14 * DAY || (this.parts.get(c.id)?.progress ?? 0) > 0))
       .map((c) => {
         const p = this.parts.get(c.id)
         const reward = c.rewardBenefitId ? this.benefits.catalog.find((b) => b.id === c.rewardBenefitId) : undefined

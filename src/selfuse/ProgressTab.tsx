@@ -40,14 +40,18 @@ import {
 import { glCheckDue, type SelfUseState } from '../data/selfUseStore'
 import { type TherapyState } from './therapyStore'
 import { Conquistas } from './Conquistas'
+import { RankingsTab } from './Coletivas'
+import { ChallengesTab } from './ChallengesTab'
 
-export type ProgressView = 'summary' | 'achievements'
+export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges'
 
 interface ProgressProps {
   state: SelfUseState
   therapy: TherapyState
   view: ProgressView
   onView: (v: ProgressView) => void
+  /** "Iniciar sessão" from a challenge: back to the library. */
+  onStartSession: () => void
   onGlCheck: () => void
   onMood: () => void
   onGoTherapist: () => void
@@ -55,17 +59,31 @@ interface ProgressProps {
   onExportTherapy: () => void
 }
 
+const VIEWS: { id: ProgressView; label: string }[] = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'rankings', label: 'Rankings' },
+  { id: 'challenges', label: 'Challenges' },
+]
+
 export function ProgressTab(props: ProgressProps) {
   const { t } = useI18n()
   const { view, onView } = props
   return (
     <div className="su-page progress">
       <h1 className="display su-h1">{t('Progress')}</h1>
-      <div className="segmented gam-seg" role="group" aria-label={t('Progress')}>
-        <button aria-pressed={view === 'summary'} onClick={() => onView('summary')}>{t('Summary')}</button>
-        <button aria-pressed={view === 'achievements'} onClick={() => onView('achievements')}>{t('Achievements')}</button>
+      {/* Four views, each its own kind of information: how the week felt,
+          what stays (achievements), where you stand together (rankings),
+          and the challenges — the company's, the live ones, the history. */}
+      <div className="segmented gam-seg gam-seg--4" role="tablist" aria-label={t('Progress')}>
+        {VIEWS.map((v) => (
+          <button key={v.id} role="tab" aria-selected={view === v.id} aria-pressed={view === v.id} onClick={() => onView(v.id)}>{t(v.label)}</button>
+        ))}
       </div>
-      {view === 'achievements' ? <Conquistas /> : <Summary {...props} />}
+      {view === 'achievements' && <Conquistas onGoRankings={() => onView('rankings')} />}
+      {view === 'rankings' && <RankingsTab />}
+      {view === 'challenges' && <ChallengesTab onStartSession={props.onStartSession} />}
+      {view === 'summary' && <Summary {...props} />}
     </div>
   )
 }
