@@ -45,7 +45,8 @@ export class MockCompany {
       challengeExclusiveId: null, sortOrder: 0, tagIds: [], ...p,
     })
     benefits.catalog.push(
-      own('co-folga', { title: 'Um dia de folga', careRationale: 'Um dia inteiro para descansar de verdade.', pillar: 'pausas_lazer', priceLoopsCenti: 30000, deliveryType: 'identified', stockTotal: 10, stockRemaining: 10 }),
+      /* free in the demo, so the identified consent can be tried at once */
+      own('co-folga', { title: 'Um dia de folga', careRationale: 'Um dia inteiro para descansar de verdade.', pillar: 'pausas_lazer', priceLoopsCenti: 0, deliveryType: 'identified', stockTotal: 10, stockRemaining: 10 }),
       own('co-cafe', { title: 'Café da manhã da empresa', careRationale: 'Uma pausa juntos, sem pressa.', pillar: 'alimentacao', priceLoopsCenti: 0, deliveryType: 'collective' }),
     )
 

@@ -316,11 +316,24 @@ function mockTherapistName(therapistId: string): string {
 
 const NR1_CURRENT_PERIOD = PERIODS[PERIODS.length - 1].period
 
+/* The gamification demo's state (docs/gamification/SPEC.md): one per page
+   load, like the rest of this module's fixtures, so a plan changed in the
+   console, a tag switched off by HR and a session in the app all see the
+   same company while the demo moves between surfaces. */
+let gamState: { ledger: MockLedger; benefits: MockBenefits; challenges: MockChallenges; company: MockCompany } | null = null
+function gamification() {
+  if (!gamState) {
+    const ledger = new MockLedger()
+    const benefits = new MockBenefits(ledger)
+    const challenges = new MockChallenges(ledger, benefits)
+    const company = new MockCompany(ledger, benefits, challenges, companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? 'Aurora')
+    gamState = { ledger, benefits, challenges, company }
+  }
+  return gamState
+}
+
 export function createMockProvider(): DataProvider {
-  const ledger = new MockLedger()
-  const benefits = new MockBenefits(ledger)
-  const challenges = new MockChallenges(ledger, benefits)
-  const company = new MockCompany(ledger, benefits, challenges, companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? 'Aurora')
+  const { ledger, benefits, challenges, company } = gamification()
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -1058,6 +1071,56 @@ export function createMockProvider(): DataProvider {
       else company.plans.push({ ...p })
     },
     adminListSubscriptions: async () => delay(company.subscriptions.map((s) => ({ ...s })), 40),
+    adminListAchievementDefs: async () => delay(ledger.defs.map((d) => ({ ...d, id: d.slug })), 40),
+    adminSaveAchievementDef: async (d) => {
+      await wait(40)
+      if (d.threshold <= 0 || d.bonusLoopsCenti < 0) throw new Error('Soglia > 0 e bonus ≥ 0.')
+      const i = ledger.defs.findIndex((x) => x.slug === d.slug)
+      if (i >= 0) ledger.defs[i] = { ...ledger.defs[i], threshold: d.threshold, bonusLoopsCenti: d.bonusLoopsCenti, active: d.active }
+    },
+    adminEvaluateAchievements: async () => { await wait(60); return ledger.evaluate().length },
+    adminGamificationReport: async (from, to) => {
+      await wait(80)
+      const a = Date.parse(`${from}T00:00:00-03:00`)
+      const b = Date.parse(`${to}T23:59:59-03:00`)
+      const loops = ledger.loopsEntries().filter((e) => e.createdAt >= a && e.createdAt <= b)
+      const by = new Map<string, { entryType: string; fundingSource: 'goodloop' | 'company'; centi: number; entries: number }>()
+      for (const e of loops) {
+        const k = `${e.entryType}|${e.fundingSource}`
+        const cur = by.get(k) ?? { entryType: e.entryType, fundingSource: e.fundingSource, centi: 0, entries: 0 }
+        cur.centi += e.amountCenti; cur.entries += 1
+        by.set(k, cur)
+      }
+      const mult = loops.filter((e) => e.entryType === 'earn_company_multiplier' && e.companyId)
+      const months = new Map<string, { companyId: string; companyName: string; month: string; loopsCenti: number; people: number }>()
+      for (const e of mult) {
+        const month = new Date(e.createdAt).toISOString().slice(0, 7) + '-01'
+        const k = `${e.companyId}|${month}`
+        const cur = months.get(k) ?? { companyId: e.companyId!, companyName: companies.find((c) => c.id === e.companyId)?.name ?? e.companyId!, month, loopsCenti: 0, people: 1 }
+        cur.loopsCenti += e.amountCenti
+        months.set(k, cur)
+      }
+      const reds = benefits.all().filter((r) => r.createdAt >= a && r.createdAt <= b)
+      const perBenefit = new Map<string, { benefitId: string; title: string; companyId: string | null; redemptions: number; refunded: number; loopsCenti: number }>()
+      for (const r of reds) {
+        const cur = perBenefit.get(r.benefitId) ?? { benefitId: r.benefitId, title: r.title, companyId: benefits.catalog.find((x) => x.id === r.benefitId)?.companyId ?? null, redemptions: 0, refunded: 0, loopsCenti: 0 }
+        if (r.status === 'refunded') cur.refunded += 1
+        else { cur.redemptions += 1; cur.loopsCenti += r.loopsSpentCenti }
+        perBenefit.set(r.benefitId, cur)
+      }
+      return {
+        from, to,
+        pointsIssued: ledger.pointsEntries().filter((p) => p.createdAt >= a && p.createdAt <= b).reduce((s, p) => s + p.points, 0),
+        loopsBySource: [...by.values()],
+        redemptionsByBenefit: [...perBenefit.values()],
+        multiplierByCompanyMonth: [...months.values()],
+        challengeResults: challenges.adminRows().map((c) => ({
+          id: c.id, title: c.title, companyId: c.companyId, status: c.status, startsAt: c.startsAt, endsAt: c.endsAt,
+          participants: c.participants, completed: c.completed, rewarded: c.rewarded,
+          bonusCenti: loops.filter((e) => e.entryType === 'challenge_bonus' && e.sourceId === c.id).reduce((s, e) => s + e.amountCenti, 0),
+        })),
+      }
+    },
     adminSetCompanyPlan: async (companyId, planId) => {
       await wait(60)
       company.setPlan(companyId, planId, companies.find((c) => c.id === companyId)?.name ?? companyId)

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
-import type { AchievementView } from '../gamification/achievements'
+import type { AchievementDef, AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { Benefit, BenefitTag, BenefitView, RedeemResult as BenefitRedeemResult, Redemption } from '../gamification/benefits'
 import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
@@ -425,6 +425,25 @@ export interface DataProvider {
   adminSavePlan(p: AddonPlan): Promise<void>
   adminListSubscriptions(): Promise<CompanySubscription[]>
   adminSetCompanyPlan(companyId: string, planId: string | null): Promise<void>
+
+  // --- Gamification: the console's achievements and reports (SPEC §8) ---
+  adminListAchievementDefs(): Promise<(AchievementDef & { id: string })[]>
+  /** Threshold, bonus, active — the slug, metric and scope are fixed. */
+  adminSaveAchievementDef(d: AchievementDef & { id: string }): Promise<void>
+  /** Re-evaluate everyone, e.g. after lowering a threshold. Returns new unlocks. */
+  adminEvaluateAchievements(): Promise<number>
+  adminGamificationReport(from: string, to: string): Promise<GamificationReport>
+}
+
+/** Admin › Report: totals only, never a person. Dates are YYYY-MM-DD. */
+export interface GamificationReport {
+  from: string
+  to: string
+  pointsIssued: number
+  loopsBySource: { entryType: string; fundingSource: 'goodloop' | 'company'; centi: number; entries: number }[]
+  redemptionsByBenefit: { benefitId: string; title: string; companyId: string | null; redemptions: number; refunded: number; loopsCenti: number }[]
+  multiplierByCompanyMonth: { companyId: string; companyName: string; month: string; loopsCenti: number; people: number }[]
+  challengeResults: { id: string; title: string; companyId: string | null; status: string; startsAt: number; endsAt: number; participants: number; completed: number; rewarded: number; bonusCenti: number }[]
 }
 
 export interface ChallengeReach {

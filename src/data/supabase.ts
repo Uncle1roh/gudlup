@@ -29,10 +29,10 @@ import { normalizeTags } from './tags'
 import { normalizePromoCode, type PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
-import type { AchievementView } from '../gamification/achievements'
+import type { AchievementDef, AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import { RedeemError, type Benefit, type BenefitTag, type BenefitView, type RedeemRefusal, type RedeemResult as BenefitRedeemResult, type Redemption } from '../gamification/benefits'
-import type { AdminRedemption, ChallengeReach } from './provider'
+import type { AdminRedemption, ChallengeReach, GamificationReport } from './provider'
 import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
 import type {
   AddonDashboard, AddonInfo, AddonPlan, ChallengeTemplate, CompanyBenefitRow, CompanyChallengeDraft,
@@ -1959,6 +1959,36 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         id: s.id, companyId: s.company_id, companyName: s.companies?.name ?? s.company_id, planId: s.plan_id,
         startsAt: toMs(s.starts_at), endsAt: s.ends_at ? toMs(s.ends_at) : null, status: s.status,
       }))
+    },
+    async adminListAchievementDefs(): Promise<(AchievementDef & { id: string })[]> {
+      const { data, error } = await sb.from('achievement_definitions').select('*').order('sort_order')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((d) => ({
+        id: d.id, slug: d.slug, kind: d.kind, scope: d.scope, metric: d.metric, threshold: Number(d.threshold), period: d.period,
+        tier: d.tier, icon: d.icon, bonusLoopsCenti: d.bonus_loops_centi, active: !!d.active, sortOrder: d.sort_order,
+      }))
+    },
+    async adminSaveAchievementDef(d: AchievementDef & { id: string }): Promise<void> {
+      const { error } = await sb.from('achievement_definitions')
+        .update({ threshold: d.threshold, bonus_loops_centi: d.bonusLoopsCenti, active: d.active }).eq('id', d.id)
+      if (error) throw error
+    },
+    async adminEvaluateAchievements(): Promise<number> {
+      const { data, error } = await sb.rpc('admin_evaluate_achievements')
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    async adminGamificationReport(from: string, to: string): Promise<GamificationReport> {
+      const { data, error } = await sb.rpc('admin_gamification_report', { p_from: from, p_to: to })
+      if (error) throw error
+      const r = data as any
+      return {
+        from: r.from, to: r.to, pointsIssued: Number(r.pointsIssued ?? 0),
+        loopsBySource: ((r.loopsBySource ?? []) as any[]).map((x) => ({ entryType: x.entryType, fundingSource: x.fundingSource, centi: Number(x.centi), entries: Number(x.entries) })),
+        redemptionsByBenefit: ((r.redemptionsByBenefit ?? []) as any[]).map((x) => ({ benefitId: x.benefitId, title: x.title, companyId: x.companyId ?? null, redemptions: Number(x.redemptions ?? 0), refunded: Number(x.refunded ?? 0), loopsCenti: Number(x.loopsCenti ?? 0) })),
+        multiplierByCompanyMonth: ((r.multiplierByCompanyMonth ?? []) as any[]).map((x) => ({ companyId: x.companyId, companyName: x.companyName, month: x.month, loopsCenti: Number(x.loopsCenti), people: Number(x.people) })),
+        challengeResults: ((r.challengeResults ?? []) as any[]).map((x) => ({ id: x.id, title: x.title, companyId: x.companyId ?? null, status: x.status, startsAt: toMs(x.startsAt), endsAt: toMs(x.endsAt), participants: Number(x.participants), completed: Number(x.completed), rewarded: Number(x.rewarded), bonusCenti: Number(x.bonusCenti) })),
+      }
     },
     async adminSetCompanyPlan(companyId: string, planId: string | null): Promise<void> {
       const { error } = await sb.rpc('admin_set_company_plan', { p_company: companyId, p_plan: planId })

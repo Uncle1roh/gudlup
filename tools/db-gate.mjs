@@ -65,9 +65,12 @@ try {
   const tests = ok && existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.sql')).sort() : []
   for (const t of tests) {
     const path = join(dir, t)
-    const first = readFileSync(path, 'utf8').split('\n')[0]
-    const m = /^--\s*fixtures:\s*(\S+)/.exec(first)
-    const files = []
+    const head = readFileSync(path, 'utf8').split('\n').slice(0, 3)
+    const m = head.map((l) => /^--\s*fixtures:\s*(\S+)/.exec(l)).find(Boolean)
+    /* `-- seed: file.sql` — applied twice before the proof, so the proof
+       also shows the seed is safe to re-run. */
+    const seed = head.map((l) => /^--\s*seed:\s*(\S+)/.exec(l)).find(Boolean)
+    const files = seed ? ['-f', seed[1], '-f', seed[1]] : []
     if (m) {
       const json = readFileSync(m[1], 'utf8')
       const pre = join(CACHE, `${t}.fixtures.sql`)
