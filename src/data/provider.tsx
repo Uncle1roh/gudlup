@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
 import type { AchievementView } from '../gamification/achievements'
+import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -349,6 +350,19 @@ export interface DataProvider {
   markAchievementsSeen(ids: string[]): Promise<void>
   /** A pathway reached its end; the server evaluates achievements. */
   recordPathwayCompleted(slug: string): Promise<void>
+
+  // --- Gamification: geographic ranks (SPEC §4) ---
+  /** The city picker: "Campinas · SP". */
+  searchMunicipalities(q: string): Promise<Municipality[]>
+  /** The city the person declares; null clears it. The geo_ranking consent
+      is recorded separately, through recordConsent. */
+  setMyCity(ibgeCode: string | null): Promise<void>
+  /** Units above their threshold, ranked by Points per active person —
+      returned without Points (PLAN A6). */
+  getGeoRankings(scope: GeoScope, period: 'month' | 'all', limit?: number): Promise<GeoRanking>
+  getMyCityCard(): Promise<CityCard | null>
+  /** Admin: refresh the roll-up and evaluate collective achievements. */
+  adminRefreshGeo(): Promise<number>
 }
 
 const DataCtx = createContext<DataProvider | null>(null)

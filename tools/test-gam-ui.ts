@@ -36,11 +36,11 @@ const onlyPt = ptKeys.filter((k) => !itKeys.has(k))
 assert(!onlyPt.length, `pt and it dictionaries carry the same keys${onlyPt.length ? `: only in pt ${onlyPt.join(' | ')}` : ''}`)
 
 /* The screens' literal t('…') keys, read from source, must all be in pt. */
-for (const file of ['src/selfuse/Conquistas.tsx', 'src/selfuse/UnlockSheet.tsx', 'src/gamification/copy.ts']) {
+for (const file of ['src/selfuse/Conquistas.tsx', 'src/selfuse/UnlockSheet.tsx', 'src/gamification/copy.ts', 'src/selfuse/Coletivas.tsx', 'src/selfuse/CityPicker.tsx']) {
   const src = readFileSync(file, 'utf8')
   const keys = [...src.matchAll(/\bt\(\s*'([^']+)'/g)].map((m) => m[1])
     .concat([...src.matchAll(/(?:of|left): '([^']+)'/g)].map((m) => m[1]))
-  const shared = new Set(['Loading…', 'Next', 'Previous', 'Not now'])
+  const shared = new Set(['Loading…', 'Next', 'Previous', 'Not now', 'Saved.', 'This month', 'Period'])
   const missing = keys.filter((k) => !shared.has(k) && !PT_GAMIFICATION[k])
   assert(!missing.length, `${file}: every screen string has pt-BR${missing.length ? `: missing ${missing.join(' | ')}` : ''}`)
 }

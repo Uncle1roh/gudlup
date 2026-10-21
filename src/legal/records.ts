@@ -71,9 +71,10 @@ export type ConsentPurpose =
   | 'marketing'        // product news
   | 'testimonial'      // an account of the person's experience may be published
   | 'research'         // de-identified use in research about the methodology
+  | 'geo_ranking'      // listening counts toward the city the person declares (gamification, SPEC §4.1)
 
 export const CONSENT_PURPOSES: ConsentPurpose[] = [
-  'measurement', 'aggregate', 'notifications', 'therapist_bridge', 'marketing', 'testimonial', 'research',
+  'measurement', 'aggregate', 'notifications', 'therapist_bridge', 'marketing', 'testimonial', 'research', 'geo_ranking',
 ]
 
 export interface ConsentEvent {

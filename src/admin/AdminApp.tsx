@@ -14,11 +14,12 @@ import { PartnerProducts } from './PartnerProducts'
 import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
+import { Economy } from './Economy'
 import { Compliance } from './Compliance'
 import { HelpNowButton } from '../legal/HelpNow'
 import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'partners' | 'users' | 'compliance' | 'switches' | 'audit'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'partners' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -29,6 +30,7 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'companies', label: 'Aziende', icon: '◭' },
   { id: 'promo', label: 'Codici promo', icon: '%' },
   { id: 'partners', label: 'Partner', icon: '❖' },
+  { id: 'economy', label: 'Economia', icon: '∞' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
   { id: 'compliance', label: 'Conformità', icon: '§' },
   { id: 'switches', label: 'Interruttori', icon: '⏻' },
@@ -134,6 +136,7 @@ export function AdminApp() {
         {section === 'compliance' && <Compliance actor={actor} />}
         {section === 'switches' && <FeatureSwitches actor={actor} />}
         {section === 'audit' && <AuditLog />}
+        {section === 'economy' && <Economy actor={actor} />}
       </main>
     </div>
   )

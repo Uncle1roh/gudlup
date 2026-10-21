@@ -30,6 +30,7 @@ import { normalizePromoCode, type PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type LoopsEntry, type Wallet } from '../gamification/economy'
 import type { AchievementView } from '../gamification/achievements'
+import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -1625,6 +1626,49 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     async recordPathwayCompleted(slug: string): Promise<void> {
       const { error } = await sb.rpc('record_pathway_completed', { p_slug: slug })
       if (error) throw error
+    },
+    async searchMunicipalities(q: string): Promise<Municipality[]> {
+      const { data, error } = await sb.rpc('search_municipalities', { p_q: q, p_limit: 12 })
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r) => ({ ibgeCode: r.ibge_code, name: r.name, uf: r.uf }))
+    },
+    async setMyCity(ibgeCode: string | null): Promise<void> {
+      const { error } = await sb.rpc('set_my_city', { p_code: ibgeCode })
+      if (error) throw error
+    },
+    async getGeoRankings(scope: GeoScope, period: 'month' | 'all', limit = 5): Promise<GeoRanking> {
+      const { data, error } = await sb.rpc('get_geo_rankings', { p_scope: scope, p_period: period, p_limit: limit })
+      if (error) throw error
+      const r = data as any
+      return {
+        scope: r.scope,
+        period: r.period,
+        threshold: r.threshold,
+        rows: ((r.rows ?? []) as any[]).map((x) => ({
+          ref: x.ref, name: x.name ?? null, uf: x.uf ?? null, rank: Number(x.rank),
+          minutesPerActive: Number(x.minutesPerActive ?? 0), mine: !!x.mine,
+        })),
+        mine: r.mine ? { ref: r.mine.ref, name: r.mine.name ?? null, uf: r.mine.uf ?? null, rank: r.mine.rank == null ? null : Number(r.mine.rank), eligible: !!r.mine.eligible } : null,
+      }
+    },
+    async getMyCityCard(): Promise<CityCard | null> {
+      const { data, error } = await sb.rpc('get_my_city_card')
+      if (error) throw error
+      const r = data as any
+      if (!r) return null
+      return {
+        consented: !!r.consented,
+        city: r.city ? { ibgeCode: r.city.ref, name: r.city.name, uf: r.city.uf } : null,
+        eligible: !!r.eligible,
+        goalSlug: r.goalSlug ?? 'city_in_loop',
+        goalShare: r.goalShare == null ? null : Number(r.goalShare),
+        myMinutesMonth: Number(r.myMinutesMonth ?? 0),
+      }
+    },
+    async adminRefreshGeo(): Promise<number> {
+      const { data, error } = await sb.rpc('admin_refresh_geo')
+      if (error) throw error
+      return Number(data ?? 0)
     },
     async saveEconomySettings(next: EconomySettings): Promise<void> {
       // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)

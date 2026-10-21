@@ -16,6 +16,24 @@ import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, d
 import { MIN_COHORT } from '../legal/market'
 import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
+import { hasConsent } from '../legal/records'
+import {
+  DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
+  type GeoScope, type GeoUnit,
+} from '../gamification/geo'
+
+/* The demo person's declared city, kept on the device like the rest of the
+   demo's state. Never a location — a choice from the picker. */
+const MOCK_CITY_KEY = 'gl.mock.city'
+function mockCity(): string | null {
+  try { return localStorage.getItem(MOCK_CITY_KEY) } catch { return null }
+}
+function mockGeoUnits(scope: GeoScope, period: 'month' | 'all'): GeoUnit[] {
+  const cities = period === 'all'
+    ? DEMO_CITY_MONTH.map((c) => ({ ...c, points: c.points * 4, minutes: c.minutes * 4, activeUsers: Math.round(c.activeUsers * 1.6) }))
+    : DEMO_CITY_MONTH
+  return rollUp(cities, scope, (ref) => DEMO_MUNICIPALITIES.find((m) => m.ibgeCode === ref)?.uf)
+}
 
 /* ---- what an admin edits survives a reload, in DEMO mode only -----------
 
@@ -927,6 +945,46 @@ export function createMockProvider(): DataProvider {
     listMyAchievements: async () => delay(ledger.achievements(), 40),
     markAchievementsSeen: async (ids) => { ledger.markSeen(ids); await wait(20) },
     recordPathwayCompleted: async (slug) => { ledger.recordPathwayCompleted(slug); await wait(20) },
+
+    // gamification: geographic ranks
+    searchMunicipalities: async (q) => delay(searchCities(DEMO_MUNICIPALITIES, q), 60),
+    setMyCity: async (code) => {
+      if (code !== null && !DEMO_MUNICIPALITIES.some((m) => m.ibgeCode === code)) throw new Error('unknown municipality')
+      try { code === null ? localStorage.removeItem(MOCK_CITY_KEY) : localStorage.setItem(MOCK_CITY_KEY, code) } catch { /* fine */ }
+      await wait(40)
+    },
+    getGeoRankings: async (scope, period, limit = 5) => {
+      await wait(60)
+      const threshold = scope === 'city' ? ledger.settings.geoMinActiveUsers : ledger.settings.hrMinCohort
+      const ranked = rankUnits(mockGeoUnits(scope, period), threshold)
+      const consented = hasConsent(loadMockLegal().consents, 'geo_ranking')
+      const city = consented ? DEMO_MUNICIPALITIES.find((m) => m.ibgeCode === mockCity()) : undefined
+      const mineRef = !city ? null : scope === 'city' ? city.ibgeCode : scope === 'state' ? city.uf : REGION_OF_UF[city.uf]
+      const label = (ref: string) => {
+        const m = scope === 'city' ? DEMO_MUNICIPALITIES.find((x) => x.ibgeCode === ref) : undefined
+        return { name: m?.name ?? null, uf: m?.uf ?? null }
+      }
+      const mineRow = ranked.find((r) => r.ref === mineRef)
+      return {
+        scope, period, threshold,
+        rows: ranked.slice(0, limit).map((r) => ({ ref: r.ref, ...label(r.ref), rank: r.rank, minutesPerActive: r.minutesPerActive, mine: r.ref === mineRef })),
+        mine: mineRef ? { ref: mineRef, ...label(mineRef), rank: mineRow?.rank ?? null, eligible: !!mineRow } : null,
+      }
+    },
+    getMyCityCard: async () => {
+      await wait(40)
+      const consented = hasConsent(loadMockLegal().consents, 'geo_ranking')
+      const city = DEMO_MUNICIPALITIES.find((m) => m.ibgeCode === mockCity()) ?? null
+      const unit = city ? DEMO_CITY_MONTH.find((c) => c.ref === city.ibgeCode) : undefined
+      const eligible = !!unit && unit.activeUsers >= ledger.settings.geoMinActiveUsers
+      const goal = ledger.defs.find((d) => d.slug === 'city_in_loop')?.threshold ?? 100000
+      return {
+        consented, city, eligible, goalSlug: 'city_in_loop',
+        goalShare: eligible && unit ? Math.min(1, unit.points / goal) : null,
+        myMinutesMonth: ledger.wallet().minutesMonth,
+      }
+    },
+    adminRefreshGeo: async () => { await wait(200); return 0 },
     saveEconomySettings: async (next) => {
       if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
       ledger.settings = { ...next }

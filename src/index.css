@@ -1529,6 +1529,10 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-tr--head { background: var(--mist-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--slate); }
 .adm-tr__right { text-align: right; display: flex; justify-content: flex-end; }
 .adm-tr.is-inactive { opacity: 0.55; }
+/* Economia (gamification): a two-column read-out, narrow enough for a phone */
+.adm-econ { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0 0 28px; }
+.adm-econ .adm-table { width: 100%; }
+.adm-table--economy .adm-tr { grid-template-columns: 1fr minmax(110px, auto); min-width: 0; }
 .adm-table--catalog .adm-tr { grid-template-columns: 92px 1.5fr 1fr 132px 1.1fr 96px 158px; }
 /* one pill per time signature (6 / 12 / 24 min) in the catalog's Durate cell */
 .adm-durs { display: flex; gap: 4px; flex-wrap: wrap; }

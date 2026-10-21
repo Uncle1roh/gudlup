@@ -39,6 +39,7 @@ import { HelpNowButton } from '../legal/HelpNow'
 import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES } from '../legal/market'
 import { LEGAL_VERSION, type LegalDocId } from '../legal/types'
 import type { ConsentPurpose, ReportKind } from '../legal/records'
+import { GEO_CONSENT_LABEL, GEO_CONSENT_NOTE, ProfileCity } from './Coletivas'
 
 interface ProfileProps {
   name: string
@@ -317,6 +318,9 @@ const PURPOSES: { purpose: ConsentPurpose; label: string; note: string; local?: 
   { purpose: 'marketing', label: 'News from Good Loop', note: 'Occasional product news by e-mail.' },
   { purpose: 'testimonial', label: 'Testimonials', note: 'An account of your experience may be published, with your name only if you say so.' },
   { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.' },
+  /* Gamification, SPEC §4.1: a separate purpose, so withdrawing it stops the
+     city counting without touching anything else. */
+  { purpose: 'geo_ranking', label: GEO_CONSENT_LABEL, note: GEO_CONSENT_NOTE },
 ]
 
 function PrivacyData({ update, hasTherapist, convention, onExport, onDelete }: ProfileProps & { onDelete: () => void }) {
@@ -358,7 +362,10 @@ function PrivacyData({ update, hasTherapist, convention, onExport, onDelete }: P
         const ev = legal.consents.filter((c) => c.purpose === row.purpose).sort((a, b) => b.at - a.at)[0]
         const hint = `${t(row.note)}${ev ? ` · ${t('Updated {date}', { date: d(ev.at, { day: 'numeric', month: 'short', year: 'numeric' }) })}` : ''}`
         return (
-          <Toggle key={row.purpose} label={t(row.label)} hint={hint} on={legal.consented(row.purpose)} disabled={busy === row.purpose} onToggle={() => void flip(row)} />
+          <div key={row.purpose}>
+            <Toggle label={t(row.label)} hint={hint} on={legal.consented(row.purpose)} disabled={busy === row.purpose} onToggle={() => void flip(row)} />
+            {row.purpose === 'geo_ranking' && legal.consented('geo_ranking') && <ProfileCity />}
+          </div>
         )
       })}
 

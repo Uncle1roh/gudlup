@@ -2365,6 +2365,51 @@ html[data-su-theme='light'] body:has(.su-studio.su-dark) { background: #070d0c; 
 .su-studio .gam-pager { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
 .su-studio .gam-pager .btn { width: auto; min-height: 44px; }
 
+/* Coletivas — the violet city card (§4.5, §9: violet for collectives,
+   sandy for the progress). Its colours are fixed, like the badges'. */
+.su-studio .gam-city {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 18px; border-radius: 20px;
+  background: #533360; color: #FAF8DF;
+}
+.su-studio .gam-city .small { color: #F4F0BE; }
+.su-studio .gam-city__where { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 700; font-size: 16px; }
+.su-studio .gam-city__goal { margin: 0; font-size: 14px; color: #F4F0BE; }
+.su-studio .gam-city__big { margin: 4px 0 0; font-size: 26px; font-weight: 700; line-height: 1.15; }
+.su-studio .gam-city__wait { margin: 2px 0; color: #FAF8DF; }
+.su-studio .gam-bar--sand { background: rgba(250, 248, 223, 0.22); }
+.su-studio .gam-bar--sand > span { background: #E89D64; }
+
+.su-studio .gam-optin { display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-optin__title { margin: 0; font-size: 18px; font-weight: 600; color: var(--su-fg); }
+
+.su-studio .gam-city-picker { display: flex; flex-direction: column; gap: 6px; }
+.su-studio .gam-city-picker input { min-height: 44px; }
+.su-studio .gam-city-picker__current { margin: 0; font-weight: 600; color: var(--su-fg); }
+.su-studio .gam-city-picker__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--su-hair); border-radius: 12px; overflow: hidden; }
+.su-studio .gam-city-picker__list button {
+  width: 100%; min-height: 44px; padding: 10px 14px; text-align: left;
+  background: transparent; border: 0; border-bottom: 1px solid var(--su-hair); color: var(--su-fg-2); font-size: 16px;
+}
+.su-studio .gam-city-picker__list li:last-child button { border-bottom: 0; }
+.su-studio .gam-city-picker__list button:hover,
+.su-studio .gam-city-picker__list button[aria-selected='true'] { background: var(--su-on); color: var(--su-fg); }
+.su-studio .gam-profile-city { padding: 4px 0 14px; }
+
+.su-studio .gam-rank { display: flex; flex-direction: column; gap: 10px; }
+.su-studio .gam-rank__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.su-studio .gam-rank__list li {
+  display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 10px;
+  border-bottom: 1px solid var(--su-hair);
+}
+.su-studio .gam-rank__list li:last-child { border-bottom: 0; }
+.su-studio .gam-rank__list li.is-mine { background: var(--su-on); border-radius: 10px; }
+.su-studio .gam-rank__mine { margin-top: 8px; }
+.su-studio .gam-rank__pos { width: 24px; text-align: right; font-weight: 700; color: var(--su-accent-2); font-variant-numeric: tabular-nums; }
+.su-studio .gam-rank__name { flex: 1; min-width: 0; color: var(--su-fg); }
+.su-studio .gam-rank__name em { font-style: normal; color: var(--su-muted); }
+.su-studio .gam-foot { margin: 0; }
+
 /* The locked fill is a light paper grey (§9). On the night ground it would
    outshine the badges that ARE unlocked, so there it steps back. */
 .su-studio .gam-badge--locked { opacity: 0.5; }

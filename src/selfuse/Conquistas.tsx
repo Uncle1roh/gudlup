@@ -7,8 +7,8 @@
    in their tier colours, locked greyed.
 
    Nothing here counts down, nothing can be lost, and nothing is ranked
-   against anyone (GAM-R1). The collective side grows its city card and
-   rankings in slice 3.
+   against anyone (GAM-R1). The collective side carries the city card and
+   the rankings (Coletivas.tsx).
    ============================================================================ */
 
 import { useEffect, useState } from 'react'
@@ -18,6 +18,7 @@ import { Badge } from '../gamification/ui/Badge'
 import { copyFor, progressKey } from '../gamification/copy'
 import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
 import { displayLoops } from '../gamification/economy'
+import { Coletivas } from './Coletivas'
 
 const GRID_PREVIEW = 9
 
@@ -61,9 +62,12 @@ export function Conquistas() {
       {next && <NextCard a={next} />}
 
       {kind === 'collective' && (
-        <p className="small muted">
-          {t('Collective achievements happen when a city, a state, the whole country or your whole company take care of themselves together.')}
-        </p>
+        <>
+          <p className="small muted">
+            {t('Collective achievements happen when a city, a state, the whole country or your whole company take care of themselves together.')}
+          </p>
+          <Coletivas />
+        </>
       )}
 
       <ul className="gam-grid">
