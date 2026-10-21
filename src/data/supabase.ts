@@ -34,6 +34,10 @@ import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamificati
 import { RedeemError, type Benefit, type BenefitTag, type BenefitView, type RedeemRefusal, type RedeemResult as BenefitRedeemResult, type Redemption } from '../gamification/benefits'
 import type { AdminRedemption, ChallengeReach } from './provider'
 import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
+import type {
+  AddonDashboard, AddonInfo, AddonPlan, ChallengeTemplate, CompanyBenefitRow, CompanyChallengeDraft,
+  CompanySubscription, IdentifiedRedemption, TagFilterRow,
+} from '../gamification/company'
 import type { Company, AdminUser, UserRole, CredentialRequest, CredentialStatus, AuditEvent } from '../admin/types'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
@@ -1688,8 +1692,16 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         inStock: r.inStock !== false,
       }))
     },
-    async redeemBenefit(benefitId: string, consentIdentified = false): Promise<BenefitRedeemResult> {
-      const { data, error } = await sb.rpc('redeem_benefit', { p_benefit: benefitId, p_consent_identified: consentIdentified })
+    async getIdentifiedPreview(): Promise<{ name: string; companyName: string | null }> {
+      const { data, error } = await sb.rpc('get_identified_preview')
+      if (error) throw error
+      const r = (data ?? {}) as { name?: string; companyName?: string | null }
+      return { name: r.name ?? '', companyName: r.companyName ?? null }
+    },
+    async redeemBenefit(benefitId: string, consentIdentified = false, employeeNumber?: string): Promise<BenefitRedeemResult> {
+      const { data, error } = await sb.rpc('redeem_benefit', {
+        p_benefit: benefitId, p_consent_identified: consentIdentified, p_employee_number: employeeNumber ?? null,
+      })
       if (error) {
         const hint = (error as { hint?: string }).hint as RedeemRefusal | undefined
         if (hint && hint.startsWith('BENEFIT_')) throw new RedeemError(hint)
@@ -1836,6 +1848,121 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       const { data, error } = await sb.rpc('admin_settle_challenges')
       if (error) throw error
       return Number(data ?? 0)
+    },
+
+    // gamification: the company add-on
+    async hrGetAddon(): Promise<AddonInfo | null> {
+      const { data, error } = await sb.rpc('hr_get_addon')
+      if (error) throw error
+      const r = data as any
+      if (!r) return null
+      return {
+        planId: r.planId, planName: r.planName, multiplier: Number(r.multiplier), companyChallenges: !!r.companyChallenges,
+        companyBenefits: !!r.companyBenefits, tagFilter: !!r.tagFilter, startsAt: toMs(r.startsAt), endsAt: r.endsAt ? toMs(r.endsAt) : null,
+      }
+    },
+    async hrListTagFilter(): Promise<TagFilterRow[]> {
+      const { data, error } = await sb.rpc('hr_list_tag_filter')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r) => ({ id: r.id, slug: r.slug, label: r.label, group: r.group, disabled: !!r.disabled, affects: Number(r.affects ?? 0), benefits: r.benefits ?? [] }))
+    },
+    async hrSetTagDisabled(tagId: string, disabled: boolean): Promise<void> {
+      const { error } = await sb.rpc('hr_set_tag_disabled', { p_tag: tagId, p_disabled: disabled })
+      if (error) throw error
+    },
+    async hrTagFilterHistory(): Promise<{ label: string; disabledAt: number; enabledAt: number | null }[]> {
+      const { data, error } = await sb.rpc('hr_tag_filter_history')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r) => ({ label: r.label, disabledAt: toMs(r.disabledAt), enabledAt: r.enabledAt ? toMs(r.enabledAt) : null }))
+    },
+    async hrListCompanyBenefits(): Promise<CompanyBenefitRow[]> {
+      const { data, error } = await sb.rpc('hr_list_company_benefits')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r): CompanyBenefitRow => ({
+        id: r.id, title: r.title, description: r.description ?? null, careRationale: r.careRationale ?? null, pillar: r.pillar,
+        priceLoopsCenti: r.priceLoopsCenti ?? null, stockTotal: r.stockTotal ?? null, deliveryType: r.deliveryType, status: r.status,
+        terms: r.terms ?? null, codesFree: Number(r.codesFree ?? 0), codesTotal: Number(r.codesTotal ?? 0),
+      }))
+    },
+    async hrSaveCompanyBenefit(b: CompanyBenefitRow): Promise<string> {
+      const { data, error } = await sb.rpc('hr_save_company_benefit', { p: { ...b, id: b.id || null } })
+      if (error) throw error
+      return String(data)
+    },
+    async hrUploadCodes(benefitId: string, codes: string[]): Promise<number> {
+      const { data, error } = await sb.rpc('hr_upload_codes', { p_benefit: benefitId, p_codes: codes })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    async hrIdentifiedRedemptions(): Promise<IdentifiedRedemption[]> {
+      const { data, error } = await sb.rpc('hr_identified_redemptions')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((r) => ({ id: r.id, benefit: r.benefit, name: r.name ?? '', employeeNumber: r.employeeNumber ?? null, consentedAt: toMs(r.consentedAt), status: r.status }))
+    },
+    async listChallengeTemplates(): Promise<ChallengeTemplate[]> {
+      const { data, error } = await sb.from('challenge_templates').select('*').eq('active', true).order('sort_order')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((t): ChallengeTemplate => ({
+        slug: t.slug, title: t.title, description: t.description, badgeIcon: t.badge_icon, format: t.format, metric: t.metric,
+        goalValue: Number(t.goal_value), goalKind: t.goal_kind, perPersonMin: t.per_person_min == null ? null : Number(t.per_person_min),
+        windowStartHour: t.window_start_hour ?? null, windowEndHour: t.window_end_hour ?? null, defaultDays: t.default_days,
+      }))
+    },
+    async hrSaveCompanyChallenge(d: CompanyChallengeDraft): Promise<string> {
+      const { data, error } = await sb.rpc('hr_save_company_challenge', {
+        p: { ...d, id: d.id || null, startsAt: new Date(d.startsAt).toISOString(), endsAt: new Date(d.endsAt).toISOString() },
+      })
+      if (error) throw error
+      return String(data)
+    },
+    async hrCompanyChallengeAction(id: string, action: 'publish' | 'end' | 'cancel'): Promise<void> {
+      const { error } = await sb.rpc('hr_company_challenge_action', { p_id: id, p_action: action })
+      if (error) throw error
+    },
+    async hrAddonDashboard(): Promise<AddonDashboard> {
+      const { data, error } = await sb.rpc('hr_addon_dashboard')
+      if (error) throw error
+      const r = data as any
+      return {
+        minCohort: Number(r.minCohort), eligible: r.eligible == null ? null : Number(r.eligible),
+        activeChallenges: Number(r.activeChallenges ?? 0),
+        multiplierLoopsMonth: r.multiplierLoopsMonth == null ? null : Number(r.multiplierLoopsMonth),
+        redemptionsMonth: r.redemptionsMonth == null ? null : Number(r.redemptionsMonth),
+        challenges: ((r.challenges ?? []) as any[]).map((c) => ({
+          id: c.id, title: c.title, status: c.status, templateSlug: c.templateSlug ?? null, startsAt: toMs(c.startsAt), endsAt: toMs(c.endsAt),
+          format: c.format, goalKind: c.goalKind, goalValue: Number(c.goalValue), perPersonMin: c.perPersonMin == null ? null : Number(c.perPersonMin),
+          rewardBonusLoopsCenti: c.rewardBonusLoopsCenti ?? null, rewardBenefitId: c.rewardBenefitId ?? null,
+          adhesionPct: c.adhesionPct == null ? null : Number(c.adhesionPct), completedPct: c.completedPct == null ? null : Number(c.completedPct),
+          collectivePct: c.collectivePct == null ? null : Number(c.collectivePct), goalReached: !!c.goalReached,
+        })),
+      }
+    },
+    async adminListPlans(): Promise<AddonPlan[]> {
+      const { data, error } = await sb.from('addon_plans').select('*').order('loops_multiplier')
+      if (error) throw error
+      return ((data ?? []) as any[]).map((p) => ({
+        id: p.id, name: p.name, multiplier: Number(p.loops_multiplier), companyChallenges: !!p.allows_company_challenges,
+        companyBenefits: !!p.allows_company_benefits, tagFilter: !!p.allows_tag_filter, active: !!p.active,
+      }))
+    },
+    async adminSavePlan(p: AddonPlan): Promise<void> {
+      const { error } = await sb.from('addon_plans').upsert({
+        id: p.id, name: p.name, loops_multiplier: p.multiplier, allows_company_challenges: p.companyChallenges,
+        allows_company_benefits: p.companyBenefits, allows_tag_filter: p.tagFilter, active: p.active,
+      })
+      if (error) throw error
+    },
+    async adminListSubscriptions(): Promise<CompanySubscription[]> {
+      const { data, error } = await sb.from('company_addon_subscriptions').select('*, companies(name)').order('starts_at', { ascending: false })
+      if (error) throw error
+      return ((data ?? []) as any[]).map((s) => ({
+        id: s.id, companyId: s.company_id, companyName: s.companies?.name ?? s.company_id, planId: s.plan_id,
+        startsAt: toMs(s.starts_at), endsAt: s.ends_at ? toMs(s.ends_at) : null, status: s.status,
+      }))
+    },
+    async adminSetCompanyPlan(companyId: string, planId: string | null): Promise<void> {
+      const { error } = await sb.rpc('admin_set_company_plan', { p_company: companyId, p_plan: planId })
+      if (error) throw error
     },
     async saveEconomySettings(next: EconomySettings): Promise<void> {
       // RLS: admin only; the schema refuses hr_min_cohort below 25 (SPN-02)

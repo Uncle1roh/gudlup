@@ -12,6 +12,15 @@ import { renderToString } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { FixedLocale } from '../src/i18n'
 import { PT_GAMIFICATION, IT_GAMIFICATION } from '../src/i18n/gamification'
+import { PT } from '../src/i18n/pt'
+import { PT_LEGAL } from '../src/i18n/legal'
+import { PT_WORKSPACE } from '../src/i18n/workspace'
+import { PT_CORPORATE } from '../src/i18n/corporate'
+import { PT_SELFUSE_EXTRA } from '../src/i18n/selfuse-extra'
+import { PT_STUDIO } from '../src/i18n/studio'
+
+/* The pt-BR dictionary as the app merges it (src/i18n/index.tsx). */
+const ALL_PT: Record<string, string> = { ...PT, ...PT_LEGAL, ...PT_WORKSPACE, ...PT_CORPORATE, ...PT_SELFUSE_EXTRA, ...PT_STUDIO, ...PT_GAMIFICATION }
 import { ACHIEVEMENT_COPY, TIER_LABEL } from '../src/gamification/copy'
 import { ACHIEVEMENTS } from '../src/gamification/achievements'
 import { MockLedger } from '../src/gamification/mockLedger'
@@ -36,12 +45,11 @@ const onlyPt = ptKeys.filter((k) => !itKeys.has(k))
 assert(!onlyPt.length, `pt and it dictionaries carry the same keys${onlyPt.length ? `: only in pt ${onlyPt.join(' | ')}` : ''}`)
 
 /* The screens' literal t('…') keys, read from source, must all be in pt. */
-for (const file of ['src/selfuse/Conquistas.tsx', 'src/selfuse/UnlockSheet.tsx', 'src/gamification/copy.ts', 'src/selfuse/Coletivas.tsx', 'src/selfuse/CityPicker.tsx', 'src/selfuse/BenefitsTab.tsx', 'src/selfuse/ChallengeCard.tsx', 'src/selfuse/ChallengeDetail.tsx']) {
+for (const file of ['src/selfuse/Conquistas.tsx', 'src/selfuse/UnlockSheet.tsx', 'src/gamification/copy.ts', 'src/selfuse/Coletivas.tsx', 'src/selfuse/CityPicker.tsx', 'src/selfuse/BenefitsTab.tsx', 'src/selfuse/ChallengeCard.tsx', 'src/selfuse/ChallengeDetail.tsx', 'src/corporate/Addon.tsx']) {
   const src = readFileSync(file, 'utf8')
   const keys = [...src.matchAll(/\bt\(\s*'([^']+)'/g)].map((m) => m[1])
     .concat([...src.matchAll(/(?:of|left): '([^']+)'/g)].map((m) => m[1]))
-  const shared = new Set(['Loading…', 'Next', 'Previous', 'Not now', 'Saved.', 'This month', 'Period', 'Close', 'Back', 'Done', 'Copy', 'Copied'])
-  const missing = keys.filter((k) => !shared.has(k) && !PT_GAMIFICATION[k])
+  const missing = keys.filter((k) => !ALL_PT[k])
   assert(!missing.length, `${file}: every screen string has pt-BR${missing.length ? `: missing ${missing.join(' | ')}` : ''}`)
 }
 

@@ -4,6 +4,10 @@ import type { AchievementView } from '../gamification/achievements'
 import type { CityCard, GeoRanking, GeoScope, Municipality } from '../gamification/geo'
 import type { Benefit, BenefitTag, BenefitView, RedeemResult as BenefitRedeemResult, Redemption } from '../gamification/benefits'
 import type { Challenge, ChallengeAdminRow, ChallengeScope, ChallengeView } from '../gamification/challenges'
+import type {
+  AddonDashboard, AddonInfo, AddonPlan, ChallengeTemplate, CompanyBenefitRow, CompanyChallengeDraft,
+  CompanySubscription, IdentifiedRedemption, TagFilterRow,
+} from '../gamification/company'
 import type { SessionRecord } from '../types/domain'
 import type { Patient, Therapist, B2bSession } from '../b2b/data'
 import type { CatalogProtocol } from './catalog'
@@ -370,7 +374,9 @@ export interface DataProvider {
   /** What this person may see now — decided server-side, company filter included. */
   getAvailableBenefits(): Promise<BenefitView[]>
   /** The one way to redeem. Throws RedeemError with the refusal. */
-  redeemBenefit(benefitId: string, consentIdentified?: boolean): Promise<BenefitRedeemResult>
+  redeemBenefit(benefitId: string, consentIdentified?: boolean, employeeNumber?: string): Promise<BenefitRedeemResult>
+  /** What an identified redemption shares, shown before the person consents. */
+  getIdentifiedPreview(): Promise<{ name: string; companyName: string | null }>
   /** "Meus benefícios", codes included. */
   listMyRedemptions(): Promise<Redemption[]>
   listBenefitTags(): Promise<BenefitTag[]>
@@ -396,6 +402,29 @@ export interface DataProvider {
   /** "População ativa suficiente" and the estimated reach. */
   adminChallengeReach(scope: ChallengeScope, ref: string | null): Promise<ChallengeReach>
   adminSettleChallenges(): Promise<number>
+
+  // --- Gamification: the company add-on (SPEC §7). HR's company is the
+  //     signed-in account's, server-side; nothing here takes a company id. ---
+  /** Plano: the add-on in force, or null. */
+  hrGetAddon(): Promise<AddonInfo | null>
+  hrListTagFilter(): Promise<TagFilterRow[]>
+  hrSetTagDisabled(tagId: string, disabled: boolean): Promise<void>
+  hrTagFilterHistory(): Promise<{ label: string; disabledAt: number; enabledAt: number | null }[]>
+  hrListCompanyBenefits(): Promise<CompanyBenefitRow[]>
+  hrSaveCompanyBenefit(b: CompanyBenefitRow): Promise<string>
+  hrUploadCodes(benefitId: string, codes: string[]): Promise<number>
+  /** The only names HR ever sees: identified redemptions, each consented. */
+  hrIdentifiedRedemptions(): Promise<IdentifiedRedemption[]>
+  listChallengeTemplates(): Promise<ChallengeTemplate[]>
+  hrSaveCompanyChallenge(d: CompanyChallengeDraft): Promise<string>
+  hrCompanyChallengeAction(id: string, action: 'publish' | 'end' | 'cancel'): Promise<void>
+  /** Company-wide aggregates only, k-guarded with complementary suppression. */
+  hrAddonDashboard(): Promise<AddonDashboard>
+  /** Admin › Piani e aziende. */
+  adminListPlans(): Promise<AddonPlan[]>
+  adminSavePlan(p: AddonPlan): Promise<void>
+  adminListSubscriptions(): Promise<CompanySubscription[]>
+  adminSetCompanyPlan(companyId: string, planId: string | null): Promise<void>
 }
 
 export interface ChallengeReach {

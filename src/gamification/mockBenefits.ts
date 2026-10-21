@@ -18,6 +18,7 @@ interface StoredRedemption {
   loopsSpentCenti: number
   status: 'active' | 'refunded'
   consentIdentifiedAt: number | null
+  employeeNumber: string | null
   createdAt: number
   expiresAt: number | null
 }
@@ -55,12 +56,14 @@ export class MockBenefits {
   }
 
   /** The checks of redeem_benefit(), in its order. */
-  redeem(benefitId: string, consentIdentified: boolean, now = Date.now()): RedeemResult {
+  redeem(benefitId: string, consentIdentified: boolean, now = Date.now(), employeeNumber: string | null = null): RedeemResult {
     const b = this.catalog.find((x) => x.id === benefitId)
     if (!b || !isAvailable(b, this.ctx(now))) throw new RedeemError('BENEFIT_UNAVAILABLE')
     const used = this.redemptions.filter((r) => r.benefitId === b.id && r.status === 'active').length
     if (used >= b.perUserLimit) throw new RedeemError('BENEFIT_LIMIT')
-    if (b.deliveryType === 'identified' && !consentIdentified) throw new RedeemError('BENEFIT_NEEDS_CONSENT')
+    if (b.deliveryType === 'identified' && (!consentIdentified || (b.companyId !== null && !employeeNumber?.trim()))) {
+      throw new RedeemError('BENEFIT_NEEDS_CONSENT')
+    }
     const price = b.priceLoopsCenti ?? 0
     if (this.ledger.balanceCenti() < price) throw new RedeemError('BENEFIT_BALANCE')
     if (b.stockRemaining !== null && b.deliveryType !== 'collective') {
@@ -82,7 +85,8 @@ export class MockBenefits {
     const id = `red-${this.seq}`
     this.redemptions.push({
       id, benefitId: b.id, code, loopsSpentCenti: price, status: 'active',
-      consentIdentifiedAt: b.deliveryType === 'identified' ? now : null, createdAt: now, expiresAt,
+      consentIdentifiedAt: b.deliveryType === 'identified' ? now : null,
+      employeeNumber: b.deliveryType === 'identified' ? employeeNumber?.trim() || null : null, createdAt: now, expiresAt,
     })
     this.ledger.postRedemption('redemption', price, id, now)
     return { redemptionId: id, code, link: b.linkUrl, expiresAt, loopsSpentCenti: price }
@@ -133,6 +137,13 @@ export class MockBenefits {
     }
     this.codes.set(benefitId, pool)
     return n
+  }
+
+  /** HR: the consented identified redemptions of the company's own benefits — the only names HR sees. */
+  identified(companyId: string): { id: string; benefit: string; employeeNumber: string | null; consentedAt: number; status: 'active' | 'refunded' }[] {
+    return this.redemptions
+      .filter((r) => r.consentIdentifiedAt !== null && this.catalog.find((b) => b.id === r.benefitId)?.companyId === companyId)
+      .map((r) => ({ id: r.id, benefit: this.catalog.find((b) => b.id === r.benefitId)!.title, employeeNumber: r.employeeNumber, consentedAt: r.consentIdentifiedAt!, status: r.status }))
   }
 
   /** Admin: every redemption, for the list and refunds. */

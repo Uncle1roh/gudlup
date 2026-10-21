@@ -36,8 +36,11 @@ import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
 import { BrandLogo } from '../components/Brand'
 import { useLegal } from '../legal/LegalContext'
 import { HelpNowButton } from '../legal/HelpNow'
+import { AddonBenefits, AddonChallenges, AddonPlan } from './Addon'
+import type { AddonInfo } from '../gamification/company'
 
 type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 'management' | 'settings'
+  | 'addon_challenges' | 'addon_benefits' | 'plan'
 
 /* ---- what this dashboard is FOR ----------------------------------------
 
@@ -66,6 +69,13 @@ const ALL_NAV: { id: Nav; label: string; extra?: boolean }[] = [
   { id: 'settings', label: 'Settings' },
 ]
 const NAV = ALL_NAV.filter((n) => EXTRAS || !n.extra)
+/* The gamification add-on (docs/gamification/SPEC.md §7.2): shown only while
+   the company has one, after Participation and before Settings. */
+const ADDON_NAV: { id: Nav; label: string }[] = [
+  { id: 'addon_challenges', label: 'Challenges (Add-on)' },
+  { id: 'addon_benefits', label: 'Benefits (Add-on)' },
+  { id: 'plan', label: 'Plan' },
+]
 
 /**
  * The company the signed-in account belongs to, from its company code.
@@ -129,6 +139,10 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
   const [nav, setNav] = useState<Nav>('overview')
   const [period, setPeriod] = useState<PeriodId>('month')
   const [menu, setMenu] = useState(false)
+  const dp = useDataProvider()
+  const [addon, setAddon] = useState<AddonInfo | null>(null)
+  useEffect(() => { void dp.hrGetAddon().then(setAddon).catch(() => setAddon(null)) }, [dp])
+  const nav_ = addon ? [...NAV.slice(0, -1), ...ADDON_NAV, ...NAV.slice(-1)] : NAV
 
   // locale: month labels and the renewal date are formatted inside
   const agg = useMemo(() => buildAggregates(state), [state, locale])
@@ -200,7 +214,7 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
         </div>
 
         <nav className="c-nav" role="tablist">
-          {NAV.map((n) => (
+          {nav_.map((n) => (
             <button key={n.id} role="tab" aria-selected={nav === n.id} onClick={() => setNav(n.id)}>
               {t(n.label)}
               {n.id === 'reports' && unread > 0 && <span className="c-navbadge">{unread}</span>}
@@ -257,6 +271,9 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
           <CompanyTherapists companyId={state.companyCode || undefined} actor={user?.email ?? undefined} />
         )}
         {nav === 'management' && EXTRAS && <Management state={state} agg={agg} update={update} />}
+        {nav === 'addon_challenges' && addon && <AddonChallenges addon={addon} />}
+        {nav === 'addon_benefits' && addon && <AddonBenefits addon={addon} />}
+        {nav === 'plan' && addon && <AddonPlan addon={addon} />}
         {nav === 'settings' && (
           <Settings state={state} registered={cellValue(agg.kpis.registered) ?? 0} update={update} />
         )}

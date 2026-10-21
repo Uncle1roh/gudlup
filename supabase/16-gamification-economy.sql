@@ -88,6 +88,9 @@ create or replace function gam_track_affiliation() returns trigger
   language plpgsql security definer set search_path = public as $$
 begin
   if tg_op = 'UPDATE' and old.company_id is not distinct from new.company_id then return null; end if;
+  -- Employees only: an HR account carries its company too, and is not one
+  -- of the people a multiplier, a share or a dashboard counts.
+  if new.role <> 'b2c_user' then return null; end if;
   update company_affiliations set ended_at = greatest(now(), started_at)
    where user_id = new.id and ended_at is null;
   if new.company_id is not null then
@@ -104,7 +107,7 @@ create trigger profiles_track_affiliation after insert or update of company_id o
 insert into company_affiliations (user_id, company_id, started_at)
 select p.id, p.company_id, p.created_at
   from profiles p
- where p.company_id is not null
+ where p.company_id is not null and p.role = 'b2c_user'
    and not exists (select 1 from company_affiliations a where a.user_id = p.id and a.ended_at is null);
 
 alter table company_affiliations enable row level security;

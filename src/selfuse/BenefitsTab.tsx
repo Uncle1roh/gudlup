@@ -197,18 +197,27 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
   const dp = useDataProvider()
   const [step, setStep] = useState<'detail' | 'confirm' | 'done'>('detail')
   const [consent, setConsent] = useState(false)
+  const [employeeNumber, setEmployeeNumber] = useState('')
+  const [shared, setShared] = useState<{ name: string; companyName: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<RedeemResult | null>(null)
   const line = priceLine(t, b, wallet, cfg)
   const identified = b.deliveryType === 'identified'
   const price = displayLoops(b.priceLoopsCenti ?? 0)
+  /* Identified (§7.2b): before consenting, the person sees EXACTLY what is
+     shared — their name, the employee number they type, and with whom. */
+  useEffect(() => {
+    if (!identified) return
+    dp.getIdentifiedPreview().then(setShared).catch(() => setShared(null))
+  }, [dp, identified])
+  const needsNumber = identified && b.companyId !== null
 
   async function redeem() {
     setBusy(true)
     setError(null)
     try {
-      const r = await dp.redeemBenefit(b.id, identified ? consent : false)
+      const r = await dp.redeemBenefit(b.id, identified ? consent : false, needsNumber ? employeeNumber.trim() : undefined)
       setResult(r)
       setStep('done')
       onRedeemed()
@@ -248,13 +257,26 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
               {price > 0 ? t('Exchange {n} Loops for this benefit?', { n: String(price) }) : t('Redeem this benefit?')}
             </p>
             {identified && (
-              <label className="legal-ack">
-                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                <span>{t('To deliver this benefit, your name and employee number will be shared with your company’s HR. Nothing else is shared.')}</span>
-              </label>
+              <div className="gam-shared">
+                <p className="small">{t('To deliver this benefit, your name and employee number will be shared with your company’s HR. Nothing else is shared.')}</p>
+                <dl className="gam-shared__what">
+                  <dt>{t('Name')}</dt><dd>{shared?.name || '—'}</dd>
+                  {shared?.companyName && <><dt>{t('Shared with')}</dt><dd>{t('HR at {company}', { company: shared.companyName })}</dd></>}
+                </dl>
+                {needsNumber && (
+                  <label className="gam-shared__field">
+                    <span className="small">{t('Employee number')}</span>
+                    <input value={employeeNumber} onChange={(e) => setEmployeeNumber(e.target.value)} autoComplete="off" maxLength={40} />
+                  </label>
+                )}
+                <label className="legal-ack">
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                  <span>{t('I agree to share these details to receive this benefit.')}</span>
+                </label>
+              </div>
             )}
             {error && <p className="small" role="alert">{error}</p>}
-            <button className="btn btn--primary" disabled={busy || (identified && !consent)} onClick={() => void redeem()}>
+            <button className="btn btn--primary" disabled={busy || (identified && !consent) || (needsNumber && !employeeNumber.trim())} onClick={() => void redeem()}>
               {busy ? t('Redeeming…') : price > 0 ? t('Exchange {n} Loops', { n: String(price) }) : t('Redeem')}
             </button>
             <button className="btn btn--ghost" onClick={() => setStep('detail')}>{t('Back')}</button>

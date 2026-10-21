@@ -108,7 +108,10 @@ export class MockChallenges {
     }
   }
 
+  /** A total: everyone else's (a fixture) plus the person's own part. A
+      company share: the fixture's %, which one person barely moves. */
   private collectiveValue(c: Challenge): number {
+    if (c.goalKind === 'share_reaching_min') return this.others.get(c.id) ?? 0
     return (this.others.get(c.id) ?? 0) + (this.parts.get(c.id)?.progress ?? 0)
   }
 

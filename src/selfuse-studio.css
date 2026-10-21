@@ -2509,3 +2509,11 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .su-studio .gam-bar > span { transition: none; }
 }
+
+/* The identified-redemption consent: exactly what is shared, then the tick. */
+.su-studio .gam-shared { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--su-hair-2); border-radius: 12px; }
+.su-studio .gam-shared__what { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+.su-studio .gam-shared__what dt { color: var(--su-muted); }
+.su-studio .gam-shared__what dd { margin: 0; color: var(--su-fg); font-weight: 600; }
+.su-studio .gam-shared__field { display: flex; flex-direction: column; gap: 4px; }
+.su-studio .gam-shared__field input { min-height: 44px; }

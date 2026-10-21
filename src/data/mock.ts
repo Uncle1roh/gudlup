@@ -18,6 +18,8 @@ import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
 import { MockBenefits } from '../gamification/mockBenefits'
 import { MockChallenges } from '../gamification/mockChallenges'
+import { MockCompany, DEMO_COMPANY_ID as GAM_COMPANY_ID } from '../gamification/mockCompany'
+import { TEMPLATE_SEED } from '../gamification/company'
 import { hasConsent } from '../legal/records'
 import {
   DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
@@ -318,6 +320,7 @@ export function createMockProvider(): DataProvider {
   const ledger = new MockLedger()
   const benefits = new MockBenefits(ledger)
   const challenges = new MockChallenges(ledger, benefits)
+  const company = new MockCompany(ledger, benefits, challenges, companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? 'Aurora')
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
@@ -992,7 +995,8 @@ export function createMockProvider(): DataProvider {
 
     // gamification: benefits
     getAvailableBenefits: async () => delay(benefits.available(), 60),
-    redeemBenefit: async (id, consent = false) => { await wait(120); return benefits.redeem(id, consent) },
+    redeemBenefit: async (id, consent = false, employeeNumber) => { await wait(120); return benefits.redeem(id, consent, Date.now(), employeeNumber ?? null) },
+    getIdentifiedPreview: async () => delay({ name: 'Mariana Alves', companyName: companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? null }, 40),
     listMyRedemptions: async () => delay(benefits.mine(), 40),
     listBenefitTags: async () => delay(benefits.tags.map((t) => ({ ...t })), 40),
     adminListBenefits: async () => delay(benefits.catalog.map((b) => ({ ...b, tagIds: [...b.tagIds] })), 40),
@@ -1031,6 +1035,33 @@ export function createMockProvider(): DataProvider {
       return { people: Math.round(active * 1.4), activeLastMonth: active, threshold, enough: scope === 'national' || active >= threshold }
     },
     adminSettleChallenges: async () => { await wait(80); return 0 },
+
+    // gamification: the company add-on (the demo's Aurora)
+    hrGetAddon: async () => delay(company.addon(), 40),
+    hrListTagFilter: async () => delay(company.tagFilter(), 40),
+    hrSetTagDisabled: async (tagId, disabled) => { await wait(60); company.setTag(tagId, disabled) },
+    hrTagFilterHistory: async () => delay(company.history.map((h) => ({ ...h })), 40),
+    hrListCompanyBenefits: async () => delay(company.companyBenefits(), 40),
+    hrSaveCompanyBenefit: async (b) => { await wait(80); return company.saveCompanyBenefit(b) },
+    hrUploadCodes: async (id, codes) => { await wait(60); return benefits.uploadCodes(id, codes) },
+    hrIdentifiedRedemptions: async () => delay(benefits.identified(GAM_COMPANY_ID).map((r) => ({ ...r, name: 'Mariana Alves' })), 40),
+    listChallengeTemplates: async () => delay(TEMPLATE_SEED.map((t) => ({ ...t })), 40),
+    hrSaveCompanyChallenge: async (d) => { await wait(80); return company.saveCompanyChallenge(d) },
+    hrCompanyChallengeAction: async (id, action) => { await wait(60); company.challengeAction(id, action) },
+    hrAddonDashboard: async () => delay(company.dashboard(), 60),
+    adminListPlans: async () => delay(company.plans.map((p) => ({ ...p })), 40),
+    adminSavePlan: async (p) => {
+      await wait(40)
+      if (p.multiplier < 1 || p.multiplier > 5) throw new Error('Il moltiplicatore va da 1 a 5.')
+      const i = company.plans.findIndex((x) => x.id === p.id)
+      if (i >= 0) company.plans[i] = { ...p }
+      else company.plans.push({ ...p })
+    },
+    adminListSubscriptions: async () => delay(company.subscriptions.map((s) => ({ ...s })), 40),
+    adminSetCompanyPlan: async (companyId, planId) => {
+      await wait(60)
+      company.setPlan(companyId, planId, companies.find((c) => c.id === companyId)?.name ?? companyId)
+    },
     saveEconomySettings: async (next) => {
       if (next.hrMinCohort < MIN_COHORT) throw new Error(`The sponsor threshold cannot go below ${MIN_COHORT} (SPN-02).`)
       ledger.settings = { ...next }

@@ -509,3 +509,32 @@
   .c-topbar .helpnow--inline { font-size: 12.5px; padding: 6px 10px; gap: 6px; }
   .c-topbar .helpnow__ring { width: 8px; height: 8px; }
 }
+
+/* ===================================================== GAMIFICATION ADD-ON ==
+   docs/gamification/SPEC.md §7.2. Company-wide figures only; the privacy
+   banner sits on every add-on page. */
+
+.c-addon-banner { margin: 0 0 16px; }
+.c-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.c-addon-kpis .c-card { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.c-addon-kpis .c-kpi__value { font-size: 26px; }
+.c-tabs { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--c-line); flex-wrap: wrap; }
+.c-tabs button { padding: 10px 14px; min-height: 44px; border: 0; background: none; color: var(--c-muted); font: inherit; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+.c-tabs button[aria-selected='true'] { color: var(--c-ink); border-bottom-color: var(--c-accent); }
+.c-addon-templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0 16px; }
+.c-addon-template { display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer; margin: 0; font: inherit; color: inherit; }
+.c-addon-template.is-on, .c-addon-mode.is-on { border-color: var(--c-accent); box-shadow: 0 0 0 2px rgba(0, 122, 94, 0.18); }
+.c-addon-check { margin: 14px 0; padding: 12px 14px; border-radius: 10px; background: var(--c-bg); }
+.c-addon-check ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.c-addon-check .is-ok { color: var(--c-accent); }
+.c-addon-check .is-bad { color: #a3341f; font-weight: 600; }
+.c-addon-card { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.c-addon-figs { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 14px; }
+.c-addon-figs dt { color: var(--c-muted); }
+.c-addon-figs dd { margin: 0; font-weight: 600; text-align: right; }
+.c-addon-tags { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; }
+.c-addon-tags > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--c-line); min-height: 44px; }
+.c-addon-modes { border: 0; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.c-addon-mode { display: flex; gap: 10px; align-items: flex-start; margin: 0; cursor: pointer; }
+.c-addon-mode > span { display: flex; flex-direction: column; gap: 4px; }
+.c-field--wide { grid-column: 1 / -1; }
