@@ -260,7 +260,7 @@ export function TherapistTab(props: TherapistTabProps) {
        until then this stays a pending request. */
     const r = therapy.request
     return (
-      <div className="su-page">
+      <div className="su-page thr-form">
         <h1 className="display su-h1">{t('Therapist')}</h1>
         <article className="card thr-pending">
           <span className="badge">{t('Request pending')}</span>
@@ -839,7 +839,7 @@ function ConnectionCodeScreen({
   }
 
   return (
-    <div className="su-page">
+    <div className="su-page thr-form">
       <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
       <h1 className="display su-h1">{t('Enter your connection code')}</h1>
       <p className="lead">{t('Your therapist will give you a unique code to connect your accounts.')}</p>
@@ -884,7 +884,7 @@ function PatientOnboarding({
 
   if (step === 1) {
     return (
-      <div className="su-page">
+      <div className="su-page thr-form">
         <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
         <span className="eyebrow">{t('Step 1 of 3')}</span>
         <h1 className="display su-h1">{t('About you')}</h1>
@@ -913,7 +913,7 @@ function PatientOnboarding({
 
   if (step === 2) {
     return (
-      <div className="su-page">
+      <div className="su-page thr-form">
         <button className="su-back" onClick={onBack}>‹ {t('Back')}</button>
         <span className="eyebrow">{t('Step 2 of 3')}</span>
         <h1 className="display su-h1">{t('Consent')}</h1>
@@ -947,7 +947,7 @@ function PatientOnboarding({
 
   const now = Date.now()
   return (
-    <div className="su-page">
+    <div className="su-page thr-form">
       <span className="eyebrow">{t('Step 3 of 3')}</span>
       <h1 className="display su-h1">{t("You're all set.")}</h1>
       <p className="lead">{t('Connected with {name}.', { name: therapist.name })}</p>

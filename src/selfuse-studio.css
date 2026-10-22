@@ -1240,6 +1240,19 @@ body:has(.su-studio) { background: var(--su-void); }
    same edge, and anything that deliberately bleeds past it says so. */
 
 .su-studio .su-page > * { padding-left: 0; padding-right: 0; }
+/* …except a box, whose text must not touch its own border. A card placed
+   straight on a page lost its 20px sides to the rule above, so the challenge
+   detail's "How it works" ran its text into the card's edge. */
+.su-studio .su-page > .safety-l1 { padding: 14px 18px; border-radius: 14px; }
+.su-studio .su-page > :is(.card, .sess-card, .pw-card, .rx-card, .msr, .thr-card, .asmt-card) {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+/* A page shown inside another (a challenge opened from Progress) already sits
+   in that page's column; padding it again indented it a second time. */
+.su-studio .su-page .su-page { padding-left: 0; padding-right: 0; padding-top: 0; }
+/* the pill keeps its own sides too */
+.su-studio .su-page > .gam-detail__back { padding: 8px 16px 8px 12px; }
 
 /* Rails bleed to the screen edge so a card can be half-visible and invite a
    scroll — but their HEADINGS stay in the column with everything else. */
@@ -2664,6 +2677,52 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
   .su-studio { --su-col: 1200px; }
   .su-studio .su-page { padding-inline: max(var(--su-inset), calc((100% - var(--su-col)) / 2)); }
   .su-studio .tabbar { padding-inline: max(32px, calc((100% - var(--su-col)) / 2)); }
+
+  /* Pages that capped THEMSELVES before the column existed. The cap and the
+     column's padding stacked — a 1180px box with 120px of padding each side
+     — and squeezed the Therapist tab to 940px, wrapping its lines early. The
+     column is the cap now; a page that reads better narrower sets its own
+     column width instead, and stays centred on the same axis. */
+  .su-studio .su-page.thr-active,
+  .su-studio .su-page.profile,
+  .su-studio .su-page.thr-find,
+  .su-studio .su-page.thr-book,
+  .su-studio .su-page.weekly,
+  .su-studio .su-page.pw-full__plan { max-width: none; margin-inline: 0; }
+  /* Lists of weeks read at 860px, but from the column's left edge — the same
+     line as the tabs above and the title on the hero — not re-centred. */
+  .su-studio .su-page.weekly > *,
+  .su-studio .su-page.pw-full__plan > * { max-width: 860px; width: 100%; }
+  /* A session's or a journey's picture still runs edge to edge; the words on
+     it start where the column does. */
+  .su-studio .sess-full {
+    padding-left: max(var(--su-inset), calc((100% - var(--su-col)) / 2));
+    padding-right: max(var(--su-inset), calc((100% - var(--su-col)) / 2));
+  }
+  /* Settings are forms: a button the width of the column is a phone layout. */
+  .su-studio .profile .btn { align-self: flex-start; width: auto; min-width: 220px; }
+  /* A challenge's detail is read top to bottom: a reading width, and its
+     action a button rather than a band across the screen. */
+  .su-studio .gam-detail > * { max-width: 860px; width: 100%; }
+  .su-studio .gam-detail > .gam-detail__back { width: auto; }
+  .su-studio .gam-sticky .btn { width: auto; min-width: 240px; }
+  /* An invitation and a short form are read, not scanned: a 1200px input or
+     a button the width of the screen is a phone layout blown up. */
+  .su-studio .su-page.thr-info,
+  .su-studio .su-page.thr-form { --su-col: 640px; }
+  .su-studio .thr-form > .btn { align-self: flex-start; width: auto; min-width: 220px; }
+
+  /* Three weeks of openings, two days to a row instead of fourteen stacked:
+     the confirm bar is reached in half the scroll. Everything that is not a
+     day — heading, notes, the legal lines — keeps the full width. */
+  .su-studio .thr-book__when {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 28px;
+    align-content: start;
+  }
+  .su-studio .thr-book__when > :not(.slotday) { grid-column: 1 / -1; margin: 0; }
+  .su-studio .thr-book__when > .slotday { margin: 0; }
 
   /* Benefits: your care beside the next milestone, then cards three across. */
   .su-studio .benefits {
