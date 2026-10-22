@@ -335,7 +335,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'No change': 'Nessuna variazione',
 
   /* ---- progress ---- */
-  'Self Use': 'In autonomia',
+  'Self Use': 'Biblioteca',
+  'Therapy': 'Terapia',
   'Therapist Guided': 'Con il terapeuta',
   'sessions · {n} min': 'sessioni · {n} min',
   'of': 'di',
@@ -547,7 +548,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Go to the offer': 'Vai all’offerta',
   /* The plan a registered code opens, printed under the field. 'Self Use' on
      its own is already translated above as the way you work, in autonomia. */
-  'Self Use + Professional Support': 'Self Use + Supporto professionale',
+  'Self Use + Professional Support': 'Biblioteca + Supporto professionale',
 
   /* ---- the first run: three cards, once, before the library ---- */
   'Start listening': 'Inizia ad ascoltare',

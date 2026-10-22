@@ -28,6 +28,8 @@ export const IT_LEGAL: Record<string, string> = {
   /* ---- first run ---- */
   'How Good Loop works': 'Come funziona Good Loop',
   'Your terms and your choices': 'I tuoi termini e le tue scelte',
+  'What this means': 'Che cosa significa',
+  'Optional — all off unless you turn them on': 'Facoltativo — tutto disattivato finché non lo attivi tu',
   'Terms': 'Termini',
   'Notices': 'Informative',
   'Nature of the service': 'Natura del servizio',
@@ -356,6 +358,8 @@ export const PT_LEGAL: Record<string, string> = {
   /* ---- first run ---- */
   'How Good Loop works': 'Como o Good Loop funciona',
   'Your terms and your choices': 'Os seus termos e as suas escolhas',
+  'What this means': 'O que isso significa',
+  'Optional — all off unless you turn them on': 'Opcional — tudo desligado até você ligar',
   'Terms': 'Termos',
   'Notices': 'Avisos',
   'Nature of the service': 'Natureza do serviço',

@@ -52,6 +52,7 @@ export const IT: Record<string, string> = {
   'Sign in': 'Accedi',
   'Have an account? Sign in': 'Hai già un account? Accedi',
   'New here? Create an account': 'Prima volta qui? Crea un account',
+  'Create an account': 'Crea un account',
   'Demo mode — any email & password works. Tap {action}.': 'Modalità demo — qualsiasi email e password funziona. Tocca {action}.',
   'Clinician accounts start unverified — credentialing is reviewed before patient sessions.': 'Gli account clinici partono come non verificati — le credenziali vengono esaminate prima delle sessioni con i pazienti.',
 

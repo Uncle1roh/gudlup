@@ -66,6 +66,7 @@ export const PT: Record<string, string> = {
   'Sign in': 'Entrar',
   'Have an account? Sign in': 'Já tem uma conta? Entre',
   'New here? Create an account': 'Novo por aqui? Crie uma conta',
+  'Create an account': 'Crie uma conta',
   'Demo mode — any email & password works. Tap {action}.': 'Modo demo — qualquer email e senha funciona. Toque em {action}.',
   'Clinician accounts start unverified — credentialing is reviewed before patient sessions.': 'Contas de clínicos começam não verificadas — o credenciamento é revisado antes das sessões com pacientes.',
 
@@ -614,7 +615,9 @@ export const PT: Record<string, string> = {
      Every `t()` key in src/selfuse, src/auth and the live catalog, checked
      against this file: 299 of the 354 had no answer here and fell back to the
      English source, which is what a Portuguese demo would have been reading.
-     "Self Use" stays as it is — it is the name of the mode, not a phrase. */
+     The mode used to be called "Self Use" on screen. It is the Biblioteca
+     now: a person opening the app is looking at a library of sessions, and
+     an English product term told them nothing about that. */
   'Close': 'Fechar',
   'This measure is recorded by your therapist during your session.':
     'Esta medida é registrada pelo seu terapeuta durante a sessão.',
@@ -703,7 +706,7 @@ export const PT: Record<string, string> = {
   'Linked company': 'Empresa vinculada',
   'Not linked': 'Nenhuma empresa',
   'Notifications': 'Notificações',
-  'Self Use reminders': 'Lembretes do Self Use',
+  'Self Use reminders': 'Lembretes das sessões',
   'Reminder time': 'Horário do lembrete',
   'Weekly check-in reminder': 'Lembrete do check-in semanal',
   'Monthly wellbeing reminder': 'Lembrete do bem-estar mensal',
@@ -725,7 +728,7 @@ export const PT: Record<string, string> = {
   'Aggregate company reports': 'Relatórios agregados para a empresa',
   'Off · never shared individually': 'Desligado · nunca compartilhado individualmente',
   'Push notifications & reminders': 'Notificações e lembretes',
-  'Share Self Use data with therapist': 'Compartilhar os dados do Self Use com o terapeuta',
+  'Share Self Use data with therapist': 'Compartilhar com o terapeuta os dados das suas sessões',
   'Revocable anytime': 'Revogável a qualquer momento',
   'Export my data': 'Exportar meus dados',
   'Delete my account': 'Excluir minha conta',
@@ -807,8 +810,8 @@ export const PT: Record<string, string> = {
   'Therapist': 'Terapeuta',
   'Professional support': 'Apoio profissional',
   'In the meantime, your Self Use sessions are always here for you.':
-    'Enquanto isso, suas sessões do Self Use continuam aqui para você.',
-  'Go to Self Use': 'Ir para o Self Use',
+    'Enquanto isso, suas sessões continuam aqui para você.',
+  'Go to Self Use': 'Ir para a Biblioteca',
   'Questions? Contact your HR team or our support.':
     'Dúvidas? Fale com o RH da sua empresa ou com o nosso suporte.',
   'Request pending': 'Pedido em aberto',
@@ -882,9 +885,9 @@ export const PT: Record<string, string> = {
   'Consent': 'Consentimento',
   'Clinical data processing': 'Tratamento de dados clínicos',
   'Session notes': 'Notas da sessão',
-  'Share Self Use history with therapist': 'Compartilhar o histórico do Self Use com o terapeuta',
+  'Share Self Use history with therapist': 'Compartilhar com o terapeuta o histórico das suas sessões',
   'Share your Self Use history and check-ins. You can revoke this at any time.':
-    'Compartilhe seu histórico do Self Use e seus check-ins. Você pode revogar quando quiser.',
+    'Compartilhe o histórico das suas sessões e seus check-ins. Você pode revogar quando quiser.',
   'OPTIONAL · DEFAULT OFF': 'OPCIONAL · DESLIGADO POR PADRÃO',
   'Step 3 of 3': 'Passo 3 de 3',
   'Connected with {name}.': 'Conectado com {name}.',

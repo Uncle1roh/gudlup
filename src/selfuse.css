@@ -1422,3 +1422,106 @@
 .adr__choice span { font-size: 15px; line-height: 1.4; color: var(--slate); }
 .adr__choice:hover { border-color: var(--aura); }
 .adr__choice:disabled { opacity: 0.5; cursor: progress; }
+
+/* ===========================================================================
+   The first run — the optional choices, and the screen on a desktop
+   =========================================================================== */
+
+/* ---- one row, one thing, one switch --------------------------------------
+
+   Each optional purpose used to print three lines: what it is, what saying
+   yes means, and that it can be changed later. Five of those stacked under
+   the acceptance box came to fifteen lines of grey type between "I accept"
+   and the button — and the honest consequence of that much text is that it
+   stops being read, which is the opposite of informed.
+
+   The consequence now sits one tap under the title, in the same words the
+   consent record stores (LEG-04). It is on the screen, which is what ONB-3.3
+   asks; it is not all shouted at once, which is what makes it readable. */
+.fr__optional {
+  margin: 16px 0 0;
+  font-size: 15px; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--slate); text-align: left;
+}
+.consent-row__more > summary {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px; padding: 2px 0;
+  font-size: 15px; font-weight: 600; color: var(--slate);
+  cursor: pointer; list-style: none;
+}
+/* Safari draws its own triangle outside the flex row unless both are off. */
+.consent-row__more > summary::marker { content: ''; }
+.consent-row__more > summary::-webkit-details-marker { display: none; }
+.consent-row__more > summary::after {
+  content: '⌄'; font-size: 15px; line-height: 1; translate: 0 -2px;
+  transition: rotate 160ms var(--ease);
+}
+.consent-row__more[open] > summary::after { rotate: 180deg; }
+.consent-row__more[open] > summary { color: var(--ink); }
+.consent-row__more .legal-consent__hint:first-of-type { margin-top: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .consent-row__more > summary::after { transition: none; }
+}
+
+/* The acceptance, the notices, the optional rows: three different kinds of
+   thing that were all 10px apart. */
+.fr__words .legal-ack__links { margin-top: 10px; }
+.fr__words .fr__privacy { margin-top: 4px; }
+.fr__consents { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.fr__consents .consent-row + .consent-row { margin-top: 0; }
+
+/* ---- the first run on a desktop -----------------------------------------
+
+   Below 1000px nothing here applies and the phone layout is untouched: the
+   stage is not displayed and `.fr__col` is `display: contents`, so the
+   children lay themselves out against `.fr` exactly as they always did.
+
+   Above it the screen is two columns — the card's own picture at a size a
+   desktop has room for, and the words and buttons in a column of their own.
+   The small drawing is dropped rather than shown twice at two sizes. */
+.fr__stage { display: none; }
+.fr__col { display: contents; }
+
+@media (min-width: 1000px) {
+  .screen.fr {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 42%);
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    text-align: left;
+  }
+  .fr__stage {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: 40px;
+    background:
+      radial-gradient(76% 60% at 34% 26%, rgba(31, 191, 148, 0.20), transparent 70%),
+      radial-gradient(64% 56% at 72% 82%, rgba(31, 191, 148, 0.10), transparent 72%),
+      var(--mist-2);
+  }
+  .fr__stageart { width: min(520px, 100%); height: auto; display: block; }
+
+  .fr__col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    min-height: 0;
+    overflow-y: auto;
+    /* No bottom padding on the COLUMN. A sticky footer sticks inside the
+       padding box, so any padding here is a strip below the button where the
+       card's last lines scroll past in the open — which is the one place a
+       person is reading before they accept something. The footer carries its
+       own bottom padding instead, as it does on the phone. */
+    padding: 38px 44px 0;
+  }
+  /* The same picture, smaller, above the words it is already behind. */
+  .fr__col .fr__art { display: none; }
+  .fr__words { max-width: 42ch; }
+  .fr__foot { max-width: 42ch; }
+}

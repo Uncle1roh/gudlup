@@ -324,8 +324,9 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Re-establish an evening wind-down routine': 'Restabelecer uma rotina noturna para desacelerar',
 
   /* ---- the plan names ---- */
-  'Self Use': 'Uso autônomo',
-  'Self Use + Professional Support': 'Uso autônomo + Apoio profissional',
+  'Self Use': 'Biblioteca',
+  'Therapy': 'Terapia',
+  'Self Use + Professional Support': 'Biblioteca + Apoio profissional',
 
   /* ---- Profile ---- */
   'High': 'Alta',

@@ -34,6 +34,7 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
+import { BreathingOrb } from '../components/BreathingOrb'
 import { useSuTheme } from './theme'
 import { useDataProvider } from '../data/provider'
 import { useLegal } from '../legal/LegalContext'
@@ -171,7 +172,7 @@ export function FirstRun({
   const theme = useSuTheme()
   const legal = useLegal()
   const dp = useDataProvider()
-  const [i, setI] = useState(0)
+  const [rawI, setI] = useState(0)
   const [crisisAck, setCrisisAck] = useState(false)
   const [termsAck, setTermsAck] = useState(false)
   const [consents, setConsents] = useState<Partial<Record<ConsentPurpose, boolean>>>({})
@@ -180,15 +181,38 @@ export function FirstRun({
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const legalSteps: Step[] = needsTerms
+  /* ---- the screens are decided when the flow OPENS ------------------------
+
+     `needsTerms` turns false the instant the Terms are accepted — acceptance
+     is recorded the moment it is given, not at the end, which is the point —
+     and the list used to be rebuilt from it on the very next render. The two
+     legal screens then vanished from under somebody who was standing on the
+     screen after them: with no company that left two screens and an index of
+     two, `steps[i]` was undefined, and reading its `kind` took the whole
+     screen down as "Something was interrupted". With a company it skipped the
+     sponsored screen in silence instead, so ONB-4 was never asked.
+
+     The company code is read from the profile and can still arrive late, so
+     that half stays live: a list that GROWS only moves the person forward
+     into a screen that exists, which is safe. One that shrinks is not. */
+  const [showLegal] = useState(needsTerms)
+  const [showTutorial] = useState(needsTutorial)
+
+  const legalSteps: Step[] = showLegal
     ? [{ kind: 'how' }, { kind: 'terms' }, ...(hasCompanyCode ? [{ kind: 'sponsored' } as Step] : [])]
     : []
   const explainer: Step[] = hasCompanyCode
     ? [modesStep(professional), WORK_STEP, METHOD_STEP]
     : [WORK_STEP, METHOD_STEP]
-  const steps: Step[] = [...legalSteps, ...(needsTutorial ? explainer : [])]
+  const steps: Step[] = [...legalSteps, ...(showTutorial ? explainer : [])]
 
+  /* Nothing may leave somebody on a screen that is not there. The freeze above
+     is the fix; this is the floor under it, so no later prop can ever make the
+     first run fall over again. */
+  const i = Math.min(rawI, steps.length - 1)
   const step = steps[i]
+  if (!step) return <div className="app-frame su-studio" />
+
   const last = i === steps.length - 1
   const onLegal = step.kind !== 'explainer'
   /* The one control that decides whether a legal screen can be left. */
@@ -243,6 +267,29 @@ export function FirstRun({
   return (
     <div className="app-frame su-studio">
       <div className="screen fr">
+        {/* ---- the desktop half ----------------------------------------------
+
+            On a phone this flow is a small drawing above a short column of
+            words, which is right for a phone. On a desktop it was the same
+            560px column stranded in the middle of a wide dark window, with a
+            210px drawing floating at the top of it.
+
+            From 1000px the screen becomes two: the card's picture at the size
+            a desktop has room for on the left, the words and the buttons in
+            their own column on the right. The small drawing is dropped there
+            — it is the SAME picture, and printing it twice is just a smaller
+            copy of the thing already filling half the screen.
+
+            The legal screens have no drawing of their own, so they take the
+            brand's signature: a panel that is never empty, whatever step the
+            person is on. */}
+        <div className="fr__stage" aria-hidden="true">
+          {step.kind === 'explainer'
+            ? <img className="fr__stageart" src={ART[step.art].src} alt="" />
+            : <BreathingOrb size={300} />}
+        </div>
+
+        <div className="fr__col">
         <div className="fr__top">
           <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
           {/* The explainer can be skipped; a legal screen cannot. */}
@@ -288,14 +335,32 @@ export function FirstRun({
               <p className="small fr__privacy">
                 <button type="button" className="legal-link" onClick={() => setSheet('privacy')}>{legal.m('ONB-3.2')}</button>
               </p>
+              {/* ---- the optional choices ---------------------------------
+
+                  Five rows, each of which used to print its title, its
+                  consequence and the "you can change this later" line in
+                  full, one under the other. Fifteen lines of grey type
+                  between the acceptance and the button: a person reads the
+                  first one, sees how much is left, and stops reading.
+
+                  Now each row is what it is — a thing, and a switch — with
+                  its consequence one tap under it. Nothing is hidden: the
+                  wording that the consent record stores (LEG-04) is the
+                  wording inside the disclosure, and it is on this screen,
+                  which is what ONB-3.3 asks for. It is simply not all
+                  shouted at once. */}
+              <p className="fr__optional">{t('Optional — all off unless you turn them on')}</p>
               <ul className="fr__consents">
                 {PURPOSES.map((p) => (
                   <li key={p.purpose} className="consent-row">
                     <div className="consent-row__main">
                       <div className="consent-row__text">
                         <div className="consent-row__title">{t(p.label)}</div>
-                        <span className="legal-consent__hint">{t(p.note)}</span>
-                        <span className="legal-consent__hint">{legal.m('ONB-3.3')}</span>
+                        <details className="consent-row__more">
+                          <summary>{t('What this means')}</summary>
+                          <span className="legal-consent__hint">{t(p.note)}</span>
+                          <span className="legal-consent__hint">{legal.m('ONB-3.3')}</span>
+                        </details>
                       </div>
                       <button
                         type="button"
@@ -362,6 +427,7 @@ export function FirstRun({
           {i > 0 && !onLegal && (
             <button className="btn btn--quiet" onClick={() => setI(i - 1)}>{t('Back')}</button>
           )}
+        </div>
         </div>
       </div>
 

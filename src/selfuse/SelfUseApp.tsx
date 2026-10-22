@@ -69,7 +69,10 @@ type Tab = 'home' | 'therapist' | 'progress' | 'benefits' | 'profile'
 
 const TABS: { id: Tab; icon: IconName; label: string }[] = [
   { id: 'home', icon: 'library', label: 'Home' },
-  { id: 'therapist', icon: 'therapist', label: 'Therapist' },
+  /* "Therapy", not "Therapist". The tab bar labels what a person FINDS
+     behind each tab, and "Terapeuta" sitting under the reader's own avatar
+     row reads as a statement about them — the one reading it is not one. */
+  { id: 'therapist', icon: 'therapist', label: 'Therapy' },
   { id: 'progress', icon: 'progress', label: 'Progress' },
   /* Benefits (docs/gamification/SPEC.md §6) — where the partner offers were,
      for everyone: care that comes back to you, exchanged for Loops. */
@@ -624,14 +627,14 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       state,
       sessions: catalog.sessions,
       pathway: findPathway(catalog.pathways, state.pathway?.id),
-      personName: accountName(user?.email),
+      personName: accountName(user?.email, legal.profile?.name),
       t,
     }).save(`good-loop-${dayKey(Date.now())}.pdf`)
   }
 
   function exportTherapy() {
     if (!therapy.link) return
-    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email), t)
+    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email, legal.profile?.name), t)
       .save(`good-loop-therapy-${dayKey(Date.now())}.pdf`)
   }
 
@@ -693,7 +696,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         {tab === 'home' && !openChallenge && (
           <Explore
             topCard={homeChallenge ? <ChallengeCard c={homeChallenge} onOpen={() => setChallengeOpen(homeChallenge.id)} /> : null}
-            name={displayName(user?.email)}
+            name={displayName(user?.email, legal.profile?.name)}
             pathway={state.pathway}
             completed={state.completedPathways.map((c) => c.id)}
             onStartPathway={startPathway}
@@ -755,7 +758,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'profile' && (
           <ProfileTab
-            name={accountName(user?.email)}
+            name={accountName(user?.email, legal.profile?.name)}
             email={user?.email ?? ''}
             convention={convention}
             hasTherapist={Boolean(therapy.link)}

@@ -241,7 +241,7 @@ export function TherapistTab(props: TherapistTabProps) {
   if (!props.hasConvention && !therapy.link) {
     return (
       <div className="su-page thr-info">
-        <h1 className="display su-h1">{t('Therapist')}</h1>
+        <h1 className="display su-h1">{t('Therapy')}</h1>
         <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
         <h2 className="thr-info__h">{t('Professional support')}</h2>
         <p className="lead">
@@ -261,7 +261,7 @@ export function TherapistTab(props: TherapistTabProps) {
     const r = therapy.request
     return (
       <div className="su-page thr-form">
-        <h1 className="display su-h1">{t('Therapist')}</h1>
+        <h1 className="display su-h1">{t('Therapy')}</h1>
         <article className="card thr-pending">
           <span className="badge">{t('Request pending')}</span>
           <div className="thr-card__id">
@@ -296,7 +296,7 @@ export function TherapistTab(props: TherapistTabProps) {
   if (!therapy.link) {
     return (
       <div className="su-page thr-info">
-        <h1 className="display su-h1">{t('Therapist')}</h1>
+        <h1 className="display su-h1">{t('Therapy')}</h1>
         <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
         <h2 className="thr-info__h">{t('Professional support, when you need it')}</h2>
         <p className="lead">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>
@@ -320,7 +320,7 @@ export function TherapistTab(props: TherapistTabProps) {
 
   return (
     <div className="su-page thr-active">
-      <h1 className="display su-h1">{t('Therapist')}</h1>
+      <h1 className="display su-h1">{t('Therapy')}</h1>
 
       <article className="card thr-hero">
         <div className="thr-card__id">

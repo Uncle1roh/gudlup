@@ -2055,6 +2055,78 @@ img, svg, video, canvas { max-width: 100%; }
 .su-studio .auth__foot { border-top-color: var(--su-hair); }
 .su-studio .auth__sep { color: var(--su-muted); }
 
+/* The two ways out of the form, on ONE line under the button: forgetting a
+   password and not having an account yet are both "I cannot get in from
+   here", and they belong next to each other rather than stacked as two
+   full-width rows, the second of which was where creating an account —
+   the whole reason a first-time person is on this screen — had been living. */
+.auth__alt {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 4px 18px; margin-top: 14px;
+}
+.auth__alt .auth__forgot,
+.auth__alt .auth__toggle { width: auto; margin: 0; padding: 4px 0; }
+
+/* The line under the title is gone from the sign-in state, so the gap above
+   the fields has to come from the fields and not from a paragraph that may
+   not be there. */
+.auth__sub { margin-bottom: 0; }
+.auth__fields { margin-top: 18px; }
+
+/* ---- the door on a desktop ----------------------------------------------
+
+   A 360px card centred in a wide window is a form floating in an empty room:
+   it reads as a dialog over nothing, and it is the FIRST thing anybody sees
+   of the product. From 900px the screen is two — the brand's signature at
+   the size it was drawn for, and the form at the width a form wants.
+
+   The stage is markup that only exists above this breakpoint in effect
+   (`display: none` below it), so the phone layout is exactly what it was.
+   It is also where a photograph goes, if one is ever made: set a
+   `background-image` on `.auth__stage` and nothing else has to move. */
+.auth__stage { display: none; }
+
+@media (min-width: 900px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr) minmax(400px, 40%);
+    align-items: stretch;
+    justify-items: stretch;
+    padding: 0;
+  }
+  .auth__stage {
+    display: grid;
+    place-items: center;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow: hidden;
+    background:
+      radial-gradient(90% 70% at 30% 20%, rgba(31, 191, 148, 0.18), transparent 70%),
+      radial-gradient(70% 60% at 75% 85%, rgba(31, 191, 148, 0.10), transparent 70%),
+      var(--mist-2);
+    background-size: cover;
+    background-position: center;
+  }
+  .auth--b2b .auth__stage { background-color: #e7eedd; }
+  .auth__stage__art { filter: drop-shadow(0 30px 60px rgba(12, 42, 34, 0.18)); }
+
+  /* The card keeps its own width inside the right column and centres in it,
+     top-pinned once it is taller than the window — the same rule the phone
+     layout already uses, for the same reason. */
+  .auth__card {
+    max-width: 420px;
+    width: min(420px, calc(100% - 64px));
+    margin: auto;
+    padding: 36px 32px;
+  }
+}
+
+/* A long sign-up form must not drag the picture down the page with it: the
+   stage is sticky, so it holds the window while the card scrolls past it. */
+@media (min-width: 900px) and (max-height: 720px) {
+  .auth__stage__art { transform: scale(0.74); }
+}
+
 
 /* ----------------------------------------------------------------------------
    Desktop layout — the B2C column widens instead of staying phone-locked

@@ -2771,3 +2771,155 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
   .su-studio .prog-bento .cal__pad { aspect-ratio: auto; height: 46px; }
   .su-studio .progress > .btn--quiet { align-self: flex-start; }
 }
+
+/* ===========================================================================
+   The Self Use door on a desktop
+
+   `index.css` turns `.auth` into two columns from 900px. This sheet loads
+   after it and already pins the dark door to `align-items: start` so a tall
+   sign-up form can be scrolled to, so the two-column rule has to be restated
+   here or the stage column collapses to the height of the orb.
+
+   The dark ground needs its own stage, too: the light sheet's mist would be
+   a white slab beside a black form.
+   =========================================================================== */
+@media (min-width: 900px) {
+  .su-studio.auth {
+    align-items: stretch;
+    justify-items: stretch;
+  }
+  .su-studio.auth .auth__stage {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(31, 191, 148, 0.22), transparent 70%),
+      radial-gradient(70% 60% at 72% 84%, rgba(31, 191, 148, 0.10), transparent 72%),
+      var(--su-ground);
+    border-right: 1px solid var(--su-hair);
+  }
+  .su-studio.auth .auth__stage__art { filter: none; }
+  .su-studio.auth .auth__card { margin: auto; }
+}
+
+/* Same row, same padding: the dark sheet gives `.auth__forgot` a top padding
+   of its own, which set the two links a few pixels apart once they shared a
+   line. */
+.su-studio.auth .auth__alt .auth__forgot { padding: 4px 0; }
+
+/* ===========================================================================
+   Four small corrections from the first full pass over the signed-in app
+   =========================================================================== */
+
+/* ---- the person's circle belongs to the same family as the artwork -------
+
+   It was a flat grey well with two letters in it: the one circle on the
+   surface that looked like a placeholder waiting for an image, sitting at the
+   top of the page about the professional. The library's own discs are lit
+   from the top left and fade to the ground, so this one is too. The initials
+   sit on the lit part, in the ground's own dark, which is the only pairing
+   that holds its contrast whatever letters land in it. */
+.su-studio .avatar {
+  background:
+    radial-gradient(circle at 34% 30%,
+      rgba(251, 246, 228, 0.96) 0%,
+      rgba(31, 191, 148, 0.92) 46%,
+      rgba(122, 198, 155, 0.58) 74%,
+      rgba(122, 198, 155, 0.20) 100%);
+  border: 0;
+  color: #06231b;
+  font-weight: 700;
+  box-shadow:
+    inset 0 0 0 1px rgba(7, 13, 12, 0.10),
+    0 10px 26px -16px rgba(0, 0, 0, 0.9);
+}
+/* A real photograph replaces the disc rather than sitting in a box on it. */
+.su-studio img.avatar { object-fit: cover; padding: 0; }
+
+/* ---- the city field ------------------------------------------------------
+
+   An unclassed `<input type="search">`: it inherited the browser's own box,
+   so the text started hard against the left edge while every other field on
+   the surface has fourteen pixels of air. It is the same field as the rest. */
+.su-studio .gam-city-picker input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 11px 14px;
+  background: var(--su-well);
+  border: 1px solid var(--su-hair);
+  border-radius: 12px;
+  color: var(--su-fg);
+  font-family: inherit;
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.su-studio .gam-city-picker input::placeholder { color: var(--su-faint); }
+.su-studio .gam-city-picker input:focus {
+  outline: none;
+  border-color: var(--su-accent);
+  background: var(--su-hover);
+}
+.su-studio .gam-city-picker input::-webkit-search-cancel-button { filter: invert(1); opacity: 0.45; }
+
+/* ---- a sheet is a sheet on a phone and a dialog on a desktop -------------
+
+   Everything that opens over the app — the legal notices behind "Learn more",
+   the pickers, the confirmations — is one `.sheet`, drawn as a panel that
+   rises from the bottom edge and is dismissed by dragging the grip. That is
+   the right object on a phone and the wrong one in a 1400px window, where it
+   becomes a wide strip welded to the bottom of the screen with a drag handle
+   no mouse will ever use.
+
+   Same markup, same component, centred: from 900px the scrim centres its
+   child, the sheet takes a dialog's width and corners, and the grip — which
+   is an affordance for a gesture that does not exist here — is dropped. */
+@media (min-width: 900px) {
+  .sheet-scrim { align-items: center; padding: 32px 24px; }
+  .sheet {
+    max-width: 640px;
+    border-radius: var(--r-lg);
+    max-height: min(82dvh, 780px);
+    padding: 22px 28px 24px;
+  }
+  .sheet__grip { display: none; }
+  .su-studio .sheet { border-radius: 22px; }
+  .legal-sheet { max-height: min(82dvh, 780px); }
+}
+
+/* ---- "help me choose", on a desktop --------------------------------------
+
+   A question mark in a circle, pinned to the bottom-right corner of a wide
+   window, is the furthest thing on the screen from where somebody browsing a
+   library is looking — and a question mark is the web's most overloaded
+   glyph: help with the app, help with the account, a chat with nobody on the
+   other end. None of those is what this is. It is the four questions that
+   pick a pathway for you.
+
+   From 1100px it keeps the position and loses the guessing: the same button,
+   with its name written on it, in the accent so it reads as an offer rather
+   than as a support widget. The circle stays on the phone, where the corner
+   is the thumb's own and space is the scarce thing. */
+.su-studio .cat-rail__help__label { display: none; }
+
+@media (min-width: 1100px) {
+  .su-studio .cat-rail__help {
+    width: auto;
+    height: auto;
+    padding: 13px 22px;
+    border-radius: var(--r-pill, 999px);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--su-accent);
+    color: var(--su-on-accent);
+    box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.75);
+  }
+  .su-studio .cat-rail__help:hover { background: var(--su-accent-2); color: var(--su-on-accent); }
+  .su-studio .cat-rail__help__label {
+    display: inline;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+  }
+}

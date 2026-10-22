@@ -228,6 +228,14 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
           They used to be a gate everybody answered before seeing the app,
           then a text link in the Pathways rail header — which is where a
           person who is already lost is least likely to look. */}
+      {/* On a phone a 52px circle in the thumb's corner is the right shape:
+          screen space is the scarce thing and the gesture is cheap.
+
+          On a desktop neither is true. The same circle sat in the bottom
+          right of a 1400px window — the furthest point from where the eye
+          is, marked with a question mark that could mean help with the app,
+          help with the account, or a chat nobody is on the other end of. It
+          says what it does there, in words, because there is room for them. */}
       <button
         className="btn cat-rail__help"
         onClick={() => setView({ kind: 'finder' })}
@@ -235,6 +243,7 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         aria-label={t('Help me choose')}
       >
         <Icon name="help" size={22} />
+        <span className="cat-rail__help__label">{t('Help me choose')}</span>
       </button>
     </div>
   )

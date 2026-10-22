@@ -8,6 +8,7 @@ import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCod
 import { useI18n } from '../i18n'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
+import { BreathingOrb } from '../components/BreathingOrb'
 import { useSuTheme } from '../selfuse/theme'
 import { useDataProvider } from '../data/provider'
 import { isValidPromoCode, normalizePromoCode } from '../data/promo'
@@ -226,6 +227,26 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
        black one. The clinician, employer and admin doors are unchanged — their
        surfaces are still light. */
     <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr ? '' : ' su-studio'}`}>
+      {/* ---- the desktop half ------------------------------------------------
+
+          A door the size of a phone, centred in a 27-inch monitor, is a form
+          floating in an empty room. From 900px the screen becomes two: the
+          brand's own signature on the left, at the size it was drawn to be
+          seen at, and the form on the right at the width a form wants.
+
+          It carries no words. Everything a person has to READ is in the card,
+          in one column, so the eye never crosses the fold — and a panel with
+          nothing to read is a panel with nothing to translate, nothing to
+          keep in step with the legal copy, and nothing to get wrong. Below
+          900px it is not rendered at all: the phone layout is untouched.
+
+          To put a photograph here later, give `.auth__stage` a background
+          image; nothing else has to change. */}
+      <div className="auth__stage" aria-hidden="true">
+        <div className="auth__stage__art">
+          <BreathingOrb size={320} />
+        </div>
+      </div>
       <div className="auth__card">
         {/* The b2c door is the dark Self Use ground; the clinician, employer
             and admin doors are light. Same logo, the colourway its ground asks
@@ -237,11 +258,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           {!isAdmin && <LanguagePicker className="auth__lang" label={false} />}
         </div>
         <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
-        <p className="auth__sub">{isAdmin
-            ? t('Sign in to the admin console')
-            : isHr
-              ? signup ? t('Create the account for your company') : t('Sign in to the employer dashboard')
-              : signup ? t('Create your account') : t('Sign in to continue')}</p>
+        {/* Only the sign-UP state says anything here. On the sign-in state the
+            line under the title repeated what the title and the button had
+            both already said — "Welcome / Sign in to continue / Sign in" is
+            three ways of announcing a door somebody is already standing at. */}
+        {signup && (
+          <p className="auth__sub">{isHr ? t('Create the account for your company') : t('Create your account')}</p>
+        )}
 
         <div className="auth__fields">
           <input className="auth__input" type="email" placeholder={t('Email')} autoComplete="email"
@@ -362,17 +385,26 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
         <button className="auth__btn" disabled={busy || !canSubmit} onClick={() => void submit()}>
           {busy ? t('Please wait…') : signup ? t('Create account') : t('Sign in')}
         </button>
-        {/* Signing in only. On the sign-up form there is no password to have
-            forgotten, and the link would just be noise. */}
-        {!signup && !demo && (
-          <button className="auth__forgot" disabled={busy} onClick={() => void forgot()}>
-            {t('Forgot your password?')}
-          </button>
-        )}
-        {!noSignup && (
-          <button className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setResetSent(false) }}>
-            {signup ? t('Have an account? Sign in') : t('New here? Create an account')}
-          </button>
+        {/* The two ways out of this form, on one line under the button.
+            They used to be stacked, each on its own full-width row, and the
+            way to an ACCOUNT — the thing a first-time person is here for —
+            was the lower of the two, written as a question ("New here?")
+            that the person has to read past to find the verb. Two plain
+            verbs, side by side. Forgetting a password is a sign-in problem
+            only: on the sign-up form there is no password to have forgotten. */}
+        {(!noSignup || (!signup && !demo)) && (
+          <div className="auth__alt">
+            {!signup && !demo && (
+              <button type="button" className="auth__forgot" disabled={busy} onClick={() => void forgot()}>
+                {t('Forgot your password?')}
+              </button>
+            )}
+            {!noSignup && (
+              <button type="button" className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setResetSent(false) }}>
+                {signup ? t('Sign in') : t('Create an account')}
+              </button>
+            )}
+          </div>
         )}
 
         {demo && <p className="auth__demo">{t('Demo mode — any email & password works. Tap {action}.', { action: signup ? t('Create account') : t('Sign in') })}</p>}
