@@ -49,6 +49,7 @@ export const PT: Record<string, string> = {
 
   /* ---- auth ---- */
   'Administrator access': 'Acesso do administrador',
+  'Commercial access': 'Acesso comercial',
   'Employer access': 'Acesso do empregador',
   'Clinician access': 'Acesso do clínico',
   'Welcome': 'Bem-vindo',

@@ -34,8 +34,13 @@ const SURFACES: Surface[] = [
   },
   {
     href: '#admin', icon: '🛠', title: 'Admin console',
-    blurb: 'Content catalogue, companies, users, therapist credential approvals, data requests, reports and legal texts. Always in Italian.',
+    blurb: 'Content catalogue, the audio library, users, therapist credential approvals, data requests, the economy rules and legal texts. Always in Italian.',
     loginHint: 'admin@goodloop.app',
+  },
+  {
+    href: '#sales', icon: '◭', title: 'Commercial console',
+    blurb: 'Companies and their access codes, the add-on plans that carry the points multiplier, in-app campaigns, and the benefits and partners the commercial team negotiates. Always in Italian.',
+    loginHint: 'comercial@goodloop.app',
   },
   {
     href: '#studio', icon: '🎚', title: 'Sound Studio',

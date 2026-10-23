@@ -27,7 +27,7 @@ export function ageAt(birthDate: string, now = new Date()): number | null {
   return age
 }
 
-export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
+export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales' }) {
   const auth = useAuth()
   const dp = useDataProvider()
   const { t, locale } = useI18n()
@@ -37,11 +37,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
   const isB2b = mode === 'b2b'
   const isAdmin = mode === 'admin'
   const isHr = mode === 'hr'
+  const isSales = mode === 'sales'
   /* The admin console has no sign-up and never will: an account that can read
      every company and every protocol is provisioned by hand, not claimed from
      a form. HR does sign up, but only against a company code an admin minted,
      which is what ties the account to the company panel it will open. */
-  const noSignup = isAdmin
+  /* Neither console is claimed from a form. An account that can read every
+     company, every contract and the whole points economy is provisioned by
+     hand, like the admin one. */
+  const noSignup = isAdmin || isSales
   const demo = auth.mode === 'demo'
   /* Somebody who has asked their system not to animate things is not asking
      for seventeen seconds of drifting water behind a password field. CSS
@@ -58,8 +62,8 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
      workspace instead of the library afterwards. */
   const [kind, setKind] = useState<'b2c_user' | 'therapist'>('b2c_user')
   const asTherapist = isB2b || (mode === 'b2c' && signup && kind === 'therapist')
-  const role: Role = isAdmin ? 'admin' : isHr ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
-  const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
+  const role: Role = isAdmin ? 'admin' : isSales ? 'sales' : isHr ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
+  const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isSales ? 'comercial@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
   const [password, setPassword] = useState(demo ? 'demo' : '')
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
@@ -232,7 +236,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
        it was dark, and opening the app meant a white screen handing over to a
        black one. The clinician, employer and admin doors are unchanged — their
        surfaces are still light. */
-    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr ? '' : ' su-studio'}`}>
+    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr || isSales ? '' : ' su-studio'}`}>
       {/* ---- the desktop half ------------------------------------------------
 
           A door the size of a phone, centred in a 27-inch monitor, is a form
@@ -275,12 +279,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
             and admin doors are light. Same logo, the colourway its ground asks
             for. */}
         <div className="auth__brand">
-          <BrandLogo variant={isB2b || isAdmin || isHr || theme === 'light' ? 'green' : 'cream'} />
+          <BrandLogo variant={isB2b || isAdmin || isHr || isSales || theme === 'light' ? 'green' : 'cream'} />
           {/* The language is the person's to choose, from the first screen.
               Not on the admin door: the console is pinned to Italian. */}
-          {!isAdmin && <LanguagePicker className="auth__lang" label={false} />}
+          {!isAdmin && !isSales && <LanguagePicker className="auth__lang" label={false} />}
         </div>
-        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
+        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isSales ? t('Commercial access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
         {/* Only the sign-UP state says anything here. On the sign-in state the
             line under the title repeated what the title and the button had
             both already said — "Welcome / Sign in to continue / Sign in" is
@@ -468,6 +472,7 @@ const ROLE_FOR_SURFACE: Record<GateMode, Role> = {
   b2b: 'therapist',
   hr: 'hr_admin',
   admin: 'admin',
+  sales: 'sales',
 }
 
 /** Where each role's own surface lives. The patient app owns the empty hash,
@@ -477,6 +482,7 @@ const HOME_FOR_ROLE: Record<Role, string> = {
   therapist: '#therapist',
   hr_admin: '#hr',
   admin: '#admin',
+  sales: '#sales',
 }
 
 const SURFACE_NAME: Record<Role, string> = {
@@ -484,9 +490,10 @@ const SURFACE_NAME: Record<Role, string> = {
   therapist: 'Good Loop clinic',
   hr_admin: 'Good Loop for employers',
   admin: 'Good Loop admin',
+  sales: 'Good Loop commerciale',
 }
 
-export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr'
+export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales'
 
 /**
  * `allow` widens a surface beyond the one role its door implies, for the one
@@ -515,7 +522,7 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
      signed in, or a flag set by hand — must not put anyone else on demo data
      without knowing it. Only an admin keeps it. */
   useEffect(() => {
-    if (ready && role && role !== 'admin' && previewing()) clearPreview()
+    if (ready && role && role !== 'admin' && role !== 'sales' && previewing()) clearPreview()
   }, [ready, role])
   useEffect(() => {
     if (misplaced && role) window.location.hash = HOME_FOR_ROLE[role]

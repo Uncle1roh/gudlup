@@ -15,7 +15,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
 import { stashMockLegalProfile } from '../data/mockLegal'
 
-export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin'
+export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin' | 'sales'
 
 export interface AuthUser { id: string; email: string }
 export interface SignUpExtra {

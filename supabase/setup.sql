@@ -10315,6 +10315,107 @@ create or replace function get_my_challenges() returns json
      )
 $$;
 
+
+-- ============================================================================
+-- THE COMMERCIAL ROLE (also in supabase/16-sales-role.sql, which is this same
+-- block on its own for a database where setup.sql has already been run).
+--
+-- A `sales` account is not an admin and inherits nothing from one. It is
+-- granted the companies, the add-on plans and their subscriptions, the
+-- campaigns and the partners — and has NO policy at all on profiles,
+-- patients, sessions, notes, assessments, scores, goals, messages or
+-- appointments, which under row-level security means no row comes back.
+-- See the header of 16-sales-role.sql for the reasoning.
+-- ============================================================================
+
+-- ---- the role -------------------------------------------------------------
+-- The same shape as the one that added `hr_admin`: a no-op on re-run.
+do $$ begin
+  alter type user_role add value if not exists 'sales';
+exception when duplicate_object then null; end $$;
+
+-- ---- who is one -----------------------------------------------------------
+-- `role::text`, not `role = 'sales'`. The Supabase editor runs a script as
+-- ONE transaction, and a value added to an enum by that same transaction
+-- cannot be used in it — a `language sql` body is parsed when it is created,
+-- so comparing against the literal here would fail on the very first run and
+-- succeed on the second, which is the worst way for a permission function to
+-- behave. Comparing text never touches the enum.
+create or replace function is_sales() returns boolean
+  language sql stable security definer set search_path = public as
+  $$ select exists (select 1 from profiles where auth_uid = auth.uid() and role::text = 'sales') $$;
+revoke all on function is_sales() from public;
+grant execute on function is_sales() to authenticated;
+
+-- ---- the customers --------------------------------------------------------
+drop policy if exists companies_sales on companies;
+create policy companies_sales on companies
+  for all using (is_sales()) with check (is_sales());
+
+-- ---- the plans, and which company is on which -----------------------------
+-- This pair IS the points multiplier: `addon_plans.multiplier` is the number,
+-- and the subscription is what puts a company on it. Selling the Premium
+-- contract and setting the multiplier are the same act, so they are the same
+-- permission.
+drop policy if exists addon_plans_sales on addon_plans;
+create policy addon_plans_sales on addon_plans
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists company_addon_subs_sales on company_addon_subscriptions;
+create policy company_addon_subs_sales on company_addon_subscriptions
+  for all using (is_sales()) with check (is_sales());
+
+-- ---- the campaigns --------------------------------------------------------
+-- A challenge is a commercial incentive that runs inside the app. What it
+-- cannot do is change what a Loop is worth: `economy_settings` is the
+-- product's, and is not granted here.
+drop policy if exists challenges_sales on challenges;
+create policy challenges_sales on challenges
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists challenge_templates_sales on challenge_templates;
+create policy challenge_templates_sales on challenge_templates
+  for all using (is_sales()) with check (is_sales());
+
+-- Read only: what a campaign counted is a result, and a result that the
+-- person who owns the campaign can edit is not a result.
+drop policy if exists challenge_counted_sales on challenge_counted;
+create policy challenge_counted_sales on challenge_counted
+  for select using (is_sales());
+
+-- ---- the partners ---------------------------------------------------------
+drop policy if exists benefits_sales on benefits;
+create policy benefits_sales on benefits
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists benefit_tags_sales on benefit_tags;
+create policy benefit_tags_sales on benefit_tags
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists benefit_tag_map_sales on benefit_tag_map;
+create policy benefit_tag_map_sales on benefit_tag_map
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists benefit_codes_sales on benefit_codes;
+create policy benefit_codes_sales on benefit_codes
+  for all using (is_sales()) with check (is_sales());
+
+drop policy if exists partner_products_sales on partner_products;
+create policy partner_products_sales on partner_products
+  for all using (is_sales()) with check (is_sales());
+
+-- A redemption is somebody's. The commercial team may see WHAT was redeemed
+-- in totals through the reports, never who redeemed it, so there is no policy
+-- for them on benefit_redemptions and this comment is here to say that the
+-- omission is deliberate rather than forgotten.
+
+-- ---- its own actions, on the record ---------------------------------------
+-- Insert only. An audit log that the people it logs can edit is a diary.
+drop policy if exists audit_sales_write on audit_events;
+create policy audit_sales_write on audit_events
+  for insert with check (is_sales());
+
+
 -- PostgREST schema-cache reload. Supabase's API layer caches the table schema;
 -- after the ALTERs above (protocols.plain, asset_meta) a stale cache yields
 -- "Could not find the 'plain' column of 'protocols' in the schema cache" on

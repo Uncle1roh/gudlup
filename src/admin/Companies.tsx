@@ -13,12 +13,13 @@
    is what an employee types to be linked to their employer.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
 import { generateCompanyCode, looksLikeCompanyCode, normalizeCode } from '../data/convention'
 import type { Company } from './types'
+import type { AddonPlan } from '../gamification/company'
 
 export function Companies({ actor }: { actor: string }) {
   const dp = useDataProvider()
@@ -46,6 +47,25 @@ export function Companies({ actor }: { actor: string }) {
   const [made, setMade] = useState<Company | null>(null)
   const [copied, setCopied] = useState(false)
 
+  /* ---- the plan, at the moment the company is created --------------------
+
+     The multiplier is not a property of the company row: it comes from the
+     add-on plan the company is subscribed to, and that lived on a second
+     screen. So selling a Premium contract was "create the company here, then
+     go to Piani e aziende and find it in the list" — two screens, and a
+     company sitting on 1× in between because somebody was interrupted.
+
+     The plan is chosen here, applied in the same action, and still editable
+     on the plans screen afterwards. Nothing about the model changed; what
+     changed is that the sale is one form. */
+  const [plans, setPlans] = useState<AddonPlan[]>([])
+  const [planId, setPlanId] = useState<string>('')
+  const loadPlans = useCallback(() => {
+    void dp.adminListPlans().then((rows) => setPlans(rows.filter((p) => p.active))).catch(() => setPlans([]))
+  }, [dp])
+  useEffect(loadPlans, [loadPlans])
+  const chosenPlan = plans.find((p) => p.id === planId) ?? null
+
   /* Minted from the name as it is typed, and editable: two companies whose
      names start with the same word would otherwise be handed codes that differ
      only in a checksum pair, and the admin is the person who should decide. */
@@ -70,8 +90,19 @@ export function Companies({ actor }: { actor: string }) {
     setBusy(true)
     await dp.saveCompany(company)
     await dp.logAudit({ actor, action: 'company.created', target: company.name, detail: `${company.id} · ${company.seats} postazioni` })
+    /* The plan second, and never fatally: the company exists either way, and
+       a subscription that did not take is fixable on the plans screen. A
+       company that was not created because its plan failed is not. */
+    if (planId) {
+      try {
+        await dp.adminSetCompanyPlan(company.id, planId)
+        await dp.logAudit({ actor, action: 'addon.plan_set', target: company.id, detail: planId })
+      } catch (e) {
+        window.alert(`Azienda creata, ma il piano non è stato applicato: ${(e as Error).message}${String.fromCharCode(10)}Assegnalo da “Piani e moltiplicatori”.`)
+      }
+    }
     setBusy(false)
-    setName(''); setSeats('100'); setCode(''); setAdding(false)
+    setName(''); setSeats('100'); setCode(''); setPlanId(''); setAdding(false)
     setMade(company)
     refetch()
   }
@@ -113,8 +144,26 @@ export function Companies({ actor }: { actor: string }) {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
             />
             <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder="Postazioni" value={seats} onChange={(e) => setSeats(e.target.value)} />
+            <select
+              className="b2b-input adm-addrow__plan"
+              value={planId}
+              onChange={(e) => setPlanId(e.target.value)}
+              aria-label="Piano add-on"
+            >
+              <option value="">Nessun piano · 1×</option>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} · {p.multiplier}×</option>
+              ))}
+            </select>
             <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad} onClick={create}>Crea</button>
           </div>
+          {chosenPlan && (
+            <p className="b2b-sub">
+              Con <b>{chosenPlan.name}</b> i Loops dell’ascolto valgono <b>{chosenPlan.multiplier}×</b> per chi è di questa
+              azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato
+              all’indietro.
+            </p>
+          )}
           <p className="b2b-sub">
             Il <b>codice azienda</b> è anche l’accesso: con questo codice l’HR si registra su <code>#hr</code> e apre
             il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.

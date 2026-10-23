@@ -1,48 +1,52 @@
+/* ============================================================================
+   The admin console — the PRODUCT
+
+   The catalogue, the audio, the rails, the credential queue, the economy's
+   own rules, the tags, the switches, the audit log. What the content and
+   operations team works on.
+
+   What left, and where it went: the companies, the add-on plans, the
+   challenges, the challenge templates and the benefits are now the
+   commercial console (`src/sales/SalesApp.tsx`). They are the same screens,
+   unchanged and not copied — only listed in a different menu. A salesperson
+   negotiating a partner should not be looking at "Importa protocollo", and
+   the person importing a protocol should not be two clicks from changing
+   what a company's multiplier is.
+   ============================================================================ */
+
 import { useEffect, useState } from 'react'
-import { BrandLogo } from '../components/Brand'
-import { useAuth, SignOutButton } from '../auth/auth'
+import { useAuth } from '../auth/auth'
 import { hydrateTtsSettings } from '../tts/settings'
-import { AvatarUpload } from '../components/AvatarUpload'
+import { ConsoleShell, type ConsoleNavItem } from './ConsoleShell'
 import { Overview } from './Overview'
 import { CatalogAdmin } from './CatalogAdmin'
 import { AssetLibrary } from './AssetLibrary'
 import { CredentialQueue } from './CredentialQueue'
 import { ExploreRails } from './ExploreRails'
-import { Companies } from './Companies'
 import { PromoCodes } from './PromoCodes'
-import { Benefits } from './Benefits'
 import { Tags } from './Tags'
-import { Challenges } from './Challenges'
-import { ChallengeTemplates } from './ChallengeTemplates'
 import { Achievements } from './Achievements'
-import { Plans } from './Plans'
 import { GamReports } from './GamReports'
 import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
 import { Economy } from './Economy'
 import { Compliance } from './Compliance'
-import { HelpNowButton } from '../legal/HelpNow'
-import { SURFACES, openPreview } from './preview'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'companies' | 'promo' | 'benefits' | 'tags' | 'challenges' | 'templates' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'plans' | 'gamreports'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'promo' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'gamreports'
 
-const NAV: { id: Section; label: string; icon: string }[] = [
+const NAV: ConsoleNavItem<Section>[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
   { id: 'catalog', label: 'Catalogo contenuti', icon: '♪' },
   { id: 'rails', label: 'Scaffali della libreria', icon: '▤' },
   { id: 'assets', label: 'Libreria audio', icon: '♫' },
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
-  { id: 'companies', label: 'Aziende', icon: '◭' },
   { id: 'promo', label: 'Codici promo', icon: '%' },
-  /* gamification (docs/gamification/SPEC.md §8), in the SPEC's order */
+  /* The economy's RULES stay here — what a Loop is worth, and what a
+     traguardo takes — while the campaigns that spend them are commercial. */
   { id: 'economy', label: 'Economia', icon: '∞' },
   { id: 'achievements', label: 'Traguardi', icon: '◎' },
-  { id: 'challenges', label: 'Sfide', icon: '⚑' },
-  { id: 'templates', label: 'Modelli di sfida', icon: '⚐' },
-  { id: 'benefits', label: 'Benefici', icon: '❖' },
   { id: 'tags', label: 'Tag', icon: '#' },
-  { id: 'plans', label: 'Piani e aziende', icon: '×' },
   { id: 'gamreports', label: 'Report', icon: '▥' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
   { id: 'compliance', label: 'Conformità', icon: '§' },
@@ -58,7 +62,6 @@ export function AdminApp() {
      the page and closes again once a section is picked. On a desktop the
      toggle is hidden and the sidebar is always open. */
   const [navOpen, setNavOpen] = useState(false)
-  const current = NAV.find((n) => n.id === section)
   function pick(id: Section) {
     setSection(id)
     setNavOpen(false)
@@ -74,89 +77,30 @@ export function AdminApp() {
   useEffect(() => { void hydrateTtsSettings() }, [])
 
   return (
-    <div className="adm">
-      <aside className={`adm-side${navOpen ? ' is-open' : ''}`}>
-        <div className="adm-brand">
-          <BrandLogo variant="cream" />
-          <span className="adm-brand__sub">admin</span>
-          <button
-            className="adm-menu"
-            aria-expanded={navOpen}
-            aria-controls="adm-drawer"
-            onClick={() => setNavOpen((v) => !v)}
-          >
-            <span className="adm-menu__label">{current?.label ?? 'Menu'}</span>
-            <span aria-hidden="true">{navOpen ? '✕' : '☰'}</span>
-          </button>
-        </div>
-        <div className="adm-drawer" id="adm-drawer">
-        <nav className="adm-nav" aria-label="Sezioni della console">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              className={`adm-nav__item ${section === n.id ? 'is-active' : ''}`}
-              aria-current={section === n.id ? 'page' : undefined}
-              onClick={() => pick(n.id)}
-            >
-              <span className="adm-nav__icon" aria-hidden="true">{n.icon}</span>
-              {n.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Open the other apps from here.
-
-            Sales has to show the whole product from one login, and three
-            accounts is not a demo. Each of these opens that surface on the
-            DEMO data — populated screens, and nothing real read or written.
-            The bar at the top of the surface moves between them and gets
-            back out. */}
-        <div className="adm-open">
-          <span className="adm-open__title">Apri un’altra app</span>
-          <span className="adm-open__note">Anteprima con dati dimostrativi</span>
-          <div className="adm-open__row">
-            {SURFACES.filter((s) => s.id !== 'admin').map((s) => (
-              <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="adm-side__foot">
-          <HelpNowButton variant="inline" />
-          <a className="adm-open__note" href="#legal" target="_blank" rel="noreferrer">Informazioni legali ↗</a>
-          <div className="adm-who">
-            <AvatarUpload size={30} fallback="⚙️" className="avatarup--bar" />
-            <span className="adm-who__email">{actor}</span>
-          </div>
-          <SignOutButton className="b2b-btn b2b-btn--signout" />
-        </div>
-        </div>
-      </aside>
-
-      <main className="adm-main">
-        <p className="adm-small-note">La console è pensata per lo schermo di un computer: qui funziona tutto, ma le tabelle scorrono di lato.</p>
-        {section === 'overview' && <Overview onGo={pick} />}
-        {section === 'catalog' && <CatalogAdmin actor={actor} />}
-        {section === 'rails' && <ExploreRails actor={actor} />}
-        {section === 'assets' && <AssetLibrary actor={actor} />}
-        {section === 'credentials' && <CredentialQueue actor={actor} />}
-        {section === 'companies' && <Companies actor={actor} />}
-        {section === 'promo' && <PromoCodes actor={actor} />}
-        {section === 'benefits' && <Benefits actor={actor} />}
-        {section === 'tags' && <Tags actor={actor} />}
-        {section === 'challenges' && <Challenges actor={actor} />}
-        {section === 'templates' && <ChallengeTemplates actor={actor} />}
-        {section === 'users' && <Users actor={actor} />}
-        {section === 'compliance' && <Compliance actor={actor} />}
-        {section === 'switches' && <FeatureSwitches actor={actor} />}
-        {section === 'audit' && <AuditLog />}
-        {section === 'economy' && <Economy actor={actor} />}
-        {section === 'achievements' && <Achievements actor={actor} />}
-        {section === 'plans' && <Plans actor={actor} />}
-        {section === 'gamreports' && <GamReports />}
-      </main>
-    </div>
+    <ConsoleShell
+      subtitle="admin"
+      nav={NAV}
+      section={section}
+      onPick={pick}
+      actor={actor}
+      preview={['app', 'therapist', 'company']}
+      navOpen={navOpen}
+      setNavOpen={setNavOpen}
+    >
+      {section === 'overview' && <Overview onGo={pick} />}
+      {section === 'catalog' && <CatalogAdmin actor={actor} />}
+      {section === 'rails' && <ExploreRails actor={actor} />}
+      {section === 'assets' && <AssetLibrary actor={actor} />}
+      {section === 'credentials' && <CredentialQueue actor={actor} />}
+      {section === 'promo' && <PromoCodes actor={actor} />}
+      {section === 'tags' && <Tags actor={actor} />}
+      {section === 'users' && <Users actor={actor} />}
+      {section === 'compliance' && <Compliance actor={actor} />}
+      {section === 'switches' && <FeatureSwitches actor={actor} />}
+      {section === 'audit' && <AuditLog />}
+      {section === 'economy' && <Economy actor={actor} />}
+      {section === 'achievements' && <Achievements actor={actor} />}
+      {section === 'gamreports' && <GamReports />}
+    </ConsoleShell>
   )
 }

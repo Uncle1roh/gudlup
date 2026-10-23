@@ -12,11 +12,15 @@ security policies in `DATA_MODEL.sql` enforce, and what the data-access layer
 | **B2C user** | Self-use app user (may also be a patient — single shared profile) | Consumer app (`/`) |
 | **Therapist** | Credentialed CRP/CFP psychologist, admin-approved | Therapist console (`/#therapist`) |
 | **Admin / HR** | Company contact for NR-1/PGR compliance | Corporate dashboard (post-MVP) |
-| **Good Loop Admin** | Platform operator (credential approval) | Internal |
+| **Good Loop Admin** | Platform operator — catalogue, audio, credentials, switches | `/#admin` |
+| **Good Loop Commercial** | Sells to companies, runs campaigns, negotiates partners | `/#sales` |
 
 ## Resource × role
 
 `RW` = read+write · `R` = read · `R(own)` = only own rows · `agg` = anonymized aggregates only · `—` = no access
+
+(The commercial role is in a table of its own below: it touches none of the
+rows in this one.)
 
 | Resource | B2C user | Therapist | Admin / HR |
 |----------|----------|-----------|------------|
@@ -31,6 +35,41 @@ security policies in `DATA_MODEL.sql` enforce, and what the data-access layer
 | Consents | RW(own) | R (their patients) | — |
 | Clinical events (audit) | — (append only) | — (append only) | agg |
 | NR-1 / PGR aggregates | — | — | R (agg) |
+
+## The commercial role (`sales`)
+
+Added when the back-office split in two: the content team publish protocols,
+the commercial team sell. `supabase/16-sales-role.sql` is the whole grant, and
+`is_sales()` is a function of its own — a commercial account is **not** an
+admin and inherits nothing from `is_admin()`, which appears in sixty-odd
+policies that all keep meaning what they meant.
+
+| Resource | `sales` |
+|----------|---------|
+| Companies (rows, codes, seats, status) | RW |
+| Add-on plans — **this is the points multiplier** | RW |
+| Company ↔ plan subscriptions | RW |
+| Challenges and challenge templates (in-app campaigns) | RW |
+| What a challenge counted | R |
+| Benefits, their tags, their codes, partner products | RW |
+| Benefit redemptions (who redeemed what) | **—** |
+| Audit events | insert only |
+| Economy settings — what a Loop is worth | **—** |
+| Catalogue, audio, rails, credentials, feature switches, promo codes | **—** |
+| Profiles, patients, sessions, notes, assessments, scores, goals, appointments, psychosocial responses | **—** |
+
+The last row is the load-bearing one, and it is an absence rather than a
+restriction: there is no policy for `sales` on any of those tables, which
+under row-level security means no row comes back. Somebody selling a contract
+has no business reading a clinical note, and that is settled in the database
+and not in the sidebar.
+
+Two deliberate omissions worth naming so they are not read as oversights:
+
+- **Benefit redemptions.** The commercial team sees what a partner is costing
+  in totals, through the reports. Who redeemed it is a person's.
+- **Economy settings.** A campaign spends Loops; what a Loop is *worth* is the
+  product's, and changing it to close a deal is not a commercial decision.
 
 ## Hard rules (load-bearing)
 

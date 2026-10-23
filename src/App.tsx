@@ -4,6 +4,7 @@ import { SelfUseApp } from './selfuse/SelfUseApp'
 import { WorkspaceApp } from './workspace/WorkspaceApp'
 import { CorporateApp } from './corporate/CorporateApp'
 import { AdminApp } from './admin/AdminApp'
+import { SalesApp } from './sales/SalesApp'
 import { DataLayerProvider } from './data/provider'
 import { AuthProvider } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
@@ -86,6 +87,10 @@ export default function App() {
      Their folders stay on disk until they are deleted; nothing renders them. */
   const isWorkspace = route === '#therapist' || route === '#b2b' || route === '#b2b-legacy'
   const isAdmin = route === '#admin'
+  /* The commercial console. Its own role and its own door, like the admin
+     one — and pinned to the same language, because the screens it shows are
+     the admin console's screens and their copy is written in Italian. */
+  const isSales = route === '#sales'
   const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate' || route === '#nr1'
   const isLegal = route === '#legal' || route.startsWith('#legal/')
 
@@ -185,6 +190,21 @@ export default function App() {
       )
     }
 
+    // The commercial console — companies, plans, campaigns, partners.
+    if (isSales) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <LegalProvider>
+              <AuthGate mode="sales">
+                <SalesApp />
+              </AuthGate>
+            </LegalProvider>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
+    }
+
     // The sponsor console — programme totals only, HR role.
     if (isCorporate) {
       return (
@@ -243,7 +263,7 @@ export default function App() {
      — without it the bar and the app end up side by side — and it publishes
      its own height as `--pvw-h`, which the four surface shells subtract from
      their 100dvh so nothing is pushed below the fold. */
-  const bar = previewing() && route !== '#admin'
+  const bar = previewing() && route !== '#admin' && route !== '#sales'
   /* Every deployment that DECLARES itself as not production carries the
      banner, on every surface and every route — including the console,
      because the console is where the destructive buttons are. It is above
@@ -254,7 +274,7 @@ export default function App() {
      different audience: it asks for a build variable to be set, so it goes
      to the surfaces whose people can set one, and never across the login
      page of the app. */
-  const surface: Surface = isAdmin || route === '#studio' || isWorkspace || isCorporate ? 'team' : 'public'
+  const surface: Surface = isAdmin || isSales || route === '#studio' || isWorkspace || isCorporate ? 'team' : 'public'
   const banner = showsBanner(appEnv(), surface)
   useEffect(() => { warnIfUndeclared() }, [])
   const boundary = (
@@ -262,10 +282,10 @@ export default function App() {
       {content()}
     </ErrorBoundary>
   )
-  const body = isAdmin ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
+  const body = isAdmin || isSales ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
   /* The banner is chrome, so on the Italian-pinned console it is Italian too,
      and anywhere else it follows the surface under it. */
-  const strip = isAdmin
+  const strip = isAdmin || isSales
     ? <FixedLocale locale="it"><EnvBanner surface={surface} /></FixedLocale>
     : <EnvBanner surface={surface} />
   return (

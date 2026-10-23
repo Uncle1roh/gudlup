@@ -2989,3 +2989,7 @@ td, th { overflow-wrap: anywhere; }
   }
   .auth__title { font-size: 34px; }
 }
+
+/* The add-on plan, chosen while the company is created rather than on a
+   second screen afterwards. */
+.adm-addrow__plan { max-width: 220px; }
