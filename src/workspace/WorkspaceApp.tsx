@@ -58,7 +58,7 @@ const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[]
   {
     title: 'Weekly',
     items: [
-      { id: 'prescriptions', icon: '📋', label: 'Selected content' },
+      { id: 'prescriptions', icon: '📈', label: 'Patient progress' },
       { id: 'reports', icon: '📄', label: 'Reports' },
     ],
   },
@@ -73,7 +73,7 @@ const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[]
 
 type View =
   | { kind: 'nav' }
-  | { kind: 'patient'; id: string }
+  | { kind: 'patient'; id: string; open?: 'rx' | 'assessment' }
   | { kind: 'call'; id: string; sandbox?: boolean }
   | { kind: 'report'; patientId: string; row: SessionRow; quickNotes?: SessionResult['quickNotes'] }
 
@@ -380,6 +380,17 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
                 row={view.row}
                 quickNotes={view.quickNotes}
                 onSave={(row) => saveSession(p.id, row, [])}
+                /* The three cards on the post-session screen are doors, and
+                   these are what is behind them. Two of them lead to modals
+                   that live on the patient card, so the card is opened with
+                   the right one already up. All three work on mock data as
+                   they do on a database: nothing here goes through the
+                   server, which is what makes the walkthrough demonstrable. */
+                next={{
+                  onSchedule: () => { setNav('calendar'); setView({ kind: 'nav' }) },
+                  onSelectContent: () => setView({ kind: 'patient', id: p.id, open: 'rx' }),
+                  onSendQuestionnaire: () => setView({ kind: 'patient', id: p.id, open: 'assessment' }),
+                }}
                 onBack={() => { setNav('patients'); setView({ kind: 'nav' }) }}
               />
             </main>
@@ -424,6 +435,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
               <PatientCard
                 patient={patient}
                 update={update}
+                openOnArrival={view.kind === 'patient' ? view.open : undefined}
                 onCall={() => startCall(patient.id)}
                 onOpenReport={(sessionId) => {
                   const row = patient.sessions.find((s) => s.id === sessionId)
@@ -441,6 +453,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
                   onCall={startCall}
                   bookings={bookings}
                   onAcceptBooking={acceptBooking}
+                  onSchedule={() => setNav('calendar')}
                 />
               )}
               {nav === 'calendar' && (

@@ -556,6 +556,56 @@ export function rxTarget(rx: WorkspacePrescription): number {
   return rx.perWeek * weeks
 }
 
+/* ---- how a plan is going -------------------------------------------------
+
+   What follows is arithmetic on the plan the CLINICIAN wrote: they chose the
+   content, the frequency and the period, and this counts what has been
+   listened to against what their own plan expects by today. It is not a score
+   about a person, it does not rank anybody, and nothing here is shown to the
+   patient — those are the lines M2R-17 and MN-29 draw, and they stay drawn.
+   "Behind" means behind the professional's own target, which is a fact about
+   the plan and the only thing a weekly review needs to surface. */
+
+export type PlanState = 'none' | 'done' | 'onTrack' | 'behind'
+
+export interface PlanProgress {
+  /** Listened, across every prescription inside its period. */
+  done: number
+  /** What those prescriptions add up to in total. */
+  target: number
+  /** What the plan expects by today, pro-rata through the period. */
+  expected: number
+  /** The latest end date among the plans counted. */
+  until: number | null
+  state: PlanState
+}
+
+export function planProgress(p: WorkspacePatient, now = Date.now()): PlanProgress {
+  const live = p.prescriptions.filter((rx) => rx.toAt >= rx.fromAt)
+  if (!live.length) return { done: 0, target: 0, expected: 0, until: null, state: 'none' }
+
+  let done = 0
+  let target = 0
+  let expected = 0
+  let until: number | null = null
+  for (const rx of live) {
+    const total = rxTarget(rx)
+    done += Math.min(rx.done, total)
+    target += total
+    /* Pro-rata, clamped at both ends: a plan that has not started expects
+       nothing, and one whose period has passed expects all of it. */
+    const span = Math.max(1, rx.toAt - rx.fromAt)
+    const through = Math.min(1, Math.max(0, (now - rx.fromAt) / span))
+    expected += Math.round(total * through)
+    until = until == null ? rx.toAt : Math.max(until, rx.toAt)
+  }
+
+  /* One session's grace. Somebody who listens on Sunday instead of Saturday
+     is not behind, and a list that says they are stops being read. */
+  const state: PlanState = done >= target ? 'done' : done + 1 < expected ? 'behind' : 'onTrack'
+  return { done, target, expected, until, state }
+}
+
 /** The professional's own VAS entries, as they wrote them: pre → post per
     session, oldest first. Printed back verbatim; never averaged, never
     trended — the reading is theirs (M2R-17). */

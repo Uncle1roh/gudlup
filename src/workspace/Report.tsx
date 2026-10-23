@@ -23,6 +23,24 @@ import { versionShort } from './Patients'
 import { rxTarget, type SessionRow, type TherapistAccount, type WorkspacePatient } from './data'
 import { buildSessionReportPdf } from './sessionPdf'
 
+/**
+ * What the three cards on the post-session screen actually do.
+ *
+ * They used to do nothing: every button called `dismiss(key)`, which hides
+ * the card it is on. "Open the calendar" closed a card titled "Schedule next
+ * session" and left the clinician on the same screen. A door with a wall
+ * behind it is worse than no door, because the first one is tried once and
+ * the second is read and understood.
+ */
+export interface PostActions {
+  /** The week, so a time can be agreed and booked. */
+  onSchedule: () => void
+  /** This patient's card, with the content picker already open. */
+  onSelectContent: () => void
+  /** This patient's card, with the questionnaire picker already open. */
+  onSendQuestionnaire: () => void
+}
+
 interface ReportProps {
   patient: WorkspacePatient
   account: TherapistAccount
@@ -30,9 +48,11 @@ interface ReportProps {
   quickNotes?: { at: number; phase: number; text: string }[]
   onSave: (row: SessionRow) => void
   onBack: () => void
+  /** The three doors on the post-session screen. */
+  next: PostActions
 }
 
-export function SessionReport({ patient, account, row, quickNotes = [], onSave, onBack }: ReportProps) {
+export function SessionReport({ patient, account, row, quickNotes = [], onSave, onBack, next }: ReportProps) {
   const { t } = useI18n()
   /* A demo fixture's note is an English key; it opens in the interface
      language like the rest of the demo. A note the therapist wrote passes
@@ -45,7 +65,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
   const set = (patch: Partial<SessionRow>) => setDraft({ ...draft, ...patch })
 
   if (post) {
-    return <PostSession patient={patient} account={account} row={draft} onDone={onBack} />
+    return <PostSession patient={patient} account={account} row={draft} onDone={onBack} next={next} />
   }
 
 
@@ -216,11 +236,13 @@ function PostSession({
   account,
   row,
   onDone,
+  next,
 }: {
   patient: WorkspacePatient
   account: TherapistAccount
   row: SessionRow
   onDone: () => void
+  next: PostActions
 }) {
   const { t } = useI18n()
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({})
@@ -249,7 +271,7 @@ function PostSession({
           <article className="w-postcard">
             <h3>{t('Schedule next session')}</h3>
             <p className="w-small">{t('When you and {name} decide. Open the calendar to pick a time.', { name: patient.name.split(' ')[0] })}</p>
-            <button className="w-btn w-btn--ghost" onClick={() => dismiss('schedule')}>{t('Open the calendar')}</button>
+            <button className="w-btn w-btn--ghost" onClick={next.onSchedule}>{t('Open the calendar')}</button>
           </article>
         )}
 
@@ -261,7 +283,7 @@ function PostSession({
                 ? t('Current: {code} — {done} of {total} done.', { code: `${rx.protocolCode} ${versionShort(rx.version)}`, done: rx.done, total: rxTarget(rx) })
                 : t('Nothing selected yet.')}
             </p>
-            <button className="w-btn w-btn--ghost" onClick={() => dismiss('rx')}>{t('Select content')}</button>
+            <button className="w-btn w-btn--ghost" onClick={next.onSelectContent}>{t('Select content')}</button>
             <button className="w-link" onClick={() => dismiss('rx')}>{t('Nothing this time')}</button>
           </article>
         )}
@@ -270,7 +292,7 @@ function PostSession({
           <article className="w-postcard">
             <h3>{t('Questionnaire')}</h3>
             <p className="w-small">{t('Send one if you decide it is useful. Which, and when, is yours to choose.')}</p>
-            <button className="w-btn w-btn--ghost" onClick={() => dismiss('assessment')}>{t('Send a questionnaire')}</button>
+            <button className="w-btn w-btn--ghost" onClick={next.onSendQuestionnaire}>{t('Send a questionnaire')}</button>
             <button className="w-link" onClick={() => dismiss('assessment')}>{t('Not now')}</button>
           </article>
         )}

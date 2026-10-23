@@ -828,3 +828,67 @@ textarea.w-input, .w-notearea { max-width: none; }
   background: linear-gradient(to top, var(--w-surface), transparent);
   pointer-events: none;
 }
+
+/* --- the roster bar: filters on the left, a name search on the right ----- */
+.w-rosterbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.w-rosterbar .w-filters { margin: 0; }
+.w-rostersearch { flex: 0 1 260px; min-width: 180px; }
+
+/* --- a row's actions, as a menu ------------------------------------------
+
+   One camera icon used to BE the Actions column, which made the heading a
+   label for a single button. The menu can also say why something is not
+   available, which a disabled icon cannot. */
+.w-rowmenu { position: relative; display: inline-block; }
+.w-rowmenu__list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+  min-width: 240px; margin: 0; padding: 6px; list-style: none;
+  background: var(--w-surface); border: 1px solid var(--w-line);
+  border-radius: 12px; box-shadow: 0 18px 40px -18px rgba(12, 32, 24, 0.45);
+  text-align: left;
+}
+.w-rowmenu__list > li + li { border-top: 1px solid var(--w-line); margin-top: 4px; padding-top: 4px; }
+.w-rowmenu__list button {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 10px; border-radius: 8px;
+  background: none; border: 0; font: inherit; font-size: 13.5px;
+  color: var(--w-ink); text-align: left; cursor: pointer;
+}
+.w-rowmenu__list button:hover:not(:disabled) { background: var(--w-bg); }
+.w-rowmenu__list button:disabled { color: var(--w-muted); cursor: not-allowed; opacity: 0.7; }
+.w-rowmenu__why {
+  margin: 0 10px 6px; font-size: 12px; line-height: 1.4; color: var(--w-muted);
+}
+
+/* --- patient progress ----------------------------------------------------
+
+   The bar carries two things: how much of the plan has been listened to, and
+   a tick at what the plan expects by today. Behind means the fill is left of
+   the tick — which is a fact about a plan, and readable at a glance without
+   anybody having to do the arithmetic the number next to it already did. */
+.w-table--progress td { vertical-align: middle; }
+.w-rxchip {
+  display: inline-block; margin: 0 6px 4px 0; padding: 2px 7px;
+  background: var(--w-bg); border-radius: 999px; font-size: 11.5px;
+}
+.w-plan { display: flex; flex-direction: column; gap: 5px; min-width: 150px; }
+.w-plan__bar {
+  position: relative; height: 7px; border-radius: 999px;
+  background: var(--w-bg); overflow: hidden;
+}
+.w-plan__fill { position: absolute; inset: 0 auto 0 0; background: var(--w-accent); border-radius: 999px; }
+.w-plan__due {
+  position: absolute; top: -2px; bottom: -2px; width: 2px;
+  background: var(--w-ink); opacity: 0.45; transform: translateX(-1px);
+}
+.w-planstate {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: var(--w-bg); color: var(--w-muted);
+}
+.w-planstate.is-onTrack { background: rgba(47, 138, 95, 0.14); color: var(--w-ok); }
+.w-planstate.is-behind  { background: rgba(176, 122, 31, 0.16); color: var(--w-warn); }
+.w-planstate.is-done    { background: rgba(0, 122, 94, 0.12); color: var(--w-accent); }

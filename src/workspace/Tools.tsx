@@ -32,7 +32,8 @@ import { buildBatchReportPdf, buildSessionReportPdf } from './sessionPdf'
 import {
   NOTIFICATION_ROWS,
   type WorkspaceState,
-  rxTarget,
+  planProgress,
+  type PlanState,
 } from './data'
 
 interface ToolProps {
@@ -48,69 +49,127 @@ interface ToolProps {
  */
 /* ---------------------------------------------------------------- TH-RX -- */
 
-type RxFilter = 'all' | 'active' | 'completed'
+type RxFilter = 'all' | 'behind' | 'active'
+
+const PLAN_LABEL: Record<PlanState, string> = {
+  none: 'No plan selected',
+  done: 'Completed',
+  onTrack: 'On track',
+  behind: 'Behind',
+}
 
 /**
- * Everything the professional has selected for people to listen to between
- * sessions, by patient name. It used to sort by an adherence percentage and
- * offer a "nudge" below 70% — the list answering "who needs attention" was
- * the software ranking people on a metric it computed (M2R-17, MN-29).
- * What is left is a record: what was chosen, for whom, and how many times it
- * was listened to.
+ * Patient progress — one row per person, not per prescription.
+ *
+ * This used to be "Selected content": every prescription in the caseload as
+ * a flat list, which answers "what did I choose" and not "how is everybody
+ * doing", and a therapist with twelve patients and three plans each read
+ * thirty-six rows to find out.
+ *
+ * What is counted is the CLINICIAN'S OWN PLAN — their content, their
+ * frequency, their period — against what has been listened to. "Behind"
+ * means behind that target, with a session's grace, and it is arithmetic on
+ * a plan rather than a judgement about a person: nothing is ranked, nothing
+ * is scored, nothing here reaches the patient, and there is no nudge. Those
+ * are the lines M2R-17 and MN-29 draw and they are still where they were.
  */
 export function Prescriptions({ state, onOpenPatient }: ToolProps) {
   const { t } = useI18n()
-  const [filter, setFilter] = useState<RxFilter>('active')
+  const [filter, setFilter] = useState<RxFilter>('all')
+  const now = Date.now()
 
   const rows = useMemo(() => {
-    const all = state.patients.flatMap((p) => p.prescriptions.map((rx) => ({ rx, patient: p })))
-    const filtered = all.filter(({ rx }) => {
-      const done = rx.done >= rxTarget(rx)
-      if (filter === 'completed') return done
-      if (filter === 'active') return rx.toAt >= Date.now() || !done
+    const all = state.patients.map((p) => ({ p, prog: planProgress(p, now) }))
+    const kept = all.filter(({ prog }) => {
+      if (filter === 'behind') return prog.state === 'behind'
+      if (filter === 'active') return prog.state === 'behind' || prog.state === 'onTrack'
       return true
     })
-    return filtered.sort((x, y) => x.patient.name.localeCompare(y.patient.name))
-  }, [state.patients, filter])
+    /* By name. The old list sorted by adherence ascending, which is a
+       ranking of people by a number the software worked out. */
+    return kept.sort((a, b) => a.p.name.localeCompare(b.p.name))
+  }, [state.patients, filter, now])
+
+  const behind = useMemo(
+    () => state.patients.filter((p) => planProgress(p, now).state === 'behind').length,
+    [state.patients, now],
+  )
 
   return (
     <>
-      <h1 className="w-h1">{t('Selected content')}</h1>
+      <div className="w-pagehead">
+        <div className="w-pagehead__title">
+          <h1 className="w-h1">{t('Patient progress')}</h1>
+          {behind > 0 && <span className="w-count">{t('{n} behind their plan', { n: behind })}</span>}
+        </div>
+      </div>
+
       <div className="w-filters">
-        {(['all', 'active', 'completed'] as RxFilter[]).map((f) => (
+        {(['all', 'active', 'behind'] as RxFilter[]).map((f) => (
           <button key={f} className="w-chip" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-            {t(f === 'all' ? 'All' : f === 'active' ? 'Active' : 'Completed')}
+            {t(f === 'all' ? 'All' : f === 'active' ? 'With a plan' : 'Behind')}
           </button>
         ))}
       </div>
 
       {!rows.length ? (
-        <div className="w-empty"><p>{t('Nothing selected.')}</p></div>
+        <div className="w-empty"><p>{t('Nobody here yet.')}</p></div>
       ) : (
-        <table className="w-table">
+        <table className="w-table w-table--progress">
           <thead>
             <tr>
-              <th>{t('Patient')}</th><th>{t('Content')}</th><th>{t('Freq.')}</th><th>{t('Period')}</th><th>{t('Listened')}</th>
+              <th>{t('Patient')}</th>
+              <th>{t('Selected content')}</th>
+              <th>{t('Listened')}</th>
+              <th>{t('Until')}</th>
+              <th>{t('Status')}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ rx, patient }) => (
-              <tr key={rx.id} className="w-row" onClick={() => onOpenPatient(patient.id)}>
+            {rows.map(({ p, prog }) => (
+              <tr key={p.id} className="w-row" onClick={() => onOpenPatient(p.id)}>
                 <td>
                   <span className="w-idcell">
-                    <span className="w-avatar" aria-hidden="true">{initials(patient.name)}</span>
-                    {patient.name}
+                    <span className="w-avatar" aria-hidden="true">{initials(p.name)}</span>
+                    {p.name}
                   </span>
                 </td>
-                <td className="w-mono w-small">{rx.protocolCode} · {versionShort(rx.version)}</td>
-                <td>{rx.perWeek}×/{t('week')}</td>
-                <td className="w-small">{fmtDate(rx.fromAt)} – {fmtDate(rx.toAt)}</td>
-                <td className="w-small">{t('{done} of {total} done', { done: rx.done, total: rxTarget(rx) })}</td>
+                <td className="w-small">
+                  {p.prescriptions.length
+                    ? p.prescriptions.map((rx) => (
+                        <span key={rx.id} className="w-rxchip w-mono">
+                          {rx.protocolCode} · {versionShort(rx.version)} · {rx.perWeek}×/{t('week')}
+                        </span>
+                      ))
+                    : <span className="w-muted">—</span>}
+                </td>
+                <td>
+                  {prog.target ? (
+                    <div className="w-plan">
+                      <div className="w-plan__bar">
+                        {/* the plan's own expectation for today, as a tick */}
+                        <span className="w-plan__fill" style={{ width: `${Math.min(100, (prog.done / prog.target) * 100)}%` }} />
+                        <span className="w-plan__due" style={{ left: `${Math.min(100, (prog.expected / prog.target) * 100)}%` }} />
+                      </div>
+                      <span className="w-small">
+                        {t('{done} of {total} done', { done: prog.done, total: prog.target })}
+                        {prog.state === 'behind' && ` · ${t('{n} behind', { n: prog.expected - prog.done })}`}
+                      </span>
+                    </div>
+                  ) : <span className="w-muted">—</span>}
+                </td>
+                <td className="w-small">{prog.until ? fmtDate(prog.until) : <span className="w-muted">—</span>}</td>
+                <td>
+                  <span className={`w-planstate is-${prog.state}`}>{t(PLAN_LABEL[prog.state])}</span>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+      <p className="w-small w-muted">
+        {t('Counted against the plan you selected — the content, the frequency and the period. Never shown to the patient.')}
+      </p>
     </>
   )
 }

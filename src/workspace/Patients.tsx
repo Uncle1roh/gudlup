@@ -21,7 +21,7 @@
      sees a friendly session name and never a code.
    ============================================================================ */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLegal } from '../legal/LegalContext'
 import { useI18n, fmtDate as localeDate } from '../i18n'
 import { wt, noteTagLabel } from './i18n'
@@ -64,6 +64,98 @@ const FILTERS: { id: Filter; label: string }[] = [
 ]
 
 const DAY = 86_400_000
+const MIN = 60_000
+
+/* ---- when a call can actually happen -------------------------------------
+
+   The roster used to offer a camera button on every row, always. There is no
+   such thing as a video session outside an appointment: the patient's side
+   only opens its lobby inside the join window (`joinWindowOpen`, fifteen
+   minutes before the start until the end), and the two peers meet on a
+   channel named after the appointment id. Pressing it at any other time put
+   the clinician alone in a room with a simulated feed.
+
+   Fifty minutes is the booking length everywhere else in the product; the
+   roster row does not carry the appointment, only its start. */
+function callWindow(nextSessionAt: number | undefined, now: number): 'open' | 'later' | 'none' {
+  if (nextSessionAt == null) return 'none'
+  if (now < nextSessionAt - 15 * MIN) return 'later'
+  if (now >= nextSessionAt + 50 * MIN) return 'none'
+  return 'open'
+}
+
+/** Case- and accent-blind, so "goncalves" finds "Gonçalves". */
+function foldText(s: string): string {
+  return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+/* ---- the row's actions ----------------------------------------------------
+
+   One camera icon was the whole of "Actions", which made the column a label
+   for a single button and hid everything else a clinician does from a row.
+   A menu says what is available, and — more to the point — can say why
+   something is NOT. */
+function RowMenu({
+  patient,
+  window: win,
+  onOpen,
+  onCall,
+  onSchedule,
+}: {
+  patient: WorkspacePatient
+  window: 'open' | 'later' | 'none'
+  onOpen: () => void
+  onCall: () => void
+  onSchedule: () => void
+}) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
+  const pick = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); setOpen(false); fn() }
+
+  return (
+    <div className="w-rowmenu" ref={box} onClick={(e) => e.stopPropagation()}>
+      <button
+        className="w-btn w-btn--sm"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t('Actions for {name}', { name: patient.name })}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
+      >
+        ⋯
+      </button>
+      {open && (
+        <ul className="w-rowmenu__list" role="menu">
+          <li><button role="menuitem" onClick={pick(onOpen)}>{t('Open record')}</button></li>
+          <li>
+            <button role="menuitem" disabled={win !== 'open'} onClick={pick(onCall)}>
+              <VideoIcon />
+              {t('Start video call')}
+            </button>
+            {win !== 'open' && (
+              <p className="w-rowmenu__why">
+                {win === 'later'
+                  ? t('Opens 15 minutes before the appointment.')
+                  : t('No appointment is running — book one first.')}
+              </p>
+            )}
+          </li>
+          <li><button role="menuitem" onClick={pick(onSchedule)}>{t('See in the calendar')}</button></li>
+        </ul>
+      )}
+    </div>
+  )
+}
 
 /* --------------------------------------------------------- bookings ------
 
@@ -115,12 +207,15 @@ interface RosterProps {
   /** Sessions people booked in their own app, for nobody on this roster. */
   bookings?: Booking[]
   onAcceptBooking?: (b: Booking) => void
+  /** Take me to this week, with this person's session on it. */
+  onSchedule?: () => void
 }
 
-export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptBooking }: RosterProps) {
+export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptBooking, onSchedule }: RosterProps) {
   const { t } = useI18n()
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<'next' | 'name' | 'last'>('next')
+  const [query, setQuery] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const now = Date.now()
 
@@ -132,6 +227,11 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
       (p.lastSessionAt != null && now - p.lastSessionAt > 30 * DAY)
 
     let list = state.patients
+    /* A roster is a list of people, and a list of people is searched by
+       name. Four demo patients fit on a screen; a real caseload does not,
+       and scrolling for a surname is not a filter chip's job. */
+    const q = foldText(query.trim())
+    if (q) list = list.filter((p) => foldText(p.name).includes(q))
     if (filter === 'today') list = list.filter((p) => p.nextSessionAt && new Date(p.nextSessionAt).toDateString() === new Date().toDateString())
     if (filter === 'alerts') list = list.filter(alerts)
     if (filter === 'inactive') list = list.filter((p) => !p.lastSessionAt || now - p.lastSessionAt > 30 * DAY)
@@ -144,7 +244,7 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
     // Alert rows float to the top of whatever ordering is in force.
     return [...sorted.filter(alerts), ...sorted.filter((p) => !alerts(p))]
     // to re-sort the roster, not wait for something else to invalidate it.
-  }, [state.patients, filter, sort, now])
+  }, [state.patients, filter, sort, query, now])
 
   if (!state.patients.length) {
     return (
@@ -181,12 +281,22 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
 
       <BookingsPanel bookings={bookings} onAccept={onAcceptBooking} />
 
-      <div className="w-filters">
-        {FILTERS.map((f) => (
-          <button key={f.id} className="w-chip" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
-            {t(f.label)}
-          </button>
-        ))}
+      <div className="w-rosterbar">
+        <div className="w-filters">
+          {FILTERS.map((f) => (
+            <button key={f.id} className="w-chip" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+              {t(f.label)}
+            </button>
+          ))}
+        </div>
+        <input
+          className="w-input w-input--sm w-rostersearch"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('Search by name…')}
+          aria-label={t('Search by name…')}
+        />
       </div>
 
       <table className="w-table w-table--roster">
@@ -220,14 +330,13 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
                 </td>
                 <td className="w-muted">{p.lastSessionAt ? fmtDate(p.lastSessionAt) : t('Never')}</td>
                 <td>
-                  <button
-                    className="w-btn w-btn--sm"
-                    onClick={(e) => { e.stopPropagation(); onCall(p.id) }}
-                    aria-label={t('Start video call with {name}', { name: p.name })}
-                    title={t('Start video call with {name}', { name: p.name })}
-                  >
-                    <VideoIcon />
-                  </button>
+                  <RowMenu
+                    patient={p}
+                    window={callWindow(p.nextSessionAt, now)}
+                    onOpen={() => onOpen(p.id)}
+                    onCall={() => onCall(p.id)}
+                    onSchedule={() => onSchedule?.()}
+                  />
                 </td>
               </tr>
             )
@@ -347,24 +456,30 @@ interface CardProps {
   update: RosterProps['update']
   onCall: () => void
   onOpenReport: (sessionId: string) => void
+  /** Which modal to arrive with open. The post-session screen offers
+      "select content" and "send a questionnaire" as the next thing to do,
+      and both of them live here — so it sends the clinician to this card
+      with the right one already up, rather than to a card they then have to
+      find the button on. */
+  openOnArrival?: 'rx' | 'assessment'
 }
 
 const SECTIONS = ['history', 'assessments', 'selfuse', 'prescriptions', 'notes', 'goals'] as const
 type Section = (typeof SECTIONS)[number]
 
-export function PatientCard({ patient, update, onCall, onOpenReport }: CardProps) {
+export function PatientCard({ patient, update, onCall, onOpenReport, openOnArrival }: CardProps) {
   const { t } = useI18n()
   const [open, setOpen] = useState<Record<Section, boolean>>({
     history: true, assessments: true, selfuse: false, prescriptions: true, notes: true, goals: false,
   })
-  const [assessOpen, setAssessOpen] = useState(false)
+  const [assessOpen, setAssessOpen] = useState(openOnArrival === 'assessment')
   const { rows, update: updateAssessments } = useAssessments()
   const dp = useDataProvider()
   /* A bridged patient is the one whose Self Use app this build actually drives,
      so their queue is read under the Self Use id. Everyone else keeps their own
      — the two never share a row. */
   const queueId = threadIdFor(patient)
-  const [rxOpen, setRxOpen] = useState(false)
+  const [rxOpen, setRxOpen] = useState(openOnArrival === 'rx')
   const [noteDraft, setNoteDraft] = useState('')
   const [noteSearch, setNoteSearch] = useState('')
   const [showAllNotes, setShowAllNotes] = useState(false)
