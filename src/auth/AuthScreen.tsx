@@ -510,12 +510,20 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
   /* The account has a surface and it is not this one: go there. A person who
      followed an old link, or a bookmark from another role, should end up in
      their own app rather than reading about why they cannot be here. */
-  /* One exception, and only one: an admin walking sales through the product.
-     Preview is per tab, only the console can turn it on, and the surface it
-     opens runs on the demo fixtures rather than the live database — so this
-     widens what an ADMIN may look at, never what they may touch. */
+  /* One exception: somebody from the team walking a prospect through the
+     product. Preview is per tab, only a console can turn it on, and the
+     surface it opens runs on the demo fixtures rather than the live
+     database — so this widens what those two roles may LOOK at, never what
+     they may touch.
+
+     The commercial role had to be added here. Without it "Fare una demo"
+     opened, say, the patient app, the gate found a `sales` account standing
+     on a `b2c_user` surface, called it misplaced and sent it home — so
+     every demo button bounced straight back to the console it was pressed
+     from, which is exactly what it looked like from the outside: nothing
+     happening. */
   const allowed = allow ?? [ROLE_FOR_SURFACE[mode]]
-  const inPreview = previewing() && role === 'admin'
+  const inPreview = previewing() && (role === 'admin' || role === 'sales')
   const misplaced = ready && !!user && !!role && !allowed.includes(role) && !inPreview
 
   /* A flag left behind — an admin who signed out in this tab and somebody else

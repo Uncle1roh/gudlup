@@ -21,7 +21,7 @@ import { useI18n } from '../i18n'
 import { SURFACES, currentSurface, go, endPreview, type PreviewSurface } from './preview'
 
 /** English source keys for the bar's surface buttons (see i18n/studio.ts). */
-const SURFACE_KEY: Record<PreviewSurface, string> = { admin: 'Admin', app: 'App', therapist: 'Therapist', company: 'Company' }
+const SURFACE_KEY: Record<PreviewSurface, string> = { admin: 'Admin', app: 'User', therapist: 'Therapist', company: 'Company' }
 
 export function PreviewBar() {
   const { t } = useI18n()
@@ -31,12 +31,15 @@ export function PreviewBar() {
       <span className="pvw__tag">{t('Preview')}</span>
       <span className="pvw__note">{t('demo data — nothing real is read or written')}</span>
       <nav className="pvw__nav">
-        {SURFACES.map((s) => (
+        {/* The console is not one of the surfaces to move between: leaving
+            is what the exit button is for, and it knows which console the
+            walkthrough was started from. */}
+        {SURFACES.filter((s) => s.id !== 'admin').map((s) => (
           <button
             key={s.id}
             className={`pvw__btn${here === s.id ? ' is-on' : ''}`}
             aria-current={here === s.id ? 'page' : undefined}
-            onClick={() => (s.id === 'admin' ? endPreview() : go(s.id))}
+            onClick={() => go(s.id)}
           >
             {t(SURFACE_KEY[s.id])}
           </button>

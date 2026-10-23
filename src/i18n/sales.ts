@@ -314,6 +314,16 @@ export const PT_SALES: Record<string, string> = {
   'Formato e obiettivo': 'Formato e meta',
   'Comunicazione': 'Comunicação',
   'Rivedi e pubblica': 'Revisar e publicar',
+  'Indietro': 'Voltar',
+  'Avanti': 'Continuar',
+  'Programma': 'Programar',
+  'Passo {n} di {total}. Niente è salvato finché non arrivi alla fine.':
+    'Passo {n} de {total}. Nada é salvo até você chegar ao fim.',
+  'Ultimo passo. Qui decidi se resta una bozza, se parte a una data, o se va online adesso.':
+    'Último passo. Aqui você decide se fica como rascunho, se começa numa data, ou se entra no ar agora.',
+  'Resta qui, invisibile nell’app.': 'Fica aqui, invisível no app.',
+  'Parte da sola alla data d’inizio.': 'Começa sozinha na data de início.',
+  'Online adesso, per tutti nell’ambito scelto.': 'No ar agora, para todos no escopo escolhido.',
   'Scorte dei premi': 'Estoque dos prêmios',
   'Icona del badge': 'Ícone do selo',
   'Nome (pt-BR, max 80) *': 'Nome (pt-BR, máx. 80) *',

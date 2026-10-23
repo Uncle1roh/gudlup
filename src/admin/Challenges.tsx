@@ -238,6 +238,11 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
   const [reach, setReach] = useState<ChallengeReach | null>(null)
   const [cityQ, setCityQ] = useState('')
   const [cities, setCities] = useState<Municipality[]>([])
+  /* The furthest step reached, so you can go back over what you filled in
+     without being able to skip ahead past something you have not. */
+  const [seen, setSeen] = useState(0)
+  useEffect(() => { setSeen((v) => Math.max(v, step)) }, [step])
+
   const patch = (p: Partial<Challenge>) => onChange({ ...draft, ...p })
   const rules = checkRules(draft)
   const ok = rules.every((r) => r.ok) && draft.title.trim().length > 0
@@ -277,13 +282,42 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
 
   return (
     <div className="adm-page">
-      <header className="adm-page__head">
-        <h1 className="b2b-h1">{draft.id ? st('Modifica sfida') : st('Nuova sfida')}</h1>
-        <ol className="adm-stepper">
-          {STEPS.map((s, i) => (
-            <li key={s}><button className={`adm-tag${i === step ? ' is-on' : ''}`} onClick={() => setStep(i)}>{i + 1} · {st(s)}</button></li>
+      {/* ---- where you are, and how far is left -------------------------
+
+          This was six chips you could click in any order, inside a dialog
+          whose foot offered "save draft", "schedule" and "publish now" at
+          the same time — so there was no way to tell whether you were
+          filling a form or already committing to something.
+
+          It is a flow now. One bar, one step at a time, Continuar to go on
+          and Voltar to go back; a step you have already been through stays
+          clickable, one you have not does not. Nothing is written until the
+          last step, which is the only place the three save buttons live,
+          and the bar says so the whole way along. */}
+      <header className="adm-flow__head">
+        <div className="adm-flow__bar" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
+          <span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+        </div>
+        <ol className="adm-flow__steps">
+          {STEPS.map((label, i) => (
+            <li key={label}>
+              <button
+                className={`adm-flow__step${i === step ? ' is-on' : ''}${i < seen ? ' is-done' : ''}`}
+                disabled={i > seen}
+                aria-current={i === step ? 'step' : undefined}
+                onClick={() => setStep(i)}
+              >
+                <span className="adm-flow__n">{i < seen ? '✓' : i + 1}</span>
+                {st(label)}
+              </button>
+            </li>
           ))}
         </ol>
+        <p className="adm-flow__note">
+          {step < STEPS.length - 1
+            ? st('Passo {n} di {total}. Niente è salvato finché non arrivi alla fine.', { n: step + 1, total: STEPS.length })
+            : st('Ultimo passo. Qui decidi se resta una bozza, se parte a una data, o se va online adesso.')}
+        </p>
       </header>
       {error && <p className="adm-note adm-note--err">{error}</p>}
 
@@ -444,18 +478,29 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
               <ul className="adm-rules">
                 {rules.map((r) => <li key={r.id} className={r.ok ? 'is-ok' : 'is-bad'}>{r.ok ? '✓' : '✗'} {st(RULE_IT[r.id])}</li>)}
               </ul>
-              <div className="adm-made__acts">
-                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !draft.title.trim()} onClick={() => onSave(draft, 'draft')}>{st('Salva bozza')}</button>
-                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !ok || draft.startsAt <= Date.now()} onClick={() => onSave(draft, 'schedule')}>Programma</button>
-                <button className="b2b-btn b2b-btn--primary" disabled={busy || !ok} onClick={() => onSave(draft, 'publish')}>{st('Pubblica ora')}</button>
+              <div className="adm-flow__save">
+                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !draft.title.trim()} onClick={() => onSave(draft, 'draft')}>
+                  {st('Salva bozza')}
+                  <small>{st('Resta qui, invisibile nell’app.')}</small>
+                </button>
+                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !ok || draft.startsAt <= Date.now()} onClick={() => onSave(draft, 'schedule')}>
+                  {st('Programma')}
+                  <small>{st('Parte da sola alla data d’inizio.')}</small>
+                </button>
+                <button className="b2b-btn b2b-btn--primary" disabled={busy || !ok} onClick={() => onSave(draft, 'publish')}>
+                  {st('Pubblica ora')}
+                  <small>{st('Online adesso, per tutti nell’ambito scelto.')}</small>
+                </button>
               </div>
             </>
           )}
 
-          <div className="adm-made__acts">
-            {step > 0 && <button className="b2b-btn b2b-btn--ghost" onClick={() => setStep(step - 1)}>Indietro</button>}
-            {step < STEPS.length - 1 && <button className="b2b-btn b2b-btn--primary" onClick={() => setStep(step + 1)}>Avanti</button>}
-            <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>{st('Chiudi senza salvare')}</button>
+          <div className="adm-flow__acts">
+            <button className="b2b-btn b2b-btn--quiet" disabled={busy} onClick={onCancel}>{st('Chiudi senza salvare')}</button>
+            <div className="adm-flow__acts__go">
+              {step > 0 && <button className="b2b-btn b2b-btn--ghost" onClick={() => setStep(step - 1)}>{st('Indietro')}</button>}
+              {step < STEPS.length - 1 && <button className="b2b-btn b2b-btn--primary" onClick={() => setStep(step + 1)}>{st('Avanti')}</button>}
+            </div>
           </div>
         </div>
 

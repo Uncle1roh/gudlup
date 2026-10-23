@@ -809,6 +809,9 @@ export const PT: Record<string, string> = {
   'Take a moment before moving on.': 'Fique um momento aqui antes de seguir.',
   'I need support': 'Preciso de ajuda',
   'Therapist': 'Terapeuta',
+  /* the preview bar an admin or a salesperson carries through the demo */
+  'User': 'Usuário',
+  'Company': 'Empresa',
   'Professional support': 'Apoio profissional',
   'In the meantime, your Self Use sessions are always here for you.':
     'Enquanto isso, suas sessões continuam aqui para você.',

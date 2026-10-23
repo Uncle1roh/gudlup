@@ -110,10 +110,17 @@ function seedCompany(): void {
   }
 }
 
+/** Where the walkthrough was started from, so it can be ended there.
+    It used to be `#admin` always — which bounced a commercial account off
+    the admin door and back to its own console by accident rather than by
+    design. */
+const FROM = 'gl.admin.preview.from'
+
 /** Turn preview on and go to a surface. */
-export function openPreview(surface: PreviewSurface): void {
+export function openPreview(surface: PreviewSurface, from = window.location.hash || '#admin'): void {
   try {
     sessionStorage.setItem(KEY, 'on')
+    sessionStorage.setItem(FROM, from)
   } catch {
     /* nothing to do: without storage the gate below will not let us through */
   }
@@ -162,7 +169,10 @@ export function endPreview(): void {
   } catch {
     /* nothing stored, nothing to clear */
   }
-  window.location.href = `${window.location.pathname}#admin`
+  let back = '#admin'
+  try { back = sessionStorage.getItem(FROM) || '#admin' } catch { /* keep the default */ }
+  try { sessionStorage.removeItem(FROM) } catch { /* nothing stored */ }
+  window.location.href = `${window.location.pathname}${back}`
 }
 
 /** Which surface the current hash is. */

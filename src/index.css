@@ -3049,7 +3049,7 @@ td, th { overflow-wrap: anywhere; }
   display: flex; flex-direction: column;
   max-height: calc(100dvh - 80px);
 }
-.adm-modal__card--wide { max-width: 1040px; }
+.adm-modal__card--wide { max-width: 1180px; }
 .adm-modal__head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
   padding: 20px 24px 14px; border-bottom: 1px solid var(--line);
@@ -3095,3 +3095,89 @@ td, th { overflow-wrap: anywhere; }
 .adm-prize__row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
 .adm-prize__hint { margin: -2px 0 8px; font-size: 12.5px; line-height: 1.45; }
 @media (max-width: 760px) { .adm-prize__row { grid-template-columns: 1fr; } }
+
+/* ---- the campaign flow ---------------------------------------------------
+
+   Six chips you could click in any order, above a foot that offered "save
+   draft", "schedule" and "publish now" all at once: no way to tell whether
+   you were filling in a form or committing to something. One bar, one step,
+   and the three saves only at the end. */
+.adm-flow__head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.adm-flow__bar {
+  height: 5px; border-radius: 999px; background: var(--mist-2); overflow: hidden;
+}
+.adm-flow__bar > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--aura-deep); transition: width 220ms var(--ease);
+}
+.adm-flow__steps {
+  display: flex; flex-wrap: wrap; gap: 6px 4px;
+  list-style: none; margin: 0; padding: 0;
+}
+.adm-flow__step {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px 6px 7px; border-radius: 999px;
+  border: 1px solid transparent; background: none;
+  font: inherit; font-size: 12.5px; color: var(--slate); cursor: pointer;
+}
+.adm-flow__step:disabled { opacity: 0.45; cursor: default; }
+.adm-flow__step.is-done { color: var(--ink); }
+.adm-flow__step.is-on {
+  border-color: var(--line); background: #fff; color: var(--ink); font-weight: 600;
+}
+.adm-flow__n {
+  display: grid; place-items: center; flex: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--mist-2); font-size: 11px; font-weight: 700; color: var(--slate);
+}
+.adm-flow__step.is-on .adm-flow__n { background: var(--aura-deep); color: #fff; }
+.adm-flow__step.is-done .adm-flow__n { background: rgba(0, 122, 94, 0.14); color: var(--aura-deep); }
+.adm-flow__note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--slate); }
+
+.adm-flow__acts {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
+}
+.adm-flow__acts__go { display: flex; gap: 10px; }
+
+/* The three endings, each saying what it does. */
+.adm-flow__save { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+.adm-flow__save .b2b-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 11px 14px; text-align: left; height: auto; white-space: normal;
+}
+.adm-flow__save .b2b-btn small { font-size: 11.5px; font-weight: 400; line-height: 1.35; opacity: 0.8; }
+@media (max-width: 760px) { .adm-flow__save { grid-template-columns: 1fr; } }
+
+/* The campaign and template editors were laid out for a full page; inside
+   the dialog they were a few pixels wider than the card and put a
+   horizontal scrollbar under the whole form. The grid fits the dialog. */
+.adm-modal__body { min-width: 0; }
+/* 516px, not 340: the preview is a real ChallengeCard at the size the phone
+   draws it, and it does not shrink below that — squeezed into a narrower
+   column it overflowed and put a sideways scrollbar under the whole dialog.
+   The column is the card's width, and below 1240px the two stack instead. */
+.adm-modal__body .adm-challenges__edit {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 516px);
+  gap: 20px;
+}
+/* …and the card scrolls inside its own panel when the column has to give,
+   so a preview that will not shrink can never put a scrollbar under the
+   form somebody is filling in. */
+.adm-modal__body .adm-challenges__preview { overflow-x: auto; }
+.adm-modal__body .adm-challenges__edit > * { min-width: 0; }
+.adm-modal__body .adm-challenges__side { position: static; }
+/* `1fr` has an automatic minimum of min-content, so one long label or an
+   input at its default intrinsic width pushes a two-column grid wider than
+   its container and the whole dialog grows a sideways scrollbar.
+   `minmax(0, 1fr)` is the fix, and the inputs have to be allowed to shrink
+   with it — a bare <input> defaults to about 177px whatever you tell it. */
+.adm-modal__body .adm-partner-form__grid,
+.adm-modal__body .adm-prize__row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; }
+.adm-modal__body .adm-flow__save { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.adm-modal__body :is(.b2b-input, input, select, textarea) { min-width: 0; max-width: 100%; }
+.adm-modal__body label { min-width: 0; }
+@media (max-width: 1240px) {
+  .adm-modal__body .adm-challenges__edit { grid-template-columns: minmax(0, 1fr); }
+  .adm-modal__body .adm-challenges__preview { overflow-x: auto; }
+}

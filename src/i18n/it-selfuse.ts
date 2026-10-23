@@ -102,6 +102,9 @@ export const IT_SELF_USE: Record<string, string> = {
   'Home': 'Home',
   'Explore': 'Esplora',
   'Therapist': 'Terapeuta',
+  /* the preview bar an admin or a salesperson carries through the demo */
+  'User': 'Utente',
+  'Company': 'Azienda',
   'Progress': 'Progressi',
   'Profile': 'Profilo',
 
