@@ -265,8 +265,14 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
     windowStartHour: draft.windowStartHour, windowEndHour: draft.windowEndHour, startsAt: draft.startsAt, endsAt: draft.endsAt,
     status: 'active', rewardBonusLoopsCenti: draft.rewardBonusLoopsCenti,
     rewardBenefit: draft.rewardBenefitId ? { id: draft.rewardBenefitId, title: benefits.find((b) => b.id === draft.rewardBenefitId)?.title ?? '' } : null,
-    myProgress: Math.round(draft.goalValue * 0.4), myCompletedAt: null, myRewardedAt: null, myBenefitGranted: false,
-    collectiveValue: draft.format === 'collective' ? Math.round(draft.goalValue * 0.4) : null, participants: draft.format === 'collective' ? 0 : null, goalReachedAt: null,
+    /* Zero, and not 40% of the goal.
+
+       The card used to be drawn as though the campaign were already running
+       and everybody were almost halfway — invented numbers on a screen whose
+       whole job is to show what you are about to publish. What a person sees
+       on day one is nothing done yet, and that is what this shows. */
+    myProgress: 0, myCompletedAt: null, myRewardedAt: null, myBenefitGranted: false,
+    collectiveValue: draft.format === 'collective' ? 0 : null, participants: draft.format === 'collective' ? 0 : null, goalReachedAt: null,
   }
 
   return (
@@ -373,21 +379,56 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
             </div>
           )}
 
+          {/* ---- the prize ------------------------------------------------
+
+              Two kinds, and a campaign may carry either or both: Loops, and
+              a product from the partner catalogue. It used to be four
+              unlabelled selects in a grid, with the rule about running out
+              of units standing next to a benefit field that was usually
+              empty — so the step read as a form about stock rather than as
+              the question "what do they get". It says what it is now, and
+              the stock rule only appears once there is something with
+              stock. */}
           {step === 3 && (
-            <div className="adm-partner-form__grid">
-              <label><span className="b2b-label">{st('Loops bonus (mai moltiplicati)')}</span>
-                <input className="b2b-input" type="number" min={0} value={Math.floor((draft.rewardBonusLoopsCenti ?? 0) / 100)} onChange={(e) => patch({ rewardBonusLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 || null })} /></label>
-              <label><span className="b2b-label">{st('Beneficio esclusivo')}</span>
-                <select className="b2b-input" value={draft.rewardBenefitId ?? ''} onChange={(e) => patch({ rewardBenefitId: e.target.value || null })}>
-                  <option value="">{st('— nessuno —')}</option>
-                  {prizes.map((b) => <option key={b.id} value={b.id}>{b.title}{b.priceLoopsCenti === null ? st(' (solo sfida)') : ''}</option>)}
-                </select></label>
-              <label><span className="b2b-label">{st('Se le unità non bastano')}</span>
-                <select className="b2b-input" value={draft.rewardRule} onChange={(e) => patch({ rewardRule: e.target.value as Challenge['rewardRule'] })}>
-                  <option value="first_to_complete">{st('A chi completa per primo')}</option>
-                  <option value="raffle">{st('Sorteggio alla chiusura')}</option>
-                </select></label>
-              <p className="adm-muted adm-partner-form__wide">{st('La quantità è quella del beneficio (Benefici › Quantità totale). Un beneficio «solo sfida» si collega a questa sfida al salvataggio.')}</p>
+            <div className="adm-prize">
+              <p className="adm-muted">{st('Una campagna può dare Loops, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.')}</p>
+
+              <div className="adm-prize__row">
+                <label className="adm-form__field">
+                  <span className="b2b-label">{st('Loops bonus')}</span>
+                  <input
+                    className="b2b-input"
+                    type="number" min={0}
+                    value={Math.floor((draft.rewardBonusLoopsCenti ?? 0) / 100)}
+                    onChange={(e) => patch({ rewardBonusLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 || null })}
+                  />
+                  <span className="adm-form__hint">{st('Accreditati a chi completa. Mai moltiplicati dal piano dell’azienda. Zero = nessun Loop.')}</span>
+                </label>
+
+                <label className="adm-form__field">
+                  <span className="b2b-label">{st('Prodotto')}</span>
+                  <select className="b2b-input" value={draft.rewardBenefitId ?? ''} onChange={(e) => patch({ rewardBenefitId: e.target.value || null })}>
+                    <option value="">{st('— nessuno —')}</option>
+                    {prizes.map((b) => <option key={b.id} value={b.id}>{b.title}{b.priceLoopsCenti === null ? st(' (solo sfida)') : ''}</option>)}
+                  </select>
+                  <span className="adm-form__hint">
+                    {prizes.length
+                      ? st('Dal catalogo di «Benefici e partner». {n} disponibili.', { n: prizes.length })
+                      : st('Nessun beneficio nel catalogo: creane uno in «Benefici e partner» e torna qui.')}
+                  </span>
+                </label>
+              </div>
+
+              {draft.rewardBenefitId && (
+                <label className="adm-form__field">
+                  <span className="b2b-label">{st('Se le unità non bastano')}</span>
+                  <select className="b2b-input" value={draft.rewardRule} onChange={(e) => patch({ rewardRule: e.target.value as Challenge['rewardRule'] })}>
+                    <option value="first_to_complete">{st('A chi completa per primo')}</option>
+                    <option value="raffle">{st('Sorteggio alla chiusura')}</option>
+                  </select>
+                  <span className="adm-form__hint">{st('La quantità è quella del beneficio (Benefici › Quantità totale). Un beneficio «solo sfida» si collega a questa campagna al salvataggio.')}</span>
+                </label>
+              )}
             </div>
           )}
 
@@ -421,6 +462,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
         <aside className="adm-challenges__side">
           <LockedRules />
           <p className="b2b-label">{st('Anteprima nella Home')}</p>
+          <p className="adm-muted adm-prize__hint">{st('Come la vede una persona il primo giorno: niente ancora fatto. Si aggiorna mentre compili.')}</p>
           <div className="su-studio adm-challenges__preview">
             <FixedLocale locale="pt-BR">
               <ChallengeCard c={preview} onOpen={() => undefined} />

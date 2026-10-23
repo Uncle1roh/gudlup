@@ -92,6 +92,9 @@ export const PT_SALES: Record<string, string> = {
   'Codice / accesso': 'Código / acesso',
   'Copia il codice': 'Copiar o código',
   'Codice terapeuta': 'Código do terapeuta',
+  'Copia l’invito': 'Copiar o convite',
+  'Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url} e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
+    'O código da sua empresa no Good Loop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
   'Sospendi': 'Pausar',
   'Riattiva': 'Reativar',
   'Attiva': 'Ativa',
@@ -329,6 +332,20 @@ export const PT_SALES: Record<string, string> = {
   'Regione': 'Região',
   'Minimo a persona per il premio': 'Mínimo por pessoa para o prêmio',
   'Beneficio esclusivo': 'Benefício exclusivo',
+  'Prodotto': 'Produto',
+  'Loops bonus': 'Loops bônus',
+  'Una campagna può dare Loops, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.':
+    'Uma campanha pode dar Loops, um produto do catálogo, ou os dois. Pelo menos um dos dois é obrigatório.',
+  'Accreditati a chi completa. Mai moltiplicati dal piano dell’azienda. Zero = nessun Loop.':
+    'Creditados para quem concluir. Nunca multiplicados pelo plano da empresa. Zero = nenhum Loop.',
+  'Dal catalogo di «Benefici e partner». {n} disponibili.':
+    'Do catálogo de «Benefícios e parceiros». {n} disponíveis.',
+  'Nessun beneficio nel catalogo: creane uno in «Benefici e partner» e torna qui.':
+    'Nenhum benefício no catálogo: crie um em «Benefícios e parceiros» e volte aqui.',
+  'La quantità è quella del beneficio (Benefici › Quantità totale). Un beneficio «solo sfida» si collega a questa campagna al salvataggio.':
+    'A quantidade é a do benefício (Benefícios › Quantidade total). Um benefício «só campanha» é vinculado a esta campanha ao salvar.',
+  'Come la vede una persona il primo giorno: niente ancora fatto. Si aggiorna mentre compili.':
+    'Como uma pessoa a vê no primeiro dia: nada feito ainda. Atualiza enquanto você preenche.',
   '— nessuno —': '— nenhum —',
   'Se le unità non bastano': 'Se as unidades não bastarem',
   'A chi completa per primo': 'Para quem concluir primeiro',

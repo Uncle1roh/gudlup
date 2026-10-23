@@ -219,7 +219,15 @@ export function Companies({ actor }: { actor: string }) {
             )}
           </div>
           <div className="adm-made__acts">
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => copy(made.id)}>{copied ? st('Copiato') : st('Copia')}</button>
+            {/* What the commercial person does next is send this to somebody,
+                so the thing to copy is the message and not just the code. */}
+            <button
+              className="b2b-btn b2b-btn--primary"
+              onClick={() => copy(st('Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url} e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.', { code: made.id, url: `${window.location.origin}${window.location.pathname}#hr` }))}
+            >
+              {copied ? st('Copiato') : st('Copia l’invito')}
+            </button>
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => copy(made.id)}>{copied ? st('Copiato') : st('Copia il codice')}</button>
             <button className="b2b-btn b2b-btn--ghost" onClick={() => setMade(null)}>{st('Chiudi')}</button>
           </div>
         </div>

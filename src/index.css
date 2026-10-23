@@ -3089,3 +3089,9 @@ td, th { overflow-wrap: anywhere; }
   display: flex; justify-content: flex-end; gap: 10px;
   margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
 }
+
+/* The prize step: two ways to reward, side by side, each saying what it is. */
+.adm-prize { display: flex; flex-direction: column; gap: 16px; }
+.adm-prize__row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+.adm-prize__hint { margin: -2px 0 8px; font-size: 12.5px; line-height: 1.45; }
+@media (max-width: 760px) { .adm-prize__row { grid-template-columns: 1fr; } }
