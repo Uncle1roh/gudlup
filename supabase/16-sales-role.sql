@@ -137,17 +137,29 @@ create policy audit_sales_write on audit_events
   for insert with check (is_sales());
 
 -- ---- what you just granted ------------------------------------------------
+-- `role::text`, for the same reason `is_sales()` uses it: the editor runs
+-- this file as ONE transaction, and a value added to an enum by that
+-- transaction cannot be compared against inside it. Postgres is explicit
+-- about it — "unsafe use of new value of enum type ... New enum values must
+-- be committed before they can be used" — and it is right: the catalogue
+-- row is not visible to other sessions yet. Casting to text asks nothing of
+-- the enum, so it works on the first run as well as every later one.
 select
   (select count(*) from pg_policies where schemaname = 'public' and policyname like '%_sales%')  as sales_policies,
-  (select count(*) from profiles where role = 'sales')                                           as sales_accounts;
+  (select count(*) from profiles where role::text = 'sales')                                     as sales_accounts;
 
 -- ── MAKING THE FIRST ONE ───────────────────────────────────────────────────
+-- RUN THIS AS A SEPARATE STEP, after the script above has finished. The
+-- editor runs whatever you paste as one transaction, and `'sales'::user_role`
+-- cannot be written until the value that was added above is committed. Paste
+-- it on its own and press Run again.
+--
 -- Supabase owns the auth tables, so the login is made by hand:
 --   Authentication → Users → Add user, "Auto Confirm User" ON
 -- then bind it, with the address you used:
 --
 --   insert into profiles (auth_uid, role, name, email, locale, active)
---   select u.id, 'sales'::user_role, 'Commerciale', u.email, 'it', true
+--   select u.id, 'sales'::user_role, 'Comercial', u.email, 'pt-BR', true
 --   from auth.users u
 --   where lower(u.email) = lower('comercial@goodloop.app')
 --     and not exists (select 1 from profiles p where p.auth_uid = u.id);
