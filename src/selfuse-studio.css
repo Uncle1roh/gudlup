@@ -2789,13 +2789,9 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
     justify-items: stretch;
   }
   .su-studio.auth .auth__stage {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(31, 191, 148, 0.22), transparent 70%),
-      radial-gradient(70% 60% at 72% 84%, rgba(31, 191, 148, 0.10), transparent 72%),
-      var(--su-ground);
+    background-color: var(--su-ground);
     border-right: 1px solid var(--su-hair);
   }
-  .su-studio.auth .auth__stage__art { filter: none; }
   .su-studio.auth .auth__card { margin: auto; }
 }
 

@@ -33,3 +33,10 @@ android/app/src/main/assets/capacitor.config.json
 # docs/STUDIO_BACKUP.md. This line is the net under a stray `git add .`.
 studio-backups/
 *.glstudio.json
+
+# Video masters. `videos/loop_login.mp4` is 78 MB of 4K at 36 Mbit — close to
+# GitHub's 100 MB hard limit, and a thing every clone would carry forever for
+# a file no build reads. The web encode committed under `public/media/` is
+# what the app loads; the master belongs beside the other masters, outside
+# this repository. docs/LOGIN_VIDEO.md has the command that makes one.
+videos/

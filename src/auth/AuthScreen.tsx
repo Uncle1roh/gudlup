@@ -8,7 +8,6 @@ import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCod
 import { useI18n } from '../i18n'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
-import { BreathingOrb } from '../components/BreathingOrb'
 import { useSuTheme } from '../selfuse/theme'
 import { useDataProvider } from '../data/provider'
 import { isValidPromoCode, normalizePromoCode } from '../data/promo'
@@ -44,6 +43,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
      which is what ties the account to the company panel it will open. */
   const noSignup = isAdmin
   const demo = auth.mode === 'demo'
+  /* Somebody who has asked their system not to animate things is not asking
+     for seventeen seconds of drifting water behind a password field. CSS
+     cannot stop a video from playing, so the element is simply not rendered
+     and the stage keeps its poster. Read once: the door does not outlive a
+     change to the setting. */
+  const calmMotion = typeof window !== 'undefined'
+    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
   const [signup, setSignup] = useState(false)
   /* WHO is registering. The public door serves both the people who use the app
@@ -240,12 +246,29 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' }) {
           keep in step with the legal copy, and nothing to get wrong. Below
           900px it is not rendered at all: the phone layout is untouched.
 
-          To put a photograph here later, give `.auth__stage` a background
-          image; nothing else has to change. */}
+          It carries a muted loop of still water, encoded for the web from
+          `videos/loop_login.mp4`: that master is 78 MB of 4K at 36 Mbit with
+          an audio track nobody will hear, which is not a thing to put in
+          front of somebody trying to sign in. `public/media/login-loop.mp4`
+          is the same seventeen seconds at 1440px, no audio, 1.1 MB. */}
       <div className="auth__stage" aria-hidden="true">
-        <div className="auth__stage__art">
-          <BreathingOrb size={320} />
-        </div>
+        {/* The poster is a CSS background on the stage itself, so something
+            is on screen before the first frame decodes, if the file never
+            arrives, and when the video is not rendered at all. */}
+        {!calmMotion && (
+          <video
+            className="auth__stage__video"
+            src={`${import.meta.env.BASE_URL}media/login-loop.mp4`}
+            poster={`${import.meta.env.BASE_URL}media/login-loop.jpg`}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+          />
+        )}
+        <div className="auth__stage__scrim" />
       </div>
       <div className="auth__card">
         {/* The b2c door is the dark Self Use ground; the clinician, employer
