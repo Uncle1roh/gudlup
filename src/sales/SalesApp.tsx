@@ -33,18 +33,24 @@
 
 import { useState } from 'react'
 import { useAuth } from '../auth/auth'
+import { useI18n } from '../i18n'
 import { ConsoleShell, type ConsoleNavItem } from '../admin/ConsoleShell'
+import { st } from './i18n'
 import { Companies } from '../admin/Companies'
 import { Plans } from '../admin/Plans'
 import { Challenges } from '../admin/Challenges'
 import { ChallengeTemplates } from '../admin/ChallengeTemplates'
 import { Benefits } from '../admin/Benefits'
+import { PromoCodes } from '../admin/PromoCodes'
 
-type Section = 'companies' | 'plans' | 'challenges' | 'templates' | 'benefits'
+type Section = 'companies' | 'plans' | 'promo' | 'challenges' | 'templates' | 'benefits'
 
 const NAV: ConsoleNavItem<Section>[] = [
   { id: 'companies', label: 'Aziende', icon: '◭' },
   { id: 'plans', label: 'Piani e moltiplicatori', icon: '×' },
+  /* The discount a person types at registration. It is a price, so it is
+     commercial — and it is what the paid mobile app will be sold against. */
+  { id: 'promo', label: 'Codici promo', icon: '%' },
   { id: 'challenges', label: 'Campagne', icon: '⚑' },
   { id: 'templates', label: 'Modelli di campagna', icon: '⚐' },
   { id: 'benefits', label: 'Benefici e partner', icon: '❖' },
@@ -52,6 +58,9 @@ const NAV: ConsoleNavItem<Section>[] = [
 
 export function SalesApp() {
   const { user } = useAuth()
+  /* Same reason as the shell: the menu labels go through `st()`, so this
+     component has to be subscribed to the language or they never change. */
+  useI18n()
   const actor = user?.email ?? 'commerciale@goodloop.app'
   const [section, setSection] = useState<Section>('companies')
   const [navOpen, setNavOpen] = useState(false)
@@ -64,8 +73,11 @@ export function SalesApp() {
 
   return (
     <ConsoleShell
-      subtitle="commerciale"
-      nav={NAV}
+      subtitle={st('commerciale')}
+      /* Translated at render, not in the table: the picker in the sidebar
+         changes the language without a reload, and a menu that did not
+         follow it would be the one Italian thing left on the screen. */
+      nav={NAV.map((n) => ({ ...n, label: st(n.label) }))}
       section={section}
       onPick={pick}
       actor={actor}
@@ -75,9 +87,11 @@ export function SalesApp() {
       preview={['app', 'therapist', 'company']}
       navOpen={navOpen}
       setNavOpen={setNavOpen}
+      language
     >
       {section === 'companies' && <Companies actor={actor} />}
       {section === 'plans' && <Plans actor={actor} />}
+      {section === 'promo' && <PromoCodes actor={actor} />}
       {section === 'challenges' && <Challenges actor={actor} />}
       {section === 'templates' && <ChallengeTemplates actor={actor} />}
       {section === 'benefits' && <Benefits actor={actor} />}

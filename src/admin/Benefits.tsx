@@ -14,6 +14,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { st } from '../sales/i18n'
 import { useDataProvider, type AdminRedemption } from '../data/provider'
 import { PILLARS, type Benefit, type BenefitTag, type Delivery, type Pillar } from '../gamification/benefits'
 
@@ -62,7 +63,7 @@ export function Benefits({ actor }: { actor: string }) {
   async function save(b: Benefit) {
     setBusy(true); setError(null); setNote(null)
     try {
-      if (b.companyId === null && b.status !== 'draft' && b.tagIds.length === 0) throw new Error('Serve almeno un tag per pubblicare un beneficio Good Loop.')
+      if (b.companyId === null && b.status !== 'draft' && b.tagIds.length === 0) throw new Error(st('Serve almeno un tag per pubblicare un beneficio Good Loop.'))
       const id = await dp.adminSaveBenefit(b)
       await dp.logAudit({ actor, action: b.id ? 'benefit.updated' : 'benefit.created', target: b.title, detail: STATUS_IT[b.status] }).catch(() => undefined)
       setNote(b.id ? 'Beneficio salvato.' : 'Beneficio creato.')
@@ -77,7 +78,9 @@ export function Benefits({ actor }: { actor: string }) {
   }
 
   async function refund(r: AdminRedemption) {
-    if (!window.confirm(`Rimborsare «${r.title}» a ${r.userLabel}?${String.fromCharCode(10, 10)}I Loops tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.`)) return
+    if (!window.confirm(st('Rimborsare «{title}» a {who}?', { title: r.title, who: r.userLabel })
+      + String.fromCharCode(10, 10)
+      + st('I Loops tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.'))) return
     setBusy(true); setError(null)
     try {
       await dp.adminRefundRedemption(r.id)
@@ -95,48 +98,47 @@ export function Benefits({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Benefici</h1>
+          <h1 className="b2b-h1">{st('Benefici')}</h1>
           <p className="b2b-sub">
-            Cura che torna alla persona, scambiata con i Loops. {goodloop.length} benefici Good Loop,{' '}
-            {goodloop.filter((b) => b.status === 'active').length} attivi.
+            {st('Cura che torna alla persona, scambiata con i Loops. {n} benefici Good Loop, {active} attivi.', { n: goodloop.length, active: goodloop.filter((b) => b.status === 'active').length })}
           </p>
         </div>
-        {!draft && view === 'catalog' && <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blank())}>+ Nuovo beneficio</button>}
+        {!draft && view === 'catalog' && <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blank())}>{st('+ Nuovo beneficio')}</button>}
       </header>
 
-      <div className="adm-spec__chips" role="group" aria-label="Vista">
-        <button className={`adm-tag${view === 'catalog' ? ' is-on' : ''}`} onClick={() => setView('catalog')}>Catalogo</button>
-        <button className={`adm-tag${view === 'redemptions' ? ' is-on' : ''}`} onClick={() => setView('redemptions')}>Riscatti ({redemptions.length})</button>
+      <div className="adm-spec__chips" role="group" aria-label={st('Vista')}>
+        <button className={`adm-tag${view === 'catalog' ? ' is-on' : ''}`} onClick={() => setView('catalog')}>{st('Catalogo')}</button>
+        <button className={`adm-tag${view === 'redemptions' ? ' is-on' : ''}`} onClick={() => setView('redemptions')}>{st('Riscatti ({n})', { n: redemptions.length })}</button>
       </div>
 
       {error && <p className="adm-note adm-note--err">{error}</p>}
       {note && <p className="adm-note adm-note--ok">{note}</p>}
 
       {draft && <Editor draft={draft} tags={tags} busy={busy} onChange={setDraft} onSave={(b) => void save(b)} onCancel={() => setDraft(null)} />}
-      {codesFor && <CodeUpload benefit={codesFor} onDone={(n) => { setCodesFor(null); if (n !== null) { setNote(`${n} codici nuovi caricati.`); load() } }} actor={actor} />}
+      {codesFor && <CodeUpload benefit={codesFor} onDone={(n) => { setCodesFor(null); if (n !== null) { setNote(st('{n} codici nuovi caricati.', { n })); load() } }} actor={actor} />}
 
       {view === 'catalog' && (
         <div className="adm-table adm-table--benefits">
           <div className="adm-tr adm-tr--head">
-            <div>Beneficio</div><div>Pilastro</div><div>Loops</div><div>Consegna</div><div>Tag</div><div>Stato</div><div className="adm-tr__right">Azioni</div>
+            <div>{st('Beneficio')}</div><div>{st('Pilastro')}</div><div>{st('Loops')}</div><div>{st('Consegna')}</div><div>{st('Tag')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azioni')}</div>
           </div>
           {list.map((b) => (
             <div className={`adm-tr${b.status === 'archived' ? ' is-inactive' : ''}`} key={b.id}>
-              <div><strong>{b.title}</strong>{b.partnerName && <div className="adm-muted">{b.partnerName}</div>}{b.companyId && <div className="adm-muted">Azienda: {b.companyId}</div>}</div>
-              <div>{PILLAR_IT[b.pillar]}</div>
-              <div>{b.priceLoopsCenti === null ? 'solo sfida' : Math.floor(b.priceLoopsCenti / 100)}</div>
+              <div><strong>{b.title}</strong>{b.partnerName && <div className="adm-muted">{b.partnerName}</div>}{b.companyId && <div className="adm-muted">{st('Azienda: {id}', { id: b.companyId })}</div>}</div>
+              <div>{st(PILLAR_IT[b.pillar])}</div>
+              <div>{b.priceLoopsCenti === null ? st('solo sfida') : Math.floor(b.priceLoopsCenti / 100)}</div>
               <div>
-                {DELIVERY_IT[b.deliveryType]}
-                {b.deliveryType === 'code_pool' && <div className="adm-muted">{counts[b.id]?.free ?? 0} liberi di {counts[b.id]?.total ?? 0}</div>}
+                {st(DELIVERY_IT[b.deliveryType])}
+                {b.deliveryType === 'code_pool' && <div className="adm-muted">{st('{free} liberi di {total}', { free: counts[b.id]?.free ?? 0, total: counts[b.id]?.total ?? 0 })}</div>}
               </div>
-              <div>{b.tagIds.map((id) => tagLabel.get(id)).filter(Boolean).join(', ') || <span className="pe-err">nessun tag</span>}</div>
-              <div><span className={`adm-pill ${b.status === 'active' ? 'adm-pill--ok' : 'adm-pill--warn'}`}>{STATUS_IT[b.status]}</span></div>
+              <div>{b.tagIds.map((id) => tagLabel.get(id)).filter(Boolean).join(', ') || <span className="pe-err">{st('nessun tag')}</span>}</div>
+              <div><span className={`adm-pill ${b.status === 'active' ? 'adm-pill--ok' : 'adm-pill--warn'}`}>{st(STATUS_IT[b.status])}</span></div>
               <div className="adm-tr__right adm-benefit__acts">
-                <button className="b2b-btn b2b-btn--ghost" onClick={() => setDraft({ ...b, tagIds: [...b.tagIds] })}>Modifica</button>
-                {b.deliveryType === 'code_pool' && <button className="b2b-btn b2b-btn--ghost" onClick={() => setCodesFor(b)}>Codici</button>}
+                <button className="b2b-btn b2b-btn--ghost" onClick={() => setDraft({ ...b, tagIds: [...b.tagIds] })}>{st('Modifica')}</button>
+                {b.deliveryType === 'code_pool' && <button className="b2b-btn b2b-btn--ghost" onClick={() => setCodesFor(b)}>{st('Codici')}</button>}
                 {b.status === 'active' && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void save({ ...b, status: 'paused' })}>Pausa</button>}
-                {(b.status === 'paused' || b.status === 'draft') && <button className="b2b-btn b2b-btn--primary" disabled={busy} onClick={() => void save({ ...b, status: 'active' })}>Pubblica</button>}
-                {b.status !== 'archived' && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void save({ ...b, status: 'archived' })}>Archivia</button>}
+                {(b.status === 'paused' || b.status === 'draft') && <button className="b2b-btn b2b-btn--primary" disabled={busy} onClick={() => void save({ ...b, status: 'active' })}>{st('Pubblica')}</button>}
+                {b.status !== 'archived' && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void save({ ...b, status: 'archived' })}>{st('Archivia')}</button>}
               </div>
             </div>
           ))}
@@ -145,7 +147,7 @@ export function Benefits({ actor }: { actor: string }) {
 
       {view === 'redemptions' && (
         <div className="adm-table adm-table--redemptions">
-          <div className="adm-tr adm-tr--head"><div>Data</div><div>Persona</div><div>Beneficio</div><div>Loops</div><div>Stato</div><div className="adm-tr__right">Azione</div></div>
+          <div className="adm-tr adm-tr--head"><div>{st('Data')}</div><div>{st('Persona')}</div><div>{st('Beneficio')}</div><div>{st('Loops')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azione')}</div></div>
           {redemptions.map((r) => (
             <div className={`adm-tr${r.status === 'refunded' ? ' is-inactive' : ''}`} key={r.id}>
               <div>{new Date(r.createdAt).toLocaleDateString('it-IT')}</div>
@@ -154,11 +156,11 @@ export function Benefits({ actor }: { actor: string }) {
               <div>{Math.floor(r.loopsSpentCenti / 100)}</div>
               <div>{r.status === 'refunded' ? 'rimborsato' : 'consegnato'}</div>
               <div className="adm-tr__right">
-                {r.status === 'active' && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void refund(r)}>Rimborsa</button>}
+                {r.status === 'active' && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void refund(r)}>{st('Rimborsa')}</button>}
               </div>
             </div>
           ))}
-          {!redemptions.length && <div className="adm-tr"><div className="adm-muted">Nessun riscatto ancora.</div></div>}
+          {!redemptions.length && <div className="adm-tr"><div className="adm-muted">{st('Nessun riscatto ancora.')}</div></div>}
         </div>
       )}
     </div>
@@ -179,56 +181,56 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
 
   return (
     <div className="card adm-partner-form">
-      <h2 className="b2b-card__title">{draft.id ? 'Modifica beneficio' : 'Nuovo beneficio'}</h2>
+      <h2 className="b2b-card__title">{draft.id ? st('Modifica beneficio') : st('Nuovo beneficio')}</h2>
       <div className="adm-partner-form__grid">
         <label>
-          <span className="b2b-label">Titolo *</span>
-          <input className="b2b-input" value={draft.title} placeholder="Es. Aula experimental de ioga" autoFocus onChange={(e) => patch({ title: e.target.value })} />
+          <span className="b2b-label">{st('Titolo *')}</span>
+          <input className="b2b-input" value={draft.title} placeholder={st('Es. Aula experimental de ioga')} autoFocus onChange={(e) => patch({ title: e.target.value })} />
         </label>
         <label>
-          <span className="b2b-label">Partner</span>
+          <span className="b2b-label">{st('Partner')}</span>
           <input className="b2b-input" value={draft.partnerName ?? ''} placeholder="[PARCEIRO]" onChange={(e) => patch({ partnerName: e.target.value || null })} />
         </label>
         <label className="adm-partner-form__wide">
-          <span className="b2b-label">Perché si prende cura della persona (in portoghese, come la legge la persona)</span>
-          <input className="b2b-input" value={draft.careRationale ?? ''} placeholder="Es. Respirar e mover o corpo no mesmo ritmo acalma por dentro." onChange={(e) => patch({ careRationale: e.target.value || null })} />
+          <span className="b2b-label">{st('Perché si prende cura della persona (in portoghese, come la legge la persona)')}</span>
+          <input className="b2b-input" value={draft.careRationale ?? ''} placeholder={st('Es. Respirar e mover o corpo no mesmo ritmo acalma por dentro.')} onChange={(e) => patch({ careRationale: e.target.value || null })} />
         </label>
         <label className="adm-partner-form__wide">
-          <span className="b2b-label">Descrizione</span>
+          <span className="b2b-label">{st('Descrizione')}</span>
           <textarea className="b2b-textarea" rows={3} value={draft.description ?? ''} onChange={(e) => patch({ description: e.target.value || null })} />
         </label>
         <label>
-          <span className="b2b-label">Pilastro</span>
+          <span className="b2b-label">{st('Pilastro')}</span>
           <select className="b2b-input" value={draft.pillar} onChange={(e) => patch({ pillar: e.target.value as Pillar })}>
             {PILLARS.map((p) => <option key={p.id} value={p.id}>{PILLAR_IT[p.id]}</option>)}
           </select>
         </label>
         <label>
-          <span className="b2b-label">Prezzo in Loops</span>
+          <span className="b2b-label">{st('Prezzo in Loops')}</span>
           <input className="b2b-input" type="number" min={0} step={1} disabled={onlyChallenge}
             value={onlyChallenge ? '' : Math.floor((draft.priceLoopsCenti ?? 0) / 100)}
             onChange={(e) => patch({ priceLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 })} />
         </label>
         <label className="adm-partner-form__check">
           <input type="checkbox" checked={onlyChallenge} onChange={(e) => patch({ priceLoopsCenti: e.target.checked ? null : 5000 })} />
-          <span>Solo come premio di una sfida (lo collega la sfida)</span>
+          <span>{st('Solo come premio di una sfida (lo collega la sfida)')}</span>
         </label>
         <label>
-          <span className="b2b-label">Consegna</span>
+          <span className="b2b-label">{st('Consegna')}</span>
           <select className="b2b-input" value={draft.deliveryType} onChange={(e) => patch({ deliveryType: e.target.value as Delivery })}>
             {(Object.keys(DELIVERY_IT) as Delivery[]).map((d) => <option key={d} value={d}>{DELIVERY_IT[d]}</option>)}
           </select>
         </label>
         {draft.deliveryType === 'static_code' && (
           <label>
-            <span className="b2b-label">Codice</span>
+            <span className="b2b-label">{st('Codice')}</span>
             <input className="b2b-input adm-mono" value={draft.staticCode ?? ''} spellCheck={false} onChange={(e) => patch({ staticCode: e.target.value.trim() || null })} />
           </label>
         )}
         {(draft.deliveryType === 'link' || draft.deliveryType === 'static_code') && (
           <label>
             <span className="b2b-label">Link per usarlo{draft.deliveryType === 'link' ? ' *' : ''}</span>
-            <input className="b2b-input" type="url" value={draft.linkUrl ?? ''} placeholder="https://…" onChange={(e) => patch({ linkUrl: e.target.value.trim() || null })} />
+            <input className="b2b-input" type="url" value={draft.linkUrl ?? ''} placeholder={st('https://…')} onChange={(e) => patch({ linkUrl: e.target.value.trim() || null })} />
           </label>
         )}
         <label>
@@ -241,30 +243,30 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
             }} />
         </label>
         <label>
-          <span className="b2b-label">Riscatti per persona</span>
+          <span className="b2b-label">{st('Riscatti per persona')}</span>
           <input className="b2b-input" type="number" min={1} step={1} value={draft.perUserLimit} onChange={(e) => patch({ perUserLimit: Math.max(1, Math.round(Number(e.target.value) || 1)) })} />
         </label>
         <label>
-          <span className="b2b-label">Valido dal</span>
+          <span className="b2b-label">{st('Valido dal')}</span>
           <input className="b2b-input" type="date" value={toDate(draft.validFrom)} onChange={(e) => patch({ validFrom: fromDate(e.target.value) })} />
         </label>
         <label>
-          <span className="b2b-label">Valido fino al</span>
+          <span className="b2b-label">{st('Valido fino al')}</span>
           <input className="b2b-input" type="date" value={toDate(draft.validTo)} onChange={(e) => patch({ validTo: fromDate(e.target.value) })} />
         </label>
         <label>
-          <span className="b2b-label">Giorni di validità del codice</span>
+          <span className="b2b-label">{st('Giorni di validità del codice')}</span>
           <input className="b2b-input" type="number" min={1} step={1} value={draft.codeValidityDays ?? ''} onChange={(e) => patch({ codeValidityDays: e.target.value === '' ? null : Math.max(1, Math.round(Number(e.target.value))) })} />
         </label>
         <label className="adm-partner-form__wide">
-          <span className="b2b-label">Condizioni e come usarlo</span>
+          <span className="b2b-label">{st('Condizioni e come usarlo')}</span>
           <textarea className="b2b-textarea" rows={2} value={draft.terms ?? ''} onChange={(e) => patch({ terms: e.target.value || null })} />
         </label>
         <fieldset className="adm-partner-form__wide adm-benefit__tags">
-          <legend className="b2b-label">Tag {draft.companyId === null && '*'} — almeno uno per un beneficio Good Loop</legend>
+          <legend className="b2b-label">{st('Tag')} {draft.companyId === null && '*'} {st('— almeno uno per un beneficio Good Loop')}</legend>
           {(['partner_segment', 'benefit_type'] as const).map((g) => (
             <div key={g} className="adm-spec__chips">
-              <span className="adm-muted">{g === 'partner_segment' ? 'Segmento del partner' : 'Tipo di beneficio'}</span>
+              <span className="adm-muted">{g === 'partner_segment' ? st('Segmento del partner') : st('Tipo di beneficio')}</span>
               {tags.filter((t) => t.group === g && t.active).map((t) => (
                 <label key={t.id} className={`adm-tag${draft.tagIds.includes(t.id) ? ' is-on' : ''}`}>
                   <input type="checkbox" checked={draft.tagIds.includes(t.id)} onChange={() => toggleTag(t.id)} /> {t.label}
@@ -272,19 +274,19 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
               ))}
             </div>
           ))}
-          {needsTag && <span className="pe-err">Senza tag si può salvare solo come bozza.</span>}
+          {needsTag && <span className="pe-err">{st('Senza tag si può salvare solo come bozza.')}</span>}
         </fieldset>
         <label>
-          <span className="b2b-label">Stato</span>
+          <span className="b2b-label">{st('Stato')}</span>
           <select className="b2b-input" value={draft.status} onChange={(e) => patch({ status: e.target.value as Benefit['status'] })}>
             {(Object.keys(STATUS_IT) as Benefit['status'][]).map((s) => <option key={s} value={s}>{STATUS_IT[s]}</option>)}
           </select>
         </label>
       </div>
-      <p className="adm-muted">Nessun conto alla rovescia, nessun prezzo barrato, nessun «ultime unità»: l’app non li mostra e il testo non deve suggerirli.</p>
+      <p className="adm-muted">{st('Nessun conto alla rovescia, nessun prezzo barrato, nessun «ultime unità»: l’app non li mostra e il testo non deve suggerirli.')}</p>
       <div className="adm-made__acts">
-        <button className="b2b-btn b2b-btn--primary" disabled={!canSave || busy} onClick={() => onSave(draft)}>{busy ? 'Salvataggio…' : 'Salva'}</button>
-        <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>Annulla</button>
+        <button className="b2b-btn b2b-btn--primary" disabled={!canSave || busy} onClick={() => onSave(draft)}>{busy ? st('Salvataggio…') : st('Salva')}</button>
+        <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>{st('Annulla')}</button>
       </div>
     </div>
   )
@@ -313,14 +315,14 @@ function CodeUpload({ benefit, onDone, actor }: { benefit: Benefit; onDone: (n: 
 
   return (
     <div className="card adm-partner-form">
-      <h2 className="b2b-card__title">Codici per «{benefit.title}»</h2>
-      <p className="adm-muted">Un codice per riga (o un CSV: conta la prima colonna). I doppioni si saltano. Dopo il caricamento i codici non si rileggono: li vedrà solo chi li riceve.</p>
+      <h2 className="b2b-card__title">{st('Codici per «{title}»', { title: benefit.title })}</h2>
+      <p className="adm-muted">{st('Un codice per riga (o un CSV: conta la prima colonna). I doppioni si saltano. Dopo il caricamento i codici non si rileggono: li vedrà solo chi li riceve.')}</p>
       <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(e) => { const f = e.target.files?.[0]; if (f) void f.text().then(setText) }} />
       <textarea className="b2b-textarea adm-mono" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
       {error && <p className="adm-note adm-note--err">{error}</p>}
       <div className="adm-made__acts">
-        <button className="b2b-btn b2b-btn--primary" disabled={!codes.length || busy} onClick={() => void upload()}>{busy ? 'Caricamento…' : `Carica ${codes.length} codici`}</button>
-        <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => onDone(null)}>Annulla</button>
+        <button className="b2b-btn b2b-btn--primary" disabled={!codes.length || busy} onClick={() => void upload()}>{busy ? st('Caricamento…') : st('Carica {n} codici', { n: codes.length })}</button>
+        <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => onDone(null)}>{st('Annulla')}</button>
       </div>
     </div>
   )

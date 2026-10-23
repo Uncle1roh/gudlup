@@ -14,6 +14,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { st } from '../sales/i18n'
 import { useDataProvider, type ChallengeReach } from '../data/provider'
 import { FixedLocale } from '../i18n'
 import { ChallengeCard } from '../selfuse/ChallengeCard'
@@ -33,7 +34,9 @@ const METRIC_IT: Record<ChallengeMetric, string> = {
   minutes_listened: 'Minuti ascoltati', sessions_completed: 'Sessioni completate', deep_sessions_completed: 'Sessioni Deep completate',
   sessions_in_time_window: 'Sessioni in una fascia oraria', pathway_completed: 'Percorsi completati',
 }
-const SCOPE_IT: Record<ChallengeScope, string> = { national: 'Nazionale', region: 'Regione', state: 'Stato', city: 'Città', company: 'Azienda' }
+/* 'Stato (UF)' and not 'Stato': the word is also the column heading for a
+   challenge's status, and one key cannot be two things in the dictionary. */
+const SCOPE_IT: Record<ChallengeScope, string> = { national: 'Nazionale', region: 'Regione', state: 'Stato (UF)', city: 'Città', company: 'Azienda' }
 const RULE_IT: Record<RuleId, string> = {
   R1: 'Nessuna sequenza di giorni: nessuno perde progressi',
   R2: 'Nessun obiettivo su autovalutazioni, punteggi o VAS',
@@ -84,8 +87,8 @@ export function Challenges({ actor }: { actor: string }) {
 
   async function act(r: ChallengeAdminRow, action: 'publish' | 'end' | 'cancel' | 'duplicate') {
     const ask: Record<string, string> = {
-      end: `Terminare «${r.title}» adesso? Si chiude e si assegnano i premi (con sorteggio, se previsto).`,
-      cancel: `Annullare «${r.title}»? Nessun premio verrà assegnato da qui in avanti.`,
+      end: st('Terminare «{title}» adesso? Si chiude e si assegnano i premi (con sorteggio, se previsto).', { title: r.title }),
+      cancel: st('Annullare «{title}»? Nessun premio verrà assegnato da qui in avanti.', { title: r.title }),
     }
     if (ask[action] && !window.confirm(ask[action])) return
     setBusy(true); setError(null); setNote(null)
@@ -116,7 +119,7 @@ export function Challenges({ actor }: { actor: string }) {
             const id = await dp.adminSaveChallenge(c)
             if (then !== 'draft') await dp.adminChallengeAction(id, then)
             await dp.logAudit({ actor, action: c.id ? 'challenge.updated' : 'challenge.created', target: c.title, detail: then }).catch(() => undefined)
-            setNote(then === 'publish' ? 'Sfida pubblicata.' : then === 'schedule' ? 'Sfida programmata.' : 'Bozza salvata.')
+            setNote(then === 'publish' ? st('Sfida pubblicata.') : then === 'schedule' ? st('Sfida programmata.') : st('Bozza salvata.'))
             setDraft(null)
             load()
           } catch (e) {
@@ -133,32 +136,32 @@ export function Challenges({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Sfide Good Loop</h1>
-          <p className="b2b-sub">Eventi a tempo, individuali o collettivi di massa, per tutto il Brasile o per una regione, uno stato, una città.</p>
+          <h1 className="b2b-h1">{st('Sfide Good Loop')}</h1>
+          <p className="b2b-sub">{st('Eventi a tempo, individuali o collettivi di massa, per tutto il Brasile o per una regione, uno stato, una città.')}</p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blankChallenge(Date.now()))}>+ Nuova sfida</button>
+        <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blankChallenge(Date.now()))}>{st('+ Nuova sfida')}</button>
       </header>
 
       <div className="adm-kpis">
-        <div><strong>{kpi.active}</strong><span>Sfide attive</span></div>
-        <div><strong>{kpi.participants}</strong><span>Persone che partecipano</span></div>
-        <div><strong>{kpi.completed}</strong><span>Hanno completato</span></div>
-        <div><strong>{kpi.rewarded}</strong><span>Premi consegnati</span></div>
+        <div><strong>{kpi.active}</strong><span>{st('Sfide attive')}</span></div>
+        <div><strong>{kpi.participants}</strong><span>{st('Persone che partecipano')}</span></div>
+        <div><strong>{kpi.completed}</strong><span>{st('Hanno completato')}</span></div>
+        <div><strong>{kpi.rewarded}</strong><span>{st('Premi consegnati')}</span></div>
       </div>
 
       {error && <p className="adm-note adm-note--err">{error}</p>}
       {note && <p className="adm-note adm-note--ok">{note}</p>}
 
-      <div className="adm-spec__chips" role="group" aria-label="Filtro">
+      <div className="adm-spec__chips" role="group" aria-label={st('Filtro')}>
         {([['all', 'Tutte'], ['active', 'Attive'], ['scheduled', 'Programmate'], ['draft', 'Bozze'], ['ended', 'Concluse']] as [Filter, string][]).map(([id, label]) => (
-          <button key={id} className={`adm-tag${filter === id ? ' is-on' : ''}`} onClick={() => setFilter(id)}>{label}</button>
+          <button key={id} className={`adm-tag${filter === id ? ' is-on' : ''}`} onClick={() => setFilter(id)}>{st(label)}</button>
         ))}
-        <input className="b2b-input adm-challenges__search" type="search" placeholder="Cerca per nome" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="b2b-input adm-challenges__search" type="search" placeholder={st('Cerca per nome')} value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
       <div className="adm-table adm-table--challenges">
         <div className="adm-tr adm-tr--head">
-          <div>Sfida</div><div>Periodo</div><div>Formato / ambito</div><div>Obiettivo</div><div>Premio</div><div>Partecipano / completato</div><div>Stato</div><div className="adm-tr__right">Azioni</div>
+          <div>{st('Sfida')}</div><div>{st('Periodo')}</div><div>{st('Formato / ambito')}</div><div>{st('Obiettivo')}</div><div>{st('Premio')}</div><div>{st('Partecipano / completato')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azioni')}</div>
         </div>
         {shown.map((r) => (
           <div className={`adm-tr${['cancelled'].includes(r.status) ? ' is-inactive' : ''}`} key={r.id}>
@@ -167,33 +170,32 @@ export function Challenges({ actor }: { actor: string }) {
               <strong>{r.title}</strong>
             </div>
             <div>{new Date(r.startsAt).toLocaleDateString('it-IT')} – {new Date(r.endsAt).toLocaleDateString('it-IT')}</div>
-            <div>{r.format === 'individual' ? 'Individuale' : 'Collettiva'} · {SCOPE_IT[r.scope]}{r.scopeRef ? ` ${scopeLabel(r.scope, r.scopeRef)}` : ''}</div>
+            <div>{r.format === 'individual' ? st('Individuale') : st('Collettiva')} · {st(SCOPE_IT[r.scope])}{r.scopeRef ? ` ${scopeLabel(r.scope, r.scopeRef)}` : ''}</div>
             <div>{METRIC_IT[r.metric]}: {r.goalValue}{r.perPersonMin ? ` (min. ${r.perPersonMin} a persona)` : ''}</div>
-            <div>{[r.rewardBonusLoopsCenti ? `+${Math.floor(r.rewardBonusLoopsCenti / 100)} Loops` : null, r.rewardBenefitId ? benefitTitle.get(r.rewardBenefitId) ?? 'beneficio' : null].filter(Boolean).join(' · ')}</div>
+            <div>{[r.rewardBonusLoopsCenti ? `+${Math.floor(r.rewardBonusLoopsCenti / 100)} Loops` : null, r.rewardBenefitId ? benefitTitle.get(r.rewardBenefitId) ?? st('beneficio') : null].filter(Boolean).join(' · ')}</div>
             <div>{r.participants} / {r.completed}</div>
-            <div><span className={`adm-pill ${r.status === 'active' ? 'adm-pill--ok' : 'adm-pill--warn'}`}>{STATUS_IT[r.status]}</span></div>
+            <div><span className={`adm-pill ${r.status === 'active' ? 'adm-pill--ok' : 'adm-pill--warn'}`}>{st(STATUS_IT[r.status])}</span></div>
             <div className="adm-tr__right adm-benefit__acts">
-              {['draft', 'scheduled'].includes(r.status) && <button className="b2b-btn b2b-btn--ghost" onClick={() => setDraft({ ...r })}>Modifica</button>}
-              {r.status === 'draft' && <button className="b2b-btn b2b-btn--primary" disabled={busy || r.startsAt >= r.endsAt} onClick={() => void act(r, 'publish')}>Pubblica</button>}
+              {['draft', 'scheduled'].includes(r.status) && <button className="b2b-btn b2b-btn--ghost" onClick={() => setDraft({ ...r })}>{st('Modifica')}</button>}
+              {r.status === 'draft' && <button className="b2b-btn b2b-btn--primary" disabled={busy || r.startsAt >= r.endsAt} onClick={() => void act(r, 'publish')}>{st('Pubblica')}</button>}
               <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void act(r, 'duplicate')}>Duplica</button>
               {['scheduled', 'active'].includes(r.status) && r.endsAt > now && <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void act(r, 'end')}>Termina</button>}
-              {['draft', 'scheduled', 'active'].includes(r.status) && <button className="b2b-btn b2b-btn--danger" disabled={busy} onClick={() => void act(r, 'cancel')}>Annulla</button>}
+              {['draft', 'scheduled', 'active'].includes(r.status) && <button className="b2b-btn b2b-btn--danger" disabled={busy} onClick={() => void act(r, 'cancel')}>{st('Annulla')}</button>}
             </div>
           </div>
         ))}
-        {!shown.length && <div className="adm-tr"><div className="adm-muted">Nessuna sfida.</div></div>}
+        {!shown.length && <div className="adm-tr"><div className="adm-muted">{st('Nessuna sfida.')}</div></div>}
       </div>
 
       <div className="adm-challenges__info">
         <section className="card">
-          <h2 className="b2b-card__title">Regole fisse in ogni sfida</h2>
+          <h2 className="b2b-card__title">{st('Regole fisse in ogni sfida')}</h2>
           <LockedRules />
         </section>
         <section className="card">
-          <h2 className="b2b-card__title">Scorte dei premi</h2>
+          <h2 className="b2b-card__title">{st('Scorte dei premi')}</h2>
           <p className="adm-muted">
-            Un beneficio esclusivo con quantità limitata va a chi completa per primo, oppure si sorteggia alla
-            chiusura tra chi ha completato. Alla persona non si mostra mai quante unità restano.
+            {st('Un beneficio esclusivo con quantità limitata va a chi completa per primo, oppure si sorteggia alla chiusura tra chi ha completato. Alla persona non si mostra mai quante unità restano.')}
           </p>
         </section>
       </div>
@@ -249,7 +251,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
 
   /* The Home card exactly as the person will see it — in their language. */
   const preview: ChallengeView = {
-    id: 'preview', companyId: null, companyName: null, title: draft.title || 'Nome da sfida', description: draft.description,
+    id: 'preview', companyId: null, companyName: null, title: draft.title || st('Nome da sfida'), description: draft.description,
     badgeIcon: draft.badgeIcon, format: draft.format, scope: draft.scope, scopeRef: draft.scopeRef, metric: draft.metric,
     goalValue: draft.goalValue, goalKind: draft.goalKind, perPersonMin: draft.perPersonMin,
     windowStartHour: draft.windowStartHour, windowEndHour: draft.windowEndHour, startsAt: draft.startsAt, endsAt: draft.endsAt,
@@ -262,7 +264,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
   return (
     <div className="adm-page">
       <header className="adm-page__head">
-        <h1 className="b2b-h1">{draft.id ? 'Modifica sfida' : 'Nuova sfida'}</h1>
+        <h1 className="b2b-h1">{draft.id ? st('Modifica sfida') : st('Nuova sfida')}</h1>
         <ol className="adm-stepper">
           {STEPS.map((s, i) => (
             <li key={s}><button className={`adm-tag${i === step ? ' is-on' : ''}`} onClick={() => setStep(i)}>{i + 1} · {s}</button></li>
@@ -279,7 +281,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
                 <input className="b2b-input" maxLength={80} value={draft.title} autoFocus onChange={(e) => patch({ title: e.target.value })} /></label>
               <label className="adm-partner-form__wide"><span className="b2b-label">Descrizione breve (pt-BR, una frase)</span>
                 <input className="b2b-input" maxLength={280} value={draft.description ?? ''} onChange={(e) => patch({ description: e.target.value || null })} /></label>
-              <fieldset className="adm-partner-form__wide adm-benefit__tags"><legend className="b2b-label">Icona del badge</legend>
+              <fieldset className="adm-partner-form__wide adm-benefit__tags"><legend className="b2b-label">{st('Icona del badge')}</legend>
                 <div className="adm-spec__chips">
                   {ICONS.map((i) => (
                     <button key={i} type="button" className={`adm-tag adm-icon-pick${draft.badgeIcon === i ? ' is-on' : ''}`} onClick={() => patch({ badgeIcon: i })} aria-label={i}>
@@ -293,34 +295,34 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
 
           {step === 1 && (
             <div className="adm-partner-form__grid">
-              <label><span className="b2b-label">Inizio</span>
+              <label><span className="b2b-label">{st('Inizio')}</span>
                 <input className="b2b-input" type="datetime-local" value={toInput(draft.startsAt)} onChange={(e) => patch({ startsAt: fromInput(e.target.value) })} /></label>
-              <label><span className="b2b-label">Fine</span>
+              <label><span className="b2b-label">{st('Fine')}</span>
                 <input className="b2b-input" type="datetime-local" value={toInput(draft.endsAt)} onChange={(e) => patch({ endsAt: fromInput(e.target.value) })} /></label>
-              <p className="adm-muted adm-partner-form__wide">Fuso orario: America/Sao_Paulo. Contano le sessioni che FINISCONO dentro il periodo.</p>
+              <p className="adm-muted adm-partner-form__wide">{st('Fuso orario: America/Sao_Paulo. Contano le sessioni che FINISCONO dentro il periodo.')}</p>
             </div>
           )}
 
           {step === 2 && (
             <div className="adm-partner-form__grid">
-              <label><span className="b2b-label">Formato</span>
+              <label><span className="b2b-label">{st('Formato')}</span>
                 <select className="b2b-input" value={draft.format} onChange={(e) => patch({ format: e.target.value as Challenge['format'], perPersonMin: e.target.value === 'collective' ? draft.perPersonMin ?? 1 : null })}>
-                  <option value="individual">Individuale — ognuno il proprio obiettivo</option>
-                  <option value="collective">Collettiva di massa — un obiettivo comune</option>
+                  <option value="individual">{st('Individuale — ognuno il proprio obiettivo')}</option>
+                  <option value="collective">{st('Collettiva di massa — un obiettivo comune')}</option>
                 </select></label>
-              <label><span className="b2b-label">Ambito</span>
+              <label><span className="b2b-label">{st('Ambito')}</span>
                 <select className="b2b-input" value={draft.scope} onChange={(e) => patch({ scope: e.target.value as ChallengeScope, scopeRef: null })}>
-                  {(['national', 'region', 'state', 'city'] as ChallengeScope[]).map((s) => <option key={s} value={s}>{SCOPE_IT[s]}</option>)}
+                  {(['national', 'region', 'state', 'city'] as ChallengeScope[]).map((s) => <option key={s} value={s}>{st(SCOPE_IT[s])}</option>)}
                 </select></label>
               {draft.scope === 'region' && (
-                <label><span className="b2b-label">Regione</span>
+                <label><span className="b2b-label">{st('Regione')}</span>
                   <select className="b2b-input" value={draft.scopeRef ?? ''} onChange={(e) => patch({ scopeRef: e.target.value || null })}>
                     <option value="">—</option>
                     {Object.keys(REGION_NAMES).map((r) => <option key={r} value={r}>{r}</option>)}
                   </select></label>
               )}
               {draft.scope === 'state' && (
-                <label><span className="b2b-label">Stato</span>
+                <label><span className="b2b-label">{st('Stato')}</span>
                   <select className="b2b-input" value={draft.scopeRef ?? ''} onChange={(e) => patch({ scopeRef: e.target.value || null })}>
                     <option value="">—</option>
                     {Object.entries(UF_NAMES).map(([uf, name]) => <option key={uf} value={uf}>{name}</option>)}
@@ -328,7 +330,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
               )}
               {draft.scope === 'city' && (
                 <label><span className="b2b-label">Città {draft.scopeRef && `(${draft.scopeRef})`}</span>
-                  <input className="b2b-input" placeholder="Cerca per nome" value={cityQ} onChange={(e) => setCityQ(e.target.value)} />
+                  <input className="b2b-input" placeholder={st('Cerca per nome')} value={cityQ} onChange={(e) => setCityQ(e.target.value)} />
                   {cities.length > 0 && (
                     <select className="b2b-input" size={Math.min(6, cities.length)} onChange={(e) => { patch({ scopeRef: e.target.value }); setCityQ('') }}>
                       {cities.map((m) => <option key={m.ibgeCode} value={m.ibgeCode}>{m.name} · {m.uf}</option>)}
@@ -342,14 +344,14 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
                   {' '}Portata stimata: {reach.people.toLocaleString('it-IT')} persone · attive il mese scorso: {reach.activeLastMonth.toLocaleString('it-IT')}.
                 </p>
               )}
-              <label><span className="b2b-label">Metrica</span>
+              <label><span className="b2b-label">{st('Metrica')}</span>
                 <select className="b2b-input" value={draft.metric} onChange={(e) => patch({ metric: e.target.value as ChallengeMetric, windowStartHour: e.target.value === 'sessions_in_time_window' ? 21 : null, windowEndHour: e.target.value === 'sessions_in_time_window' ? 24 : null })}>
                   {(Object.keys(METRIC_IT) as ChallengeMetric[]).map((m) => <option key={m} value={m}>{METRIC_IT[m]}</option>)}
                 </select></label>
               <label><span className="b2b-label">Obiettivo {draft.metric === 'minutes_listened' ? '(minuti)' : ''}</span>
                 <input className="b2b-input" type="number" min={1} value={draft.goalValue} onChange={(e) => patch({ goalValue: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /></label>
               {draft.format === 'collective' && (
-                <label><span className="b2b-label">Minimo a persona per il premio</span>
+                <label><span className="b2b-label">{st('Minimo a persona per il premio')}</span>
                   <input className="b2b-input" type="number" min={1} value={draft.perPersonMin ?? 1} onChange={(e) => patch({ perPersonMin: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /></label>
               )}
               {draft.metric === 'sessions_in_time_window' && (
@@ -367,36 +369,36 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
             <div className="adm-partner-form__grid">
               <label><span className="b2b-label">Loops bonus (mai moltiplicati)</span>
                 <input className="b2b-input" type="number" min={0} value={Math.floor((draft.rewardBonusLoopsCenti ?? 0) / 100)} onChange={(e) => patch({ rewardBonusLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 || null })} /></label>
-              <label><span className="b2b-label">Beneficio esclusivo</span>
+              <label><span className="b2b-label">{st('Beneficio esclusivo')}</span>
                 <select className="b2b-input" value={draft.rewardBenefitId ?? ''} onChange={(e) => patch({ rewardBenefitId: e.target.value || null })}>
-                  <option value="">— nessuno —</option>
-                  {prizes.map((b) => <option key={b.id} value={b.id}>{b.title}{b.priceLoopsCenti === null ? ' (solo sfida)' : ''}</option>)}
+                  <option value="">{st('— nessuno —')}</option>
+                  {prizes.map((b) => <option key={b.id} value={b.id}>{b.title}{b.priceLoopsCenti === null ? st(' (solo sfida)') : ''}</option>)}
                 </select></label>
-              <label><span className="b2b-label">Se le unità non bastano</span>
+              <label><span className="b2b-label">{st('Se le unità non bastano')}</span>
                 <select className="b2b-input" value={draft.rewardRule} onChange={(e) => patch({ rewardRule: e.target.value as Challenge['rewardRule'] })}>
-                  <option value="first_to_complete">A chi completa per primo</option>
-                  <option value="raffle">Sorteggio alla chiusura</option>
+                  <option value="first_to_complete">{st('A chi completa per primo')}</option>
+                  <option value="raffle">{st('Sorteggio alla chiusura')}</option>
                 </select></label>
-              <p className="adm-muted adm-partner-form__wide">La quantità è quella del beneficio (Benefici › Quantità totale). Un beneficio «solo sfida» si collega a questa sfida al salvataggio.</p>
+              <p className="adm-muted adm-partner-form__wide">{st('La quantità è quella del beneficio (Benefici › Quantità totale). Un beneficio «solo sfida» si collega a questa sfida al salvataggio.')}</p>
             </div>
           )}
 
           {step === 4 && (
             <label className="adm-partner-form__check">
               <input type="checkbox" checked={draft.announceInApp} onChange={(e) => patch({ announceInApp: e.target.checked })} />
-              <span>Annunciare nell’app — un messaggio gentile, una volta sola, mai notifiche ripetute.</span>
+              <span>{st('Annunciare nell’app — un messaggio gentile, una volta sola, mai notifiche ripetute.')}</span>
             </label>
           )}
 
           {step === 5 && (
             <>
               <ul className="adm-rules">
-                {rules.map((r) => <li key={r.id} className={r.ok ? 'is-ok' : 'is-bad'}>{r.ok ? '✓' : '✗'} {RULE_IT[r.id]}</li>)}
+                {rules.map((r) => <li key={r.id} className={r.ok ? 'is-ok' : 'is-bad'}>{r.ok ? '✓' : '✗'} {st(RULE_IT[r.id])}</li>)}
               </ul>
               <div className="adm-made__acts">
-                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !draft.title.trim()} onClick={() => onSave(draft, 'draft')}>Salva bozza</button>
+                <button className="b2b-btn b2b-btn--ghost" disabled={busy || !draft.title.trim()} onClick={() => onSave(draft, 'draft')}>{st('Salva bozza')}</button>
                 <button className="b2b-btn b2b-btn--ghost" disabled={busy || !ok || draft.startsAt <= Date.now()} onClick={() => onSave(draft, 'schedule')}>Programma</button>
-                <button className="b2b-btn b2b-btn--primary" disabled={busy || !ok} onClick={() => onSave(draft, 'publish')}>Pubblica ora</button>
+                <button className="b2b-btn b2b-btn--primary" disabled={busy || !ok} onClick={() => onSave(draft, 'publish')}>{st('Pubblica ora')}</button>
               </div>
             </>
           )}
@@ -404,13 +406,13 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
           <div className="adm-made__acts">
             {step > 0 && <button className="b2b-btn b2b-btn--ghost" onClick={() => setStep(step - 1)}>Indietro</button>}
             {step < STEPS.length - 1 && <button className="b2b-btn b2b-btn--primary" onClick={() => setStep(step + 1)}>Avanti</button>}
-            <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>Chiudi senza salvare</button>
+            <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={onCancel}>{st('Chiudi senza salvare')}</button>
           </div>
         </div>
 
         <aside className="adm-challenges__side">
           <LockedRules />
-          <p className="b2b-label">Anteprima nella Home</p>
+          <p className="b2b-label">{st('Anteprima nella Home')}</p>
           <div className="su-studio adm-challenges__preview">
             <FixedLocale locale="pt-BR">
               <ChallengeCard c={preview} onOpen={() => undefined} />

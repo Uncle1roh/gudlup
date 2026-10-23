@@ -26,6 +26,7 @@
 --                                   — the in-app campaigns
 --     benefits / benefit_tags / benefit_tag_map / benefit_codes
 --     partner_products              — what partners give and what it costs
+--     promo_codes                   — the discount typed at registration
 --
 -- plus INSERT on audit_events, so its own actions are on the record.
 --
@@ -37,7 +38,7 @@
 -- database is where that is settled, not the sidebar.
 --
 -- It also has no write over the catalogue, the audio, the credential queue,
--- the feature switches, the economy's own settings or the promo codes.
+-- the feature switches or the economy's own settings.
 -- ============================================================================
 
 -- ---- the role -------------------------------------------------------------
@@ -75,6 +76,14 @@ create policy addon_plans_sales on addon_plans
 
 drop policy if exists company_addon_subs_sales on company_addon_subscriptions;
 create policy company_addon_subs_sales on company_addon_subscriptions
+  for all using (is_sales()) with check (is_sales());
+
+-- ---- the discounts --------------------------------------------------------
+-- A promo code is a price, and a price is commercial. It is also what the
+-- paid mobile app will be sold against, which is the reason the screen moved
+-- out of the admin console with the rest.
+drop policy if exists promo_codes_sales on promo_codes;
+create policy promo_codes_sales on promo_codes
   for all using (is_sales()) with check (is_sales());
 
 -- ---- the campaigns --------------------------------------------------------

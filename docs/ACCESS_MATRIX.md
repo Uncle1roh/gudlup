@@ -52,10 +52,11 @@ policies that all keep meaning what they meant.
 | Challenges and challenge templates (in-app campaigns) | RW |
 | What a challenge counted | R |
 | Benefits, their tags, their codes, partner products | RW |
+| Promo codes — the discount typed at registration | RW |
 | Benefit redemptions (who redeemed what) | **—** |
 | Audit events | insert only |
 | Economy settings — what a Loop is worth | **—** |
-| Catalogue, audio, rails, credentials, feature switches, promo codes | **—** |
+| Catalogue, audio, rails, credentials, feature switches | **—** |
 | Profiles, patients, sessions, notes, assessments, scores, goals, appointments, psychosocial responses | **—** |
 
 The last row is the load-bearing one, and it is an absence rather than a

@@ -23,7 +23,6 @@ import { CatalogAdmin } from './CatalogAdmin'
 import { AssetLibrary } from './AssetLibrary'
 import { CredentialQueue } from './CredentialQueue'
 import { ExploreRails } from './ExploreRails'
-import { PromoCodes } from './PromoCodes'
 import { Tags } from './Tags'
 import { Achievements } from './Achievements'
 import { GamReports } from './GamReports'
@@ -33,7 +32,7 @@ import { AuditLog } from './AuditLog'
 import { Economy } from './Economy'
 import { Compliance } from './Compliance'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'promo' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'gamreports'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'gamreports'
 
 const NAV: ConsoleNavItem<Section>[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -41,7 +40,6 @@ const NAV: ConsoleNavItem<Section>[] = [
   { id: 'rails', label: 'Scaffali della libreria', icon: '▤' },
   { id: 'assets', label: 'Libreria audio', icon: '♫' },
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
-  { id: 'promo', label: 'Codici promo', icon: '%' },
   /* The economy's RULES stay here — what a Loop is worth, and what a
      traguardo takes — while the campaigns that spend them are commercial. */
   { id: 'economy', label: 'Economia', icon: '∞' },
@@ -92,7 +90,6 @@ export function AdminApp() {
       {section === 'rails' && <ExploreRails actor={actor} />}
       {section === 'assets' && <AssetLibrary actor={actor} />}
       {section === 'credentials' && <CredentialQueue actor={actor} />}
-      {section === 'promo' && <PromoCodes actor={actor} />}
       {section === 'tags' && <Tags actor={actor} />}
       {section === 'users' && <Users actor={actor} />}
       {section === 'compliance' && <Compliance actor={actor} />}

@@ -2993,3 +2993,20 @@ td, th { overflow-wrap: anywhere; }
 /* The add-on plan, chosen while the company is created rather than on a
    second screen afterwards. */
 .adm-addrow__plan { max-width: 220px; }
+
+/* The language picker in the commercial console's sidebar. The admin console
+   has none: it is Italian by decision. */
+.adm-lang {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+/* The console's section, remounted when the language changes. It is a plain
+   wrapper: it must not introduce a box of its own. */
+.adm-main__in { display: contents; }

@@ -8,6 +8,7 @@
    ============================================================================ */
 
 import { useState } from 'react'
+import { st } from '../sales/i18n'
 import { useDataProvider } from '../data/provider'
 import { usePromoCodes } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -72,13 +73,13 @@ export function PromoCodes({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Codici promo</h1>
+          <h1 className="b2b-h1">{st('Codici promo')}</h1>
           <p className="b2b-sub">
-            Codici da inserire alla registrazione, ciascuno con la sua percentuale di sconto. {codes.length} in totale.
+            {st('Codici da inserire alla registrazione, ciascuno con la sua percentuale di sconto. {n} in totale.', { n: codes.length })}
           </p>
         </div>
         <button className="b2b-btn b2b-btn--primary" onClick={() => { setAdding((v) => !v); setError(null) }}>
-          {adding ? 'Annulla' : '+ Nuovo codice'}
+          {adding ? st('Annulla') : st('+ Nuovo codice')}
         </button>
       </header>
 
@@ -92,43 +93,43 @@ export function PromoCodes({ actor }: { actor: string }) {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               autoFocus
             />
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => setCode(generatePromoCode())}>Genera</button>
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => setCode(generatePromoCode())}>{st('Genera')}</button>
             <input
               className="b2b-input adm-addrow__pct"
               type="number" min={1} max={100} step={1}
-              placeholder="Sconto %"
+              placeholder={st('Sconto %')}
               value={pct}
               onChange={(e) => setPct(e.target.value)}
             />
-            <button className="b2b-btn b2b-btn--primary" disabled={!canCreate} onClick={() => void create()}>Crea</button>
+            <button className="b2b-btn b2b-btn--primary" disabled={!canCreate} onClick={() => void create()}>{st('Crea')}</button>
           </div>
           <p className="b2b-sub">
-            Da 3 a 32 caratteri: lettere, numeri e trattini. Sconto da 1 a 100%.
-            {finalCode && !codeTaken && !codeBad && isValidDiscount(pctNum) && <> Sarà <b>{finalCode}</b> · <b>{pctNum}%</b>.</>}
-            {codeTaken && <span className="pe-err">{finalCode} esiste già.</span>}
-            {codeBad && <span className="pe-err">Forma non valida.</span>}
-            {pctBad && <span className="pe-err">Lo sconto è un numero intero da 1 a 100.</span>}
+            {st('Da 3 a 32 caratteri: lettere, numeri e trattini. Sconto da 1 a 100%.')}
+            {finalCode && !codeTaken && !codeBad && isValidDiscount(pctNum) && <> {st('Sarà {code} · {pct}%.', { code: finalCode, pct: pctNum })}</>}
+            {codeTaken && <span className="pe-err">{st('{code} esiste già.', { code: finalCode })}</span>}
+            {codeBad && <span className="pe-err">{st('Forma non valida.')}</span>}
+            {pctBad && <span className="pe-err">{st('Lo sconto è un numero intero da 1 a 100.')}</span>}
           </p>
         </>
       )}
 
       {error && <p className="pe-err">{error}</p>}
-      {loadError && <p className="pe-err">Impossibile caricare i codici: {loadError.message} — esegui supabase/9-promo-codes.sql.</p>}
-      {loading && <p className="b2b-sub">Caricamento…</p>}
+      {loadError && <p className="pe-err">{st('Impossibile caricare i codici: {err} — esegui supabase/9-promo-codes.sql.', { err: loadError.message })}</p>}
+      {loading && <p className="b2b-sub">{st('Caricamento…')}</p>}
 
       {!loading && !loadError && (
         codes.length === 0 ? (
-          <p className="b2b-sub">Ancora nessun codice. «＋ Nuovo codice» per crearne uno.</p>
+          <p className="b2b-sub">{st('Ancora nessun codice. «＋ Nuovo codice» per crearne uno.')}</p>
         ) : (
           <div className="adm-table adm-table--promo">
             <div className="adm-tr adm-tr--head">
-              <div>Codice</div><div>Sconto</div><div>Utilizzi</div><div>Creato</div><div className="adm-tr__right">Azione</div>
+              <div>{st('Codice')}</div><div>{st('Sconto')}</div><div>{st('Utilizzi')}</div><div>{st('Creato')}</div><div className="adm-tr__right">{st('Azione')}</div>
             </div>
             {codes.map((c) => (
               <div className="adm-tr" key={c.code}>
                 <div>
-                  <button className="adm-code adm-code--btn" title="Copia il codice" onClick={() => copy(c.code)}>
-                    {copied === c.code ? 'Copiato' : c.code}
+                  <button className="adm-code adm-code--btn" title={st('Copia il codice')} onClick={() => copy(c.code)}>
+                    {copied === c.code ? st('Copiato') : c.code}
                   </button>
                 </div>
                 <div><b>{c.discountPct}%</b></div>
@@ -137,16 +138,16 @@ export function PromoCodes({ actor }: { actor: string }) {
                 <div className="adm-tr__right">
                   {armed === c.code ? (
                     <>
-                      <button className="b2b-btn b2b-btn--danger" disabled={busy} onClick={() => void remove(c.code)}>Sì, elimina</button>
-                      <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => setArmed(null)}>Annulla</button>
+                      <button className="b2b-btn b2b-btn--danger" disabled={busy} onClick={() => void remove(c.code)}>{st('Sì, elimina')}</button>
+                      <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => setArmed(null)}>{st('Annulla')}</button>
                     </>
                   ) : (
                     <button
                       className="b2b-btn b2b-btn--ghost"
-                      title={c.uses ? `${c.uses} account lo hanno usato: mantengono lo sconto` : undefined}
+                      title={c.uses ? st('{n} account lo hanno usato: mantengono lo sconto', { n: c.uses }) : undefined}
                       onClick={() => setArmed(c.code)}
                     >
-                      Elimina
+                      {st('Elimina')}
                     </button>
                   )}
                 </div>
@@ -156,7 +157,7 @@ export function PromoCodes({ actor }: { actor: string }) {
         )
       )}
       <p className="b2b-sub" style={{ marginTop: 12 }}>
-        Eliminare un codice impedisce nuove registrazioni con quel codice; gli account già registrati mantengono lo sconto.
+        {st('Eliminare un codice impedisce nuove registrazioni con quel codice; gli account già registrati mantengono lo sconto.')}
       </p>
     </div>
   )

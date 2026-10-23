@@ -10365,6 +10365,14 @@ drop policy if exists company_addon_subs_sales on company_addon_subscriptions;
 create policy company_addon_subs_sales on company_addon_subscriptions
   for all using (is_sales()) with check (is_sales());
 
+-- ---- the discounts --------------------------------------------------------
+-- A promo code is a price, and a price is commercial. It is also what the
+-- paid mobile app will be sold against, which is the reason the screen moved
+-- out of the admin console with the rest.
+drop policy if exists promo_codes_sales on promo_codes;
+create policy promo_codes_sales on promo_codes
+  for all using (is_sales()) with check (is_sales());
+
 -- ---- the campaigns --------------------------------------------------------
 -- A challenge is a commercial incentive that runs inside the app. What it
 -- cannot do is change what a Loop is worth: `economy_settings` is the

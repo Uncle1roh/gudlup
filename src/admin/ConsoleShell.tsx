@@ -17,10 +17,13 @@
    ============================================================================ */
 
 import { type ReactNode } from 'react'
+import { useI18n } from '../i18n'
+import { st } from '../sales/i18n'
 import { BrandLogo } from '../components/Brand'
 import { SignOutButton } from '../auth/auth'
 import { AvatarUpload } from '../components/AvatarUpload'
 import { HelpNowButton } from '../legal/HelpNow'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { SURFACES, openPreview, type PreviewSurface } from './preview'
 
 export interface ConsoleNavItem<Id extends string> {
@@ -42,6 +45,13 @@ export function ConsoleShell<Id extends string>({
   preview,
   navOpen,
   setNavOpen,
+  /** Whether this console lets its people choose the language.
+
+      The admin console does not and will not: it is pinned to Italian by
+      decision, and none of its screens has a `t()` in it. The commercial
+      console does — it took five of those screens with it, and the people
+      using them are not the people who wrote them. */
+  language = false,
   children,
 }: {
   subtitle: string
@@ -52,8 +62,32 @@ export function ConsoleShell<Id extends string>({
   preview: PreviewSurface[]
   navOpen: boolean
   setNavOpen: (open: boolean) => void
+  language?: boolean
   children: ReactNode
 }) {
+  /* Subscribing to the interface language is what makes the picker work.
+
+     The screens in here read their words through `st()`, which asks
+     `currentLocale()` at call time and is not a hook — so nothing re-renders
+     when the language changes, and the console sat in Italian with the
+     picker showing Português. This hook subscribes the shell, and the `key`
+     below remounts the section under it, which is the only way to reach a
+     tree of components that do not use the hook themselves.
+
+     Remounting discards a half-filled form. That is the right trade for a
+     deliberate change of language, and the wrong one for anything else,
+     which is why the key is the locale and nothing else. */
+  const { locale } = useI18n()
+
+  /* The chrome follows the console, not the person.
+
+     `st()` asks `currentLocale()`, which is a module value the I18nProvider
+     sets — and `FixedLocale`, which pins the admin console to Italian, only
+     changes the React context. So an admin whose own language is Portuguese
+     would have got a Portuguese sidebar around an Italian console. The
+     console that offers a language is the one whose chrome is translated;
+     the other keeps the Italian its screens are written in. */
+  const ct = language ? st : (k: string) => k
   const current = nav.find((n) => n.id === section)
 
   return (
@@ -76,7 +110,7 @@ export function ConsoleShell<Id extends string>({
           </button>
         </div>
         <div className="adm-drawer" id="adm-drawer">
-          <nav className="adm-nav" aria-label="Sezioni della console">
+          <nav className="adm-nav" aria-label={ct('Sezioni della console')}>
             {nav.map((n) => (
               <button
                 key={n.id}
@@ -98,8 +132,8 @@ export function ConsoleShell<Id extends string>({
               read or written. The bar at the top of the surface moves
               between them and gets back out. */}
           <div className="adm-open">
-            <span className="adm-open__title">Apri un’altra app</span>
-            <span className="adm-open__note">Anteprima con dati dimostrativi</span>
+            <span className="adm-open__title">{ct('Apri un’altra app')}</span>
+            <span className="adm-open__note">{ct('Anteprima con dati dimostrativi')}</span>
             <div className="adm-open__row">
               {SURFACES.filter((s) => preview.includes(s.id)).map((s) => (
                 <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
@@ -110,8 +144,9 @@ export function ConsoleShell<Id extends string>({
           </div>
 
           <div className="adm-side__foot">
+            {language && <LanguagePicker className="adm-lang" label={false} />}
             <HelpNowButton variant="inline" />
-            <a className="adm-open__note" href="#legal" target="_blank" rel="noreferrer">Informazioni legali ↗</a>
+            <a className="adm-open__note" href="#legal" target="_blank" rel="noreferrer">{ct('Informazioni legali ↗')}</a>
             <div className="adm-who">
               <AvatarUpload size={30} fallback="⚙️" className="avatarup--bar" />
               <span className="adm-who__email">{actor}</span>
@@ -122,8 +157,8 @@ export function ConsoleShell<Id extends string>({
       </aside>
 
       <main className="adm-main">
-        <p className="adm-small-note">La console è pensata per lo schermo di un computer: qui funziona tutto, ma le tabelle scorrono di lato.</p>
-        {children}
+        <p className="adm-small-note">{ct('La console è pensata per lo schermo di un computer: qui funziona tutto, ma le tabelle scorrono di lato.')}</p>
+        <div key={locale} className="adm-main__in">{children}</div>
       </main>
     </div>
   )

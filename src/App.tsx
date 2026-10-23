@@ -88,8 +88,11 @@ export default function App() {
   const isWorkspace = route === '#therapist' || route === '#b2b' || route === '#b2b-legacy'
   const isAdmin = route === '#admin'
   /* The commercial console. Its own role and its own door, like the admin
-     one — and pinned to the same language, because the screens it shows are
-     the admin console's screens and their copy is written in Italian. */
+     one — but NOT pinned to Italian with it. The admin console is Italian by
+     decision, for one team; the commercial console took five of its screens
+     to a different team, and those screens now read their words through
+     `st()` (src/sales/i18n.ts), so the picker in its sidebar means
+     something. */
   const isSales = route === '#sales'
   const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate' || route === '#nr1'
   const isLegal = route === '#legal' || route.startsWith('#legal/')
@@ -282,10 +285,10 @@ export default function App() {
       {content()}
     </ErrorBoundary>
   )
-  const body = isAdmin || isSales ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
+  const body = isAdmin ? <FixedLocale locale="it">{boundary}</FixedLocale> : boundary
   /* The banner is chrome, so on the Italian-pinned console it is Italian too,
      and anywhere else it follows the surface under it. */
-  const strip = isAdmin || isSales
+  const strip = isAdmin
     ? <FixedLocale locale="it"><EnvBanner surface={surface} /></FixedLocale>
     : <EnvBanner surface={surface} />
   return (

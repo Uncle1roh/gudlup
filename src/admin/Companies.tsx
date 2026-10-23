@@ -14,6 +14,7 @@
    ============================================================================ */
 
 import { useCallback, useEffect, useState } from 'react'
+import { st } from '../sales/i18n'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -34,7 +35,7 @@ export function Companies({ actor }: { actor: string }) {
       setIssued(made.code)
       await dp.logAudit({ actor, action: 'therapist_code.issued', target: companyId, detail: made.code }).catch(() => undefined)
     } catch (e) {
-      window.alert(`Impossibile generare il codice: ${(e as Error).message}`)
+      window.alert(st('Impossibile generare il codice: {err}', { err: (e as Error).message }))
       setCodeFor(null)
     }
   }
@@ -98,7 +99,8 @@ export function Companies({ actor }: { actor: string }) {
         await dp.adminSetCompanyPlan(company.id, planId)
         await dp.logAudit({ actor, action: 'addon.plan_set', target: company.id, detail: planId })
       } catch (e) {
-        window.alert(`Azienda creata, ma il piano non è stato applicato: ${(e as Error).message}${String.fromCharCode(10)}Assegnalo da “Piani e moltiplicatori”.`)
+        window.alert(st('Azienda creata, ma il piano non è stato applicato: {err}', { err: (e as Error).message })
+          + String.fromCharCode(10) + st('Assegnalo da “Piani e moltiplicatori”.'))
       }
     }
     setBusy(false)
@@ -127,49 +129,46 @@ export function Companies({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">Aziende</h1>
+          <h1 className="b2b-h1">{st('Aziende')}</h1>
           <p className="b2b-sub">Le aziende su cui la piattaforma è attivata. {companies.length} in totale.</p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding((v) => !v)}>{adding ? 'Annulla' : '+ Nuova azienda'}</button>
+        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding((v) => !v)}>{adding ? st('Annulla') : st('+ Nuova azienda')}</button>
       </header>
 
       {adding && (
         <>
           <div className="adm-addrow">
-            <input className="b2b-input" placeholder="Nome azienda" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <input className="b2b-input" placeholder={st('Nome azienda')} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             <input
               className="b2b-input adm-addrow__code"
               placeholder={suggested || 'CODICE-2026-XX'}
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
             />
-            <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder="Postazioni" value={seats} onChange={(e) => setSeats(e.target.value)} />
+            <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder={st('Postazioni')} value={seats} onChange={(e) => setSeats(e.target.value)} />
             <select
               className="b2b-input adm-addrow__plan"
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
-              aria-label="Piano add-on"
+              aria-label={st('Piano add-on')}
             >
-              <option value="">Nessun piano · 1×</option>
+              <option value="">{st('Nessun piano · 1×')}</option>
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>{p.name} · {p.multiplier}×</option>
               ))}
             </select>
-            <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad} onClick={create}>Crea</button>
+            <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad} onClick={create}>{st('Crea')}</button>
           </div>
           {chosenPlan && (
             <p className="b2b-sub">
-              Con <b>{chosenPlan.name}</b> i Loops dell’ascolto valgono <b>{chosenPlan.multiplier}×</b> per chi è di questa
-              azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato
-              all’indietro.
+              {st('Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.', { plan: chosenPlan.name, mult: chosenPlan.multiplier })}
             </p>
           )}
           <p className="b2b-sub">
-            Il <b>codice azienda</b> è anche l’accesso: con questo codice l’HR si registra su <code>#hr</code> e apre
-            il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.
-            {finalCode && !codeTaken && !codeBad && <> Sarà <b>{finalCode}</b>.</>}
-            {codeTaken && <span className="pe-err"> {finalCode} è già di un’altra azienda.</span>}
-            {codeBad && <span className="pe-err"> Forma non valida: serve NOME-ANNO-XX.</span>}
+            {st('Il codice azienda è anche l’accesso: con questo codice l’HR si registra su #hr e apre il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.')}
+            {finalCode && !codeTaken && !codeBad && <> {st('Sarà {code}.', { code: finalCode })}</>}
+            {codeTaken && <span className="pe-err"> {st('{code} è già di un’altra azienda.', { code: finalCode })}</span>}
+            {codeBad && <span className="pe-err"> {st('Forma non valida: serve NOME-ANNO-XX.')}</span>}
           </p>
         </>
       )}
@@ -177,22 +176,22 @@ export function Companies({ actor }: { actor: string }) {
       {made && (
         <div className="adm-made">
           <div>
-            <b>{made.name}</b> creata. Codice azienda:{' '}
+            {st('{name} creata. Codice azienda:', { name: made.name })}{' '}
             <span className="adm-code">{made.id}</span>
           </div>
           <div className="adm-made__acts">
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => copy(made.id)}>{copied ? 'Copiato' : 'Copia'}</button>
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => setMade(null)}>Chiudi</button>
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => copy(made.id)}>{copied ? st('Copiato') : st('Copia')}</button>
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => setMade(null)}>{st('Chiudi')}</button>
           </div>
         </div>
       )}
 
-      {loading && <p className="b2b-sub">Caricamento…</p>}
+      {loading && <p className="b2b-sub">{st('Caricamento…')}</p>}
 
       {!loading && (
         <div className="adm-table adm-table--companies">
           <div className="adm-tr adm-tr--head">
-            <div>Azienda</div><div>Codice / accesso</div><div>Postazioni usate</div><div>Creata</div><div>Stato</div><div className="adm-tr__right">Azione</div>
+            <div>{st('Azienda')}</div><div>{st('Codice / accesso')}</div><div>{st('Postazioni usate')}</div><div>{st('Creata')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azione')}</div>
           </div>
           {companies.map((c) => {
             const pct = c.seats ? Math.min(100, Math.round((c.activeUsers / c.seats) * 100)) : 0
@@ -200,14 +199,14 @@ export function Companies({ actor }: { actor: string }) {
               <div className="adm-tr" key={c.id}>
                 <div><b>{c.name}</b></div>
                 <div>
-                  <button className="adm-code adm-code--btn" title="Copia il codice" onClick={() => copy(c.id)}>{c.id}</button>
+                  <button className="adm-code adm-code--btn" title={st('Copia il codice')} onClick={() => copy(c.id)}>{c.id}</button>
                 </div>
                 <div>
                   <div className="adm-seats">{c.activeUsers} / {c.seats}</div>
                   <div className="adm-bar"><span style={{ width: `${pct}%` }} /></div>
                 </div>
                 <div>{fmtDate(c.createdAt)}</div>
-                <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">Attiva</span> : <span className="adm-pill adm-pill--warn">In pausa</span>}</div>
+                <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">{st('Attiva')}</span> : <span className="adm-pill adm-pill--warn">{st('In pausa')}</span>}</div>
                 <div className="adm-tr__right">
                   {/* The company can issue these themselves; this is for the
                       support call where they cannot. */}
