@@ -278,10 +278,29 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     ...account,
   }
 
+  /* ---- where a demo appointment lands -------------------------------------
+
+     The seeded appointments used to be `now + 2h`, `now + 1d2h` and so on.
+     Relative to the moment the demo is opened — which is how four patients
+     ended up at 04:25 in a calendar grid that runs 07:00 to 21:00, and a
+     salesperson opening the app in the evening found an empty week.
+
+     An appointment belongs at a clinic hour. `clinicAt` puts it on a real
+     day at a real time: inside the grid, always, whatever o'clock it is when
+     somebody opens the laptop. Days ahead wrap inside the SAME week, because
+     the calendar shows one week and a demo should not need the arrows. */
+  const clinicAt = (daysAhead: number, hhmm: [number, number]): number => {
+    const d = new Date(now)
+    const weekday = (d.getDay() + 6) % 7            // 0 = Monday
+    const within = Math.min(weekday + daysAhead, 4) // never past Friday
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (within - weekday))
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hhmm[0], hhmm[1]).getTime()
+  }
+
   const mk = (
     id: string,
     name: string,
-    opts: Partial<WorkspacePatient> & { nextIn?: number; lastAgo?: number },
+    opts: Partial<WorkspacePatient> & { nextAt?: number; lastAgo?: number },
   ): WorkspacePatient => ({
     id,
     name,
@@ -289,7 +308,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     company: 'Nexa Health',
     status: 'active',
     linkedAt: now - 380 * DAY,
-    nextSessionAt: opts.nextIn != null ? now + opts.nextIn : undefined,
+    nextSessionAt: opts.nextAt,
     lastSessionAt: opts.lastAgo != null ? now - opts.lastAgo : undefined,
     sessions: [],
     assessments: [],
@@ -303,7 +322,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
   })
 
   const maria = mk('p-maria', 'Maria Santos', {
-    nextIn: 2 * HOUR,
+    nextAt: clinicAt(0, [14, 0]),
     lastAgo: 6 * DAY,
     assessmentDue: 'DASS-21 (T2)',
     bridged: true,
@@ -347,7 +366,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
   })
 
   const joao = mk('p-joao', 'João Carvalho', {
-    nextIn: DAY + 2 * HOUR,
+    nextAt: clinicAt(1, [10, 30]),
     lastAgo: 7 * DAY,
     sessions: [
       { id: 's-j1', at: now - 7 * DAY, kind: 'gl-video', protocolCode: 'GL-ANX 1.1', version: 6, minutes: 46, phasesCompleted: 6, vasPre: 5, vasPost: 4, note: 'Steady progress; listening between sessions going well.', noteNumber: 4, signatureVersion: 0 },
@@ -364,7 +383,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
   })
 
   const rafael = mk('p-rafael', 'Rafael Fonseca', {
-    nextIn: 2 * DAY + 6 * HOUR,
+    nextAt: clinicAt(2, [16, 0]),
     lastAgo: 12 * DAY,
     sessions: [
       { id: 's-r1', at: now - 12 * DAY, kind: 'gl-video', protocolCode: 'GL-STRESS 4.1', version: 24, minutes: 58, phasesCompleted: 6, vasPre: 7, vasPost: 4, note: 'Deep version well tolerated.', noteNumber: 3, signedAt: now - 12 * DAY, signatureVersion: 1 },
@@ -374,7 +393,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     ],
   })
 
-  const teresa = mk('p-teresa', 'Teresa Alves', { nextIn: 3 * DAY + 3 * HOUR, lastAgo: 9 * DAY, status: 'new' })
+  const teresa = mk('p-teresa', 'Teresa Alves', { nextAt: clinicAt(3, [9, 30]), lastAgo: 9 * DAY, status: 'new' })
   const bruno = mk('p-bruno', 'Bruno Dias', {
     lastAgo: 20 * DAY,
     prescriptions: [

@@ -43,7 +43,6 @@ interface CalendarProps {
 
 export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps) {
   const { t } = useI18n()
-  const [view, setView] = useState<'week' | 'day'>('week')
   const [offset, setOffset] = useState(0)
   const [availOpen, setAvailOpen] = useState(false)
   const [popover, setPopover] = useState<{ patientId: string; at: number } | null>(null)
@@ -55,9 +54,14 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back).getTime()
   }, [now, offset])
 
-  const days = (view === 'week' ? WEEKDAYS : [WEEKDAYS[(new Date(now).getDay() + 6) % 7]]).map((label, i) => ({
+  /* The week, always. There used to be a Week/Day toggle next to the title;
+     the day view built a ONE-column `days` array and handed it to a grid
+     whose columns, header and availability bands are all written for seven,
+     so the calendar came apart rather than narrowed. A clinician's week is
+     the unit they plan in anyway, and the arrows already move through it. */
+  const days = WEEKDAYS.map((label, i) => ({
     label,
-    date: new Date(monday + (view === 'week' ? i : (new Date(now).getDay() + 6) % 7) * DAY),
+    date: new Date(monday + i * DAY),
   }))
 
   const booked = state.patients
@@ -87,10 +91,6 @@ export function Calendar({ state, update, onOpenPatient, onCall }: CalendarProps
       <div className="w-pagehead">
         <div className="w-pagehead__title">
           <h1 className="w-h1">{t('Calendar')}</h1>
-          <div className="w-segmented">
-            <button aria-pressed={view === 'week'} onClick={() => setView('week')}>{t('Week')}</button>
-            <button aria-pressed={view === 'day'} onClick={() => setView('day')}>{t('Day')}</button>
-          </div>
           <div className="w-navarrows">
             <button onClick={() => setOffset((o) => o - 1)} aria-label={t('Previous week')}>‹</button>
             <span className="w-small">

@@ -99,7 +99,6 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
   const [collapsed, setCollapsed] = useState(false)
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [elapsed, setElapsed] = useState(0)
-  const [reminded, setReminded] = useState(false)
 
   /* The patient connecting IS the moment the session starts. Waiting for the
      therapist to press a second button after that would be one click between
@@ -178,12 +177,14 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
               </p>
             )}
 
-            {!reminded ? (
-              <button className="w-link" onClick={() => setReminded(true)}>{t('Send a reminder?')}</button>
-            ) : (
-              <p className="w-small">{t('Reminder sent.')}</p>
-            )}
-
+            {/* "Send a reminder?" used to live here. It set a boolean and
+                printed "Reminder sent." — nothing left the browser, because
+                there is no notification path in the product at all: no
+                service worker, no push subscription, no mail. A button that
+                reports having done something it did not do is worse than no
+                button, most of all on the screen where a clinician is
+                waiting for somebody who has not arrived. It comes back when
+                there is something behind it. */}
             <button
               className="w-btn w-btn--primary"
               disabled={call.camStatus !== 'live' || call.callState === 'connecting' || (call.realtime && !call.peerPresent)}

@@ -795,3 +795,36 @@ textarea.w-input, .w-notearea { max-width: none; }
 /* "Retry" inside the camera warning: the waiting room's pale-on-dark link
    colour disappeared on the light warning box. */
 .w-call__waitmain .w-warnbox .w-link { color: #6b5111; text-decoration: underline; }
+
+/* The transport stays on screen -------------------------------------------
+
+   Pause, Stop and Intervene sit at the foot of the monitor panel, under the
+   active parameters, the quick-notes list and the note field. The list grows
+   while the session runs, so the three controls a clinician may need in a
+   hurry — above all Intervene, which opens two-way audio to somebody in the
+   middle of a protocol — scrolled off the bottom exactly as the session got
+   long enough for them to matter.
+
+   They stick to the foot of the panel instead. Opaque, with a short fade
+   above, so the notes pass under them rather than through them. */
+.w-transport {
+  position: sticky;
+  /* -16px, not 0: a sticky element sticks inside its scroll container's
+     padding box, and `.w-panel__body` has 16px of it. At 0 the notes scrolled
+     past in the open under the buttons. */
+  bottom: -16px;
+  z-index: 3;
+  margin-top: auto;
+  padding-top: 12px;
+  padding-bottom: 26px;
+  background: var(--w-surface);
+  /* the panel body's own side padding, so the strip reaches both edges */
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+.w-transport::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 100%; height: 18px;
+  background: linear-gradient(to top, var(--w-surface), transparent);
+  pointer-events: none;
+}
