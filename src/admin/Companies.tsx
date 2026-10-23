@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { st } from '../sales/i18n'
+import { ConsoleModal } from './ConsoleModal'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -43,6 +44,7 @@ export function Companies({ actor }: { actor: string }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [seats, setSeats] = useState('100')
+  const [contact, setContact] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [made, setMade] = useState<Company | null>(null)
@@ -83,6 +85,7 @@ export function Companies({ actor }: { actor: string }) {
       // company panel for its HR admin, and links an employee's account
       id: finalCode,
       name: n,
+      contactEmail: contact.trim() || null,
       seats: Math.max(1, parseInt(seats, 10) || 0),
       activeUsers: 0,
       status: 'active',
@@ -104,7 +107,7 @@ export function Companies({ actor }: { actor: string }) {
       }
     }
     setBusy(false)
-    setName(''); setSeats('100'); setCode(''); setPlanId(''); setAdding(false)
+    setName(''); setSeats('100'); setCode(''); setPlanId(''); setContact(''); setAdding(false)
     setMade(company)
     refetch()
   }
@@ -130,47 +133,80 @@ export function Companies({ actor }: { actor: string }) {
       <header className="adm-page__head adm-page__head--row">
         <div>
           <h1 className="b2b-h1">{st('Aziende')}</h1>
-          <p className="b2b-sub">Le aziende su cui la piattaforma è attivata. {companies.length} in totale.</p>
+          <p className="b2b-sub">{st('Le aziende su cui la piattaforma è attivata. {n} in totale.', { n: companies.length })}</p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding((v) => !v)}>{adding ? st('Annulla') : st('+ Nuova azienda')}</button>
+        <button className="b2b-btn b2b-btn--primary" onClick={() => setAdding(true)}>{st('+ Nuova azienda')}</button>
       </header>
 
       {adding && (
-        <>
-          <div className="adm-addrow">
-            <input className="b2b-input" placeholder={st('Nome azienda')} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-            <input
-              className="b2b-input adm-addrow__code"
-              placeholder={suggested || 'CODICE-2026-XX'}
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-            />
-            <input className="b2b-input adm-addrow__seats" type="number" min={1} placeholder={st('Postazioni')} value={seats} onChange={(e) => setSeats(e.target.value)} />
-            <select
-              className="b2b-input adm-addrow__plan"
-              value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-              aria-label={st('Piano add-on')}
-            >
-              <option value="">{st('Nessun piano · 1×')}</option>
-              {plans.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} · {p.multiplier}×</option>
-              ))}
-            </select>
-            <button className="b2b-btn b2b-btn--primary" disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad} onClick={create}>{st('Crea')}</button>
+        <ConsoleModal
+          title={st('+ Nuova azienda')}
+          note={st('Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé su #hr con questo codice, e i dipendenti lo inseriscono alla registrazione.')}
+          onClose={() => setAdding(false)}
+        >
+          <div className="adm-form">
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Nome azienda')} *</span>
+              <input className="b2b-input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </label>
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Codice azienda')} *</span>
+              <input
+                className="b2b-input adm-mono"
+                placeholder={suggested || 'NOME-2026-XX'}
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+              />
+              <span className="adm-form__hint">
+                {st('Suggerito dal nome, e modificabile. È quello che l’HR e i dipendenti digitano.')}
+                {finalCode && !codeTaken && !codeBad && <> {st('Sarà {code}.', { code: finalCode })}</>}
+                {codeTaken && <span className="pe-err"> {st('{code} è già di un’altra azienda.', { code: finalCode })}</span>}
+                {codeBad && <span className="pe-err"> {st('Forma non valida: serve NOME-ANNO-XX.')}</span>}
+              </span>
+            </label>
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('E-mail del referente')}</span>
+              <input
+                className="b2b-input"
+                type="email"
+                inputMode="email"
+                placeholder="rh@azienda.com.br"
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+              />
+              <span className="adm-form__hint">{st('A chi mandare il codice. Non crea un login: lo apre la persona stessa su #hr.')}</span>
+            </label>
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Quante persone può registrare')} *</span>
+              <input className="b2b-input" type="number" min={1} value={seats} onChange={(e) => setSeats(e.target.value)} />
+              <span className="adm-form__hint">{st('Il numero di dipendenti coperti dal contratto.')}</span>
+            </label>
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Piano add-on')}</span>
+              <select className="b2b-input" value={planId} onChange={(e) => setPlanId(e.target.value)}>
+                <option value="">{st('Nessun piano · 1×')}</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} · {p.multiplier}×</option>
+                ))}
+              </select>
+              <span className="adm-form__hint">
+                {chosenPlan
+                  ? st('Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.', { plan: chosenPlan.name, mult: chosenPlan.multiplier })
+                  : st('Senza piano i Loops valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».')}
+              </span>
+            </label>
           </div>
-          {chosenPlan && (
-            <p className="b2b-sub">
-              {st('Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.', { plan: chosenPlan.name, mult: chosenPlan.multiplier })}
-            </p>
-          )}
-          <p className="b2b-sub">
-            {st('Il codice azienda è anche l’accesso: con questo codice l’HR si registra su #hr e apre il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.')}
-            {finalCode && !codeTaken && !codeBad && <> {st('Sarà {code}.', { code: finalCode })}</>}
-            {codeTaken && <span className="pe-err"> {st('{code} è già di un’altra azienda.', { code: finalCode })}</span>}
-            {codeBad && <span className="pe-err"> {st('Forma non valida: serve NOME-ANNO-XX.')}</span>}
-          </p>
-        </>
+          <div className="adm-form__acts">
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => setAdding(false)}>{st('Annulla')}</button>
+            <button
+              className="b2b-btn b2b-btn--primary"
+              disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad}
+              onClick={create}
+            >
+              {st('Crea')}
+            </button>
+          </div>
+        </ConsoleModal>
       )}
 
       {made && (
@@ -178,6 +214,9 @@ export function Companies({ actor }: { actor: string }) {
           <div>
             {st('{name} creata. Codice azienda:', { name: made.name })}{' '}
             <span className="adm-code">{made.id}</span>
+            {made.contactEmail && (
+              <div className="adm-muted">{st('Mandalo a {email} — con questo codice apre il pannello aziendale su #hr.', { email: made.contactEmail })}</div>
+            )}
           </div>
           <div className="adm-made__acts">
             <button className="b2b-btn b2b-btn--ghost" onClick={() => copy(made.id)}>{copied ? st('Copiato') : st('Copia')}</button>
@@ -211,9 +250,9 @@ export function Companies({ actor }: { actor: string }) {
                   {/* The company can issue these themselves; this is for the
                       support call where they cannot. */}
                   <button className="b2b-btn b2b-btn--ghost" onClick={() => void issueTherapistCode(c.id)}>
-                    {codeFor === c.id && issued ? issued : 'Codice terapeuta'}
+                    {codeFor === c.id && issued ? issued : st('Codice terapeuta')}
                   </button>
-                  <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? 'Sospendi' : 'Riattiva'}</button>
+                  <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? st('Sospendi') : st('Riattiva')}</button>
                 </div>
               </div>
             )

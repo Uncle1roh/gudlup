@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { st } from '../sales/i18n'
+import { ConsoleModal } from './ConsoleModal'
 import { useDataProvider, type ChallengeReach } from '../data/provider'
 import { FixedLocale } from '../i18n'
 import { ChallengeCard } from '../selfuse/ChallengeCard'
@@ -104,8 +105,15 @@ export function Challenges({ actor }: { actor: string }) {
     }
   }
 
-  if (draft) {
-    return (
+  /* The editor is an overlay, not a page. It used to be an early return, so
+     opening it took the list of campaigns off the screen — you lost sight of
+     the thing you were adding to, and getting back was a button to find. */
+  const editor = draft ? (
+    <ConsoleModal
+      wide
+      title={draft.id ? st('Modifica sfida') : st('Nuova sfida')}
+      onClose={() => { setDraft(null); setError(null) }}
+    >
       <Editor
         draft={draft}
         benefits={benefits}
@@ -129,8 +137,8 @@ export function Challenges({ actor }: { actor: string }) {
           }
         }}
       />
-    )
-  }
+    </ConsoleModal>
+  ) : null
 
   return (
     <div className="adm-page">
@@ -199,6 +207,7 @@ export function Challenges({ actor }: { actor: string }) {
           </p>
         </section>
       </div>
+      {editor}
     </div>
   )
 }
@@ -212,13 +221,12 @@ function scopeLabel(scope: ChallengeScope, ref: string): string {
 function LockedRules() {
   return (
     <p className="adm-note adm-challenges__locked">
-      Le sessioni SOS non contano mai · nessun obiettivo su autovalutazioni o VAS · nessuna sequenza di giorni ·
-      nessuno perde progressi · nessuna squadra o gruppo piccolo.
+      {st('Le sessioni SOS non contano mai · nessun obiettivo su autovalutazioni o VAS · nessuna sequenza di giorni · nessuno perde progressi · nessuna squadra o gruppo piccolo.')}
     </p>
   )
 }
 
-const STEPS = ['Informazioni', 'Periodo', 'Formato e obiettivo', 'Premio', 'Comunicazione', 'Rivedi e pubblica']
+const STEPS = ['Informazioni', 'Periodo', 'Formato e obiettivo', 'Premio', 'Comunicazione', 'Rivedi e pubblica']  // read through st()
 
 function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
   draft: Challenge; benefits: Benefit[]; busy: boolean; error: string | null
@@ -267,7 +275,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
         <h1 className="b2b-h1">{draft.id ? st('Modifica sfida') : st('Nuova sfida')}</h1>
         <ol className="adm-stepper">
           {STEPS.map((s, i) => (
-            <li key={s}><button className={`adm-tag${i === step ? ' is-on' : ''}`} onClick={() => setStep(i)}>{i + 1} · {s}</button></li>
+            <li key={s}><button className={`adm-tag${i === step ? ' is-on' : ''}`} onClick={() => setStep(i)}>{i + 1} · {st(s)}</button></li>
           ))}
         </ol>
       </header>
@@ -277,9 +285,9 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
         <div className="card adm-partner-form">
           {step === 0 && (
             <div className="adm-partner-form__grid">
-              <label className="adm-partner-form__wide"><span className="b2b-label">Nome (pt-BR, max 80) *</span>
+              <label className="adm-partner-form__wide"><span className="b2b-label">{st('Nome (pt-BR, max 80) *')}</span>
                 <input className="b2b-input" maxLength={80} value={draft.title} autoFocus onChange={(e) => patch({ title: e.target.value })} /></label>
-              <label className="adm-partner-form__wide"><span className="b2b-label">Descrizione breve (pt-BR, una frase)</span>
+              <label className="adm-partner-form__wide"><span className="b2b-label">{st('Descrizione breve (pt-BR, una frase)')}</span>
                 <input className="b2b-input" maxLength={280} value={draft.description ?? ''} onChange={(e) => patch({ description: e.target.value || null })} /></label>
               <fieldset className="adm-partner-form__wide adm-benefit__tags"><legend className="b2b-label">{st('Icona del badge')}</legend>
                 <div className="adm-spec__chips">
@@ -329,7 +337,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
                   </select></label>
               )}
               {draft.scope === 'city' && (
-                <label><span className="b2b-label">Città {draft.scopeRef && `(${draft.scopeRef})`}</span>
+                <label><span className="b2b-label">{st('Città')} {draft.scopeRef && `(${draft.scopeRef})`}</span>
                   <input className="b2b-input" placeholder={st('Cerca per nome')} value={cityQ} onChange={(e) => setCityQ(e.target.value)} />
                   {cities.length > 0 && (
                     <select className="b2b-input" size={Math.min(6, cities.length)} onChange={(e) => { patch({ scopeRef: e.target.value }); setCityQ('') }}>
@@ -348,7 +356,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
                 <select className="b2b-input" value={draft.metric} onChange={(e) => patch({ metric: e.target.value as ChallengeMetric, windowStartHour: e.target.value === 'sessions_in_time_window' ? 21 : null, windowEndHour: e.target.value === 'sessions_in_time_window' ? 24 : null })}>
                   {(Object.keys(METRIC_IT) as ChallengeMetric[]).map((m) => <option key={m} value={m}>{METRIC_IT[m]}</option>)}
                 </select></label>
-              <label><span className="b2b-label">Obiettivo {draft.metric === 'minutes_listened' ? '(minuti)' : ''}</span>
+              <label><span className="b2b-label">{st('Obiettivo')} {draft.metric === 'minutes_listened' ? st('(minuti)') : ''}</span>
                 <input className="b2b-input" type="number" min={1} value={draft.goalValue} onChange={(e) => patch({ goalValue: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /></label>
               {draft.format === 'collective' && (
                 <label><span className="b2b-label">{st('Minimo a persona per il premio')}</span>
@@ -356,9 +364,9 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
               )}
               {draft.metric === 'sessions_in_time_window' && (
                 <>
-                  <label><span className="b2b-label">Dalle (ora)</span>
+                  <label><span className="b2b-label">{st('Dalle (ora)')}</span>
                     <input className="b2b-input" type="number" min={0} max={23} value={draft.windowStartHour ?? 0} onChange={(e) => patch({ windowStartHour: Math.max(0, Math.min(23, Math.round(Number(e.target.value)))) })} /></label>
-                  <label><span className="b2b-label">Alle (ora)</span>
+                  <label><span className="b2b-label">{st('Alle (ora)')}</span>
                     <input className="b2b-input" type="number" min={1} max={24} value={draft.windowEndHour ?? 24} onChange={(e) => patch({ windowEndHour: Math.max(1, Math.min(24, Math.round(Number(e.target.value)))) })} /></label>
                 </>
               )}
@@ -367,7 +375,7 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
 
           {step === 3 && (
             <div className="adm-partner-form__grid">
-              <label><span className="b2b-label">Loops bonus (mai moltiplicati)</span>
+              <label><span className="b2b-label">{st('Loops bonus (mai moltiplicati)')}</span>
                 <input className="b2b-input" type="number" min={0} value={Math.floor((draft.rewardBonusLoopsCenti ?? 0) / 100)} onChange={(e) => patch({ rewardBonusLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 || null })} /></label>
               <label><span className="b2b-label">{st('Beneficio esclusivo')}</span>
                 <select className="b2b-input" value={draft.rewardBenefitId ?? ''} onChange={(e) => patch({ rewardBenefitId: e.target.value || null })}>

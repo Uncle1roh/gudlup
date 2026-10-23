@@ -189,9 +189,9 @@ let demoTherapist: Therapist = { ...DEMO_THERAPIST }
 const DEMO_SELF_CRED = 'cr-self'
 
 const companies: Company[] = [
-  { id: 'AURORA-2026-Z5', name: 'Aurora Tech', seats: 250, activeUsers: 168, status: 'active', createdAt: nowMs - 90 * DAY },
-  { id: 'MERIDIAN-2026-WN', name: 'Meridian Saúde', seats: 120, activeUsers: 74, status: 'active', createdAt: nowMs - 40 * DAY },
-  { id: 'VALE-2026-JL', name: 'Vale Logística', seats: 500, activeUsers: 0, status: 'paused', createdAt: nowMs - 6 * DAY },
+  { id: 'AURORA-2026-Z5', name: 'Aurora Tech', contactEmail: 'rh@auroratech.com.br', seats: 250, activeUsers: 168, status: 'active', createdAt: nowMs - 90 * DAY },
+  { id: 'MERIDIAN-2026-WN', name: 'Meridian Saúde', contactEmail: 'pessoas@meridiansaude.com.br', seats: 120, activeUsers: 74, status: 'active', createdAt: nowMs - 40 * DAY },
+  { id: 'VALE-2026-JL', name: 'Vale Logística', contactEmail: null, seats: 500, activeUsers: 0, status: 'paused', createdAt: nowMs - 6 * DAY },
 ]
 
 const adminUsers: AdminUser[] = [

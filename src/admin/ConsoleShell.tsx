@@ -16,7 +16,7 @@
    what each one renders.
    ============================================================================ */
 
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { st } from '../sales/i18n'
 import { BrandLogo } from '../components/Brand'
@@ -88,6 +88,7 @@ export function ConsoleShell<Id extends string>({
      console that offers a language is the one whose chrome is translated;
      the other keeps the Italian its screens are written in. */
   const ct = language ? st : (k: string) => k
+  const [demoOpen, setDemoOpen] = useState(false)
   const current = nav.find((n) => n.id === section)
 
   return (
@@ -131,16 +132,29 @@ export function ConsoleShell<Id extends string>({
               surface on the DEMO data — populated screens, and nothing real
               read or written. The bar at the top of the surface moves
               between them and gets back out. */}
+          {/* One door, then a choice.
+
+              Three unlabelled buttons under the words "open another app" is
+              a thing to decode, in front of somebody you are selling to. The
+              question a person actually has is "can I show them the
+              product?" — so that is the button, and which product comes
+              after they have said yes. */}
           <div className="adm-open">
-            <span className="adm-open__title">{ct('Apri un’altra app')}</span>
-            <span className="adm-open__note">{ct('Anteprima con dati dimostrativi')}</span>
-            <div className="adm-open__row">
-              {SURFACES.filter((s) => preview.includes(s.id)).map((s) => (
-                <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            <button className="adm-open__go" onClick={() => setDemoOpen((v) => !v)} aria-expanded={demoOpen}>
+              ▶ {ct('Fare una demo')}
+            </button>
+            {demoOpen && (
+              <div className="adm-open__panel">
+                <span className="adm-open__note">{ct('Dati dimostrativi: niente di reale viene letto o scritto.')}</span>
+                <div className="adm-open__row">
+                  {SURFACES.filter((s) => preview.includes(s.id)).map((s) => (
+                    <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
+                      {ct(s.label)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="adm-side__foot">

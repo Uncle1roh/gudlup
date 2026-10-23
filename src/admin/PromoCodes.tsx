@@ -9,6 +9,7 @@
 
 import { useState } from 'react'
 import { st } from '../sales/i18n'
+import { ConsoleModal } from './ConsoleModal'
 import { useDataProvider } from '../data/provider'
 import { usePromoCodes } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -78,39 +79,57 @@ export function PromoCodes({ actor }: { actor: string }) {
             {st('Codici da inserire alla registrazione, ciascuno con la sua percentuale di sconto. {n} in totale.', { n: codes.length })}
           </p>
         </div>
-        <button className="b2b-btn b2b-btn--primary" onClick={() => { setAdding((v) => !v); setError(null) }}>
-          {adding ? st('Annulla') : st('+ Nuovo codice')}
+        <button className="b2b-btn b2b-btn--primary" onClick={() => { setAdding(true); setError(null) }}>
+          {st('+ Nuovo codice')}
         </button>
       </header>
 
       {adding && (
-        <>
-          <div className="adm-addrow">
-            <input
-              className="b2b-input adm-addrow__code"
-              placeholder="ES. BENVENUTO10"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              autoFocus
-            />
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => setCode(generatePromoCode())}>{st('Genera')}</button>
-            <input
-              className="b2b-input adm-addrow__pct"
-              type="number" min={1} max={100} step={1}
-              placeholder={st('Sconto %')}
-              value={pct}
-              onChange={(e) => setPct(e.target.value)}
-            />
+        <ConsoleModal
+          title={st('+ Nuovo codice')}
+          note={st('Da 3 a 32 caratteri: lettere, numeri e trattini. Sconto da 1 a 100%.')}
+          onClose={() => { setAdding(false); setError(null) }}
+        >
+          <div className="adm-form">
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Codice')} *</span>
+              <div className="adm-form__row">
+                <input
+                  className="b2b-input adm-mono"
+                  placeholder={st('ES. BENVENUTO10')}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  autoFocus
+                />
+                <button className="b2b-btn b2b-btn--ghost" onClick={() => setCode(generatePromoCode())}>{st('Genera')}</button>
+              </div>
+              <span className="adm-form__hint">
+                {codeTaken && <span className="pe-err">{st('{code} esiste già.', { code: finalCode })}</span>}
+                {codeBad && <span className="pe-err">{st('Forma non valida.')}</span>}
+              </span>
+            </label>
+            <label className="adm-form__field">
+              <span className="b2b-label">{st('Sconto %')} *</span>
+              <input
+                className="b2b-input"
+                type="number" min={1} max={100} step={1}
+                value={pct}
+                onChange={(e) => setPct(e.target.value)}
+              />
+              <span className="adm-form__hint">
+                {pctBad
+                  ? <span className="pe-err">{st('Lo sconto è un numero intero da 1 a 100.')}</span>
+                  : finalCode && !codeTaken && !codeBad && isValidDiscount(pctNum)
+                    ? st('Sarà {code} · {pct}%.', { code: finalCode, pct: pctNum })
+                    : null}
+              </span>
+            </label>
+          </div>
+          <div className="adm-form__acts">
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => { setAdding(false); setError(null) }}>{st('Annulla')}</button>
             <button className="b2b-btn b2b-btn--primary" disabled={!canCreate} onClick={() => void create()}>{st('Crea')}</button>
           </div>
-          <p className="b2b-sub">
-            {st('Da 3 a 32 caratteri: lettere, numeri e trattini. Sconto da 1 a 100%.')}
-            {finalCode && !codeTaken && !codeBad && isValidDiscount(pctNum) && <> {st('Sarà {code} · {pct}%.', { code: finalCode, pct: pctNum })}</>}
-            {codeTaken && <span className="pe-err">{st('{code} esiste già.', { code: finalCode })}</span>}
-            {codeBad && <span className="pe-err">{st('Forma non valida.')}</span>}
-            {pctBad && <span className="pe-err">{st('Lo sconto è un numero intero da 1 a 100.')}</span>}
-          </p>
-        </>
+        </ConsoleModal>
       )}
 
       {error && <p className="pe-err">{error}</p>}

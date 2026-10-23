@@ -287,7 +287,7 @@ function mapPartnerProduct(r: any): PartnerProduct {
 }
 
 function mapCompany(r: any): Company {
-  return { id: r.id, name: r.name, seats: r.seats ?? 0, activeUsers: r.active_users ?? 0, status: r.status === 'paused' ? 'paused' : 'active', createdAt: toMs(r.created_at) }
+  return { id: r.id, name: r.name, contactEmail: r.contact_email ?? null, seats: r.seats ?? 0, activeUsers: r.active_users ?? 0, status: r.status === 'paused' ? 'paused' : 'active', createdAt: toMs(r.created_at) }
 }
 function mapAdminUser(r: any): AdminUser {
   return { id: r.id, name: r.name ?? '', email: r.email ?? '', role: (r.role as UserRole) ?? 'b2c_user', companyId: r.company_id ?? undefined, active: r.active !== false, createdAt: toMs(r.created_at) }
@@ -1152,7 +1152,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return (data ?? []).map(mapCompany)
     },
     async saveCompany(c: Company): Promise<void> {
-      const row = { id: c.id, name: c.name, seats: c.seats, active_users: c.activeUsers, status: c.status, created_at: toIso(c.createdAt) }
+      const row = { id: c.id, name: c.name, contact_email: c.contactEmail, seats: c.seats, active_users: c.activeUsers, status: c.status, created_at: toIso(c.createdAt) }
       const { error } = await sb.from('companies').upsert(row, { onConflict: 'id' })
       if (error) throw error
     },
@@ -1787,8 +1787,16 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return out
     },
     async adminListRedemptions(): Promise<AdminRedemption[]> {
+      /* `profiles!user_id`, not `profiles`.
+
+         benefit_redemptions points at profiles TWICE — `user_id`, the person
+         who redeemed, and `refunded_by`, whoever reversed it — so PostgREST
+         cannot tell which join is meant and refuses the whole request:
+         "could not embed because more than one relationship was found for
+         'benefit_redemptions' and 'profiles'". The screen came up empty with
+         that sentence on it. Naming the foreign key answers the question. */
       const { data, error } = await sb.from('benefit_redemptions')
-        .select('*, benefits(title, partner_name, pillar, delivery_type, terms), profiles(name)')
+        .select('*, benefits(title, partner_name, pillar, delivery_type, terms), profiles!user_id(name)')
         .order('created_at', { ascending: false }).limit(500)
       if (error) throw error
       return ((data ?? []) as any[]).map((r): AdminRedemption => ({

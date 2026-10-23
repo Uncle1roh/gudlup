@@ -10424,6 +10424,11 @@ create policy audit_sales_write on audit_events
   for insert with check (is_sales());
 
 
+-- The address the access code is sent to when a company is created. A
+-- CONTACT, not a login: the HR account is made by that person at #hr with
+-- the code, since creating a login needs a service key.
+alter table companies add column if not exists contact_email text;
+
 -- PostgREST schema-cache reload. Supabase's API layer caches the table schema;
 -- after the ALTERs above (protocols.plain, asset_meta) a stale cache yields
 -- "Could not find the 'plain' column of 'protocols' in the schema cache" on

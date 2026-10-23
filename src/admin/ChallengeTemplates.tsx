@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { st } from '../sales/i18n'
+import { ConsoleModal } from './ConsoleModal'
 import { useDataProvider } from '../data/provider'
 import { FixedLocale } from '../i18n'
 import { ChallengeCard } from '../selfuse/ChallengeCard'
@@ -86,14 +87,19 @@ export function ChallengeTemplates({ actor }: { actor: string }) {
       {note && <p className="adm-note adm-note--ok">{note}</p>}
 
       {draft && (
+        <ConsoleModal
+          wide
+          title={isNew ? st('+ Nuovo modello') : st('Modifica')}
+          onClose={() => setDraft(null)}
+        >
         <div className="adm-challenges__edit">
           <div className="card adm-partner-form">
             <div className="adm-partner-form__grid">
               <label><span className="b2b-label">{st('Slug *')}</span>
                 <input className="b2b-input adm-mono" value={draft.slug} disabled={!isNew} onChange={(e) => patch({ slug: e.target.value.toLowerCase() })} /></label>
-              <label><span className="b2b-label">Nome (pt-BR) *</span>
+              <label><span className="b2b-label">{st('Nome (pt-BR) *')}</span>
                 <input className="b2b-input" maxLength={80} value={draft.title} onChange={(e) => patch({ title: e.target.value })} /></label>
-              <label className="adm-partner-form__wide"><span className="b2b-label">Testo (pt-BR, una frase) *</span>
+              <label className="adm-partner-form__wide"><span className="b2b-label">{st('Testo (pt-BR, una frase) *')}</span>
                 <input className="b2b-input" maxLength={280} value={draft.description} onChange={(e) => patch({ description: e.target.value })} /></label>
               <label><span className="b2b-label">{st('Formato')}</span>
                 <select className="b2b-input" value={draft.format} onChange={(e) => patch({ format: e.target.value as ChallengeTemplate['format'], goalKind: 'total', perPersonMin: e.target.value === 'collective' ? 1 : null })}>
@@ -109,7 +115,7 @@ export function ChallengeTemplates({ actor }: { actor: string }) {
                 <select className="b2b-input" value={draft.metric} onChange={(e) => patch({ metric: e.target.value as ChallengeMetric, windowStartHour: e.target.value === 'sessions_in_time_window' ? 21 : null, windowEndHour: e.target.value === 'sessions_in_time_window' ? 24 : null })}>
                   {(Object.keys(METRIC_IT) as ChallengeMetric[]).map((m) => <option key={m} value={m}>{st(METRIC_IT[m])}</option>)}
                 </select></label>
-              <label><span className="b2b-label">Obiettivo proposto{draft.goalKind === 'share_reaching_min' ? ' (%)' : ''}</span>
+              <label><span className="b2b-label">{st('Obiettivo proposto')}{draft.goalKind === 'share_reaching_min' ? ' (%)' : ''}</span>
                 <input className="b2b-input" type="number" min={1} value={draft.goalValue} onChange={(e) => patch({ goalValue: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /></label>
               {draft.format === 'collective' && (
                 <label><span className="b2b-label">{st('Minimo a persona')}</span>
@@ -117,13 +123,13 @@ export function ChallengeTemplates({ actor }: { actor: string }) {
               )}
               {draft.metric === 'sessions_in_time_window' && (
                 <>
-                  <label><span className="b2b-label">Dalle (ora)</span>
+                  <label><span className="b2b-label">{st('Dalle (ora)')}</span>
                     <input className="b2b-input" type="number" min={0} max={23} value={draft.windowStartHour ?? 0} onChange={(e) => patch({ windowStartHour: Math.max(0, Math.min(23, Math.round(Number(e.target.value)))) })} /></label>
-                  <label><span className="b2b-label">Alle (ora)</span>
+                  <label><span className="b2b-label">{st('Alle (ora)')}</span>
                     <input className="b2b-input" type="number" min={1} max={24} value={draft.windowEndHour ?? 24} onChange={(e) => patch({ windowEndHour: Math.max(1, Math.min(24, Math.round(Number(e.target.value)))) })} /></label>
                 </>
               )}
-              <label><span className="b2b-label">Durata proposta (giorni)</span>
+              <label><span className="b2b-label">{st('Durata proposta (giorni)')}</span>
                 <input className="b2b-input" type="number" min={1} max={92} value={draft.defaultDays} onChange={(e) => patch({ defaultDays: Math.max(1, Math.min(92, Math.round(Number(e.target.value) || 30))) })} /></label>
               <label><span className="b2b-label">{st('Icona')}</span>
                 <select className="b2b-input" value={draft.badgeIcon} onChange={(e) => patch({ badgeIcon: e.target.value })}>
@@ -155,6 +161,7 @@ export function ChallengeTemplates({ actor }: { actor: string }) {
             </div>
           </aside>
         </div>
+        </ConsoleModal>
       )}
 
       <div className="adm-table adm-table--templates">

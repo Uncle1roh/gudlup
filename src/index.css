@@ -3010,3 +3010,82 @@ td, th { overflow-wrap: anywhere; }
 /* The console's section, remounted when the language changes. It is a plain
    wrapper: it must not introduce a box of its own. */
 .adm-main__in { display: contents; }
+
+/* ---- the console's filter row has air under it --------------------------
+
+   `.adm-spec__chips` is used both as a filter row above a table and as a
+   group of checkboxes inside a form, so the margin goes on the filter ROW
+   specifically: the chips sat directly on the first row of the list, and
+   the two read as one block. */
+.adm-spec__chips[role='group'] + .adm-table,
+.adm-spec__chips[role='group'] + .adm-note,
+.adm-spec__chips + .adm-table,
+.adm-filters + .adm-table { margin-top: 16px; }
+.adm-page > .adm-spec__chips[role='group'] { margin-bottom: 4px; }
+
+/* "Fare una demo" — one door, then the choice of which product to show. */
+.adm-open__go {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #eaf3ec; font: inherit; font-size: 13px; font-weight: 600;
+  text-align: left; cursor: pointer;
+}
+.adm-open__go:hover { background: rgba(255, 255, 255, 0.16); }
+.adm-open__panel { margin-top: 8px; }
+
+/* ---- the console's create dialog ---------------------------------------- */
+.adm-modal {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 24px;
+  background: rgba(10, 26, 20, 0.52);
+  backdrop-filter: blur(2px);
+  overflow-y: auto;
+}
+.adm-modal__card {
+  width: 100%; max-width: 620px; margin: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 40px 90px -40px rgba(8, 24, 18, 0.6);
+  display: flex; flex-direction: column;
+  max-height: calc(100dvh - 80px);
+}
+.adm-modal__card--wide { max-width: 1040px; }
+.adm-modal__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px 24px 14px; border-bottom: 1px solid var(--line);
+}
+.adm-modal__title { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 500; color: var(--ink); }
+.adm-modal__note { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--slate); }
+.adm-modal__x {
+  flex: none; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--mist-2);
+  font-size: 19px; line-height: 1; color: var(--slate); cursor: pointer;
+}
+.adm-modal__x:hover { background: #fff; color: var(--ink); }
+.adm-modal__body { padding: 20px 24px 24px; overflow-y: auto; }
+/* The editors inside were written as page sections; they must not repeat the
+   card chrome once they are in a dialog. */
+.adm-modal__body > .card { border: 0; box-shadow: none; padding: 0; background: none; }
+.adm-modal__body > .card > .b2b-card__title:first-child { display: none; }
+
+@media (max-width: 760px) {
+  .adm-modal { padding: 16px 10px; }
+  .adm-modal__card { max-height: calc(100dvh - 32px); }
+  .adm-modal__head { padding: 16px 16px 12px; }
+  .adm-modal__body { padding: 16px; }
+}
+
+/* A form inside the console's dialog: one field per row, label above, the
+   consequence under it. The old inline add-rows were a row of bare inputs
+   with the explanation in a paragraph somewhere below them. */
+.adm-form { display: flex; flex-direction: column; gap: 16px; }
+.adm-form__field { display: flex; flex-direction: column; gap: 6px; }
+.adm-form__field > .b2b-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.adm-form__hint { font-size: 12.5px; line-height: 1.45; color: var(--slate); }
+.adm-form__hint:empty { display: none; }
+.adm-form__row { display: flex; gap: 8px; align-items: center; }
+.adm-form__row > .b2b-input { flex: 1; min-width: 0; }
+.adm-form__acts {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
+}

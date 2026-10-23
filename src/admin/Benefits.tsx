@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { st } from '../sales/i18n'
+import { ConsoleModal } from './ConsoleModal'
 import { useDataProvider, type AdminRedemption } from '../data/provider'
 import { PILLARS, type Benefit, type BenefitTag, type Delivery, type Pillar } from '../gamification/benefits'
 
@@ -114,7 +115,15 @@ export function Benefits({ actor }: { actor: string }) {
       {error && <p className="adm-note adm-note--err">{error}</p>}
       {note && <p className="adm-note adm-note--ok">{note}</p>}
 
-      {draft && <Editor draft={draft} tags={tags} busy={busy} onChange={setDraft} onSave={(b) => void save(b)} onCancel={() => setDraft(null)} />}
+      {draft && (
+        <ConsoleModal
+          wide
+          title={draft.id ? st('Modifica beneficio') : st('Nuovo beneficio')}
+          onClose={() => setDraft(null)}
+        >
+          <Editor draft={draft} tags={tags} busy={busy} onChange={setDraft} onSave={(b) => void save(b)} onCancel={() => setDraft(null)} />
+        </ConsoleModal>
+      )}
       {codesFor && <CodeUpload benefit={codesFor} onDone={(n) => { setCodesFor(null); if (n !== null) { setNote(st('{n} codici nuovi caricati.', { n })); load() } }} actor={actor} />}
 
       {view === 'catalog' && (
@@ -229,12 +238,12 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
         )}
         {(draft.deliveryType === 'link' || draft.deliveryType === 'static_code') && (
           <label>
-            <span className="b2b-label">Link per usarlo{draft.deliveryType === 'link' ? ' *' : ''}</span>
+            <span className="b2b-label">{st('Link per usarlo')}{draft.deliveryType === 'link' ? ' *' : ''}</span>
             <input className="b2b-input" type="url" value={draft.linkUrl ?? ''} placeholder={st('https://…')} onChange={(e) => patch({ linkUrl: e.target.value.trim() || null })} />
           </label>
         )}
         <label>
-          <span className="b2b-label">Quantità totale (vuoto = senza limite)</span>
+          <span className="b2b-label">{st('Quantità totale (vuoto = senza limite)')}</span>
           <input className="b2b-input" type="number" min={0} step={1} value={draft.stockTotal ?? ''}
             onChange={(e) => {
               const v = e.target.value === '' ? null : Math.max(0, Math.round(Number(e.target.value)))

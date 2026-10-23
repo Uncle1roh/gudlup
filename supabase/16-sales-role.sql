@@ -166,3 +166,12 @@ select
 --
 -- It signs in at #sales. An account that lands on the wrong door is sent to
 -- its own, so there is nothing else to configure.
+
+-- ---- who the company was sold to ------------------------------------------
+-- The commercial console creates a company and needs somewhere to put the
+-- address the access code goes to. It is a CONTACT and not a login: the HR
+-- account is still made by that person at #hr with the code, because
+-- creating a login needs the service key and a service key has no business
+-- in a browser.
+alter table companies add column if not exists contact_email text;
+notify pgrst, 'reload schema';

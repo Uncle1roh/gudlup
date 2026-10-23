@@ -22,7 +22,12 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 export interface Company {
   id: string
   name: string
-  /** Seats purchased in the rollout. */
+  /** Who at the company this was sold to: where the access code is sent, and
+      the address their HR account is expected to register with. It is a
+      CONTACT, not a login — the login is made by the person themselves at
+      #hr with the code. */
+  contactEmail: string | null
+  /** How many people this company may register. */
   seats: number
   /** Employees currently provisioned. */
   activeUsers: number

@@ -39,9 +39,12 @@ const CORPORATE_SLOT = slotKey(FALLBACK_TENANT)
 /** Where each surface lives, and what to call it in the bar. */
 export const SURFACES: { id: PreviewSurface; hash: string; label: string }[] = [
   { id: 'admin', hash: '#admin', label: 'Admin' },
-  { id: 'app', hash: '', label: 'App' },
+  /* Named for WHO is on the other side, not for what the codebase calls
+     the folder. "App" and "Azienda" told a salesperson nothing about which
+     of three products they were about to show. */
+  { id: 'app', hash: '', label: 'Utente' },
   { id: 'therapist', hash: '#therapist', label: 'Terapeuta' },
-  { id: 'company', hash: '#hr', label: 'Azienda' },
+  { id: 'company', hash: '#hr', label: 'Impresa' },
 ]
 
 /* The Sound Studio is deliberately NOT here. An admin already reaches it
