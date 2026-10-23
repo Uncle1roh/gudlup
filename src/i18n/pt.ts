@@ -678,6 +678,8 @@ export const PT: Record<string, string> = {
   'Thanks! Saved.': 'Pronto, salvo.',
   'Average {n} · {label}': 'Média {n} · {label}',
   'Weekly check-in': 'Check-in semanal',
+  'From 1 to 5. The line is last week.': 'De 1 a 5. A linha é a semana passada.',
+  'From 1 to 5. Next week you will see the change.': 'De 1 a 5. Na próxima semana você verá a mudança.',
   'Finish': 'Concluir',
   'Wellbeing snapshot saved.': 'Retrato do bem-estar salvo.',
   'Scale 0–100': 'Escala 0–100',

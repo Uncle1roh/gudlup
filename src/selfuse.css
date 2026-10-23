@@ -1535,3 +1535,73 @@
   background: var(--mist-2); border: 1px solid var(--line);
 }
 .thr-hero__mark .gl-icon { width: 26px; height: 26px; }
+
+/* ===========================================================================
+   The check-in screens are a phone flow, at any window size
+
+   `.app-frame` fills the window from 760px up, and these screens had no
+   width of their own — so on a laptop the five 1:1 answer buttons became
+   five 260px squares, the question was set at 32px across the whole screen,
+   and a sixty-second check-in looked like a billboard. They keep a column.
+   =========================================================================== */
+.screen.msr {
+  width: min(520px, 100%);
+  margin-inline: auto;
+}
+.msr__body { max-width: 100%; }
+/* `aspect-ratio: 1` on a stretched grid column is what made the squares
+   enormous; capping the GRID caps the buttons, which stay square. */
+.scale5 { max-width: 360px; margin-inline: auto; width: 100%; }
+.scale5__ends { max-width: 360px; margin-inline: auto; width: 100%; }
+.mood-row { max-width: 440px; margin-inline: auto; width: 100%; }
+.mood-note { max-width: 440px; margin-inline: auto; width: 100%; }
+.mood-note__count { max-width: 440px; margin-inline: auto; width: 100%; }
+
+/* ---- the week, on a 1 to 5 track ----------------------------------------
+
+   The old bars were filled to `value / 5` with an arrow beside them, and
+   nothing said what a full bar meant or what the arrow compared against —
+   so it read as progress towards something, which it is not. The track IS
+   the scale: four hairlines, five slots, this week filled, last week marked
+   on the same line. */
+.glweek { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.glweek__key { margin: 0 0 2px; }
+.glweek__row { display: grid; grid-template-columns: 88px minmax(0, 1fr) 62px; align-items: center; gap: 10px; }
+.glweek__label { font-size: 15px; font-weight: 600; }
+.glweek__track {
+  position: relative; height: 10px; border-radius: var(--r-pill);
+  background: var(--mist-2); overflow: hidden;
+}
+/* The three dividers that make five slots legible without a legend.
+   Above the fill, and translucent rather than a flat colour: the same line
+   has to read on the empty track AND on the filled part, and anything
+   opaque disappears into one or the other. */
+.glweek__track > i {
+  position: absolute; top: 0; bottom: 0; width: 1px; z-index: 2;
+  background: rgba(12, 42, 34, 0.22);
+}
+.glweek__track > i:nth-of-type(1) { left: 25%; }
+.glweek__track > i:nth-of-type(2) { left: 50%; }
+.glweek__track > i:nth-of-type(3) { left: 75%; }
+.glweek__fill {
+  position: absolute; inset: 0 auto 0 0; z-index: 1;
+  background: var(--aura); border-radius: var(--r-pill);
+}
+/* last week, ON the track rather than implied by an arrow */
+.glweek__was {
+  position: absolute; top: -3px; bottom: -3px; width: 2px; z-index: 3;
+  background: var(--ink); opacity: 0.55; transform: translateX(-1px);
+  border-radius: 2px;
+}
+.glweek__val {
+  font-size: 15px; font-weight: 700; text-align: right;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.glweek__val em { font-style: normal; font-size: 12.5px; font-weight: 600; margin-left: 4px; }
+.glweek__val em.is-up { color: var(--aura-deep); }
+.glweek__val em.is-down { color: var(--slate); }
+
+@media (max-width: 420px) {
+  .glweek__row { grid-template-columns: 74px minmax(0, 1fr) 54px; gap: 8px; }
+  .glweek__label { font-size: 14px; }
+}

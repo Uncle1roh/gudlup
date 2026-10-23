@@ -572,7 +572,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   if (overlay.kind === 'glcheck') {
     return (
       <GlCheckFlow
-        previous={state.glChecks[state.glChecks.length - 1] ?? null}
+        /* The flow no longer compares anything: answering closes it, and
+           the week is read on Progress. */
         onDone={(e) => update((s) => ({ ...s, glChecks: [...s.glChecks, e] }))}
         onClose={() => setOverlay({ kind: 'none' })}
       />

@@ -294,6 +294,8 @@ export const IT_SELF_USE: Record<string, string> = {
 
   /* ---- measurement ---- */
   'Weekly check-in': 'Check-in settimanale',
+  'From 1 to 5. The line is last week.': 'Da 1 a 5. La linea è la settimana scorsa.',
+  'From 1 to 5. Next week you will see the change.': 'Da 1 a 5. La prossima settimana vedrai il cambiamento.',
   'How has your energy been this week?': 'Com’è stata la tua energia questa settimana?',
   'How easy has it been to concentrate?': 'Quanto è stato facile concentrarti?',
   'How well have you been sleeping?': 'Come hai dormito?',

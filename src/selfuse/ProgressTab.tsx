@@ -32,12 +32,9 @@
    ============================================================================ */
 
 import { useEffect, useState } from 'react'
+import { GlCheckWeek } from './Measures'
 import { useI18n, fmtDate } from '../i18n'
 import {
-  GL_CHECK_QUESTIONS,
-  glCheckAverage,
-  trend,
-  trendArrow,
   dayKey,
   MOOD_LEVELS,
   type MoodEntry,
@@ -145,24 +142,7 @@ function Summary({ state, onGlCheck, onMood, onExportSelfUse, onStartSession, on
           <h3 className="home__sect">{t('This week')}</h3>
           {last ? (
             <>
-              <p className="small muted">{t('This week vs. last')}</p>
-              <div className="msr-bars">
-                {GL_CHECK_QUESTIONS.map((d) => {
-                  const cur = last.scores[d.id]
-                  const before = prev?.scores[d.id] ?? null
-                  const tr = trend(cur, before, 0.01, 1)
-                  return (
-                    <div key={d.id} className="msr-bar">
-                      <span className="msr-bar__label">{t(d.label)}</span>
-                      <span className="msr-bar__track" aria-hidden="true"><span style={{ width: `${(cur / 5) * 100}%` }} /></span>
-                      <span className="msr-bar__val">{cur}{tr && ` ${trendArrow(tr.direction)}`}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="small muted">
-                {t('Average')} {glCheckAverage(last)} · {t('scale 1–5')}
-              </p>
+              <GlCheckWeek last={last} previous={prev} />
             </>
           ) : (
             <p className="small muted">{t('No check-in yet.')}</p>

@@ -23,7 +23,6 @@ import {
   WHO5_STEM,
   MOOD_LEVELS,
   MOOD_NOTE_MAX,
-  glCheckAverage,
   who5Percent,
   trend,
   trendArrow,
@@ -39,16 +38,14 @@ import { Icon } from './icons'
 /* ------------------------------------------------------------- MSR-1 ----- */
 
 interface GlCheckProps {
-  previous: GlCheckEntry | null
   onDone: (e: GlCheckEntry) => void
   onClose: () => void
 }
 
-export function GlCheckFlow({ previous, onDone, onClose }: GlCheckProps) {
+export function GlCheckFlow({ onDone, onClose }: GlCheckProps) {
   const { t } = useI18n()
   const [step, setStep] = useState(0)
   const [scores, setScores] = useState<Partial<Record<GlDimension, number>>>({})
-  const [saved, setSaved] = useState<GlCheckEntry | null>(null)
 
   const q = GL_CHECK_QUESTIONS[step]
   const value = q ? scores[q.id] : undefined
@@ -56,38 +53,13 @@ export function GlCheckFlow({ previous, onDone, onClose }: GlCheckProps) {
   function next() {
     if (!q || value == null) return
     if (step < GL_CHECK_QUESTIONS.length - 1) { setStep(step + 1); return }
-    const entry: GlCheckEntry = { at: Date.now(), scores: scores as Record<GlDimension, number> }
-    setSaved(entry)
-    onDone(entry)
-  }
-
-  if (saved) {
-    const now = glCheckAverage(saved)
-    const before = glCheckAverage(previous)
-    const tr = trend(now, before, 0.05, 2)
-    return (
-      <MeasureDone title={t('Thanks! Saved.')} onClose={onClose}>
-        <div className="msr-bars">
-          {GL_CHECK_QUESTIONS.map((d) => {
-            const cur = saved.scores[d.id]
-            const prev = previous?.scores[d.id]
-            const dTr = trend(cur, prev ?? null, 0.01, 1)
-            return (
-              <div key={d.id} className="msr-bar">
-                <span className="msr-bar__label">{t(d.label)}</span>
-                <span className="msr-bar__track" aria-hidden="true">
-                  <span style={{ width: `${(cur / 5) * 100}%` }} />
-                </span>
-                <span className="msr-bar__val">
-                  {cur}{dTr && <span className="msr-bar__arrow"> {trendArrow(dTr.direction)}</span>}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-        {tr && <p className="small muted">{t('Average {n} · {label}', { n: now ?? 0, label: t(tr.label) })}</p>}
-      </MeasureDone>
-    )
+    /* The fifth answer IS the end. There used to be a "Thanks! Saved."
+       screen after it, carrying a copy of the same five bars that the
+       Progress tab already shows — a sixth screen to dismiss, telling a
+       person who had just answered five questions that their five answers
+       had been received. The flow closes, and the week is on Progress. */
+    onDone({ at: Date.now(), scores: scores as Record<GlDimension, number> })
+    onClose()
   }
 
   return (
@@ -126,6 +98,62 @@ export function GlCheckFlow({ previous, onDone, onClose }: GlCheckProps) {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ---- the week, read in one place ----------------------------------------
+
+   Five dimensions, each answered 1 to 5. The old chart drew a bar filled to
+   `value / 5` with a small arrow next to it, and nothing on screen said what
+   a full bar meant or what the arrow was comparing against — so it looked
+   like a progress bar towards something, which is exactly what it is not.
+
+   What it is: where this week sits on a 1–5 scale, and where last week sat.
+   So the track carries the scale itself (four hairlines, five slots), the
+   fill is this week, and last week is a mark ON the same track. The number
+   says the change in words rather than in a glyph: "4 · +1 vs. a semana
+   passada". Nothing is interpreted, nothing is averaged into a verdict —
+   that boundary is the difference between a wellbeing product and a
+   clinical one, and it is why there is no "good"/"bad" anywhere here.
+   ========================================================================= */
+
+export function GlCheckWeek({ last, previous }: { last: GlCheckEntry; previous?: GlCheckEntry | null }) {
+  const { t } = useI18n()
+  /* 1 is the floor of the scale, not zero: a 1 is an answer, and drawing it
+     as an empty track would read as "nothing recorded". */
+  const pos = (v: number) => ((v - 1) / 4) * 100
+
+  return (
+    <div className="glweek">
+      <p className="glweek__key small muted">
+        {previous
+          ? t('From 1 to 5. The line is last week.')
+          : t('From 1 to 5. Next week you will see the change.')}
+      </p>
+      {GL_CHECK_QUESTIONS.map((d) => {
+        const cur = last.scores[d.id]
+        const before = previous?.scores[d.id]
+        const delta = typeof before === 'number' ? cur - before : null
+        return (
+          <div key={d.id} className="glweek__row">
+            <span className="glweek__label">{t(d.label)}</span>
+            <span className="glweek__track" aria-hidden="true">
+              <i /><i /><i />
+              <span className="glweek__fill" style={{ width: `${pos(cur)}%` }} />
+              {typeof before === 'number' && (
+                <span className="glweek__was" style={{ left: `${pos(before)}%` }} />
+              )}
+            </span>
+            <span className="glweek__val">
+              {cur}
+              {delta !== null && delta !== 0 && (
+                <em className={delta > 0 ? 'is-up' : 'is-down'}>{delta > 0 ? `+${delta}` : delta}</em>
+              )}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

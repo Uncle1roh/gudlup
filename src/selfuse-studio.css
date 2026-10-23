@@ -2943,3 +2943,13 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
 }
 .su-studio.auth .auth__input { padding: 14px 16px; font-size: 16px; }
 .su-studio.auth .auth__kindbtn { border-radius: 12px; }
+
+/* The week's track on the dark surface. The mark for last week has to read
+   against a light fill as well as against the empty track, so it is the
+   ground's own dark rather than a tint of the accent. */
+.su-studio .glweek__track { background: var(--su-well); }
+.su-studio .glweek__track > i { background: rgba(255, 255, 255, 0.26); }
+.su-studio .glweek__fill { background: var(--su-accent); }
+.su-studio .glweek__was { background: var(--su-cream); opacity: 0.85; }
+.su-studio .glweek__val em.is-up { color: var(--su-accent-2); }
+.su-studio .glweek__val em.is-down { color: var(--su-muted); }
