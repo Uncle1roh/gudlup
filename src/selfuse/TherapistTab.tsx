@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
+import { BrandIcon } from '../components/Brand'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useLegal } from '../legal/LegalContext'
@@ -324,7 +325,13 @@ export function TherapistTab(props: TherapistTabProps) {
 
       <article className="card thr-hero">
         <div className="thr-card__id">
-          <span className="avatar" aria-hidden="true">{initials(link.therapist.name)}</span>
+          {/* The mark, not a monogram. Two letters in a coloured disc is the
+              shape a photograph goes in, so a disc with no photograph in it
+              reads as one that failed to load — and this is the one card on
+              the surface that is about a real person, where "missing image"
+              is the worst thing it could accidentally say. The professional's
+              name is written next to it either way. */}
+          <span className="thr-hero__mark" aria-hidden="true"><BrandIcon variant="cream" /></span>
           <div>
             <strong>{link.therapist.name}</strong>
             <div className="small muted">{t(link.therapist.role)}</div>

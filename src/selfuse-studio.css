@@ -2048,7 +2048,7 @@ body:has(.su-studio) { overflow: hidden; }
   .su-studio .cat-rail__track { gap: 18px; }
 
   /* the door centres in the window rather than filling a phone */
-  .su-studio.auth .auth__card { max-width: 420px; }
+  .su-studio.auth .auth__card { max-width: 440px; }
 
   /* no tab bar at the foot on desktop, so the button sits where it can */
   .su-studio .cat-rail__help { bottom: max(28px, env(safe-area-inset-bottom)); right: 28px; }
@@ -2816,20 +2816,30 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
    from the top left and fade to the ground, so this one is too. The initials
    sit on the lit part, in the ground's own dark, which is the only pairing
    that holds its contrast whatever letters land in it. */
+/* A disc lit from the top left, like the library's own artwork — but quiet.
+   The first attempt at this was the full accent gradient, and at 42px on a
+   dark ground a saturated green blob with two dark letters on it shouted
+   louder than the name beside it. Monograms are a way of telling rows apart
+   in a list, not a thing to look at. */
 .su-studio .avatar {
   background:
-    radial-gradient(circle at 34% 30%,
-      rgba(251, 246, 228, 0.96) 0%,
-      rgba(31, 191, 148, 0.92) 46%,
-      rgba(122, 198, 155, 0.58) 74%,
-      rgba(122, 198, 155, 0.20) 100%);
-  border: 0;
-  color: #06231b;
+    radial-gradient(circle at 34% 28%,
+      rgba(122, 198, 155, 0.34) 0%,
+      rgba(31, 191, 148, 0.16) 58%,
+      rgba(31, 191, 148, 0.06) 100%);
+  border: 1px solid var(--su-hair-2);
+  color: var(--su-accent-2);
   font-weight: 700;
-  box-shadow:
-    inset 0 0 0 1px rgba(7, 13, 12, 0.10),
-    0 10px 26px -16px rgba(0, 0, 0, 0.9);
 }
+
+/* The one card about a real person takes the mark instead of a monogram. */
+.su-studio .thr-hero__mark {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--su-well);
+  border: 1px solid var(--su-hair-2);
+}
+.su-studio .thr-hero__mark .gl-icon { width: 26px; height: 26px; }
 /* A real photograph replaces the disc rather than sitting in a box on it. */
 .su-studio img.avatar { object-fit: cover; padding: 0; }
 
@@ -2923,3 +2933,17 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
     white-space: nowrap;
   }
 }
+
+/* The dark door loses its panel too — `index.css` drops the card everywhere,
+   and this sheet loads after it, so the raised background, the hairline and
+   the lift shadow have to be dropped here or the panel survives on the one
+   surface it was most visible on. The inputs keep their own well: a field
+   still has to read as a field on a ground with nothing else on it. */
+.su-studio.auth .auth__card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.su-studio.auth .auth__input { padding: 14px 16px; font-size: 16px; }
+.su-studio.auth .auth__kindbtn { border-radius: 12px; }

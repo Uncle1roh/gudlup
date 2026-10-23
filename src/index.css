@@ -2110,15 +2110,11 @@ img, svg, video, canvas { max-width: 100%; }
   .auth--b2b .auth__stage { background-color: #e7eedd; }
   .auth__stage__art { filter: drop-shadow(0 30px 60px rgba(12, 42, 34, 0.18)); }
 
-  /* The card keeps its own width inside the right column and centres in it,
+  /* The form keeps its own width inside the right column and centres in it,
      top-pinned once it is taller than the window — the same rule the phone
-     layout already uses, for the same reason. */
-  .auth__card {
-    max-width: 420px;
-    width: min(420px, calc(100% - 64px));
-    margin: auto;
-    padding: 36px 32px;
-  }
+     layout already uses, for the same reason. Its width and padding are set
+     where the card was dropped, further down this sheet. */
+  .auth__card { margin: auto; }
 }
 
 /* A long sign-up form must not drag the picture down the page with it: the
@@ -2917,3 +2913,61 @@ td, th { overflow-wrap: anywhere; }
 .ftoff__note { margin: 0 0 8px; font-size: 15px; line-height: 1.5; }
 .ftoff__sub { margin: 0; font-size: 13.5px; opacity: 0.7; }
 .ftoff__back { margin-top: 22px; }
+
+/* ===========================================================================
+   The door is not a dialog
+
+   The sign-in and sign-up form sat in a white panel floating on the ground,
+   360px wide, with 10px between fields and 15px type. Two problems, and the
+   second is the one that was actually felt.
+
+   FIRST: the panel. Every screen that follows it — the crisis note, the
+   terms, the cards explaining what Good Loop is — puts its content straight
+   on the ground. So the first thing a person meets is the only screen in the
+   flow drawn as a card, which reads as a dialog laid over an app they have
+   not been let into yet. On the desktop split it got worse: a card inside a
+   column inside a page, three nested boxes to hold six fields. It is the
+   screen, so it is on the screen's own ground.
+
+   SECOND: the breathing. The sign-up form is nine fields deep — date,
+   country, two kinds of account, name, company code, how the audio addresses
+   you, team, promo — and at 10px apart in 15px type it was a wall. The
+   spacing below is the same rhythm the first-run screens already use.
+   =========================================================================== */
+.auth__card {
+  max-width: 400px;
+  padding: 26px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.auth__title { font-size: 30px; margin: 20px 0 2px; }
+.auth__sub { font-size: 15px; }
+.auth__fields { gap: 14px; margin-top: 24px; }
+.auth__input { padding: 14px 16px; font-size: 16px; border-radius: 12px; }
+.auth__btn { margin-top: 24px; padding: 15px; font-size: 16px; }
+
+/* Age and country: a label above its field, not a label beside one. */
+.auth__gate { display: flex; flex-direction: column; gap: 14px; }
+.auth__gatefield { display: flex; flex-direction: column; gap: 7px; }
+.auth__gatefield > span { font-size: 14px; line-height: 1.4; color: var(--slate); }
+
+.auth__kind { gap: 10px; }
+.auth__kindbtn { padding: 13px 14px; gap: 3px; border-radius: 12px; }
+.auth__kindbtn b { font-size: 14.5px; }
+.auth__kindbtn small { font-size: 12.5px; line-height: 1.4; }
+.auth__addressed { gap: 10px; }
+.auth__addressed__q { font-size: 14.5px; }
+.auth__code { font-size: 13px; }
+
+@media (min-width: 900px) {
+  /* Wider here because there is room, not because the form needs it: the
+     column is the readable measure, and the stage holds the rest. */
+  .auth__card {
+    max-width: 440px;
+    width: min(440px, calc(100% - 72px));
+    padding: 32px 0;
+  }
+  .auth__title { font-size: 34px; }
+}

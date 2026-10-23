@@ -11,7 +11,7 @@
    ============================================================================ */
 
 import { useI18n } from '../i18n'
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
 import { stashMockLegalProfile } from '../data/mockLegal'
 
@@ -110,6 +110,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(demoSession)
   const [role, setRole] = useState<Role | null>(demoSession?.role ?? null)
 
+  /* ---- the role of an account THIS tab has just created --------------------
+
+     Signing up is two writes, and only the first one is Supabase's. `signUp`
+     creates the login — which starts a session, which fires the auth listener,
+     which reads `profiles` for a role — and only THEN do we insert the profile
+     row the listener is looking for. The listener almost always wins that
+     race, finds nothing, and the gate tells a person who has just filled in
+     the whole form that their account "is not set up yet".
+
+     It was a true statement for about two hundred milliseconds, and the screen
+     that said it had no way of ever being told otherwise.
+
+     So the one tab that knows what was just created remembers it. It is set
+     only AFTER the profile insert has actually succeeded — never before, or a
+     failed insert would hand the account a role it does not have in the
+     database and let it into a surface it cannot read. */
+  const createdRole = useRef<Role | null>(null)
+
   useEffect(() => {
     if (!supa) return
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
@@ -133,7 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const r = await loadRole(u.id)
       if (!active) return
       setUser({ id: u.id, email: u.email ?? '' })
-      setRole(r)
+      /* `createdRole` is read HERE, when the answer is used, not when the
+         query was sent: whichever of the two finishes last is right, so the
+         sign-up is correct in both orders. */
+      setRole(r ?? createdRole.current)
       /* ready LAST. A gate that rendered between the session arriving and the
          role arriving would see a signed-in account with no role and bounce it
          off its own surface. */
@@ -214,8 +235,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
           if (tErr) throw tErr
         }
+        /* The row exists now. Remember it for a listener that already looked
+           and found nothing, and set it directly for the case where no further
+           listener runs at all. Both are needed: the two finish in either
+           order, and only one of them can be last. */
+        createdRole.current = role
+        setRole(role)
       },
-      async signOut() { await sb.auth.signOut() },
+      async signOut() {
+        createdRole.current = null
+        await sb.auth.signOut()
+      },
       async resetPassword(email: string) {
         /* The redirect comes back to THIS app with a recovery token in the
            URL fragment; Supabase's client picks it up and the person is signed

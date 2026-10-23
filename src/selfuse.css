@@ -1525,3 +1525,13 @@
   .fr__words { max-width: 42ch; }
   .fr__foot { max-width: 42ch; }
 }
+
+/* The professional's card carries the mark where a photograph would go; the
+   light surfaces need the same shape, since the Self Use sheet only paints
+   the dark one. */
+.thr-hero__mark {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--mist-2); border: 1px solid var(--line);
+}
+.thr-hero__mark .gl-icon { width: 26px; height: 26px; }

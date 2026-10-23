@@ -540,7 +540,12 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
           <p className="auth__sub">
             {t('It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.')}
           </p>
-          <button className="auth__btn" onClick={() => void signOut()}>{t('Sign out')}</button>
+          {/* Not a dead end any more. The usual reason to land here is that
+              the profile row arrived a moment after the gate looked for it —
+              a reload asks again, and costs nothing when the answer is the
+              same. Signing out stays, for the account that really has none. */}
+          <button className="auth__btn" onClick={() => window.location.reload()}>{t('Try again')}</button>
+          <button className="auth__toggle" onClick={() => void signOut()}>{t('Sign out')}</button>
         </div>
       </div>
     )
