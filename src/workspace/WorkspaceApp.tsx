@@ -334,12 +334,23 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   if (view.kind === 'call') {
     const p = view.sandbox ? virtualPatient(t('Virtual Patient')) : patient
     if (p) {
+      /* Only a real booking can be called off. A roster entry the therapist
+         typed in by hand has no appointment behind it, so the control is not
+         offered rather than offered and silently doing nothing. */
+      const bookingId = view.sandbox ? null : roomFor(p.name)
       return (
         <LiveSession
           patient={p}
           sandbox={view.sandbox}
-          roomId={view.sandbox ? null : roomFor(p.name)}
+          roomId={bookingId}
           demoSeconds={demoSeconds}
+          onCancelAppointment={bookingId ? async () => {
+            await dp.cancelAppointment(bookingId)
+            update((s) => ({
+              ...s,
+              patients: s.patients.map((x) => (x.id === p.id ? { ...x, nextSessionAt: undefined } : x)),
+            }))
+          } : undefined}
           onExit={() => { setView({ kind: 'nav' }); loadAppointments() }}
           onEnd={(r) => {
             if (view.sandbox) { setView({ kind: 'nav' }); return }

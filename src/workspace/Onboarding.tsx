@@ -402,6 +402,13 @@ function Terms({ account, onSign }: { account: TherapistAccount; onSign: () => v
         <p className="w-small">{t('Version {v}', { v: LEGAL_VERSION })} · <a href="#legal/professional" target="_blank" rel="noreferrer">{t('Open on the legal information page')} ↗</a></p>
         <div
           className="w-terms legal-text"
+          /* The signature unlocks at the bottom of the document — and used to
+             unlock ONLY from a scroll event. A panel whose content already
+             fits (a short document, a tall window, a language whose draft is
+             briefer) never fires one, so the box stayed disabled and the
+             clinician could not finish registering at all. Measured on mount
+             too: if there is nothing to scroll, they have read it. */
+          ref={(el) => { if (el && el.scrollHeight <= el.clientHeight + 24) setAtBottom(true) }}
           onScroll={(e) => {
             const el = e.currentTarget
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setAtBottom(true)

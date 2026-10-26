@@ -125,7 +125,23 @@ export function ProfileTab(props: ProfileProps) {
 
 /* ------------------------------------------------------------------------- */
 
-/** Rectification (DAT-07): what the person told us, editable by them. */
+/**
+ * Rectification (DAT-07): what the person told us, editable by them.
+ *
+ * The screen is a FORM, and it now behaves like one.
+ *
+ * It used to have its one Save button in the middle, with Language and
+ * Appearance below it — two settings that commit the instant you touch them,
+ * sitting under a button that commits the four above it. One screen, two
+ * rules, and no way to tell from looking which field obeyed which. A person
+ * who changed their name, then their language, then left, had saved exactly
+ * one of the two, and the screen never said so.
+ *
+ * Now: one Save, at the top where it is always in reach and again at the
+ * end of the screen where the eye lands after the last field; it is live
+ * only while something is actually unsaved; and every field under it says
+ * plainly whether it is saved to the account or kept on this device.
+ */
 function AccountSettings({ name, email, convention }: ProfileProps) {
   const { t, locale, setLocale } = useI18n()
   const dp = useDataProvider()
@@ -135,28 +151,71 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
   const [personalEmail, setPersonalEmail] = useState('')
   const [country, setCountry] = useState('')
   const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'failed'>('idle')
+  const [failure, setFailure] = useState<string | null>(null)
+  /* What is on the server right now. The comparison against it is what makes
+     "Save" mean something: a button that is always live cannot tell a person
+     whether their change has landed, and the old one was always live. */
+  const [base, setBase] = useState({ name, personalEmail: '', country: '', locale })
 
   useEffect(() => {
     if (!legal.profile) return
-    setDraftName(legal.profile.name || name)
-    setPersonalEmail(legal.profile.personalEmail ?? '')
-    setCountry(legal.profile.country ?? '')
+    const p = legal.profile
+    setDraftName(p.name || name)
+    setPersonalEmail(p.personalEmail ?? '')
+    setCountry(p.country ?? '')
+    setBase({ name: p.name || name, personalEmail: p.personalEmail ?? '', country: p.country ?? '', locale: (p.locale as Locale) ?? locale })
+    // the locale is deliberately not a dependency: re-reading the profile is
+    // what moves the baseline, and switching language must leave it dirty
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [legal.profile, name])
+
+  const dirty =
+    draftName.trim() !== base.name.trim() ||
+    personalEmail.trim() !== base.personalEmail.trim() ||
+    country !== base.country ||
+    locale !== base.locale
 
   async function save() {
     setSaved('saving')
+    setFailure(null)
     try {
-      await dp.updateMyProfile({ name: draftName.trim() || name, personalEmail: personalEmail.trim() || null, country: country || undefined, locale })
+      await dp.updateMyProfile({
+        name: draftName.trim() || name,
+        personalEmail: personalEmail.trim() || null,
+        country: country || undefined,
+        locale,
+      })
+      /* Read it back before saying it is saved. Without this the screen was
+         reporting the REQUEST, not the row: anything the database quietly
+         refused still printed "Saved." */
       await legal.refresh()
+      setBase({ name: draftName.trim() || name, personalEmail: personalEmail.trim(), country, locale })
       setSaved('done')
-    } catch {
+    } catch (e) {
+      /* The real reason, not a shrug. "Could not save just now" is what a
+         person reads for weeks without anybody learning why. */
+      setFailure((e as Error)?.message || null)
       setSaved('failed')
     }
   }
 
+  const saveBtn = (
+    <button className="btn btn--primary" disabled={saved === 'saving' || !dirty} onClick={() => void save()}>
+      {/* Three states, and the idle one is not "Saved": a screen that says
+          "Saved" the moment it opens has told the person nothing. */}
+      {saved === 'saving' ? t('Saving…') : dirty ? t('Save changes') : saved === 'done' ? t('Saved') : t('Nothing to save')}
+    </button>
+  )
+
   return (
     <>
-      <h2 className="display su-h1">{t('Account Settings')}</h2>
+      {/* Top: the title and the Save, pinned, so the button is on screen
+          from whichever field the person is editing. */}
+      <div className="acct__bar">
+        <h2 className="display su-h1">{t('Account Settings')}</h2>
+        {saveBtn}
+      </div>
+
       <label className="ob-field">
         <span className="ob-field__label">{t('Name')}</span>
         <input className="ob-input" value={draftName} onChange={(e) => setDraftName(e.target.value)} autoComplete="name" />
@@ -183,17 +242,17 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
         <span className="ob-field__label">{t('Linked company')}<em className="small muted"> · {t('locked')}</em></span>
         <input className="ob-input" value={convention?.companyName ?? t('Not linked')} readOnly />
       </label>
-      <button className="btn btn--primary" disabled={saved === 'saving'} onClick={() => void save()}>
-        {saved === 'saving' ? t('Saving…') : t('Save changes')}
-      </button>
-      {saved === 'done' && <p className="small muted">{t('Saved.')}</p>}
-      {saved === 'failed' && <p className="ob-error">{t('Could not save just now. Try again in a moment.')}</p>}
 
+      {/* The language changes the screen at once — a language picker that
+          waited for a Save would be read in the language you are leaving —
+          and it is ALSO on the account, which is what Save writes. Said
+          here, because a field that does both is the one that confuses. */}
       <label className="ob-field">
         <span className="ob-field__label">{t('Language')}</span>
         <select className="ob-input" value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
           {LOCALES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
+        <span className="legal-consent__hint">{t('Changes straight away here. Save to keep it on your account, on every device.')}</span>
       </label>
 
       <div className="ob-field__label">{t('Appearance')}</div>
@@ -210,6 +269,20 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
         ))}
       </div>
       <p className="small muted">{t('A session always plays on a dark screen, whichever you pick.')}</p>
+      <p className="small muted">{t('Kept on this device — nothing to save.')}</p>
+
+      {/* End of the screen: the same button, because the last field is where
+          somebody finishes and the top of the page is not where they are. */}
+      <div className="acct__end">
+        {saveBtn}
+        {saved === 'done' && !dirty && <p className="small muted">{t('Saved.')}</p>}
+        {saved === 'failed' && (
+          <p className="ob-error">
+            {t('Could not save just now. Try again in a moment.')}
+            {failure && <><br /><span className="small">{failure}</span></>}
+          </p>
+        )}
+      </div>
     </>
   )
 }

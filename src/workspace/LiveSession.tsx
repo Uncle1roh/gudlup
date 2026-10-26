@@ -75,11 +75,18 @@ interface LiveSessionProps {
   demoSeconds?: number | null
   onEnd: (r: SessionResult) => void
   onExit: () => void
+  /**
+   * Call off the booking behind this room — the patient never arrived, or the
+   * two of them agreed in the call not to work today. Absent when there is no
+   * booking to call off (the Sandbox, or a roster entry with no appointment),
+   * and the control is then not offered.
+   */
+  onCancelAppointment?: () => Promise<void> | void
 }
 
 const PHASES = ['Opening', 'Breath', 'Imagery', 'Altern.', 'Settle', 'Closing']
 
-export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEnd, onExit }: LiveSessionProps) {
+export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEnd, onExit, onCancelAppointment }: LiveSessionProps) {
   const { t } = useI18n()
   /* The Sandbox never opens a real room: a practice session must not be
      joinable by a patient who happens to be waiting. */
@@ -94,25 +101,68 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
     role: 'therapist',
     onControl: (c) => { if (c.action === 'started') setPatientStartedAt(Date.now()) },
   })
-  const [joined, setJoined] = useState(false)
+  /* ---- the room and the session are two different things -----------------
+
+     They used to be one. The therapist pressed "Call the patient", the peer
+     connection came up, and that same instant the session began: the clock
+     started, the record was opened, and the pre-session panel was gone.
+     There was no moment in which the two of them were simply on a call.
+
+     A video room is not a session. People arrive early, say hello, settle,
+     agree what today is for — and sometimes agree there is no session today
+     at all. So the call now connects by itself the moment both devices are
+     in the room, the way every other video tool behaves, and the session
+     starts when the therapist says it does.
+
+     `started` is that second step. Everything that makes this a clinical
+     record — the clock, the session number, the notes, the protocol — hangs
+     off it, so nothing is written by somebody merely opening a window. */
+  const [started, setStarted] = useState(false)
   const [tab, setTab] = useState<Tab>('notes')
   const [collapsed, setCollapsed] = useState(false)
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
 
-  /* The patient connecting IS the moment the session starts. Waiting for the
-     therapist to press a second button after that would be one click between
-     them and a person who is already on screen. */
+  /* Joining is nobody's decision. In a real room the two devices announce
+     themselves to each other, so the second arrival is the signal to dial —
+     the therapist does not press anything to be in a call with someone who
+     is already there. In the demo there is no second device, so the
+     simulated peer stands in and connects the same way. */
+  const { camStatus, callState, peerPresent, realtime, connectPatient, connectSimulated } = call
   useEffect(() => {
-    if (call.callState === 'connected' && !joined) {
-      startedAt.current = Date.now()
-      setJoined(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call.callState])
+    if (camStatus !== 'live' || callState !== 'idle') return
+    if (realtime && !peerPresent) return
+    const id = window.setTimeout(() => { realtime ? connectPatient() : connectSimulated() }, 150)
+    return () => clearTimeout(id)
+  }, [camStatus, callState, peerPresent, realtime, connectPatient, connectSimulated])
 
   const sessionNumber = nextSessionNumber(patient)
   const startedAt = useRef(Date.now())
+
+  function startSession() {
+    startedAt.current = Date.now()
+    setStarted(true)
+  }
+
+  async function cancelAppointment() {
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      await onCancelAppointment?.()
+      /* Tell the other side before the room closes. Without it a patient who
+         IS there — connected, waiting, camera on — would watch the therapist
+         vanish and have nothing to read. */
+      call.sendControl({ action: 'end' })
+      call.hangup()
+      onExit()
+    } catch {
+      setCancelError(t('We could not cancel the appointment just now. Check your connection and try again.'))
+      setCancelling(false)
+    }
+  }
 
   // Notes tab state
   const [goal, setGoal] = useState('')
@@ -126,10 +176,10 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
   const [quickNotes, setQuickNotes] = useState<{ at: number; phase: number; text: string }[]>([])
 
   useEffect(() => {
-    if (!joined) return
+    if (!started) return
     const id = window.setInterval(() => setElapsed((Date.now() - startedAt.current) / 1000), 1000)
     return () => clearInterval(id)
-  }, [joined])
+  }, [started])
 
   // Auto-save the note, the way the wireframe's "Saved · 14:03" implies.
   useEffect(() => {
@@ -139,7 +189,8 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
   }, [note])
 
   /* ------------------------------------------------- TH-CALL-WAIT ------ */
-  if (!joined) {
+  if (!started) {
+    const inRoom = call.callState === 'connected'
     return (
       <div className={`w-call${sandbox ? ' w-call--sandbox' : ''}`}>
         {sandbox ? <SandboxBanner onExit={onExit} /> : (
@@ -150,17 +201,34 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
         )}
         <div className="w-call__wait">
           <div className="w-call__waitmain">
-            <div className="w-avatar w-avatar--xl" aria-hidden="true">{initials(patient.name)}</div>
+            {/* Once the two of them are connected this is a call, so it shows
+                the call: the patient fills the frame and the therapist's own
+                camera sits in the corner, exactly as it will when the session
+                starts. Before that there is nobody to show, so it is the
+                person's initials and the therapist's own camera, large
+                enough to straighten a collar in. */}
+            {inRoom ? (
+              <div className="w-call__room">
+                <PeerVideo call={call} fallbackInitials={initials(patient.name)} label={t('patient webcam feed')} />
+                <SelfVideo call={call} className="w-video__self" />
+              </div>
+            ) : (
+              <>
+                <div className="w-avatar w-avatar--xl" aria-hidden="true">{initials(patient.name)}</div>
+                <SelfVideo call={call} className="w-selfcam" />
+              </>
+            )}
+
             <h2 className="w-h2">
-              {call.callState === 'connecting'
-                ? t('Connecting to {name}…', { name: patient.name })
-                : call.peerPresent
-                  ? t('{name} is in the waiting room', { name: patient.name })
-                  : t('Waiting for {name} to join…', { name: patient.name })}
+              {inRoom
+                ? t('You are in the call with {name}', { name: patient.name })
+                : call.callState === 'connecting'
+                  ? t('Connecting to {name}…', { name: patient.name })
+                  : call.peerPresent
+                    ? t('{name} is joining…', { name: patient.name })
+                    : t('Waiting for {name} to join…', { name: patient.name })}
             </h2>
             {call.callState === 'connecting' && <div className="w-spinner" aria-hidden="true" />}
-
-            <SelfVideo call={call} className="w-selfcam" />
 
             {call.camStatus === 'denied' && (
               <p className="w-warnbox">
@@ -177,6 +245,20 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
               </p>
             )}
 
+            {/* The mic and the camera belong to the room, not to the session:
+                somebody waiting has every reason to turn their camera off,
+                and had no way to until the session had already begun. */}
+            {call.camStatus === 'live' && (
+              <div className="w-call__waitbar">
+                <button className="w-callbtn" aria-pressed={!call.micOn} onClick={call.toggleMic}>
+                  {call.micOn ? '🎤' : '🔇'}<span>{t('Mute')}</span>
+                </button>
+                <button className="w-callbtn" aria-pressed={!call.camOn} onClick={call.toggleCam}>
+                  {call.camOn ? '📷' : '🚫'}<span>{t('Camera')}</span>
+                </button>
+              </div>
+            )}
+
             {/* "Send a reminder?" used to live here. It set a boolean and
                 printed "Reminder sent." — nothing left the browser, because
                 there is no notification path in the product at all: no
@@ -185,25 +267,52 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
                 button, most of all on the screen where a clinician is
                 waiting for somebody who has not arrived. It comes back when
                 there is something behind it. */}
-            <button
-              className="w-btn w-btn--primary"
-              disabled={call.camStatus !== 'live' || call.callState === 'connecting' || (call.realtime && !call.peerPresent)}
-              onClick={call.connectPatient}
-            >
-              {sandbox ? t('Start practice session') : t('Call the patient')}
+            <button className="w-btn w-btn--primary" disabled={!inRoom} onClick={startSession}>
+              {sandbox ? t('Start practice session') : t('Start the session')}
             </button>
+            <p className="w-small">
+              {inRoom
+                ? t('Nothing is recorded yet. The session record opens when you start it.')
+                : call.realtime
+                  ? t('The call opens by itself when you are both here.')
+                  : t('Demo room: the patient feed is simulated in this tab over a real peer connection.')}
+            </p>
 
             {call.realtime && !call.peerPresent && (
               <button className="w-link w-link--quiet" disabled={call.camStatus !== 'live'} onClick={call.connectSimulated}>
                 {t('Demo · simulate the patient')}
               </button>
             )}
-            <p className="w-small">
-              {call.realtime
-                ? t('Real room. The patient joins from their app and the call connects between the two devices.')
-                : t('Demo room: the patient feed is simulated in this tab over a real peer connection.')}
-            </p>
-            <button className="w-btn w-btn--ghost" onClick={onExit}>{t('Cancel')}</button>
+
+            {/* The other way this half hour can end. A patient who never
+                arrives used to leave the therapist with one button — the one
+                that walks out of the room — and a booking that stayed in the
+                diary as though it had been kept. */}
+            {onCancelAppointment && !confirmCancel && (
+              <button className="w-link w-link--quiet" onClick={() => setConfirmCancel(true)}>
+                {t('Cancel this appointment')}
+              </button>
+            )}
+            {confirmCancel && (
+              <div className="w-call__cancel" role="group" aria-label={t('Cancel this appointment')}>
+                <p className="w-small">
+                  {call.peerPresent
+                    ? t('Cancel this appointment? {name} is in the room and the call will close for them too.', { name: patient.name })
+                    : t('Cancel this appointment? It is marked cancelled in the diary and no session is recorded.', { name: patient.name })}
+                </p>
+                {cancelError && <p className="w-error" role="alert">{cancelError}</p>}
+                <div className="w-call__cancelrow">
+                  <button className="w-btn w-btn--ghost" disabled={cancelling} onClick={() => setConfirmCancel(false)}>
+                    {t('Keep the appointment')}
+                  </button>
+                  <button className="w-btn w-btn--danger" disabled={cancelling} onClick={() => void cancelAppointment()}>
+                    {cancelling ? t('Please wait…') : t('Cancel the appointment')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button className="w-btn w-btn--ghost" onClick={onExit}>{t('Leave the room')}</button>
           </div>
 
           <aside className="w-call__prep">

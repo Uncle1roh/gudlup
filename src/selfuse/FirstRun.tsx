@@ -31,7 +31,7 @@
    Someone who accepts and then closes the app has accepted.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { BreathingOrb } from '../components/BreathingOrb'
@@ -180,6 +180,9 @@ export function FirstRun({
   const [sheet, setSheet] = useState<LegalDocId | null>(null)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  /** The tick box of whichever legal screen is open, and its flash. */
+  const ackRef = useRef<HTMLLabelElement>(null)
+  const [nudge, setNudge] = useState(false)
 
   /* ---- the screens are decided when the flow OPENS ------------------------
 
@@ -219,6 +222,25 @@ export function FirstRun({
   const blocked =
     (step.kind === 'how' && !crisisAck) ||
     (step.kind === 'terms' && !termsAck)
+
+  /* ---- a button that refuses must say what it is waiting for -------------
+
+     Both legal screens open with one tick box and end, several hundred
+     pixels further down, with a greyed-out button. On the Terms screen the
+     five optional switches sit between the two, so by the time somebody
+     reaches the button the box that unlocks it has scrolled off the top of
+     the screen — and the button said nothing at all. It was simply dead, on
+     the one screen nobody can go round, and "I cannot go forward" is exactly
+     what that looks like from the outside.
+
+     The button is live now whether or not the box is ticked. Pressed while
+     it is not, it does the only useful thing: takes the person to the box
+     and makes it move. */
+  function nudgeAck() {
+    ackRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setNudge(true)
+    window.setTimeout(() => setNudge(false), 1400)
+  }
 
   async function next() {
     if (blocked || busy) return
@@ -311,7 +333,7 @@ export function FirstRun({
             <>
               <h1 className="display fr__title">{t('How Good Loop works')}</h1>
               <p className="lead fr__body">{legal.m('ONB-2.1')}</p>
-              <label className="legal-ack fr__accept">
+              <label ref={ackRef} className={`legal-ack fr__accept${nudge ? ' is-nudge' : ''}`}>
                 <input type="checkbox" checked={crisisAck} onChange={(e) => setCrisisAck(e.target.checked)} />
                 <span>{legal.m('ONB-2.2')}</span>
               </label>
@@ -323,7 +345,7 @@ export function FirstRun({
           {step.kind === 'terms' && (
             <>
               <h1 className="display fr__title">{t('Your terms and your choices')}</h1>
-              <label className="legal-ack fr__accept">
+              <label ref={ackRef} className={`legal-ack fr__accept${nudge ? ' is-nudge' : ''}`}>
                 <input type="checkbox" checked={termsAck} onChange={(e) => setTermsAck(e.target.checked)} />
                 <span>{legal.m('ONB-3.1')}</span>
               </label>
@@ -420,8 +442,20 @@ export function FirstRun({
 
         <div className="fr__foot">
           {saveError && <p className="fr__error" role="alert">{saveError}</p>}
+          {blocked && (
+            <p className="fr__need" aria-live="polite">
+              {step.kind === 'terms'
+                ? t('Tick the box above to accept the Terms and continue.')
+                : t('Tick the box above to continue.')}
+            </p>
+          )}
           {dots}
-          <button className="btn btn--primary" onClick={() => void next()} disabled={blocked || busy}>
+          <button
+            className={`btn btn--primary${blocked ? ' is-waiting' : ''}`}
+            onClick={() => (blocked ? nudgeAck() : void next())}
+            aria-disabled={blocked || busy}
+            disabled={busy}
+          >
             {step.kind === 'terms' ? t('Accept & continue') : last ? t('Start listening') : t('Next')}
           </button>
           {i > 0 && !onLegal && (

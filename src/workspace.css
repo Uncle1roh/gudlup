@@ -393,6 +393,33 @@ textarea.w-input, .w-notearea { max-width: none; }
 .w-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.18); border-top-color: #7ac69b; animation: w-spin 900ms linear infinite; }
 @keyframes w-spin { to { transform: rotate(360deg); } }
 
+/* ---- the room, before the session starts --------------------------------
+
+   Both of them are on the call and nothing clinical has begun. It is the
+   same picture the session will show — patient large, therapist in the
+   corner — at a size that leaves the start button and the way out of the
+   appointment below it, rather than a full-bleed stage with no room for
+   either. */
+.w-call__room {
+  position: relative; width: min(720px, 100%); aspect-ratio: 16 / 9;
+  border-radius: 14px; overflow: hidden; background: #0a1b14;
+}
+.w-call__room .w-video__self { bottom: 14px; left: 14px; }
+/* The same two controls as the in-call bar, but here they sit in the flow
+   with nothing to overlay, so they take the width their label needs instead
+   of wrapping "Desativar o microfone" onto three lines in a 66px box. */
+.w-call__waitbar { display: flex; gap: 14px; }
+.w-call__waitbar .w-callbtn { width: auto; min-width: 66px; padding-inline: 12px; }
+.w-call__cancel {
+  width: min(460px, 100%); padding: 14px 16px; border-radius: 12px; text-align: left;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.w-call__cancel .w-small { color: rgba(232,239,233,0.78); }
+.w-call__cancelrow { display: flex; gap: 10px; justify-content: flex-end; }
+.w-call__cancelrow .w-btn { min-width: 0; }
+.w-call__cancelrow .w-btn--danger { background: rgba(178,59,59,0.16); color: #ffc9c9; border-color: rgba(255,170,170,0.35); }
+
 .w-call__prep { background: var(--w-surface); color: var(--w-ink); padding: 20px; overflow-y: auto; }
 .w-call__prep h3 { font-family: var(--display); font-size: 15px; font-weight: 500; margin-bottom: 12px; }
 .w-prepblock { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--w-line); }
