@@ -39,7 +39,7 @@ import {
   MOOD_LEVELS,
   type MoodEntry,
 } from '../data/measures'
-import { glCheckDue, type SelfUseState } from '../data/selfUseStore'
+import { glCheckDue, type Launch, type SelfUseState } from '../data/selfUseStore'
 import { type TherapyState } from './therapyStore'
 import { Conquistas } from './Conquistas'
 import { RankingsTab } from './Coletivas'
@@ -47,6 +47,8 @@ import { ChallengesTab } from './ChallengesTab'
 import { ChallengeCard } from './ChallengeCard'
 import { Icon } from './icons'
 import { useDataProvider } from '../data/provider'
+import { Journey } from '../ui2/Journey'
+import { TopBar, PageTitle } from '../ui2/TopBar'
 import { Badge } from '../gamification/ui/Badge'
 import { copyFor } from '../gamification/copy'
 import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
@@ -56,12 +58,16 @@ import type { Wallet } from '../gamification/economy'
 export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges'
 
 interface ProgressProps {
+  /** First name, when the account gives one — the top bar prints it. */
+  name: string | null
   state: SelfUseState
   therapy: TherapyState
   view: ProgressView
   onView: (v: ProgressView) => void
   /** "Iniciar sessão" from a challenge: back to the library. */
   onStartSession: () => void
+  /** Start one session straight away — the pathway's next, from the ring. */
+  onStartLaunch: (l: Launch) => void
   onGlCheck: () => void
   onMood: () => void
   onGoTherapist: () => void
@@ -80,8 +86,9 @@ export function ProgressTab(props: ProgressProps) {
   const { t } = useI18n()
   const { view, onView } = props
   return (
-    <div className="su-page progress">
-      <h1 className="display su-h1">{t('Progress')}</h1>
+    <>
+      <TopBar name={props.name} />
+      <PageTitle title={t('My journey')} />
       {/* Four views, each its own kind of information: how the week felt,
           what stays (achievements), where you stand together (rankings),
           and the challenges — the company's, the live ones, the history. */}
@@ -94,11 +101,11 @@ export function ProgressTab(props: ProgressProps) {
       {view === 'rankings' && <RankingsTab />}
       {view === 'challenges' && <ChallengesTab onStartSession={props.onStartSession} />}
       {view === 'summary' && <Summary {...props} />}
-    </div>
+    </>
   )
 }
 
-function Summary({ state, onGlCheck, onMood, onExportSelfUse, onStartSession, onView }: ProgressProps) {
+function Summary({ state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const [wallet, setWallet] = useState<Wallet | null>(null)
@@ -124,6 +131,18 @@ function Summary({ state, onGlCheck, onMood, onExportSelfUse, onStartSession, on
 
   return (
     <>
+      {/* The mockup's four panels: the pathway ring, the twelve weeks, how
+          the sessions felt, and the check-in. Each one stands only while the
+          thing behind it exists. The app's own blocks follow below — they
+          have no panel in the mockup and are not inventions to drop. */}
+      <Journey
+        pathway={state.pathway}
+        therapy={therapy}
+        glDue={glCheckDue(state)}
+        onGlCheck={onGlCheck}
+        onStart={onStartLaunch}
+      />
+
       {/* The phone's empty state. On a desk each block of the grid carries
           its own instead — one empty card across the screen read as broken. */}
       {blank && (

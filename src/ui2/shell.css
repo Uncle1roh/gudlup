@@ -386,7 +386,10 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
    prescriptions at its own stop. Until then it at least stops being a stack
    of white boxes on a photograph. */
 .gl-root .thr-extra { display: flex; flex-direction: column; gap: 14px; }
-.gl-root .thr-extra .card,
+.gl-root .card,
+.gl-root .empty,
+.gl-root .gam-care,
+.gl-root .gam-milestone,
 .gl-root .thr-extra .chron {
   border-radius: 22px;
   padding: 18px 20px;
@@ -398,15 +401,60 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
   box-shadow: none;
 }
 
-.gl-root .thr-extra .home__sect {
+.gl-root .home__sect {
   font-family: 'Outfit', system-ui, sans-serif;
   font-weight: 500;
   font-size: 20px;
   margin: 10px 0 0;
 }
 
-.gl-root .thr-extra .muted,
-.gl-root .thr-extra .small { color: var(--ink-2); }
+.gl-root .muted,
+.gl-root .small { color: var(--ink-2); }
+
+/* The old phone-only empty state offered the weekly check-in. The ported
+   panel above offers it too, so one of them is a second copy of the same
+   button on the same screen. */
+.gl-root .empty.prog-phone { display: none; }
+
+.gl-root .gam-milestone__body { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.gl-root .gam-milestone { gap: 14px; }
+
+/* The four-view switch on Minha jornada keeps its shape; on the photograph
+   it needs the surface's own colours or the chosen tab goes cream on cream. */
+.gl-root .segmented {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.gl-root .segmented button {
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.gl-root .segmented button[aria-selected='true'] { background: var(--act-bg); color: var(--act-fg); }
+
+/* Primary buttons inside the leftover blocks: the surface's, not the old
+   bottle green. */
+.gl-root .btn--primary {
+  background: var(--act-bg);
+  color: var(--act-fg);
+  border: 0;
+}
+
+.gl-root .btn--ghost,
+.gl-root .btn--quiet {
+  background: var(--btn);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
 
 .gl-root .gam-challenge {
   display: flex;

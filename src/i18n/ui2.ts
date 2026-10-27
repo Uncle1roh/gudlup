@@ -68,6 +68,14 @@ export const IT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× questa settimana',
+
+  /* minha jornada */
+  'of {n} weeks': 'di {n} settimane',
+  'The {n} weeks': 'Le {n} settimane',
+  'Now': 'Adesso',
+  'How you felt': 'Come ti sei sentito',
+  'Before and after each session (1–5)': 'Prima e dopo ogni seduta (1–5)',
+  'Done for this week.': 'Fatto per questa settimana.',
 }
 
 export const PT_UI2: Record<string, string> = {
@@ -134,4 +142,12 @@ export const PT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× esta semana',
+
+  /* minha jornada */
+  'of {n} weeks': 'de {n} semanas',
+  'The {n} weeks': 'As {n} semanas',
+  'Now': 'Agora',
+  'How you felt': 'Como você se sentiu',
+  'Before and after each session (1–5)': 'Antes e depois de cada sessão (1–5)',
+  'Done for this week.': 'Feito nesta semana.',
 }

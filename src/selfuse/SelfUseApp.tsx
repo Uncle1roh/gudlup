@@ -80,7 +80,7 @@ const DEST_OF: Record<Tab, Dest> = {
 /* Only the library stands on the colour of the mood. Every other mockup is
    the same photograph under a dark wash — a room you go into, rather than
    the shelf you browse. A screen gets the deep surface once it is ported. */
-const DEEP: Tab[] = ['therapist', 'path']
+const DEEP: Tab[] = ['therapist', 'path', 'progress']
 
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',
@@ -751,11 +751,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'progress' && (
           <ProgressTab
+            name={displayName(user?.email, legal.profile?.name)}
             state={state}
             therapy={therapy}
             view={progressView}
             onView={setProgressView}
             onStartSession={() => setTab('home')}
+            onStartLaunch={(l) => setLaunch(l)}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
             onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}

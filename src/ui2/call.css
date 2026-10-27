@@ -294,6 +294,77 @@
 .path2-count { font-size: 12px; color: var(--ink-2); }
 .path2-off { font-size: 12px; color: #f2c29a; }
 
+/* -------------------------------------------------------- minha jornada ---
+   The ring, the weeks in two columns, and the two lines. */
+
+.jr2-note { margin: -16px 0 0; font-size: 16px; color: var(--ink-2); padding: 0 8px; }
+.jr2-ring { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.jr2-dial { position: relative; display: flex; align-items: center; justify-content: center; }
+.jr2-dial svg { display: block; }
+
+.jr2-dial__n {
+  position: absolute;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 44px;
+  line-height: 1;
+  transform: translateY(-10px);
+}
+
+.jr2-dial__of { position: absolute; font-size: 13px; color: var(--ink-2); transform: translateY(24px); }
+.jr2-focus { font-family: 'Outfit', system-ui, sans-serif; font-size: 22px; text-align: center; }
+.jr2-sub { font-size: 13px; color: var(--ink-2); }
+.jr2-ring .call2-act { align-self: stretch; margin-top: auto; }
+
+.jr2-weeks { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+
+.jr2-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+@media (max-width: 760px) {
+  .jr2-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+.jr2-week {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.jr2-n {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: var(--inset);
+}
+
+.jr2-week--done .jr2-n { background: #3db189; color: #06140f; border-color: transparent; }
+.jr2-week--now .jr2-n { background: var(--act-bg); color: var(--act-fg); border-color: transparent; }
+.jr2-week--ahead .jr2-t { color: var(--ink-2); }
+.jr2-t { flex: 1; min-width: 0; font-size: 15px; }
+.jr2-s { font-size: 12px; color: var(--link); white-space: nowrap; }
+.jr2-s--now { color: #f2c29a; }
+
+.jr2-chart { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.jr2-svg { width: 100%; height: auto; }
+.jr2-key { display: flex; gap: 18px; font-size: 12px; color: var(--ink-2); }
+.jr2-key i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 6px; }
+.jr2-key__after { border-top: 2.5px solid #3db189; }
+.jr2-key__before { border-top: 2.5px dashed #e89d64; }
+
 /* ------------------------------------------------------------ treatment ---
    No rail, no panes: a dim photograph, the orb, one line, and the two
    things the person is still allowed to do. */
