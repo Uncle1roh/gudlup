@@ -25,7 +25,7 @@ import { MoodProvider, useMood } from '../mood/MoodContext'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useDataProvider } from '../data/provider'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { Explore } from './Explore'
 import { FirstRun } from './FirstRun'
 import { AddressedAsGate } from './AddressedAsGate'
@@ -73,7 +73,9 @@ const TABS: { id: Tab; icon: IconName; label: string }[] = [
      behind each tab, and "Terapeuta" sitting under the reader's own avatar
      row reads as a statement about them — the one reading it is not one. */
   { id: 'therapist', icon: 'therapist', label: 'Therapy' },
-  { id: 'progress', icon: 'progress', label: 'Progress' },
+  /* "My journey", not "Progress": the tab holds a 12-week path and the
+     person's own check-ins, and progress is a word for a score. */
+  { id: 'progress', icon: 'progress', label: 'My journey' },
   /* Benefits (docs/gamification/SPEC.md §6) — where the partner offers were,
      for everyone: care that comes back to you, exchanged for Loops. */
   { id: 'benefits', icon: 'loop', label: 'Benefits' },
@@ -709,6 +711,25 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         {tab === 'home' && !openChallenge && (
           <Explore
             topCard={homeChallenge ? <ChallengeCard c={homeChallenge} onOpen={() => setChallengeOpen(homeChallenge.id)} /> : null}
+            /* A session today is the most important thing on this screen,
+               so it sits above everything the library has to offer — and it
+               is the same room the Therapy tab opens, not a second one. */
+            todayCard={
+              appointment && therapy.link && isToday(appointment.startsAtMs) ? (
+                <button className="su-card su-today" onClick={() => setOverlay({ kind: 'call' })}>
+                  <span className="su-today__text">
+                    <strong>
+                      {t('Session with {name} · today {time}', {
+                        name: therapy.link.therapist.name,
+                        time: fmtDate(appointment.startsAtMs, { hour: 'numeric', minute: '2-digit' }),
+                      })}
+                    </strong>
+                    <span className="small muted">{t('Confidential: your employer does not see your sessions.')}</span>
+                  </span>
+                  <span className="btn btn--primary su-today__cta">{t('Enter')}</span>
+                </button>
+              ) : null
+            }
             name={displayName(user?.email, legal.profile?.name)}
             pathway={state.pathway}
             completed={state.completedPathways.map((c) => c.id)}
@@ -861,3 +882,10 @@ function downloadJson(filename: string, data: unknown): void {
 }
 
 export type { Duration }
+
+/** Same calendar day, in the reader's own timezone. */
+function isToday(ms: number): boolean {
+  const d = new Date(ms)
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+}

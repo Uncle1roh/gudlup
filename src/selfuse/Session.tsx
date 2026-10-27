@@ -383,7 +383,10 @@ export function stereoAnswer(stage: StereoStage, side: 'left' | 'right'):
  * still lets the person continue — a headphone problem is a quality problem,
  * not a safety one — but it is not recorded as a pass.
  */
-function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; onBack: () => void }) {
+/* Exported so the therapy waiting room can run the same check rather than a
+   second, slightly different one: a session over video still plays binaural
+   material, and headphones on the wrong ears break it the same way. */
+export function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; onBack: () => void }) {
   const { t } = useI18n()
   const [stage, setStage] = useState<StereoStage>('intro')
   const [warn, setWarn] = useState(false)

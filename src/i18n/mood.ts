@@ -44,6 +44,25 @@ export const IT_MOOD: Record<string, string> = {
   'Search the library': 'Cerca nella biblioteca',
   'Search by feeling, goal or session': 'Cerca per sensazione, obiettivo o sessione',
   'All': 'Tutti',
+
+  /* ---- phase 4: the rest of the surface ---- */
+  'Your check-ins': 'I tuoi check-in',
+  'A check-in takes about ten seconds: where you are, and a word for it. It is yours — nobody else sees it.': 'Un check-in dura una decina di secondi: dove sei e una parola per dirlo. È tuo: nessun altro lo vede.',
+  'Your last session, before and after': 'La tua ultima sessione, prima e dopo',
+  'Check in now': 'Fai un check-in',
+  'Session with {name} · today {time}': 'Seduta con {name} · oggi alle {time}',
+  'Confidential: your employer does not see your sessions.': 'Riservato: la tua azienda non vede le tue sedute.',
+  'Enter': 'Entra',
+  'Before you go in': 'Prima di entrare',
+  'Camera and microphone': 'Fotocamera e microfono',
+  'working': 'funzionano',
+  'not ready': 'non pronti',
+  'Wired stereo headphones': 'Cuffie stereo con filo',
+  'Test left and right': 'Prova destra e sinistra',
+  'A quiet place where you will not be interrupted': 'Un posto tranquillo dove nessuno ti interrompe',
+  'My journey': 'Il mio percorso',
+  'Talk to a psychologist': 'Parla con uno psicologo',
+  'Sessions by video with a licensed professional.': 'Sedute in videochiamata con un professionista abilitato.',
 }
 
 export const PT_MOOD: Record<string, string> = {
@@ -80,4 +99,23 @@ export const PT_MOOD: Record<string, string> = {
   'Search the library': 'Buscar na biblioteca',
   'Search by feeling, goal or session': 'Buscar por sentimento, objetivo ou protocolo',
   'All': 'Todos',
+
+  /* ---- phase 4: the rest of the surface ---- */
+  'Your check-ins': 'Seus check-ins',
+  'A check-in takes about ten seconds: where you are, and a word for it. It is yours — nobody else sees it.': 'Um check-in leva uns dez segundos: onde você está e uma palavra para isso. É seu — mais ninguém vê.',
+  'Your last session, before and after': 'Sua última sessão, antes e depois',
+  'Check in now': 'Fazer um check-in',
+  'Session with {name} · today {time}': 'Sessão com {name} · hoje às {time}',
+  'Confidential: your employer does not see your sessions.': 'Sigiloso: sua empresa não vê suas sessões.',
+  'Enter': 'Entrar',
+  'Before you go in': 'Antes de entrar',
+  'Camera and microphone': 'Câmera e microfone',
+  'working': 'funcionando',
+  'not ready': 'não estão prontos',
+  'Wired stereo headphones': 'Fones estéreo com fio',
+  'Test left and right': 'Testar direita e esquerda',
+  'A quiet place where you will not be interrupted': 'Um lugar tranquilo, sem interrupções',
+  'My journey': 'Minha jornada',
+  'Talk to a psychologist': 'Falar com um psicólogo',
+  'Sessions by video with a licensed professional.': 'Sessões por videochamada com um profissional registrado.',
 }

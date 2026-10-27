@@ -34,6 +34,7 @@
 import { useEffect, useState } from 'react'
 import { GlCheckWeek } from './Measures'
 import { useI18n, fmtDate } from '../i18n'
+import { MoodJourney } from '../mood/MoodJourney'
 import {
   dayKey,
   MOOD_LEVELS,
@@ -137,6 +138,10 @@ function Summary({ state, onGlCheck, onMood, onExportSelfUse, onStartSession, on
       )}
 
       <div className={`prog-bento${blank ? ' prog-desk' : ''}`}>
+        {/* The emotional check-ins, which are the redesign's before/after:
+            colours and the words the person chose, never a score. */}
+        <div className="prog-b8"><MoodJourney /></div>
+
         {/* How the week felt, set against the week before it. */}
         <section className="card prog-b8">
           <h3 className="home__sect">{t('This week')}</h3>

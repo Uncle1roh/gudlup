@@ -58,6 +58,9 @@ interface ExploreProps {
   onToggleSave?: (slug: string) => void
   /** At most one challenge card, under the greeting (docs/gamification/SPEC.md §5.5). */
   topCard?: ReactNode
+  /** The appointment that is TODAY, as a card with a way into the waiting
+      room (the redesign's Home shortcut). Absent on every other day. */
+  todayCard?: ReactNode
 }
 
 type View =
@@ -67,7 +70,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard }: ExploreProps) {
+export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard, todayCard }: ExploreProps) {
   const { t, locale } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
@@ -199,6 +202,7 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
           trigger (D-17). */}
       <LibraryNotice sponsored={sponsored} />
 
+      {todayCard}
       {topCard}
 
       {/* No search field on this screen below the desktop breakpoint. The

@@ -105,6 +105,18 @@ export function ProfileTab(props: ProfileProps) {
         </div>
       </div>
 
+      {/* The redesign puts the route to a person first on this screen
+          (WPerfil.dc.html). It is the same static link the library and the
+          end of every session carry — never offered because of anything
+          the app has concluded about the reader. */}
+      <button className="su-card profile__pro" onClick={props.onFindProfessional}>
+        <span className="profile__pro__text">
+          <strong>{t('Talk to a psychologist')}</strong>
+          <span className="small muted">{t('Sessions by video with a licensed professional.')}</span>
+        </span>
+        <span aria-hidden="true">›</span>
+      </button>
+
       <ul className="menu">
         {rows.map((r) => (
           <li key={r.id}>

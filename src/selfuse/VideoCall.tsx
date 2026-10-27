@@ -37,6 +37,7 @@ import { audioUrlFor, useCatalog } from '../data/liveCatalog'
 import { useVideoCall, type VideoCall as Call } from '../b2b/webrtc/useVideoCall'
 import type { ControlAction } from '../b2b/webrtc/signaling'
 import type { TherapistProfile } from './therapyStore'
+import { StereoCheck } from './Session'
 import type { Duration } from '../types/domain'
 import { Icon } from './icons'
 
@@ -76,6 +77,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
   const [locationOk, setLocationOk] = useState(false)
   const [recordedTip, setRecordedTip] = useState(false)
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [testingEars, setTestingEars] = useState(false)
   const [treatment, setTreatment] = useState<Treatment | null>(null)
   const [paused, setPaused] = useState(false)
   const [intervening, setIntervening] = useState(false)
@@ -135,6 +137,12 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
   /* ------------------------------------------------------------ VID-1 --- */
   if (stage === 'waiting') {
     const ready = call.camStatus === 'live'
+    /* The same ear test the self-guided player runs, in the lobby where
+       there is time for it. It never blocks the session: a person whose
+       headphones are odd still has their appointment. */
+    if (testingEars) {
+      return <StereoCheck onDone={() => setTestingEars(false)} onBack={() => setTestingEars(false)} />
+    }
     return (
       <div className="app-frame call su-studio su-dark">
         <div className="call__waiting">
@@ -193,7 +201,25 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
             </p>
           )}
 
-          <p className="small muted call__hp"><Icon name="headphones" size={15} /> {t('Stereo headphones are required for this session')}</p>
+          {/* Ready to be seen, heard and listened to. The ear test is the
+              one of the three the app can actually check, and it is the one
+              that matters most: the treatment in the middle of this session
+              is binaural, and swapped or mono headphones destroy it. */}
+          <div className="call__ready">
+            <p className="small call__ready__title">{t('Before you go in')}</p>
+            <ul className="call__checks">
+              <li className={call.camStatus === 'live' ? 'is-ok' : undefined}>
+                {t('Camera and microphone')} · {call.camStatus === 'live' ? t('working') : t('not ready')}
+              </li>
+              <li>
+                <Icon name="headphones" size={15} /> {t('Wired stereo headphones')}
+                <button className="btn btn--quiet call__eartest" onClick={() => setTestingEars(true)}>
+                  {t('Test left and right')}
+                </button>
+              </li>
+              <li>{t('A quiet place where you will not be interrupted')}</li>
+            </ul>
+          </div>
 
           <p className="lead">
             {call.callState === 'connecting'
