@@ -1,0 +1,350 @@
+/* ============================================================================
+   The three rooms — WSalaEspera, WChamada, WTratamento
+
+   A video panel on the left, a column of panes on the right, and in the
+   treatment a screen with almost nothing on it. These live in their own
+   sheet because they are the only screens with a layout that depends on an
+   aspect ratio rather than on a rhythm of rows.
+
+   Everything reads the same tokens as the rest of `.gl-root--deep`.
+   ============================================================================ */
+
+/* The room is two columns on a desk and one on a phone; the video keeps its
+   shape, the panes stack beside it. */
+.call2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .call2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+.call2-stage {
+  position: relative;
+  aspect-ratio: 16 / 11;
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(10, 30, 30, 0.5);
+  border: 1px solid var(--line);
+}
+
+.call2-stage__feed,
+.call2-stage video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* The initials disc shown until a camera is actually sending frames. */
+.call2-stage__mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call2-stage__disc {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 46px;
+  color: #06140f;
+}
+
+.call2-stage__tag {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(6, 20, 15, 0.62);
+  font-size: 13px;
+}
+
+/* SelfView and PeerView bring their own markup. Inside the new stage they
+   fill it, rather than keeping the box the old layout gave them. */
+.call2-stage > .call__selfview,
+.call2-stage > .call__feed,
+.call2-stage > .call__feed--live {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.call2-stage > video,
+.call2-stage > .call__selfview video,
+.call2-stage > .call__feed video,
+.call2-stage > .call__feed .call__el { width: 100%; height: 100%; object-fit: cover; }
+
+/* The location field is the one input on these screens. */
+.call2-pane .ob-input {
+  height: 44px;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 400 15px 'DM Sans', system-ui, sans-serif;
+}
+
+.call2-pane .ob-input::placeholder { color: var(--ink-2); }
+
+/* The picture-in-picture of yourself, top right of the stage. */
+.call2-self {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 176px;
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(10, 30, 30, 0.72);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call2-self video { width: 100%; height: 100%; object-fit: cover; }
+
+.call2-self__disc {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #2a1608;
+  background: #e89d64;
+}
+
+/* The round controls, floating at the foot of the stage. */
+.call2-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 999px;
+  background: rgba(6, 20, 15, 0.55);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+}
+
+.call2-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--btn);
+  border: 1px solid var(--line);
+}
+
+.call2-btn[aria-pressed='true'] { background: rgba(250, 248, 223, 0.22); }
+.call2-btn--end { background: #e89d64; color: #2a1608; border-color: transparent; }
+
+/* The panes down the right-hand side. */
+.call2-pane {
+  border-radius: 28px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.call2-pane__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.call2-pane__h { margin: 0; font-family: 'Outfit', system-ui, sans-serif; font-weight: 500; font-size: 20px; }
+.call2-pill { height: 38px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
+.call2-note { margin: 0; font-size: 14px; color: var(--ink-2); }
+.call2-ok { margin: 0; font-size: 13px; color: #7ac69b; }
+.call2-warn { margin: 0; font-size: 13px; color: #f2c29a; }
+
+.call2-ears { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.call2-ear {
+  height: 48px;
+  border-radius: 14px;
+  cursor: pointer;
+  font: 500 15px 'DM Sans', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.call2-ear:hover { background: rgba(250, 248, 223, 0.14); }
+
+.call2-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.call2-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; }
+.call2-list__tick { color: #7ac69b; flex: none; line-height: 1.3; }
+.call2-list__off { color: var(--ink-2); }
+
+/* "Como é a sessão" — the three phases, numbered. */
+.call2-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.call2-steps li { display: flex; gap: 12px; }
+
+.call2-steps__n {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.call2-steps__n--on { background: #3db189; color: #06140f; border-color: transparent; }
+.call2-steps__t { display: flex; flex-direction: column; gap: 2px; }
+.call2-steps__t strong { font-weight: 600; font-size: 15px; }
+.call2-steps__t span { font-size: 13px; color: var(--ink-2); }
+
+.call2-act {
+  height: 56px;
+  border-radius: 999px;
+  background: var(--act-bg);
+  color: var(--act-fg);
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  font: 600 16px 'DM Sans', system-ui, sans-serif;
+}
+
+.call2-act[disabled] { opacity: 0.45; cursor: not-allowed; }
+.call2-quiet { background: none; border: 0; color: var(--ink-2); font: 400 14px 'DM Sans', system-ui, sans-serif; cursor: pointer; text-decoration: underline; }
+
+/* ------------------------------------------------------------ treatment ---
+   No rail, no panes: a dim photograph, the orb, one line, and the two
+   things the person is still allowed to do. */
+
+.treat2 {
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  position: relative;
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.treat2__chip {
+  position: absolute;
+  left: 28px;
+  top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.treat2__chip i { width: 8px; height: 8px; border-radius: 50%; background: #e89d64; display: block; }
+
+.treat2__thumb {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  width: 150px;
+  border-radius: 18px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.treat2__thumb video { width: 100%; border-radius: 12px; display: block; }
+
+.treat2__disc {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #7ac69b;
+  color: #06140f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+
+/* Still. Only the glow drifts, and not on a rhythm anyone could breathe to. */
+.treat2__orb { display: block; max-width: 72vw; height: auto; animation: treat2-glow 12s ease-in-out infinite; }
+
+@keyframes treat2-glow {
+  0%, 100% { opacity: 0.86; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .treat2__orb { animation: none; }
+}
+
+.treat2__line {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.treat2__sub { margin: 0; font-size: 14px; color: var(--ink-2); text-align: center; }
+
+.treat2__hud { width: min(640px, 100%); display: flex; flex-direction: column; gap: 8px; margin-top: 40px; }
+.treat2__bar { height: 3px; border-radius: 999px; background: rgba(250, 248, 223, 0.18); overflow: hidden; }
+.treat2__bar span { display: block; height: 100%; background: var(--ink); }
+.treat2__times { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+.treat2__acts { display: flex; align-items: center; gap: 18px; }
+
+.treat2__pause {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 500 15px 'DM Sans', system-ui, sans-serif;
+}
+
+.treat2__state { font-size: 13px; color: #f2c29a; min-height: 18px; text-align: center; }
+
+@media (max-width: 900px) {
+  .treat2 { padding: 20px; }
+  .treat2__line { font-size: 28px; }
+  .treat2__thumb { width: 104px; right: 16px; top: 16px; }
+  .treat2__chip { left: 16px; top: 16px; }
+}

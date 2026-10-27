@@ -10,6 +10,8 @@ import './selfuse-studio.css'
 // sheets above reaches it — it does not restyle them, it replaces them screen
 // by screen. Last, so a name both define resolves here.
 import './ui2/shell.css'
+// the three rooms: waiting, call, treatment
+import './ui2/call.css'
 import './corporate.css'
 import './workspace.css'
 // legal surfaces: Help now, the legal page, in-context notices (src/legal)

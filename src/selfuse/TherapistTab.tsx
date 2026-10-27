@@ -20,7 +20,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
-import { BrandIcon } from '../components/Brand'
+// BrandIcon moved out with the old hero card
+// import { BrandIcon } from '../components/Brand'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useLegal } from '../legal/LegalContext'
@@ -35,7 +36,7 @@ import { prescriptionsFromPlan, type Plan } from '../data/plan'
 import { normalizeConnectionCode } from '../data/link'
 import {
   expandOpenings,
-  joinWindowOpen,
+
   type Appointment,
   type TherapistListing,
   type WeeklySlot,
@@ -61,8 +62,11 @@ import {
 } from '../data/assessmentStore'
 import { INSTRUMENTS } from '../data/assessments'
 import { useBackLayer } from './backStack'
+import { Therapy } from '../ui2/Therapy'
 
 interface TherapistTabProps {
+  /** First name, when the account gives one — the top bar prints it. */
+  name: string | null
   hasConvention: boolean
   therapy: TherapyState
   update: (fn: (s: TherapyState) => TherapyState) => void
@@ -313,84 +317,154 @@ export function TherapistTab(props: TherapistTabProps) {
   const link = therapy.link
   /* The join window is computed from the REAL appointment, not from the
      link's remembered time — a rescheduled session must move the button. */
-  const nextAt = props.appointment?.startsAtMs ?? link.nextSessionAt
   const consentGate = !!card?.consentTemplate
     && !accepted.some((c) => c.therapistId === link.therapist.id && c.templateVersion === card.consentTemplate?.version)
 
-  const joinable = props.appointment ? joinWindowOpen(props.appointment, Date.now()) : false
 
   return (
-    <div className="su-page thr-active">
-      <h1 className="display su-h1">{t('Therapy')}</h1>
+    <>
+      <Therapy
+        name={props.name}
+        link={link}
+        appointment={props.appointment}
+        consentGate={consentGate}
+        onReadConsent={() => setConsentOpen(true)}
+        onEnterRoom={props.onJoinCall}
+        onFindAnother={() => setView({ kind: 'list' })}
+        onBooked={props.onAppointmentChanged}
+        extraSlot={
+          <div className="thr-extra">
+      {/* Below 1100px this is one column and the wrappers do nothing. On a
+                desk they are the two columns: what is ASKED OF YOU on the left,
+                what has HAPPENED on the right. */}
+            <div className="thr-cols">
+              <div className="thr-col">
 
-      <article className="card thr-hero">
-        <div className="thr-card__id">
-          {/* The mark, not a monogram. Two letters in a coloured disc is the
-              shape a photograph goes in, so a disc with no photograph in it
-              reads as one that failed to load — and this is the one card on
-              the surface that is about a real person, where "missing image"
-              is the worst thing it could accidentally say. The professional's
-              name is written next to it either way. */}
-          <span className="thr-hero__mark" aria-hidden="true"><BrandIcon variant="cream" /></span>
-          <div>
-            <strong>{link.therapist.name}</strong>
-            <div className="small muted">{t(link.therapist.role)}</div>
+            {(pending.length > 0 || finished.length > 0) && (
+              <>
+                <h3 className="home__sect">{t('Questionnaires')}</h3>
+                {pending.map((r) => {
+                  const inst = r.instrumentId === 'VAS' ? null : INSTRUMENTS[r.instrumentId]
+                  const answered = r.responses.length
+                  return (
+                    <article key={r.id} className="card asmt-card">
+                      <div className="rx-card__top">
+                        <strong>{inst ? inst.name : 'VAS'}</strong>
+                        <span className="small muted">{t('{n} min', { n: minutesFor(r.instrumentId) })}</span>
+                      </div>
+                      <p className="small muted">
+                        {t('{name} asked you to fill this in. Take it when you have a quiet few minutes.', {
+                          name: therapy.link?.therapist.name ?? t('Your therapist'),
+                        })}
+                      </p>
+                      <button className="btn btn--primary" onClick={() => setView({ kind: 'assessment', id: r.id })}>
+                        {answered > 0 ? t('Resume') : t('Start')}
+                      </button>
+                    </article>
+                  )
+                })}
+                {/* Completed ones show the DATE and nothing else. The score is on the
+                    therapist's side, where the history that gives it meaning is. */}
+                {finished.length > 0 && (
+                  <ul className="chron">
+                    {finished.map((r) => (
+                      <li key={r.id} className="chron__row">
+                        <span>{d(r.completedAt ?? r.administeredAt)}</span>
+                        <span>{r.instrumentId === 'VAS' ? 'VAS' : INSTRUMENTS[r.instrumentId].name}</span>
+                        <span className="small muted">{t('Sent')}</span>
+                        <span />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {/* SES-6 — content the professional selected; the platform never
+                suggests, orders or pre-fills a selection (M2P-10). */}
+            <h3 className="home__sect">{m('SES-6', { name: link.therapist.name })}</h3>
+            {!prescriptions.length && <p className="small muted">{t('Nothing selected yet.')}</p>}
+            {prescriptions.map((rx) => {
+              const s = catalog.sessions.find((x) => x.slug === rx.slug)
+              if (!s) return null
+              /* Offer Start only when the session can actually be started at the
+                 prescribed length. A protocol a PO disabled this morning, or a
+                 length that was never rendered, used to open anyway and play the
+                 placeholder bed under a clinical prescription. */
+              const playable = s.available && s.durations.includes(rx.duration)
+              return (
+                <article key={rx.id} className="card rx-card">
+                  <div className="rx-card__top">
+                    <strong>{t('{n}× {name} this week', { n: rx.perWeek, name: t(s.name) })}</strong>
+                    <span className="small muted">({t(durationLabel(rx.duration))} {rx.duration}m)</span>
+                  </div>
+                  {/* Bar and count are ONE thing — the bar is the count drawn — so
+                      they sit together with their own small gap rather than being
+                      two children of the card's larger rhythm. */}
+                  <div className="rx-card__progress">
+                    <div className="rx-card__bar" aria-hidden="true">
+                      <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
+                    </div>
+                    <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
+                  </div>
+                  {rx.done < rx.total && playable && (
+                    <button
+                      className="btn btn--ghost"
+                      onClick={() => props.onStartPrescription({ slug: rx.slug, duration: rx.duration }, rx.id)}
+                    >
+                      {t('Start session')}
+                    </button>
+                  )}
+                  {!playable && (
+                    <p className="small muted">
+                      {t('Not available to play yet — your therapist has been told.')}
+                    </p>
+                  )}
+                </article>
+              )
+            })}
+
+              </div>
+
+              <div className="thr-col">
+            <h3 className="home__sect">{t('Session history')}</h3>
+            {/* A heading with nothing under it reads as a failure. It is not: there
+                has simply been no session yet. */}
+            {!link.sessions.length && <p className="thr-empty">{t('Your sessions together will be listed here.')}</p>}
+            <ul className="chron">
+              {link.sessions.map((s) => {
+                const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
+                return (
+                  <li key={s.id} className="chron__row">
+                    <span>{d(s.at)}</span>
+                    <span>{name ? t(name) : t('Video session')}</span>
+                    <span className="small muted">{s.minutes}m</span>
+                    {/* This column was labelled "Done", which read as "you attended".
+                        It is the notes-sharing flag: whether your therapist wrote up
+                        the session for you to see. Two different facts. */}
+                    <span className="small muted">{s.notesShared ? t('Notes shared') : ''}</span>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <h3 className="home__sect">{t('Goals')}</h3>
+            {!link.goals.length && <p className="thr-empty">{t('Goals you agree on with your therapist appear here.')}</p>}
+            <ul className="goals">
+              {link.goals.map((g) => (
+                <li key={g.id}>
+                  <span className={`goal-dot goal-dot--${g.status}`} aria-hidden="true" />
+                  {t(g.text)}
+                  <span className="small muted"> · {g.status === 'achieved' ? t('Achieved') : t('In progress')}</span>
+                </li>
+              ))}
+            </ul>
+
+              </div>
+            </div>
           </div>
-        </div>
-        {/* WHEN, as one block: the appointment and the line that explains it.
-            They were siblings of the buttons in a single wrapping flex row, so
-            on a desk the status floated between the name and the actions and
-            its own footnote wrapped onto a second line under the avatar. */}
-        <div className="thr-hero__when">
-          {nextAt && <span className="small muted">{t('Next session:')}</span>}
-          {nextAt ? (
-            <strong className="thr-hero__next">
-              {d(nextAt, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </strong>
-          ) : (
-            <strong className="thr-hero__next thr-hero__next--none">{t('No session is scheduled yet.')}</strong>
-          )}
-          {/* The line explains the DISABLED button, so it has to agree with
-              the line above it. It used to say "no session is scheduled yet"
-              whenever there was no confirmed appointment — printed directly
-              beneath a date, which is the one place a person looks to find
-              out when they are next seen. */}
-          {!joinable && (
-            <p className="small muted thr-hero__note">
-              {nextAt
-                ? t('Opens 15 minutes before your session starts.')
-                : t('Your therapist will propose a time.')}
-            </p>
-          )}
-        </div>
-
-        {/* M2P-04 — the professional's informed-consent form, accepted before
-            the first session. The join button stays shut until it is. */}
-        {consentGate && (
-          <div className="thr-consent">
-            <p className="small">{m('CNS-1', { name: link.therapist.name })}</p>
-            <button className="btn btn--ghost" onClick={() => setConsentOpen(true)}>{t('Read and accept the consent form')}</button>
-          </div>
-        )}
-
-        <div className="thr-hero__acts">
-          <button className="btn btn--primary" disabled={!joinable || consentGate} onClick={props.onJoinCall}>
-            {t('Join Session')}
-          </button>
-          {/* A linked person had NO way to book. The slot picker was reachable
-              only from the unlinked state, through "find a therapist" — so once
-              somebody had a therapist the app told them "your therapist will
-              propose a time" and offered nothing, on either side. */}
-          <button
-            className="btn btn--ghost"
-            onClick={() => setView({ kind: 'profile', id: link.therapist.id })}
-          >
-            {nextAt ? t('Change the time') : t('Book a session')}
-          </button>
-        </div>
-        {/* SET-8 — a different professional is always a tap away (M2P-12). */}
-        <button type="button" className="legal-link" onClick={() => setView({ kind: 'list' })}>{m('SET-8')}</button>
-      </article>
+        }
+      />
 
       {consentOpen && card?.consentTemplate && (
         <InformedConsentSheet
@@ -404,136 +478,7 @@ export function TherapistTab(props: TherapistTabProps) {
           onClose={() => setConsentOpen(false)}
         />
       )}
-
-      {/* Below 1100px this is one column and the wrappers do nothing. On a
-          desk they are the two columns: what is ASKED OF YOU on the left,
-          what has HAPPENED on the right. */}
-      <div className="thr-cols">
-        <div className="thr-col">
-
-      {(pending.length > 0 || finished.length > 0) && (
-        <>
-          <h3 className="home__sect">{t('Questionnaires')}</h3>
-          {pending.map((r) => {
-            const inst = r.instrumentId === 'VAS' ? null : INSTRUMENTS[r.instrumentId]
-            const answered = r.responses.length
-            return (
-              <article key={r.id} className="card asmt-card">
-                <div className="rx-card__top">
-                  <strong>{inst ? inst.name : 'VAS'}</strong>
-                  <span className="small muted">{t('{n} min', { n: minutesFor(r.instrumentId) })}</span>
-                </div>
-                <p className="small muted">
-                  {t('{name} asked you to fill this in. Take it when you have a quiet few minutes.', {
-                    name: therapy.link?.therapist.name ?? t('Your therapist'),
-                  })}
-                </p>
-                <button className="btn btn--primary" onClick={() => setView({ kind: 'assessment', id: r.id })}>
-                  {answered > 0 ? t('Resume') : t('Start')}
-                </button>
-              </article>
-            )
-          })}
-          {/* Completed ones show the DATE and nothing else. The score is on the
-              therapist's side, where the history that gives it meaning is. */}
-          {finished.length > 0 && (
-            <ul className="chron">
-              {finished.map((r) => (
-                <li key={r.id} className="chron__row">
-                  <span>{d(r.completedAt ?? r.administeredAt)}</span>
-                  <span>{r.instrumentId === 'VAS' ? 'VAS' : INSTRUMENTS[r.instrumentId].name}</span>
-                  <span className="small muted">{t('Sent')}</span>
-                  <span />
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-
-      {/* SES-6 — content the professional selected; the platform never
-          suggests, orders or pre-fills a selection (M2P-10). */}
-      <h3 className="home__sect">{m('SES-6', { name: link.therapist.name })}</h3>
-      {!prescriptions.length && <p className="small muted">{t('Nothing selected yet.')}</p>}
-      {prescriptions.map((rx) => {
-        const s = catalog.sessions.find((x) => x.slug === rx.slug)
-        if (!s) return null
-        /* Offer Start only when the session can actually be started at the
-           prescribed length. A protocol a PO disabled this morning, or a
-           length that was never rendered, used to open anyway and play the
-           placeholder bed under a clinical prescription. */
-        const playable = s.available && s.durations.includes(rx.duration)
-        return (
-          <article key={rx.id} className="card rx-card">
-            <div className="rx-card__top">
-              <strong>{t('{n}× {name} this week', { n: rx.perWeek, name: t(s.name) })}</strong>
-              <span className="small muted">({t(durationLabel(rx.duration))} {rx.duration}m)</span>
-            </div>
-            {/* Bar and count are ONE thing — the bar is the count drawn — so
-                they sit together with their own small gap rather than being
-                two children of the card's larger rhythm. */}
-            <div className="rx-card__progress">
-              <div className="rx-card__bar" aria-hidden="true">
-                <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
-              </div>
-              <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
-            </div>
-            {rx.done < rx.total && playable && (
-              <button
-                className="btn btn--ghost"
-                onClick={() => props.onStartPrescription({ slug: rx.slug, duration: rx.duration }, rx.id)}
-              >
-                {t('Start session')}
-              </button>
-            )}
-            {!playable && (
-              <p className="small muted">
-                {t('Not available to play yet — your therapist has been told.')}
-              </p>
-            )}
-          </article>
-        )
-      })}
-
-        </div>
-
-        <div className="thr-col">
-      <h3 className="home__sect">{t('Session history')}</h3>
-      {/* A heading with nothing under it reads as a failure. It is not: there
-          has simply been no session yet. */}
-      {!link.sessions.length && <p className="thr-empty">{t('Your sessions together will be listed here.')}</p>}
-      <ul className="chron">
-        {link.sessions.map((s) => {
-          const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
-          return (
-            <li key={s.id} className="chron__row">
-              <span>{d(s.at)}</span>
-              <span>{name ? t(name) : t('Video session')}</span>
-              <span className="small muted">{s.minutes}m</span>
-              {/* This column was labelled "Done", which read as "you attended".
-                  It is the notes-sharing flag: whether your therapist wrote up
-                  the session for you to see. Two different facts. */}
-              <span className="small muted">{s.notesShared ? t('Notes shared') : ''}</span>
-            </li>
-          )
-        })}
-      </ul>
-
-      <h3 className="home__sect">{t('Goals')}</h3>
-      {!link.goals.length && <p className="thr-empty">{t('Goals you agree on with your therapist appear here.')}</p>}
-      <ul className="goals">
-        {link.goals.map((g) => (
-          <li key={g.id}>
-            <span className={`goal-dot goal-dot--${g.status}`} aria-hidden="true" />
-            {t(g.text)}
-            <span className="small muted"> · {g.status === 'achieved' ? t('Achieved') : t('In progress')}</span>
-          </li>
-        ))}
-      </ul>
-
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
 

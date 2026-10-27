@@ -75,6 +75,11 @@ const DEST_OF: Record<Tab, Dest> = {
   home: 'home', therapist: 'therapy', path: 'path',
   progress: 'journey', benefits: 'benefits', profile: 'profile',
 }
+/* Only the library stands on the colour of the mood. Every other mockup is
+   the same photograph under a dark wash — a room you go into, rather than
+   the shelf you browse. A screen gets the deep surface once it is ported. */
+const DEEP: Tab[] = ['therapist']
+
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',
   journey: 'progress', benefits: 'benefits', profile: 'profile',
@@ -594,6 +599,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     }
     return (
       <PatientVideoCall
+        name={displayName(user?.email, legal.profile?.name)}
         addressedAs={state.addressedAs ?? 'm'}
         therapist={therapy.link.therapist}
         startsAt={appointment?.startsAtMs ?? therapy.link.nextSessionAt}
@@ -684,7 +690,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   return (
-    <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])}>
+    <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])} surface={DEEP.includes(tab) ? 'deep' : 'mood'}>
       <div className="tabview" key={`${tab}:${tabReset}`}>
         {tab === 'home' && openChallenge && (
           <ChallengeDetail c={openChallenge} onBack={() => setChallengeOpen(null)} onStart={() => setChallengeOpen(null)} />
@@ -718,6 +724,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'therapist' && (
           <TherapistTab
+            name={displayName(user?.email, legal.profile?.name)}
             hasConvention={hasProfessionalSupport(convention)}
             therapy={therapy}
             update={updateTherapy}

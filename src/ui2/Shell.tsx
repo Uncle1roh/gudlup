@@ -106,17 +106,21 @@ export function Shell({
   dest,
   onDest,
   dests = DESTS,
+  surface = 'mood',
   children,
 }: {
   dest: Dest
   onDest(next: Dest): void
   dests?: Dest[]
+  /** 'mood' is the library's ground; 'deep' is the photograph the therapy,
+      journey, benefits and profile mockups stand on. */
+  surface?: 'mood' | 'deep'
   children: ReactNode
 }) {
   const { t } = useI18n()
 
   return (
-    <div className="gl-root">
+    <div className={`gl-root${surface === 'deep' ? ' gl-root--deep' : ''}`}>
       <nav className="gl-nav" aria-label={t('Main navigation')}>
         <span className="gl-nav__logo" aria-hidden="true">
           <Logomark />

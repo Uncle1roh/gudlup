@@ -116,6 +116,60 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
 
 .gl-root a { color: var(--link); }
 
+/* ------------------------------------------------------- the deep room ---
+   Only the library takes the colour of the mood. Every other mockup — the
+   therapy screens, the journey, the benefits, the profile — stands on the
+   same photograph under a dark wash, with a fixed cream-on-green token set.
+   That is what the files say, and it reads as a deliberate separation: the
+   library is where you browse, this is a room you go into.
+
+   Flipping it back to the mood colour is removing this one block. */
+
+.gl-root--deep {
+  --ink: #faf8df;
+  --ink-2: rgba(250, 248, 223, 0.85);
+  --link: #b7dbad;
+  --glass: rgba(10, 30, 30, 0.5);
+  --btn: rgba(250, 248, 223, 0.08);
+  --line: rgba(250, 248, 223, 0.2);
+  --act-bg: #faf8df;
+  --act-fg: #0b2620;
+  --hair: rgba(250, 248, 223, 0.08);
+  --inset: rgba(250, 248, 223, 0.06);
+
+  background-color: #0b1c1c;
+  background-image:
+    linear-gradient(180deg, rgba(6, 22, 20, 0.62) 0%, rgba(6, 22, 20, 0.45) 45%, rgba(6, 22, 20, 0.62) 100%),
+    url('/ui/bg-lago.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  color: var(--ink);
+}
+
+html.gl2:has(.gl-root--deep),
+html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
+
+.gl-root--deep .glass { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22); }
+.gl-root--deep .glass-btn:hover { background: rgba(250, 248, 223, 0.16); }
+
+/* Darker still, for the minutes with the eyes closed. */
+.gl-root--dim {
+  background-image:
+    linear-gradient(180deg, rgba(3, 10, 10, 0.82), rgba(3, 10, 10, 0.9)),
+    url('/ui/bg-lago.jpg');
+}
+
+/* The mockups' own grid helpers, copied. */
+.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.g4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.s2 { grid-column: span 2; }
+
+@media (max-width: 900px) {
+  .g3, .g4 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .s2 { grid-column: auto; }
+}
+
 /* ----------------------------------------------------------------- glass ---
    Real translucency, not a painted panel: the card takes the colour of the
    mood behind it. Amber ground, amber card.
@@ -326,6 +380,33 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* What is still below the three therapy columns — the questionnaires, the
+   prescriptions, the goals — keeps its own markup until Percurso takes the
+   prescriptions at its own stop. Until then it at least stops being a stack
+   of white boxes on a photograph. */
+.gl-root .thr-extra { display: flex; flex-direction: column; gap: 14px; }
+.gl-root .thr-extra .card,
+.gl-root .thr-extra .chron {
+  border-radius: 22px;
+  padding: 18px 20px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.gl-root .thr-extra .home__sect {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  margin: 10px 0 0;
+}
+
+.gl-root .thr-extra .muted,
+.gl-root .thr-extra .small { color: var(--ink-2); }
 
 .gl-root .gam-challenge {
   display: flex;
