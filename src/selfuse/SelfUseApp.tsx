@@ -45,40 +45,40 @@ import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import { resolveCompanyCode, hasProfessionalSupport } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
-import { Icon, type IconName } from './icons'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
 import { dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
-import { BrandLogo } from '../components/Brand'
-import { useSuTheme } from './theme'
+
 import { useBackLayer } from './backStack'
 import { UnlockSheet } from './UnlockSheet'
 import { unseenUnlocks, type AchievementView } from '../gamification/achievements'
 import { pickHomeChallenge, type ChallengeView } from '../gamification/challenges'
 import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
+import { Shell, type Dest } from '../ui2/Shell'
+import { MoodProvider } from '../mood/MoodProvider'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
    app wants to choose something, and a Home that only linked to the place
    where you choose was a hop with nothing in it. */
-type Tab = 'home' | 'therapist' | 'progress' | 'benefits' | 'profile'
+type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'benefits' | 'profile'
 
-const TABS: { id: Tab; icon: IconName; label: string }[] = [
-  { id: 'home', icon: 'library', label: 'Home' },
-  /* "Therapy", not "Therapist". The tab bar labels what a person FINDS
-     behind each tab, and "Terapeuta" sitting under the reader's own avatar
-     row reads as a statement about them — the one reading it is not one. */
-  { id: 'therapist', icon: 'therapist', label: 'Therapy' },
-  { id: 'progress', icon: 'progress', label: 'Progress' },
-  /* Benefits (docs/gamification/SPEC.md §6) — where the partner offers were,
-     for everyone: care that comes back to you, exchanged for Loops. */
-  { id: 'benefits', icon: 'loop', label: 'Benefits' },
-  { id: 'profile', icon: 'profile', label: 'Profile' },
-]
+
+/* The rail's destinations and this surface's tabs are the same six things
+   under two names. "Percurso" is the only one without a tab behind it yet —
+   it is built at its own stop. */
+const DEST_OF: Record<Tab, Dest> = {
+  home: 'home', therapist: 'therapy', path: 'path',
+  progress: 'journey', benefits: 'benefits', profile: 'profile',
+}
+const TAB_OF: Record<Dest, Tab> = {
+  home: 'home', therapy: 'therapist', path: 'path',
+  journey: 'progress', benefits: 'benefits', profile: 'profile',
+}
 
 type Overlay =
   | { kind: 'none' }
@@ -98,6 +98,7 @@ interface SelfUseAppProps {
 export function SelfUseApp(props: SelfUseAppProps) {
   return (
     <LiveCatalogProvider>
+      <MoodProvider>
       {/* One tap from every screen — the first run, the player, a call, every
           tab (CRS-01). It used to float over the surface as a direct child of
           #root, where `#root > * { width: 100% }` stretched it across the
@@ -111,15 +112,13 @@ export function SelfUseApp(props: SelfUseAppProps) {
         </div>
         <SelfUseSurface {...props} />
       </div>
+      </MoodProvider>
     </LiveCatalogProvider>
   )
 }
 
 function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { t } = useI18n()
-  /* The only thing in the app that reads the theme: the logo is a PNG in two
-     colourways and CSS cannot repaint it. */
-  const theme = useSuTheme()
   const catalog = useCatalog()
   const { user, role, signOut } = useAuth()
   const dp = useDataProvider()
@@ -146,10 +145,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     if (id === tab) setTabReset((n) => n + 1)
     else setTab(id)
   }
-  /* The Partner tab is for admin accounts only while the offers are being
-     put together — an admin reaches it through the console's preview. Any
-     other account never sees the tab, and cannot land on it. */
-  const tabs = TABS
   /* One search, shared by the top bar and the library's own header, so a
      query typed in either place is the same query. */
   const [query, setQuery] = useState('')
@@ -689,7 +684,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   return (
-    <div className="app-frame app-frame--tabs su-studio">
+    <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])}>
       <div className="tabview" key={`${tab}:${tabReset}`}>
         {tab === 'home' && openChallenge && (
           <ChallengeDetail c={openChallenge} onBack={() => setChallengeOpen(null)} onStart={() => setChallengeOpen(null)} />
@@ -781,50 +776,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         />
       )}
 
-      <nav className={`tabbar${tabs.length > 4 ? ' tabbar--5' : ''}`}>
-        {/* The wordmark was a `::before` on this nav — fine while it was
-            decoration, wrong the moment anything had to sit next to it. It is
-            an element now so the search field can stand between it and the
-            tabs, which is where the desktop layout has room for one. Both are
-            hidden at phone widths, where this nav is four icons at the foot
-            of the screen and the search lives in the library's own header. */}
-        <span className="tabbar__brand">
-          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} />
-        </span>
-
-        <label className="su-search su-search--bar">
-          <Icon name="search" size={16} />
-          <input
-            type="search"
-            value={query}
-            placeholder={t('Search sessions')}
-            aria-label={t('Search sessions')}
-            /* Searching is a thing you do to the library, so it takes you
-               there rather than filtering a screen you cannot see. */
-            onChange={(e) => { setQuery(e.target.value); if (e.target.value) setTab('home') }}
-          />
-        </label>
-
-        {tabs.map((tb) => (
-          <button key={tb.id} className={`tabbar__btn${tab === tb.id ? ' is-on' : ''}`} onClick={() => selectTab(tb.id)} aria-current={tab === tb.id ? 'page' : undefined}>
-            <span className="tabbar__icon"><Icon name={tb.icon} /></span>
-            <span className="tabbar__label">{t(tb.label)}</span>
-          </button>
-        ))}
-
-        {/* The desk layout's copy of Help now: the top bar is where the
-            shell's strip would otherwise stand, so it moves in here. Hidden
-            below 1100px, where the strip above the frame carries it. */}
-        <HelpNowButton variant="bar" className="tabbar__help" />
-      </nav>
 
       {onDemoToggle && (
         <button className="dev-toggle su-dev" onClick={onDemoToggle}>
           {demoSeconds ? t('demo {n}s', { n: demoSeconds }) : t('full length')}
         </button>
       )}
-
-    </div>
+    </Shell>
   )
 }
 

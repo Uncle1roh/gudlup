@@ -19,6 +19,7 @@ import { IT_CORPORATE, PT_CORPORATE } from './corporate'
 import { IT_SELFUSE_EXTRA, PT_SELFUSE_EXTRA } from './selfuse-extra'
 import { IT_STUDIO, PT_STUDIO } from './studio'
 import { IT_GAMIFICATION, PT_GAMIFICATION } from './gamification'
+import { IT_UI2, PT_UI2 } from './ui2'
 
 export type Locale = 'en' | 'it' | 'pt-BR'
 
@@ -31,8 +32,8 @@ const STORAGE_KEY = 'gl.locale'
 /* One dictionary per surface after that, so each surface's copy can be
    written and reviewed on its own without editing a shared file. */
 const DICTS: Partial<Record<Locale, Record<string, string>>> = {
-  it: { ...IT, ...IT_SELF_USE, ...IT_LEGAL, ...IT_WORKSPACE, ...IT_CORPORATE, ...IT_SELFUSE_EXTRA, ...IT_STUDIO, ...IT_GAMIFICATION },
-  'pt-BR': { ...PT, ...PT_LEGAL, ...PT_WORKSPACE, ...PT_CORPORATE, ...PT_SELFUSE_EXTRA, ...PT_STUDIO, ...PT_GAMIFICATION },
+  it: { ...IT, ...IT_SELF_USE, ...IT_LEGAL, ...IT_WORKSPACE, ...IT_CORPORATE, ...IT_SELFUSE_EXTRA, ...IT_STUDIO, ...IT_GAMIFICATION, ...IT_UI2 },
+  'pt-BR': { ...PT, ...PT_LEGAL, ...PT_WORKSPACE, ...PT_CORPORATE, ...PT_SELFUSE_EXTRA, ...PT_STUDIO, ...PT_GAMIFICATION, ...PT_UI2 },
 }
 
 /** Options shown in every language picker (Profile, the legal page, the

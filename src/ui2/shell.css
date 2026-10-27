@@ -1,0 +1,295 @@
+/* ============================================================================
+   GOOD LOOP — the redesigned surface (docs/ui-redesign/mockups/*.dc.html)
+
+   This is not a restyle of the old screens. The screens under `.gl-root` are
+   ports of the mockups: their markup, their inline values, their class
+   names. `selfuse.css` and `selfuse-studio.css` are scoped out by simply not
+   matching — nothing here carries `.su-studio`, `.app-frame` or `.su-shell`,
+   so not one of those 4 599 lines applies. They are left in place because
+   other surfaces still use them.
+
+   What lives here: the type, the ground, the token aliases, and the handful
+   of classes the mockups define (`.glass`, `.glass-btn`, `.rail`, `.tile`,
+   `.mood-grid`). Per-screen CSS goes in its own file next to this one.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- type ---
+   Outfit for display, DM Sans for body — the mockup's two families, at the
+   mockup's weights. Self-hosted rather than fetched from Google: the product
+   has never sent a reader's address to a third party for a font, and a
+   redesign is not a reason to start. Same families, same `display: swap`. */
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Roman-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/DMSans-Roman-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/DMSans-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* -------------------------------------------------------------- the ground ---
+   `MoodProvider` puts `.gl2` and the `--mood-*` properties on <html>. The
+   page behind the app has to be the mood colour too, or a dark strip shows
+   past the end of the content on a short screen. */
+
+html.gl2,
+html.gl2 body {
+  background: var(--mood-bg, #beb6a9);
+  transition: background-color 1.5s ease;
+}
+
+/* `.su-shell` is the wrapper that carries the Help now strip above every
+   screen (legal.css). It paints itself dark and centres its children, which
+   would leave the redesigned surface as a column in a black room. Under the
+   mood it steps back: no colour of its own, and its child fills it. */
+html.gl2 .su-shell {
+  background: transparent;
+  align-items: stretch;
+}
+
+/* The Help now strip above the surface (CRS-01 — one tap from every screen)
+   paints itself dark too. It stays, because it is a safety control and not a
+   decoration, but it stops being a black band across the top: the ground
+   runs behind it and the button keeps its own colour. */
+html.gl2 .su-shell__bar {
+  background: transparent;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ root ---
+   The token names the mockups use, pointed at the namespaced ones the
+   provider writes. The admin, HR and workspace consoles read `--ink` and
+   `--line` from `:root`; the aliasing happens HERE, inside the redesigned
+   surface, so the mood cannot reach them. */
+
+.gl-root {
+  --ink: var(--mood-ink, #1f2b2a);
+  --ink-2: var(--mood-ink-2, rgba(31, 43, 42, 0.78));
+  --link: var(--mood-link, #0b5e48);
+  --glass: var(--mood-glass, rgba(255, 255, 255, 0.38));
+  --btn: var(--mood-btn, rgba(255, 255, 255, 0.32));
+  --line: var(--mood-line, rgba(31, 43, 42, 0.16));
+  --act-bg: var(--mood-act-bg, #1f2b2a);
+  --act-fg: var(--mood-act-fg, #faf8df);
+
+  background-color: var(--mood-bg, #beb6a9);
+  color: var(--ink);
+  /* The mockup's two soft lights: one from the top right, one from the
+     bottom left. They sit on top of whatever colour the mood is. */
+  background-image:
+    radial-gradient(ellipse at 75% 0%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(ellipse at 0% 100%, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0) 55%);
+  transition: background-color 1.5s ease, color 1.5s ease;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.gl-root a { color: var(--link); }
+
+/* ----------------------------------------------------------------- glass ---
+   Real translucency, not a painted panel: the card takes the colour of the
+   mood behind it. Amber ground, amber card.
+
+   `backdrop-filter` is expensive — each element carrying it is its own
+   composited layer, and a library of eighty of them killed the renderer in
+   the first attempt. It belongs on panes, never on list items. */
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  transition: background-color 1.5s ease;
+}
+
+.glass-btn {
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  color: var(--ink) !important;
+  cursor: pointer;
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+
+/* No bevel, no inner shadow, no 3-D. Tried and rejected. */
+.gl-root button { font-family: inherit; }
+
+/* ------------------------------------------------------------------ rails ---
+   A horizontal shelf. The scrollbar is thin and takes the line colour, so it
+   belongs to the surface rather than to the operating system. */
+
+.rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* ------------------------------------------------------------------ tiles ---
+   One photograph, moved under each tile by `background-position`, which is
+   how the mockup gets a shelf of different-looking covers out of a single
+   image. Text on a tile is always cream, whatever the mood is, because it
+   sits on the dark gradient rather than on the surface. */
+
+.tile {
+  background-image: url('/ui/bg-lago.jpg');
+  background-size: 420% auto;
+}
+
+.gl-root a.tile { color: #faf8df; }
+
+/* ------------------------------------------------------------- mood grid ---
+   Fixed, not derived: the four corners of the grid are the four anchors of
+   the colour engine, painted as radial gradients over the neutral sand. */
+
+.mood-grid {
+  background:
+    radial-gradient(circle at 100% 0%, #fbc959, rgba(251, 201, 89, 0) 70%),
+    radial-gradient(circle at 0% 0%, #c25237, rgba(194, 82, 55, 0) 70%),
+    radial-gradient(circle at 0% 100%, #46576c, rgba(70, 87, 108, 0) 70%),
+    radial-gradient(circle at 100% 100%, #95e3d3, rgba(149, 227, 211, 0) 70%),
+    #beb6a9;
+}
+
+/* ------------------------------------------------------------ the shell ---
+   The 64px icon rail and the content beside it. Below 900px the rail becomes
+   the glass tab bar at the foot of the screen (the mobile mockups). */
+
+.gl-root {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  /* Nothing on this surface scrolls sideways: a rail scrolls inside itself,
+     and a child wide enough to push the page is a bug in that child. */
+  overflow-x: clip;
+}
+
+.gl-nav {
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.gl-nav__logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #3db189;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #06140f;
+  margin-bottom: 18px;
+  flex: none;
+}
+
+.gl-nav__btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+
+.gl-nav__btn.is-on {
+  background: var(--act-bg);
+  color: var(--act-fg);
+  border-color: transparent;
+}
+
+.gl-main {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.gl-wordmark {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------ the phone ---
+   Not the desktop squeezed: the mobile mockups are their own layout. The
+   rail leaves the side and becomes a glass bar at the foot. */
+
+@media (max-width: 899px) {
+  .gl-root {
+    padding: 24px 18px 18px;
+    gap: 16px;
+    flex-direction: column;
+  }
+
+  .gl-nav {
+    order: 2;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 40;
+    flex: none;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 999px;
+    /* On the phone the rail IS a pane — glass, at the foot of the screen. */
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    backdrop-filter: blur(22px) saturate(140%);
+    border: 1px solid var(--line);
+  }
+
+  .gl-nav__logo { display: none; }
+  .gl-nav__btn { width: 44px; height: 44px; border: none; background: transparent; }
+  .gl-nav__btn.is-on { background: var(--act-bg); color: var(--act-fg); }
+
+  .gl-main { gap: 20px; padding-bottom: 84px; }
+}
+
+/* --------------------------------------------------------------- motion ---
+   The 1.5s colour walk is the one animation on this surface. Somebody who
+   has asked for less motion gets the colour immediately instead. */
+
+@media (prefers-reduced-motion: reduce) {
+  html.gl2,
+  html.gl2 body,
+  .gl-root,
+  .glass,
+  .glass-btn,
+  .gl-nav__btn { transition: none !important; }
+}

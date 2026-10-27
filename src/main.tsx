@@ -6,6 +6,10 @@ import './index.css'
 import './selfuse.css'
 // the dark "Studio" restyle of the Self Use surface — must follow selfuse.css
 import './selfuse-studio.css'
+// the redesign (docs/ui-redesign). Scoped under `.gl-root`, so none of the two
+// sheets above reaches it — it does not restyle them, it replaces them screen
+// by screen. Last, so a name both define resolves here.
+import './ui2/shell.css'
 import './corporate.css'
 import './workspace.css'
 // legal surfaces: Help now, the legal page, in-context notices (src/legal)
