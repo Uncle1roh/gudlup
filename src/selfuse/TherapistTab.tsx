@@ -17,7 +17,7 @@
      toward the Self Use pathway.
    ============================================================================ */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Launch } from '../data/selfUseStore'
 import { useI18n, fmtDate } from '../i18n'
 // BrandIcon moved out with the old hero card
@@ -32,7 +32,6 @@ import type { LegalDocId } from '../legal/types'
 import type { InformedConsentTemplate, PatientInformedConsent, ProfessionalCard } from '../legal/records'
 import { CONSENT_TEMPLATE_ITEMS, CONSENT_TEMPLATE_ITEM_LABELS } from '../legal/records'
 import { useDataProvider } from '../data/provider'
-import { prescriptionsFromPlan, type Plan } from '../data/plan'
 import { normalizeConnectionCode } from '../data/link'
 import {
   expandOpenings,
@@ -41,7 +40,6 @@ import {
   type TherapistListing,
   type WeeklySlot,
 } from '../data/scheduling'
-import { durationLabel } from '../data/selfuse'
 import { useCatalog } from '../data/liveCatalog'
 import {
   seedLink,
@@ -100,17 +98,10 @@ export function TherapistTab(props: TherapistTabProps) {
     else setView({ kind: 'root' })
   })
   const { therapy, update } = props
-  const [plan, setPlan] = useState<Plan | null>(null)
-  useEffect(() => {
-    let alive = true
-    void dp.getMyPlan().then((p) => { if (alive) setPlan(p) }).catch(() => undefined)
-    return () => { alive = false }
-  }, [dp])
 
   /* The professional's public card (registration, verified date, consent
      form) and what this person has already accepted — the two things the
      consent gate compares (M2P-04). Nothing clinical. */
-  const { m } = useLegal()
   const linkedId = therapy.link?.therapist.id ?? null
   const [card, setCard] = useState<ProfessionalCard | null>(null)
   const [accepted, setAccepted] = useState<PatientInformedConsent[]>([])
@@ -126,35 +117,6 @@ export function TherapistTab(props: TherapistTabProps) {
   const pending = pendingFor(rows, SELF_USE_PATIENT_ID)
   const finished = completedFor(rows, SELF_USE_PATIENT_ID)
 
-  /* Prescriptions come from the therapist's PLAN on the server. They used to
-     come from `seedLink` fixtures written into this app's own storage, so
-     anything a real clinician prescribed reached nobody. The local list is
-     still the fallback for the demo, where there is no plan to read.
-
-     This is computed HERE, above every early return below, because a hook
-     that runs only on one of the screens is not a hook — React counts them
-     in order, and the screens below would render fewer than the root did.
-     That is exactly what crashed the booking screen. */
-  const linkedPrescriptions = therapy.link?.prescriptions
-  const prescriptions = useMemo(() => {
-    const fromPlan = prescriptionsFromPlan(plan)
-    if (!fromPlan.length) return (linkedPrescriptions ?? []).map((rx) => ({ ...rx, total: rx.perWeek }))
-    return fromPlan.map((rx, i) => {
-      const session = catalog.sessions.find((x) => x.protocolCode === rx.protocolCode)
-      return {
-        id: `plan-${rx.protocolCode}-${rx.duration}-${i}`,
-        slug: session?.slug ?? '',
-        duration: rx.duration,
-        perWeek: rx.perWeek,
-        assignedAt: plan?.updatedAt ?? Date.now(),
-        done: rx.done,
-        /* Done is counted across the WHOLE prescription; perWeek is the weekly
-           rhythm. Printing one against the other produced "2 of 1 done". */
-        total: rx.total,
-        status: (rx.done >= rx.total ? 'completed' : 'active') as 'active' | 'completed',
-      }
-    })
-  }, [plan, linkedPrescriptions, catalog.sessions])
 
   /* ---------------------------------------------------- booking flow ----- */
 
@@ -379,50 +341,6 @@ export function TherapistTab(props: TherapistTabProps) {
                 )}
               </>
             )}
-
-            {/* SES-6 — content the professional selected; the platform never
-                suggests, orders or pre-fills a selection (M2P-10). */}
-            <h3 className="home__sect">{m('SES-6', { name: link.therapist.name })}</h3>
-            {!prescriptions.length && <p className="small muted">{t('Nothing selected yet.')}</p>}
-            {prescriptions.map((rx) => {
-              const s = catalog.sessions.find((x) => x.slug === rx.slug)
-              if (!s) return null
-              /* Offer Start only when the session can actually be started at the
-                 prescribed length. A protocol a PO disabled this morning, or a
-                 length that was never rendered, used to open anyway and play the
-                 placeholder bed under a clinical prescription. */
-              const playable = s.available && s.durations.includes(rx.duration)
-              return (
-                <article key={rx.id} className="card rx-card">
-                  <div className="rx-card__top">
-                    <strong>{t('{n}× {name} this week', { n: rx.perWeek, name: t(s.name) })}</strong>
-                    <span className="small muted">({t(durationLabel(rx.duration))} {rx.duration}m)</span>
-                  </div>
-                  {/* Bar and count are ONE thing — the bar is the count drawn — so
-                      they sit together with their own small gap rather than being
-                      two children of the card's larger rhythm. */}
-                  <div className="rx-card__progress">
-                    <div className="rx-card__bar" aria-hidden="true">
-                      <span style={{ width: `${Math.min(100, Math.round((rx.done / Math.max(1, rx.total)) * 100))}%` }} />
-                    </div>
-                    <div className="small muted">{t('{done} of {total} done', { done: rx.done, total: rx.total })}</div>
-                  </div>
-                  {rx.done < rx.total && playable && (
-                    <button
-                      className="btn btn--ghost"
-                      onClick={() => props.onStartPrescription({ slug: rx.slug, duration: rx.duration }, rx.id)}
-                    >
-                      {t('Start session')}
-                    </button>
-                  )}
-                  {!playable && (
-                    <p className="small muted">
-                      {t('Not available to play yet — your therapist has been told.')}
-                    </p>
-                  )}
-                </article>
-              )
-            })}
 
               </div>
 

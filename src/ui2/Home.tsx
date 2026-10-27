@@ -22,6 +22,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { greeting } from '../selfuse/greeting'
 import { useDataProvider } from '../data/provider'
 import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { SELF_USE_THEMES, durationLabel, type SelfUseTheme } from '../data/selfuse'
@@ -134,11 +135,9 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         <span className="gl-wordmark">goodloop</span>
 
         <div style={{ flex: '0 1 560px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-          {name && (
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>
-              {t('Hello, {name}.', { name })}
-            </span>
-          )}
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>
+            {name ? `${t(greeting())}, ${name}` : t(greeting())}
+          </span>
           <MoodChip open={checkInOpen} onToggle={() => setCheckInOpen((v) => !v)} />
           {checkInOpen && <CheckIn onClose={() => setCheckInOpen(false)} />}
         </div>
@@ -166,7 +165,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-2)' }}>
               <span aria-hidden="true" style={{ width: 28, height: 2, background: 'currentColor' }} />
-              {t('Featured this week')}
+              {t('A good place to start')}
             </span>
 
             <h1 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 400, fontSize: 76, lineHeight: 0.95, letterSpacing: '-0.03em' }}>
@@ -190,7 +189,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
                 <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: '50%', background: '#3DB189', color: '#06140f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor" /></svg>
                 </span>
-                {t('Listen now')}
+                {t('Play')} · {shortestOf(featured)}m
               </button>
               <button
                 type="button"
@@ -198,7 +197,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
                 onClick={() => onOpen(featured.slug)}
                 style={{ height: 56, padding: '0 24px', borderRadius: 999, display: 'flex', alignItems: 'center', fontWeight: 500, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }}
               >
-                {t('About this session')}
+                {t('More')}
               </button>
             </div>
           </div>
@@ -209,13 +208,13 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
             <circle cx="11" cy="11" r="7" />
             <path d="M20 20l-3.5-3.5" />
           </svg>
-          <span className="gl-sr">{t('Search the library')}</span>
+          <span className="gl-sr">{t('Search sessions')}</span>
           <input
             className="gl-search"
             type="search"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
-            placeholder={t('Search by feeling, goal or session')}
+            placeholder={t('Search sessions')}
             style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: 'var(--ink)', fontFamily: "'DM Sans', sans-serif", fontSize: 16 }}
           />
         </label>
@@ -223,7 +222,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
 
       {/* --------------------------------------------------------- chips --- */}
       <div role="tablist" aria-label={t('Categories')} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        {([{ id: 'all' as const, label: 'All' }, ...SELF_USE_THEMES]).map((c) => {
+        {([{ id: 'all' as const, label: 'All themes' }, ...SELF_USE_THEMES]).map((c) => {
           const on = theme === c.id
           return (
             <button

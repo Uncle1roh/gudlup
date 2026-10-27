@@ -45,7 +45,7 @@ export function Therapy({
 
   return (
     <>
-      <TopBar name={name} role={t('Employee')} />
+      <TopBar name={name} />
       <PageTitle title={t('Therapy')} note={t('Confidential: your company does not see your sessions or what you talk about.')} />
 
       <section className="g3">
@@ -58,7 +58,7 @@ export function Therapy({
           onEnterRoom={onEnterRoom}
         />
         <Diary link={link} />
-        <Booking link={link} onBooked={onBooked} onFindAnother={onFindAnother} />
+        <Booking link={link} onBooked={onBooked} />
       </section>
 
       {extraSlot}
@@ -111,8 +111,8 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        <Fact label={t('When')} value={at ? d(at, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : t('Not scheduled yet')} />
-        <Fact label={t('Duration')} value={t('about {n} min', { n: appointment?.durationMin ?? 50 })} />
+        <Fact label={t('Next session:')} value={at ? d(at, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : t('No session is scheduled yet.')} />
+        <Fact label={t('Duration')} value={t('{n} min', { n: appointment?.durationMin ?? 50 })} />
       </div>
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)' }}>
@@ -123,7 +123,7 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
             <rect x="17" y="14" width="4" height="6" rx="1.5" />
           </svg>
         </span>
-        {t('Wired stereo headphones are required')}
+        {t('Stereo headphones are required for this session')}
       </span>
 
       {consentGate && (
@@ -153,7 +153,7 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
           <rect x="3" y="6" width="12" height="12" rx="3" />
           <path d="M15 10l6-3v10l-6-3z" />
         </svg>
-        {t('Enter the waiting room')}
+        {t('Join Session')}
       </button>
 
       {!joinable && (
@@ -219,9 +219,9 @@ function Diary({ link }: { link: TherapyLink }) {
         </div>
       ))}
 
-      <h2 style={{ margin: '18px 0 6px', fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: 20 }}>{t('History')}</h2>
+      <h2 style={{ margin: '18px 0 6px', fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: 20 }}>{t('Session history')}</h2>
 
-      {history.length === 0 && <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>{t('Your sessions appear here afterwards.')}</p>}
+      {history.length === 0 && <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>{t('Your sessions together will be listed here.')}</p>}
 
       {history.map((s) => (
         <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, minHeight: 36, alignItems: 'center' }}>
@@ -237,11 +237,7 @@ function Diary({ link }: { link: TherapyLink }) {
 
 /* ------------------------------------------------------------ booking --- */
 
-function Booking({ link, onBooked, onFindAnother }: {
-  link: TherapyLink
-  onBooked(): void
-  onFindAnother(): void
-}) {
+function Booking({ link, onBooked }: { link: TherapyLink; onBooked(): void }) {
   const { t, d } = useI18n()
   const dp = useDataProvider()
   const [openings, setOpenings] = useState<number[] | null>(null)
@@ -304,7 +300,7 @@ function Booking({ link, onBooked, onFindAnother }: {
 
   return (
     <article className="glass" style={{ borderRadius: 28, padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: 20 }}>{t('Book a new session')}</h2>
+      <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 500, fontSize: 20 }}>{t('Book a session')}</h2>
 
       {/* One professional, named — not a choice of three. Changing who you
           see is a decision of its own, and it has its own door below. */}
@@ -321,7 +317,7 @@ function Booking({ link, onBooked, onFindAnother }: {
       {openings === null && <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>{t('Loading…')}</p>}
 
       {openings !== null && days.length === 0 && (
-        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>{t('No open times in the next three weeks.')}</p>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>{t('No free times in the next three weeks. Try again later.')}</p>
       )}
 
       {days.length > 0 && (
@@ -388,11 +384,7 @@ function Booking({ link, onBooked, onFindAnother }: {
           cursor: slot == null || busy ? 'not-allowed' : 'pointer', opacity: slot == null || busy ? 0.45 : 1,
         }}
       >
-        {slot == null ? t('Choose a time') : t('Confirm · {when}', { when: d(slot, { weekday: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) })}
-      </button>
-
-      <button type="button" className="legal-link" style={{ alignSelf: 'center' }} onClick={onFindAnother}>
-        {t('See other professionals')}
+        {slot == null ? t('Pick a time above') : t('Confirm')}
       </button>
     </article>
   )

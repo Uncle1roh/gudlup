@@ -145,7 +145,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
     const minutes = startsAt ? Math.max(0, Math.round((startsAt - Date.now()) / 60_000)) : null
     return (
       <Shell dest="therapy" onDest={onLeave} surface="deep">
-        <TopBar name={name} role={t('Employee')} />
+        <TopBar name={name} />
         <PageTitle
           title={t('Waiting room')}
           note={
@@ -158,7 +158,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
         <div className="call2">
           <div className="call2-stage">
             <SelfView call={call} />
-            <span className="call2-stage__tag">{t('Your camera')}</span>
+            <span className="call2-stage__tag">{t('Camera')}</span>
             <div className="call2-bar">
               <button type="button" className="call2-btn" disabled={!ready} onClick={call.toggleMic} aria-pressed={!call.micOn} aria-label={call.micOn ? t('Mute') : t('Unmute')}>
                 <Icon name={call.micOn ? 'mic' : 'micOff'} size={20} />
@@ -237,7 +237,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
                 button is here for the moment they already have. */}
             <button type="button" className="call2-act" disabled={!call.peerPresent} onClick={() => setStage('video')}>
               <Icon name="camera" size={18} />
-              {t('Enter the call')}
+              {t('Enter session')}
             </button>
             <p className="call2-note" style={{ textAlign: 'center' }}>
               {call.callState === 'connecting'
@@ -246,7 +246,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
                   ? t('Your therapist is here. The session will open by itself.')
                   : t('Waiting for your therapist to open the room…')}
             </p>
-            <button type="button" className="call2-quiet" onClick={onLeave}>{t('Back to Therapy')}</button>
+            <button type="button" className="call2-quiet" onClick={onLeave}>{t('Leave')}</button>
           </div>
         </div>
       </Shell>
@@ -377,8 +377,8 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
             </span>
             <p className="call2-note" style={{ color: 'var(--ink)' }}>
               {debrief
-                ? t('The treatment is over. Talk about what you felt, in your own words.')
-                : t('Your therapist will start the treatment shortly. Keep your headphones on.')}
+                ? t('Debrief with your therapist')
+                : t('Your therapist will start the session when you are both ready.')}
             </p>
           </article>
         </div>
@@ -585,7 +585,7 @@ function TreatmentMode({
         <path d="M10 140c18-24 36 24 54 0s36 24 54 0 36 24 54 0 36 24 54 0 36 24 54 0" fill="none" stroke="#F4F0BE" strokeWidth="1.4" opacity=".35" />
       </svg>
 
-      <p className="treat2__line">{t('Close your eyes and just listen.')}</p>
+      <p className="treat2__line">{t('Close your eyes and follow the sound.')}</p>
       <p className="treat2__sub">{t('The screen dims by itself.')}</p>
 
       <div className="treat2__state">

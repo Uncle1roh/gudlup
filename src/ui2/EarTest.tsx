@@ -44,17 +44,17 @@ export function EarTest({ onPass }: { onPass?(): void }) {
       <div className="call2-pane__top">
         <h2 className="call2-pane__h">{t('Headphone test')}</h2>
         <button type="button" className="glass-btn call2-pill" onClick={play}>
-          {state.kind === 'idle' ? t('Play a sound') : t('Play again')}
+          {state.kind === 'idle' ? t('Play the tone') : t('Play the tone again')}
         </button>
       </div>
 
       {state.kind === 'idle' && (
-        <p className="call2-note">{t('A session moves sound between your ears. One tap tells you whether yours are working.')}</p>
+        <p className="call2-note">{t('Put your headphones on. We will play a short tone in one ear.')}</p>
       )}
 
       {state.kind !== 'idle' && (
         <>
-          <p className="call2-note">{t('Which ear did you hear the sound in?')}</p>
+          <p className="call2-note">{t('Which ear hears the tone?')}</p>
           <div className="call2-ears">
             <button type="button" className="call2-ear" onClick={() => answer('left')}>{t('Left')}</button>
             <button type="button" className="call2-ear" onClick={() => answer('right')}>{t('Right')}</button>

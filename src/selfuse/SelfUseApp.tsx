@@ -60,6 +60,8 @@ import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
 import { Shell, type Dest } from '../ui2/Shell'
 import { MoodProvider } from '../mood/MoodProvider'
+import { Path } from '../ui2/Path'
+import { usePrescriptions } from '../ui2/prescriptions'
 
 /* Home IS the library. There is no separate Explore tab: the rails, the
    pathways and the continue card are one screen, because a person opening the
@@ -78,7 +80,7 @@ const DEST_OF: Record<Tab, Dest> = {
 /* Only the library stands on the colour of the mood. Every other mockup is
    the same photograph under a dark wash — a room you go into, rather than
    the shelf you browse. A screen gets the deep surface once it is ported. */
-const DEEP: Tab[] = ['therapist']
+const DEEP: Tab[] = ['therapist', 'path']
 
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',
@@ -155,6 +157,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
+  /* Percurso's list, read once for the whole surface. */
+  const prescriptions = usePrescriptions(therapy)
   const videoOn = useFeature('video')
 
   /* The browser's back, one layer at a time (see backStack.ts). Registered in
@@ -719,6 +723,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
                  than whatever order the library happens to be in. */
               saved: s.saved.includes(slug) ? s.saved.filter((x) => x !== slug) : [slug, ...s.saved],
             }))}
+          />
+        )}
+
+        {tab === 'path' && (
+          <Path
+            name={displayName(user?.email, legal.profile?.name)}
+            therapistName={therapy.link?.therapist.name ?? null}
+            prescriptions={prescriptions}
+            onStart={(slug, duration, id) => setLaunch({ slug, duration, prescriptionId: id })}
           />
         )}
 

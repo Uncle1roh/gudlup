@@ -240,6 +240,60 @@
 .call2-act[disabled] { opacity: 0.45; cursor: not-allowed; }
 .call2-quiet { background: none; border: 0; color: var(--ink-2); font: 400 14px 'DM Sans', system-ui, sans-serif; cursor: pointer; text-decoration: underline; }
 
+/* ------------------------------------------------------------- percurso ---
+   The mockup's row, laid out three to a desk. */
+
+.path2-card { border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.path2-top { display: flex; align-items: center; gap: 12px; }
+
+.path2-icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #faf8df;
+}
+
+.path2-id { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.path2-name { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
+.path2-desc { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.path2-play {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 0;
+  background: var(--act-bg);
+  color: var(--act-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.path2-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.path2-pill {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.path2-pill--quiet { color: var(--ink-2); }
+.path2-bar { height: 4px; border-radius: 999px; background: rgba(250, 248, 223, 0.18); overflow: hidden; }
+.path2-bar span { display: block; height: 100%; background: #3db189; }
+.path2-count { font-size: 12px; color: var(--ink-2); }
+.path2-off { font-size: 12px; color: #f2c29a; }
+
 /* ------------------------------------------------------------ treatment ---
    No rail, no panes: a dim photograph, the orb, one line, and the two
    things the person is still allowed to do. */
