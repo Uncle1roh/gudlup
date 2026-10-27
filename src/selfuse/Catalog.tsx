@@ -74,6 +74,10 @@ interface CatalogProps {
   top?: string[]
   /** The shelf an admin defined. Absent or empty = the built-in rails. */
   storedRails?: ExploreRail[] | null
+  /** The search field, which the redesign puts beside the billboard — where
+      the "Sua trilha" box used to be (HomeMood.dc.html). It belongs to the
+      shell, which owns the query, so it arrives as a slot. */
+  searchSlot?: ReactNode
 }
 
 export function Catalog({
@@ -88,6 +92,7 @@ export function Catalog({
   query = '',
   onClearQuery,
   storedRails,
+  searchSlot,
   saved = [],
   onToggleSave,
   recent = [],
@@ -249,14 +254,43 @@ export function Catalog({
         ) : (
           <>
         {!filtering && hero && (
-          <Hero
-            session={hero}
-            pathway={featuredSlug && hero.slug === featuredSlug ? heroPathway : undefined}
-            onOpen={() => onOpen(hero.slug)}
-            onStart={(d) => onQuickStart(hero.slug, d)}
-            onOpenPathway={onOpenPathway}
-          />
+          <div className="cat-top">
+            <Hero
+              session={hero}
+              pathway={featuredSlug && hero.slug === featuredSlug ? heroPathway : undefined}
+              onOpen={() => onOpen(hero.slug)}
+              onStart={(d) => onQuickStart(hero.slug, d)}
+              onOpenPathway={onOpenPathway}
+            />
+            {searchSlot}
+          </div>
         )}
+
+        {/* The categories as chips, over the rails: one row, the way the
+            redesign draws it. The themes are the catalogue's real five —
+            the mockup's seven include two we do not have material filed
+            under, and a chip that filters to nothing is a lie. */}
+        <div className="cat-chips" role="tablist" aria-label={t('Categories')}>
+          <button
+            role="tab"
+            className="cat-chip"
+            aria-selected={theme === 'all' && !onlyPathways}
+            onClick={() => { setTheme('all'); setOnlyPathways(false) }}
+          >
+            {t('All')}
+          </button>
+          {SELF_USE_THEMES.map((th) => (
+            <button
+              key={th.id}
+              role="tab"
+              className="cat-chip"
+              aria-selected={theme === th.id}
+              onClick={() => { setOnlyPathways(false); setTheme(theme === th.id ? 'all' : th.id) }}
+            >
+              {t(th.label)}
+            </button>
+          ))}
+        </div>
 
         <div className="cat__filters">
           <div className="filter-row" role="group" aria-label={t('Duration')}>
@@ -388,9 +422,16 @@ function Hero({
     <section className="cat-hero" style={coverStyle(cover)}>
       <div className="cat-hero__body">
         <span className="cat-hero__eyebrow">
-          {pathway ? t('Today in your pathway') : t('A good place to start')}
+          {pathway ? t('Today in your pathway') : t('Featured this week')}
         </span>
         <h2 className="cat-hero__title">{t(session.name)}</h2>
+        {/* The three lengths, as the redesign's billboard prints them. NOT
+            the protocol code: a code is a clinical identifier and never
+            reaches the person reading this screen, whatever a mockup draws
+            (Explore.tsx's vocabulary rule, CLAUDE.md). */}
+        <p className="cat-hero__meta">
+          {session.durations.map((d) => `${t(durationLabel(d))} ${d} min`).join(' · ')}
+        </p>
         {pathway ? (
           <>
             <p className="cat-hero__blurb">
@@ -404,12 +445,12 @@ function Hero({
         )}
         <div className="cat-hero__actions">
           <button className="btn btn--light" onClick={() => onStart(shortest)}>
-            <Icon name="play" size={17} /> {t('Play')} · {shortest}m
+            <Icon name="play" size={17} /> {t('Listen now')} · {shortest}m
           </button>
           {pathway && onOpenPathway ? (
             <button className="btn btn--light btn--outline" onClick={onOpenPathway}>{t('See pathway')}</button>
           ) : (
-            <button className="btn btn--light btn--outline" onClick={onOpen}>{t('More')}</button>
+            <button className="btn btn--light btn--outline" onClick={onOpen}>{t('About this session')}</button>
           )}
         </div>
       </div>

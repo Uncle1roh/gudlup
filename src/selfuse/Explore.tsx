@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { MoodPill } from '../mood/MoodPill'
 import { useLegal } from '../legal/LegalContext'
 import { LibraryNotice } from '../legal/LibraryNotice'
 import { greeting, longDate } from './greeting'
@@ -67,7 +68,7 @@ type View =
   | { kind: 'session'; slug: string }
 
 export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard }: ExploreProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
   const dp = useDataProvider()
@@ -85,6 +86,17 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
     void dp.listExploreRails()
       .then((rows) => { if (alive) setRails(rows) })
       .catch(() => { if (alive) setRails([]) })
+    return () => { alive = false }
+  }, [dp])
+  /* The balance in the top bar. One number the person already owns; a
+     failure just leaves it out rather than showing a zero they have not
+     earned. */
+  const [loops, setLoops] = useState<number | null>(null)
+  useEffect(() => {
+    let alive = true
+    void dp.getWallet()
+      .then((w) => { if (alive) setLoops(Math.round((w?.balanceCenti ?? 0) / 100)) })
+      .catch(() => { if (alive) setLoops(null) })
     return () => { alive = false }
   }, [dp])
   useEffect(() => {
@@ -161,15 +173,24 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
 
   return (
     <div className="su-page explore">
-      {/* The date above, the greeting below — the shape the app opens with.
-          A person arriving at a library of clinical material should be
-          greeted by name before they are shown a shelf. */}
-      <header className="su-hello">
-        <span className="su-hello__date">{t(longDate())}</span>
-        <h1 className="display su-hello__line">
-          {name ? `${t(greeting())}, ${name}` : t(greeting())}
-        </h1>
+      {/* The top bar the redesign opens with (HomeMood.dc.html): who you
+          are, how you are, and what you have. The greeting is still the
+          heading of the page — a person arriving at a library of clinical
+          material is greeted by name before they are shown a shelf — and
+          the check-in sits beside it rather than on a screen of its own. */}
+      <header className="su-top">
+        <div className="su-top__hello">
+          <h1 className="display su-top__greet">
+            {name ? `${t(greeting())}, ${name}.` : `${t(greeting())}.`}
+          </h1>
+          <MoodPill />
+        </div>
+        <div className="su-top__right">
+          {loops !== null && <span className="su-top__loops">{loops.toLocaleString(locale)} Loops</span>}
+          <span className="su-top__avatar" aria-hidden="true">{initialsOf(name)}</span>
+        </div>
       </header>
+      <p className="su-top__date">{t(longDate())}</p>
 
       {/* The ONE legal element of this screen (MN-25): on the first visit the
           category note (CAT-1 / CAT-2 — this library is made for the working
@@ -210,6 +231,18 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         }
         query={query}
         onClearQuery={() => onQuery?.('')}
+        searchSlot={
+          <label className="su-find">
+            <Icon name="search" size={20} />
+            <span className="sr-only">{t('Search the library')}</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => onQuery?.(e.target.value)}
+              placeholder={t('Search by feeling, goal or session')}
+            />
+          </label>
+        }
         saved={saved}
         onToggleSave={onToggleSave}
         recent={recent}
@@ -609,4 +642,10 @@ function SessionDetail({
       </div>
     </div>
   )
+}
+
+/** Two letters for the avatar in the top bar. */
+function initialsOf(name: string | null): string {
+  if (!name) return 'GL'
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'GL'
 }
