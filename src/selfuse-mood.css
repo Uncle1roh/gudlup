@@ -193,16 +193,25 @@ html.su-mood .su-grained::after { opacity: 0.07; }
    wrapper, so every screen gets it at once. Buttons are flat glass pills:
    no bevel, no 3D — that was tried and rejected. */
 
+/* Translucent, hairline, large radius — on everything that is a surface. */
 html.su-mood .su-studio :where(
   .card, .panel, .sheet, .tile, .su-card, .cat-card-wrap, .metric, .week,
   .daylist, .notes, .check, .chip, .filter-chip, .mood-chip, .pw-big,
-  .cat-hero, .su-callout, .legal-ack, .toggle-row, .benefit, .conq
+  .su-callout, .legal-ack, .toggle-row, .benefit, .conq
 ) {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--line);
   transition: background-color 1.5s ease, border-color 1.5s ease;
+}
+
+/* The BLUR is expensive — each blurred element is its own composited layer —
+   and the library puts eighty cards on one screen. Eighty blur layers took
+   the renderer down in testing, so the blur is reserved for the few big
+   surfaces that read as panes of glass; the small ones are translucent and
+   look the same against a flat colour. */
+html.su-mood .su-studio :where(.card, .panel, .sheet, .su-card) {
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
 }
 
 html.su-mood .su-studio :where(.card, .panel, .sheet, .su-card) { border-radius: 26px; }
@@ -361,4 +370,247 @@ html.su-mood .su-search--bar { display: none !important; }
     transition-duration: 0.01ms !important;
     animation: none !important;
   }
+}
+
+/* =========================================================== the check-in ==
+
+   The two-axis grid, the words, and the two-second confirmation. The grid's
+   four corners are the spec's four anchors, painted as radial gradients so
+   the square itself shows what it is asking.
+   ============================================================================ */
+
+.mood-ci {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--ink);
+}
+.mood-ci__head { display: flex; align-items: baseline; gap: 10px; }
+.mood-ci__title { margin: 0; font-family: var(--display); font-weight: 500; font-size: 20px; }
+.mood-ci__hint { font-size: 12px; color: var(--ink-2); }
+.mood-ci__close {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--btn); border: 1px solid var(--line); color: var(--ink); font-size: 18px; line-height: 1;
+}
+.mood-ci__body { display: flex; gap: 18px; align-items: stretch; flex-wrap: wrap; }
+.mood-ci__gridwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mood-ci__row { display: flex; align-items: center; gap: 6px; }
+.mood-ci__axis { font-size: 12px; color: var(--ink-2); }
+.mood-ci__axis--left { writing-mode: vertical-rl; transform: rotate(180deg); }
+.mood-ci__axis--right { writing-mode: vertical-rl; }
+
+.mood-ci__grid {
+  position: relative;
+  width: 200px; height: 200px;
+  border-radius: 20px;
+  cursor: crosshair;
+  touch-action: none;
+  /* the four anchors, in their corners (spec § Regras da cor) */
+  background:
+    radial-gradient(circle at 100% 0%, #FBC959, rgba(251, 201, 89, 0) 70%),
+    radial-gradient(circle at 0% 0%, #C25237, rgba(194, 82, 55, 0) 70%),
+    radial-gradient(circle at 0% 100%, #46576C, rgba(70, 87, 108, 0) 70%),
+    radial-gradient(circle at 100% 100%, #95E3D3, rgba(149, 227, 211, 0) 70%),
+    #BEB6A9;
+}
+.mood-ci__cross { position: absolute; background: rgba(255, 255, 255, 0.55); }
+.mood-ci__cross--v { left: 50%; top: 0; bottom: 0; width: 1px; }
+.mood-ci__cross--h { top: 50%; left: 0; right: 0; height: 1px; }
+.mood-ci__dot {
+  position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.mood-ci__words { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 8px; }
+.mood-ci__q { font-size: 14px; font-weight: 500; }
+.mood-ci__word {
+  min-height: 40px; padding: 0 14px; border-radius: var(--r-pill);
+  background: var(--btn); border: 1px solid var(--line); color: var(--ink);
+  font: 500 14px var(--sans);
+}
+.mood-ci__word:hover { background: var(--glass); }
+.mood-ci__skip {
+  align-self: flex-start; margin-top: auto; padding: 4px 0;
+  background: none; border: none; color: var(--ink-2); font-size: 13px; text-decoration: underline;
+}
+.mood-ci__live { font-size: 12.5px; color: var(--ink-2); }
+.mood-ci__note { font-size: 12.5px; color: var(--ink-2); }
+
+.mood-done {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 26px 16px; text-align: center;
+}
+.mood-done__swatch {
+  width: 86px; height: 86px; border-radius: 50%;
+  border: 3px solid var(--ink); transition: background-color 1.5s ease;
+}
+.mood-done__line { margin: 0; font-family: var(--display); font-size: 20px; color: var(--ink); }
+
+/* ---- the pill in the top bar ---- */
+.mood-pill__wrap { position: relative; flex: 1 1 320px; min-width: 0; max-width: 560px; }
+.mood-pill {
+  width: 100%; height: 48px; padding: 0 14px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 500 15px var(--sans);
+  text-align: left;
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+.mood-pill__swatch {
+  width: 32px; height: 32px; flex: none; border-radius: 50%;
+  border: 2px solid var(--ink); transition: background-color 1.5s ease;
+}
+.mood-pill__label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mood-pill__caret { opacity: 0.7; }
+
+.mood-pop {
+  position: absolute; top: 58px; left: 0; right: 0; z-index: 30;
+  min-width: min(380px, 92vw);
+  padding: 22px; border-radius: 28px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  backdrop-filter: blur(30px) saturate(150%);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+/* ---- before and after, side by side ---- */
+.mood-ba { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.mood-ba__pair { display: flex; align-items: center; gap: 18px; }
+.mood-ba__one { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mood-ba__swatch {
+  width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--line);
+}
+.mood-ba__when { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.mood-ba__word { font-family: var(--display); font-size: 17px; color: var(--ink); }
+.mood-ba__arrow { color: var(--ink-2); font-size: 20px; }
+
+@media (max-width: 520px) {
+  .mood-ci__grid { width: 170px; height: 170px; }
+  .mood-pop { padding: 16px; border-radius: 22px; }
+}
+
+/* ================================================================= HOME ===
+
+   "Home IS the library" was already true; what changes is the shape of its
+   first screen (HomeMood.dc.html):
+
+     top bar     greeting · the check-in pill · Loops · avatar
+     billboard   the featured session, big, on the mood colour — with the
+                 SEARCH where the "Sua trilha" box used to be
+     chips       the catalogue's real themes
+     rails       unchanged, which is why they are not in this block
+   ============================================================================ */
+
+html.su-mood .su-top {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 16px; padding-top: 6px;
+  position: relative; z-index: 5;
+}
+html.su-mood .su-top__hello {
+  flex: 1 1 420px; min-width: 0;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+html.su-mood .su-top__greet {
+  margin: 0; font-family: var(--display); font-weight: 400; font-size: 26px;
+  white-space: nowrap; color: var(--ink);
+}
+html.su-mood .su-top__right { display: flex; align-items: center; gap: 12px; }
+html.su-mood .su-top__loops {
+  height: 44px; padding: 0 16px; display: flex; align-items: center;
+  border-radius: var(--r-pill); background: var(--btn); border: 1px solid var(--line);
+  font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+html.su-mood .su-top__avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--act-bg); color: var(--act-fg); font-weight: 600;
+}
+html.su-mood .su-top__date {
+  margin: 2px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ---- the billboard, and the search beside it ---- */
+html.su-mood .cat-top {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; flex-wrap: wrap; margin-bottom: 8px;
+}
+html.su-mood .cat-top .cat-hero { flex: 1 1 520px; }
+html.su-mood .su-find {
+  flex: 0 1 440px; height: 60px; min-width: 260px;
+  display: flex; align-items: center; gap: 12px; padding: 0 22px;
+  border-radius: var(--r-pill);
+  background: var(--glass); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  color: var(--ink);
+}
+html.su-mood .su-find input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: var(--ink); font: 400 16px var(--sans);
+}
+html.su-mood .su-find input::placeholder { color: var(--ink-2); }
+html.su-mood .sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* The billboard stands on the mood colour, with no picture behind it: the
+   mockup's lake was a placeholder for exactly this, and a cover photo under
+   76px type is a second ground fighting the first. The artwork still does
+   its job on the cards, where a picture tells sessions apart. */
+html.su-mood .cat-hero {
+  min-height: 300px;
+  margin-inline: 0;
+  padding: 36px 8px 0;
+  /* The cover arrives as an inline style from coverStyle(), so the rule
+     that removes it has to say !important or the picture wins. */
+  background-image: none !important;
+  background-color: transparent !important;
+  border: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--ink);
+}
+html.su-mood .cat-hero::after { display: none; }
+html.su-mood .cat-hero__body { gap: 14px; max-width: 620px; }
+html.su-mood .cat-hero__eyebrow { color: var(--ink-2); opacity: 1; }
+html.su-mood .cat-hero__meta { font-size: 14px; color: var(--ink-2); }
+html.su-mood .cat-hero__blurb { color: var(--ink-2); font-size: 17px; line-height: 1.55; }
+html.su-mood .cat-hero__title {
+  font-family: var(--display); font-weight: 400; letter-spacing: -0.03em;
+  font-size: clamp(40px, 6vw, 76px); line-height: 0.98; color: var(--ink);
+}
+html.su-mood .cat-hero .btn--light { background: var(--act-bg); color: var(--act-fg); }
+html.su-mood .cat-hero .btn--outline { background: var(--btn); color: var(--ink); border-color: var(--line); }
+
+/* ---- the chips replace the standing column ---- */
+html.su-mood .cat__side { display: none; }
+html.su-mood .cat { display: block; }
+html.su-mood .cat-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 18px; }
+html.su-mood .cat-chip {
+  height: 42px; padding: 0 18px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--btn); color: var(--ink);
+  font: 500 14px var(--sans);
+}
+html.su-mood .cat-chip[aria-selected='true'] { background: var(--act-bg); color: var(--act-fg); border-color: transparent; }
+
+/* ---- journeys as tall cards ---- */
+html.su-mood .pw-rail__track .pw-big {
+  flex: 0 0 220px; height: 300px;
+  align-items: flex-start; justify-content: flex-end;
+  padding: 18px; border-radius: 24px; text-align: left;
+}
+html.su-mood .pw-rail__track .pw-big__name { font-family: var(--display); font-size: 24px; line-height: 1.05; }
+
+@media (max-width: 899px) {
+  html.su-mood .su-top__greet { font-size: 22px; white-space: normal; }
+  html.su-mood .su-top__right { order: -1; }
+  html.su-mood .cat-hero { min-height: 240px; }
+  html.su-mood .su-find { flex-basis: 100%; height: 52px; }
 }

@@ -19,7 +19,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
 import type { ExploreRail } from './rails'
-import type { CompanyMember, CompanyMemberDraft, CompanyTherapist, TherapistActivationCode } from './provider'
+import type { CompanyMember, CompanyMemberDraft, CompanyTherapist, MoodCheckinRow, TherapistActivationCode } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
@@ -1153,6 +1153,48 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
       return Number(data ?? 0)
     },
+    /* --- the emotional check-in ---
+       `user_id` is the caller's own profile id and the policy says so too;
+       an insert for anybody else, or without the measurement consent, is
+       refused by the database rather than by this function. */
+    async recordMoodCheckin(row: MoodCheckinRow) {
+      const { error } = await sb.from('mood_checkins').insert({
+        user_id: await profileId(),
+        created_at: toIso(row.at),
+        context: row.context,
+        session_id: row.sessionId ?? null,
+        protocol_code: row.protocolCode ?? null,
+        valence: row.valence,
+        arousal: row.arousal,
+        label_id: row.labelId,
+        locale: row.locale,
+        color_oklch: row.colorOklch,
+        variant: row.variant,
+      })
+      if (error) throw error
+    },
+    async listMyMoodCheckins(limit = 60) {
+      const { data, error } = await sb
+        .from('mood_checkins')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      if (error) return []
+      return (data ?? []).map((r: Record<string, any>) => ({
+        id: String(r.id),
+        at: toMs(r.created_at),
+        context: r.context,
+        sessionId: r.session_id ?? undefined,
+        protocolCode: r.protocol_code ?? undefined,
+        valence: Number(r.valence),
+        arousal: Number(r.arousal),
+        labelId: r.label_id ?? null,
+        locale: String(r.locale ?? 'pt-BR'),
+        colorOklch: String(r.color_oklch ?? ''),
+        variant: r.variant ?? 'color',
+      })) as MoodCheckinRow[]
+    },
+
     async checkCompanyEmail(companyCode: string, email: string) {
       const { data, error } = await sb.rpc('company_email_status', {
         p_company_id: companyCode.trim().toUpperCase(),

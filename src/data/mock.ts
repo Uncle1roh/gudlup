@@ -1,5 +1,5 @@
 import type { SessionRecord } from '../types/domain'
-import type { CompanyTherapist, DataProvider, SessionRequest, TherapistActivationCode } from './provider'
+import type { CompanyTherapist, DataProvider, MoodCheckinRow, SessionRequest, TherapistActivationCode } from './provider'
 import { SEED_HISTORY } from './seed'
 import { DEMO_PATIENTS, DEMO_THERAPIST, type Patient, type Therapist } from '../b2b/data'
 import { seedCatalog, type CatalogProtocol } from './catalog'
@@ -220,6 +220,11 @@ let companyMembers: MemberRow[] = restored<MemberRow[] | null>('members', null) 
   { companyId: 'AURORA-2026-Z5', email: 'lucia.pereira@aurora.co', name: 'Lúcia Pereira', employeeRef: 'AUR-0402', enabled: true, addedAt: nowMs - 41 * DAY, addedBy: 'camila@aurora.co' },
   { companyId: 'AURORA-2026-Z5', email: 'tiago.nunes@aurora.co', name: 'Tiago Nunes', employeeRef: 'AUR-0109', enabled: false, addedAt: nowMs - 88 * DAY, addedBy: 'camila@aurora.co', disabledAt: nowMs - 9 * DAY },
 ]
+
+/* The person's own emotional check-ins. Newest first, and nowhere near any
+   other account in this store: the demo mirrors the privacy rule, not only
+   the shape. */
+let moodCheckins: MoodCheckinRow[] = restored<MoodCheckinRow[] | null>('mood', null) ?? []
 
 /** Accounts holding a company code that the approved list does not name —
     what a leaked code actually cost. The console only ever sees the count. */
@@ -778,6 +783,17 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
       for (const u of hit) u.companyId = undefined
       return hit.length
     },
+    /* --- the emotional check-in (demo: in memory, persisted) --- */
+    recordMoodCheckin: async (row) => {
+      await wait(60)
+      moodCheckins = [{ ...row, id: durableId('mood') }, ...moodCheckins].slice(0, 400)
+      persist('mood', moodCheckins)
+    },
+    listMyMoodCheckins: async (limit = 60) => {
+      await wait(60)
+      return moodCheckins.slice(0, limit).map((r) => ({ ...r }))
+    },
+
     checkCompanyEmail: async (companyCode, email) => {
       await wait(60)
       const cid = companyCode.trim().toUpperCase()

@@ -34,6 +34,10 @@ import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
 import { Icon } from './icons'
 import { useBackLayer } from './backStack'
+import { MoodCheckIn } from '../mood/MoodCheckIn'
+import { MoodBeforeAfter, type MoodSnapshot } from '../mood/MoodBeforeAfter'
+import { useMoodRecorder } from '../mood/useMoodRecorder'
+import type { MoodEntry } from '../mood/MoodContext'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -136,7 +140,25 @@ function markSafeUseSeen(): void {
   try { localStorage.setItem(SAFE_USE_KEY, '1') } catch { /* storage unavailable */ }
 }
 
-type Stage = 'pre' | 'stereo' | 'play' | 'post'
+/* The emotional check-in runs on its own screen at each end of the session
+   (docs/ui-redesign/checkin-emocional-spec.docx): ten seconds, the grid and
+   a word, before anything else is asked and before anything is played.
+
+   It does NOT replace the five-face VAS on the pre and post screens. The two
+   are different instruments — one is a wellbeing self-report that a linked
+   clinician reads as part of a record, the other is an affect label the
+   person keeps — and quietly ending a clinical data stream is not something
+   a restyle gets to do.
+
+   Whether it is mandatory is an open decision in the spec (§ Decisões em
+   aberto), so it is skippable: "Agora não" moves on and stores nothing. */
+type Stage = 'mood-pre' | 'pre' | 'stereo' | 'play' | 'mood-post' | 'post'
+
+/** Ties the before and the after of one session together. Not a row id:
+    the "before" happens before any session row exists. */
+function correlationId(): string {
+  try { return crypto.randomUUID() } catch { return `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` }
+}
 
 /* A session is a dark room on purpose: the screen goes out, the eyes close.
    `su-dark` keeps the night palette on every screen of the flow even when the
@@ -145,17 +167,23 @@ const SESSION_FRAME = 'app-frame su-studio su-dark'
 
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
+  const { t } = useI18n()
   /* The player kill switch. Checked HERE, above every stage, because this is
      the one door into playback: the pre-session screen, the stereo check and
      the player itself are all behind it. */
   const playerOn = useFeature('player')
-  const [stage, setStage] = useState<Stage>('pre')
+  const [stage, setStage] = useState<Stage>('mood-pre')
+  /* The check-in at both ends, and the id that ties them together. */
+  const correlation = useRef(correlationId())
+  const moodRecorder = useMoodRecorder()
+  const [moodPre, setMoodPre] = useState<MoodEntry | null>(null)
+  const [moodPost, setMoodPost] = useState<MoodEntry | null>(null)
   /* Before the audio starts, back is the screen's own back: leave the session.
      While it plays, the player catches it (below). Afterwards there is nothing
      to go back TO — the session happened — so the press is caught and the
      screen stays where the person can still answer how it went. */
   useBackLayer(true, () => {
-    if (stage === 'pre' || stage === 'stereo') onCancel()
+    if (stage === 'mood-pre' || stage === 'pre' || stage === 'stereo') onCancel()
   })
   const startedAt = useRef(Date.now())
   const completed = useRef(true)
@@ -177,6 +205,23 @@ export function SessionFlow(props: SessionFlowProps) {
     setStage(needsStereoCheck ? 'stereo' : 'play')
   }
 
+  if (stage === 'mood-pre' || stage === 'mood-post') {
+    const post = stage === 'mood-post'
+    return (
+      <MoodStep
+        context={post ? 'post_session' : 'pre_session'}
+        sessionId={correlation.current}
+        protocolCode={session.protocolCode}
+        title={post ? t('And now?') : undefined}
+        stores={moodRecorder.stores}
+        onSkip={() => setStage(post ? 'post' : 'pre')}
+        onDone={(e) => {
+          moodRecorder.record(e)
+          if (post) { setMoodPost(e); setStage('post') } else { setMoodPre(e); setStage('pre') }
+        }}
+      />
+    )
+  }
   if (stage === 'pre') {
     return (
       <PreSession
@@ -206,7 +251,7 @@ export function SessionFlow(props: SessionFlowProps) {
           completed.current = finished
           endedAt.current = Date.now()
           listenedSec.current = listened
-          setStage('post')
+          setStage('mood-post')
         }}
       />
     )
@@ -216,6 +261,10 @@ export function SessionFlow(props: SessionFlowProps) {
       session={session}
       duration={duration}
       contextLine={props.contextLine}
+      /* The spec's own feedback: the two colours and the two words, where
+         the numeric before/after used to be. Only when both ends were
+         answered — one colour beside nothing is not a comparison. */
+      mood={moodPre && moodPost ? { before: moodPre, after: moodPost } : undefined}
       onFeedback={(f, post) => {
         if (f === 'support') { props.onNeedSupport(); return }
         props.onDone({
@@ -881,18 +930,61 @@ function ImmersiveSession({
   )
 }
 
+/* ----------------------------------------------------- the check-in ------
+
+   Its own screen at each end of the session, in the session's own frame.
+   "Agora não" is here rather than inside the component because skipping the
+   whole check-in and skipping only the WORD are different acts: the first
+   stores nothing, the second stores a point with no label and is counted. */
+
+function MoodStep({
+  context, sessionId, protocolCode, title, stores, onDone, onSkip,
+}: {
+  context: 'pre_session' | 'post_session'
+  sessionId: string
+  protocolCode?: string
+  title?: string
+  stores: boolean
+  onDone: (e: MoodEntry) => void
+  onSkip: () => void
+}) {
+  const { t } = useI18n()
+  return (
+    <div className={SESSION_FRAME}>
+      <div className="screen screen--center">
+        <div className="screen__body">
+          <MoodCheckIn
+            context={context}
+            sessionId={sessionId}
+            protocolCode={protocolCode}
+            title={title}
+            notStored={!stores}
+            onDone={onDone}
+          />
+        </div>
+        <div className="screen__footer">
+          <button className="btn btn--quiet" onClick={onSkip}>{t('Not now')}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* --------------------------------------------------------- SES-4 / SES-5 -- */
 
 function PostSession({
   session,
   duration,
   contextLine,
+  mood,
   onFeedback,
   onFindProfessional,
 }: {
   session: ResolvedSession
   duration: Duration
   contextLine?: string
+  /** Both ends of the emotional check-in, when both were answered. */
+  mood?: { before: MoodSnapshot; after: MoodSnapshot }
   onFeedback: (f: PostFeedback | null, vasPost: number | null) => void
   onFindProfessional: () => void
 }) {
@@ -916,6 +1008,17 @@ function PostSession({
           <h2 className="display">{t('Well done')}</h2>
           <p className="muted post__what">{t(session.name)} · {t('{n} min', { n: duration })}</p>
           {isDeep && <p className="lead post__reorient">{t('Take a moment before moving on.')}</p>}
+
+          {/* What changed, in the person's own words and colours. It states
+              the two answers side by side and claims nothing about why they
+              differ — a session is not asserted to have caused anything, and
+              the colour certainly is not. */}
+          {mood && (
+            <div className="post__mood">
+              <p className="small">{t('Before and after')}</p>
+              <MoodBeforeAfter before={mood.before} after={mood.after} />
+            </div>
+          )}
 
           {/* ONE question, asked once.
 

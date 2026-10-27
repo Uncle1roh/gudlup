@@ -59,6 +59,26 @@ export interface CompanyMemberDraft {
   employeeRef?: string
 }
 
+/** One emotional check-in (docs/ui-redesign/checkin-emocional-spec.docx).
+    Health data: it goes nowhere near an employer, and nothing is written
+    without the measurement consent — the database enforces both. */
+export interface MoodCheckinRow {
+  id?: string
+  at: number
+  context: 'pre_session' | 'post_session' | 'standalone'
+  /** Ties the before and the after of one session. Minted by the app. */
+  sessionId?: string
+  protocolCode?: string
+  /** −1 … +1, two decimals. */
+  valence: number
+  arousal: number
+  /** The word they chose; null when they skipped it. */
+  labelId: string | null
+  locale: string
+  colorOklch: string
+  variant: 'color' | 'no_color'
+}
+
 /** What a company code does for ONE address.
     `no-roster` — the company approves nobody in particular, so the code alone
     is the gate, which is how every tenant worked before the list existed. */
@@ -239,6 +259,17 @@ export interface DataProvider {
   countUnlistedMembers(companyId?: string): Promise<number>
   /** Disconnect every one of them. Returns how many lost the convention. */
   revokeUnlistedMembers(companyId?: string): Promise<number>
+  /* --- The emotional check-in ------------------------------------------
+     Ten seconds before and after a session, and whenever a person wants it.
+     The rows are theirs: no employer path, no therapist path, and no write
+     at all without the measurement consent. */
+
+  /** Store one. Refused by the database when consent is off — the caller
+      checks first and keeps the colour either way. */
+  recordMoodCheckin(row: MoodCheckinRow): Promise<void>
+  /** This person's own check-ins, newest first. */
+  listMyMoodCheckins(limit?: number): Promise<MoodCheckinRow[]>
+
   /** Asked at the door, BEFORE the account exists: does this code open
       anything for this address? Never says whether an address is unknown or
       turned off — both are `denied` — so a code cannot be used to read an
