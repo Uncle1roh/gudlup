@@ -329,6 +329,59 @@ export const IT_CORPORATE: Record<string, string> = {
   'Which employee is connected to which therapist': 'Quale dipendente è collegato a quale terapeuta',
   'Remove {name} from your convention?': 'Rimuovere {name} dalla convenzione?',
   'Current patients will retain their connection until the end of their current quarterly cycle.': 'I pazienti attuali mantengono il collegamento fino alla fine del ciclo trimestrale in corso.',
+
+  /* ---- the approved addresses: the second gate beside the code ---- */
+  'Employees': 'Dipendenti',
+  'Approved addresses': 'Indirizzi approvati',
+  'Your company code says which company an account belongs to. This list says who inside it may use that code. With at least one address on the list, the code works for these people and nobody else — so a code that gets forwarded enrols no one, and somebody who leaves is cut off here, without reissuing the code to everyone.':
+    'Il codice aziendale dice a quale azienda appartiene un account. Questo elenco dice chi, dentro l’azienda, può usarlo. Con almeno un indirizzo nell’elenco, il codice vale per queste persone e per nessun altro: un codice girato ad altri non iscrive nessuno, e chi se ne va lo togli da qui, senza riemettere il codice per tutti.',
+  'The list is empty, so the code alone opens the app.': 'L’elenco è vuoto: in questo momento basta il codice per entrare.',
+  'Anyone who knows your code can register against your licences today. Add the first address and that stops: from then on the code is checked against this list.':
+    'Oggi chiunque conosca il codice può registrarsi consumando le tue licenze. Aggiungi il primo indirizzo e questo finisce: da quel momento il codice viene confrontato con questo elenco.',
+  'approved': 'approvati',
+  'turned off': 'disattivati',
+  '{n} licences in your convention': '{n} licenze nella tua convenzione',
+  'More approved addresses than licences — the ones over the limit will not be able to register.':
+    'Gli indirizzi approvati superano le licenze: chi eccede non riuscirà a registrarsi.',
+  'Add an address': 'Aggiungi un indirizzo',
+  'Employee name': 'Nome del dipendente',
+  'Approved email address': 'Email approvata',
+  'Your reference (optional)': 'Riferimento interno (facoltativo)',
+  'Add to the list': 'Aggiungi all’elenco',
+  'It does not have to be a work address — approve whichever address the person will register with.':
+    'Non deve per forza essere un indirizzo aziendale: approva quello con cui la persona si registrerà.',
+  'Import a list instead': 'Oppure importa un elenco',
+  'Import a list': 'Importa un elenco',
+  'Paste one address per line, or a CSV with name and email columns. Addresses already on the list are updated and keep their current access — importing an old file never re-admits somebody you turned off.':
+    'Incolla un indirizzo per riga, oppure un CSV con le colonne nome ed email. Gli indirizzi già presenti vengono aggiornati e mantengono l’accesso che hanno: reimportare un file vecchio non riattiva mai chi avevi disattivato.',
+  'Choose a CSV file': 'Scegli un file CSV',
+  'Addresses read: {n}': 'Indirizzi letti: {n}',
+  'already on the list: {n}': 'già nell’elenco: {n}',
+  'lines with no address: {n}': 'righe senza indirizzo: {n}',
+  'Add these addresses ({n})': 'Aggiungi questi indirizzi ({n})',
+  'Lines we could not read': 'Righe che non siamo riusciti a leggere',
+  'On the list': 'Nell’elenco',
+  'Search the list': 'Cerca nell’elenco',
+  'Reference': 'Riferimento',
+  'Access': 'Accesso',
+  'Enabled': 'Attivo',
+  'Turned off': 'Disattivato',
+  'Turn off': 'Disattiva',
+  'Turn on': 'Riattiva',
+  'That does not look like an email address.': 'Questo non sembra un indirizzo email.',
+  'Turn off access for {email}? They keep their account and their own history, and lose everything the company convention opens — straight away.':
+    'Disattivare l’accesso di {email}? Mantiene il suo account e la sua cronologia, e perde subito tutto ciò che apre la convenzione aziendale.',
+  'Take {email} off the list? Same effect as turning access off, and the line goes.':
+    'Togliere {email} dall’elenco? Stesso effetto della disattivazione, e la riga sparisce.',
+  'Accounts on your company code but not on this list: {n}. Disconnect all of them? They keep their accounts and lose the company convention.':
+    'Account con il codice aziendale fuori da questo elenco: {n}. Scollegarli tutti? Mantengono il proprio account e perdono la convenzione aziendale.',
+  'Accounts no longer on your company code: {n}': 'Account scollegati dal codice aziendale: {n}',
+  'Accounts holding your code without being on this list: {n}': 'Account che hanno il tuo codice senza essere in questo elenco: {n}',
+  'They registered before the list existed, or with a code somebody passed on. Adding addresses does not touch them — this does.':
+    'Si sono registrati prima che l’elenco esistesse, o con un codice passato da qualcun altro. Aggiungere indirizzi non li tocca: questo sì.',
+  'Disconnect them': 'Scollegali',
+  'This list is yours: names and addresses you put here, and nothing else. It does not say whether someone created an account, whether they use the app, or anything they did in it — none of that reaches this dashboard.':
+    'Questo elenco è tuo: nomi e indirizzi che hai inserito, e nient’altro. Non dice se una persona ha creato un account, se usa l’app o che cosa ci ha fatto: niente di tutto questo arriva a questa dashboard.',
 }
 
 export const PT_CORPORATE: Record<string, string> = {
@@ -649,4 +702,57 @@ export const PT_CORPORATE: Record<string, string> = {
   'Which employee is connected to which therapist': 'Qual colaborador está vinculado a qual terapeuta',
   'Remove {name} from your convention?': 'Remover {name} do seu convênio?',
   'Current patients will retain their connection until the end of their current quarterly cycle.': 'Os pacientes atuais mantêm o vínculo até o fim do ciclo trimestral em andamento.',
+
+  /* ---- the approved addresses: the second gate beside the code ---- */
+  'Employees': 'Colaboradores',
+  'Approved addresses': 'Endereços aprovados',
+  'Your company code says which company an account belongs to. This list says who inside it may use that code. With at least one address on the list, the code works for these people and nobody else — so a code that gets forwarded enrols no one, and somebody who leaves is cut off here, without reissuing the code to everyone.':
+    'O código da empresa diz a qual empresa uma conta pertence. Esta lista diz quem, dentro dela, pode usar esse código. Com pelo menos um endereço na lista, o código vale para essas pessoas e para mais ninguém: um código repassado não cadastra ninguém, e quem sai da empresa você tira daqui, sem reemitir o código para todo mundo.',
+  'The list is empty, so the code alone opens the app.': 'A lista está vazia: por ora, basta o código para entrar.',
+  'Anyone who knows your code can register against your licences today. Add the first address and that stops: from then on the code is checked against this list.':
+    'Hoje qualquer pessoa que saiba o código pode se cadastrar consumindo suas licenças. Adicione o primeiro endereço e isso acaba: daí em diante o código é conferido com esta lista.',
+  'approved': 'aprovados',
+  'turned off': 'desativados',
+  '{n} licences in your convention': '{n} licenças no seu convênio',
+  'More approved addresses than licences — the ones over the limit will not be able to register.':
+    'Há mais endereços aprovados do que licenças: quem passar do limite não conseguirá se cadastrar.',
+  'Add an address': 'Adicionar um endereço',
+  'Employee name': 'Nome do colaborador',
+  'Approved email address': 'E-mail aprovado',
+  'Your reference (optional)': 'Referência interna (opcional)',
+  'Add to the list': 'Adicionar à lista',
+  'It does not have to be a work address — approve whichever address the person will register with.':
+    'Não precisa ser um e-mail corporativo: aprove aquele com que a pessoa vai se cadastrar.',
+  'Import a list instead': 'Ou importe uma lista',
+  'Import a list': 'Importar uma lista',
+  'Paste one address per line, or a CSV with name and email columns. Addresses already on the list are updated and keep their current access — importing an old file never re-admits somebody you turned off.':
+    'Cole um endereço por linha, ou um CSV com as colunas nome e e-mail. Endereços que já estão na lista são atualizados e mantêm o acesso atual: reimportar um arquivo antigo nunca readmite quem você desativou.',
+  'Choose a CSV file': 'Escolher um arquivo CSV',
+  'Addresses read: {n}': 'Endereços lidos: {n}',
+  'already on the list: {n}': 'já na lista: {n}',
+  'lines with no address: {n}': 'linhas sem endereço: {n}',
+  'Add these addresses ({n})': 'Adicionar estes endereços ({n})',
+  'Lines we could not read': 'Linhas que não conseguimos ler',
+  'On the list': 'Na lista',
+  'Search the list': 'Buscar na lista',
+  'Reference': 'Referência',
+  'Access': 'Acesso',
+  'Enabled': 'Ativo',
+  'Turned off': 'Desativado',
+  'Turn off': 'Desativar',
+  'Turn on': 'Reativar',
+  'That does not look like an email address.': 'Isso não parece um endereço de e-mail.',
+  'Turn off access for {email}? They keep their account and their own history, and lose everything the company convention opens — straight away.':
+    'Desativar o acesso de {email}? A pessoa mantém a conta e o próprio histórico, e perde na hora tudo o que o convênio da empresa abre.',
+  'Take {email} off the list? Same effect as turning access off, and the line goes.':
+    'Tirar {email} da lista? Mesmo efeito de desativar, e a linha some.',
+  'Accounts on your company code but not on this list: {n}. Disconnect all of them? They keep their accounts and lose the company convention.':
+    'Contas com o código da empresa fora desta lista: {n}. Desvincular todas? Elas mantêm a conta e perdem o convênio da empresa.',
+  'Accounts no longer on your company code: {n}': 'Contas desvinculadas do código da empresa: {n}',
+  'Accounts holding your code without being on this list: {n}': 'Contas com o seu código que não estão nesta lista: {n}',
+  'They registered before the list existed, or with a code somebody passed on. Adding addresses does not touch them — this does.':
+    'Cadastraram-se antes de a lista existir, ou com um código repassado por alguém. Adicionar endereços não mexe nelas: isto mexe.',
+  'Disconnect them': 'Desvincular',
+  'This list is yours: names and addresses you put here, and nothing else. It does not say whether someone created an account, whether they use the app, or anything they did in it — none of that reaches this dashboard.':
+    'Esta lista é sua: nomes e endereços que você colocou aqui, e nada além disso. Ela não diz se alguém criou conta, se usa o app ou o que fez nele — nada disso chega a este painel.',
 }

@@ -200,7 +200,35 @@ const adminUsers: AdminUser[] = [
   { id: 'u3', name: 'Camila Rocha', email: 'camila@aurora.co', role: 'hr_admin', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 88 * DAY },
   { id: 'u4', name: 'Mariana Alves', email: 'mariana@aurora.co', role: 'b2c_user', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 30 * DAY },
   { id: 'u5', name: 'Amministratore (tu)', email: 'admin@goodloop.app', role: 'admin', active: true, createdAt: nowMs - 200 * DAY },
+  /* A personal address holding Aurora's company code without being on
+     Aurora's approved list — the leak the list exists to answer, so the
+     employer panel has one to show. */
+  { id: 'u6', name: 'Rodrigo Dias', email: 'rodrigo.dias@gmail.com', role: 'b2c_user', companyId: 'AURORA-2026-Z5', active: true, createdAt: nowMs - 20 * DAY },
 ]
+
+/* The addresses a company approves — the second gate, beside the code. Aurora
+   (the company the HR console signs in as) starts with a small list so the
+   panel has something to show, including one address that was turned off:
+   that is the state nobody designs for and everybody hits. */
+type MemberRow = {
+  companyId: string; email: string; name?: string; employeeRef?: string
+  enabled: boolean; addedAt: number; addedBy?: string; disabledAt?: number
+}
+let companyMembers: MemberRow[] = restored<MemberRow[] | null>('members', null) ?? [
+  { companyId: 'AURORA-2026-Z5', email: 'mariana@aurora.co', name: 'Mariana Alves', employeeRef: 'AUR-0241', enabled: true, addedAt: nowMs - 60 * DAY, addedBy: 'camila@aurora.co' },
+  { companyId: 'AURORA-2026-Z5', email: 'bruno.sa@aurora.co', name: 'Bruno Sá', employeeRef: 'AUR-0318', enabled: true, addedAt: nowMs - 60 * DAY, addedBy: 'camila@aurora.co' },
+  { companyId: 'AURORA-2026-Z5', email: 'lucia.pereira@aurora.co', name: 'Lúcia Pereira', employeeRef: 'AUR-0402', enabled: true, addedAt: nowMs - 41 * DAY, addedBy: 'camila@aurora.co' },
+  { companyId: 'AURORA-2026-Z5', email: 'tiago.nunes@aurora.co', name: 'Tiago Nunes', employeeRef: 'AUR-0109', enabled: false, addedAt: nowMs - 88 * DAY, addedBy: 'camila@aurora.co', disabledAt: nowMs - 9 * DAY },
+]
+
+/** Accounts holding a company code that the approved list does not name —
+    what a leaked code actually cost. The console only ever sees the count. */
+function unlistedFor(cid: string): AdminUser[] {
+  return adminUsers.filter((u) =>
+    u.role === 'b2c_user' && u.companyId?.toUpperCase() === cid
+    && !companyMembers.some((m) =>
+      m.companyId.toUpperCase() === cid && m.enabled && m.email === u.email.toLowerCase()))
+}
 
 let promoCodes: PromoCode[] = restored<PromoCode[] | null>('promo', null) ?? [
   { code: 'BENVENUTO10', discountPct: 10, createdAt: nowMs - 12 * DAY, createdBy: 'admin@goodloop.app', uses: 3 },
@@ -672,6 +700,92 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
         companyTherapists = [...companyTherapists, { companyId: hit.companyId, therapist: me, addedAt: Date.now() }]
       }
       return { ok: true as const, companyId: hit.companyId }
+    },
+
+    /* --- a company's approved addresses (demo: in memory, persisted) --- */
+    listCompanyMembers: async (companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      return companyMembers
+        .filter((m) => m.companyId.toUpperCase() === cid)
+        .sort((a, b) => a.email.localeCompare(b.email))
+        .map(({ companyId: _c, ...rest }) => ({ ...rest }))
+    },
+    addCompanyMembers: async (rows, companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      let n = 0
+      for (const r of rows) {
+        const email = r.email.trim().toLowerCase()
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue
+        const at = companyMembers.findIndex((m) => m.companyId.toUpperCase() === cid && m.email === email)
+        if (at >= 0) {
+          /* Enabled is NOT touched: re-importing last year's spreadsheet must
+             never quietly re-admit somebody HR turned off. */
+          companyMembers[at] = {
+            ...companyMembers[at],
+            name: r.name?.trim() || companyMembers[at].name,
+            employeeRef: r.employeeRef?.trim() || companyMembers[at].employeeRef,
+          }
+        } else {
+          companyMembers = [...companyMembers, {
+            companyId: cid, email, name: r.name?.trim() || undefined,
+            employeeRef: r.employeeRef?.trim() || undefined, enabled: true, addedAt: Date.now(),
+          }]
+        }
+        n += 1
+      }
+      persist('members', companyMembers)
+      return n
+    },
+    setCompanyMemberAccess: async (email, enabled, companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      const addr = email.trim().toLowerCase()
+      companyMembers = companyMembers.map((m) =>
+        m.companyId.toUpperCase() === cid && m.email === addr
+          ? { ...m, enabled, disabledAt: enabled ? undefined : Date.now() }
+          : m)
+      persist('members', companyMembers)
+      /* The live account follows in the same breath — in the wired build this
+         is one transaction, and a demo where the switch moved but the account
+         kept the convention would be a demo of the bug. */
+      for (const u of adminUsers) {
+        if (u.email.toLowerCase() !== addr || u.role !== 'b2c_user') continue
+        if (!enabled && u.companyId?.toUpperCase() === cid) u.companyId = undefined
+        if (enabled && !u.companyId) u.companyId = cid
+      }
+    },
+    removeCompanyMember: async (email, companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      const addr = email.trim().toLowerCase()
+      companyMembers = companyMembers.filter((m) => !(m.companyId.toUpperCase() === cid && m.email === addr))
+      persist('members', companyMembers)
+      for (const u of adminUsers) {
+        if (u.email.toLowerCase() === addr && u.role === 'b2c_user' && u.companyId?.toUpperCase() === cid) u.companyId = undefined
+      }
+    },
+    countUnlistedMembers: async (companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      return unlistedFor(cid).length
+    },
+    revokeUnlistedMembers: async (companyId) => {
+      await wait()
+      const cid = (companyId ?? DEMO_COMPANY_ID).toUpperCase()
+      const hit = unlistedFor(cid)
+      for (const u of hit) u.companyId = undefined
+      return hit.length
+    },
+    checkCompanyEmail: async (companyCode, email) => {
+      await wait(60)
+      const cid = companyCode.trim().toUpperCase()
+      if (!cid) return 'no-company' as const
+      const roster = companyMembers.filter((m) => m.companyId.toUpperCase() === cid)
+      if (!roster.length) return 'no-roster' as const
+      const addr = email.trim().toLowerCase()
+      return roster.some((m) => m.email === addr && m.enabled) ? ('ok' as const) : ('denied' as const)
     },
 
     listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs] })) },

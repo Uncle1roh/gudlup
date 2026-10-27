@@ -945,6 +945,10 @@ export const PT: Record<string, string> = {
     'Um código de empresa tem esta forma: ACME-2026-K7. Confira com quem te passou.',
   'We do not know this code yet. You can create your account without it and add it later.':
     'Ainda não conhecemos este código. Você pode criar a conta sem ele e adicioná-lo depois.',
+  'This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.':
+    'Esta empresa só aceita os endereços que aprovou, e {email} não é um deles. Peça ao RH para incluí-lo — ou deixe o código em branco e crie sua conta por conta própria.',
+  'This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.':
+    'Esta empresa só aceita os endereços que aprovou, e este não está entre eles. Peça ao RH para incluí-lo, ou crie sua conta sem o código.',
   'Promo code (optional)': 'Código promocional (opcional)',
   'Checking the code…': 'Verificando o código…',
   'Promo code accepted — {pct}% off.': 'Código válido — {pct}% de desconto.',

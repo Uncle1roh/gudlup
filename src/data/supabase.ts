@@ -19,7 +19,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import type { DataProvider, SessionRequest } from './provider'
 import type { ExploreRail } from './rails'
-import type { CompanyTherapist, TherapistActivationCode } from './provider'
+import type { CompanyMember, CompanyMemberDraft, CompanyTherapist, TherapistActivationCode } from './provider'
 import type { SessionRecord, MoodCheck, Duration } from '../types/domain'
 import type { Patient, Therapist, B2bSession, B2cSession, Goal, Score, RapidNote } from '../b2b/data'
 import type { CatalogProtocol, ProtocolSource, TenantScope } from './catalog'
@@ -1095,6 +1095,78 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (answer === 'ALREADY_USED') return { ok: false as const, reason: 'already-used' as const }
       if (answer === 'NOT_A_THERAPIST') return { ok: false as const, reason: 'not-a-therapist' as const }
       return { ok: false as const, reason: 'unknown' as const }
+    },
+
+    /* --- a company's approved addresses ---
+       Reads come straight off the table (HR may select its own company's
+       rows); every WRITE goes through a function, because turning an address
+       off has to cut the live account loose in the same transaction. The
+       company is taken from the caller's own profile inside those functions
+       and never from this argument, which exists for the admin-side read. */
+    async listCompanyMembers(companyId?: string) {
+      const cid = companyId ?? (await myCompanyId())
+      if (!cid) return []
+      const { data, error } = await sb
+        .from('company_members')
+        .select('*')
+        .eq('company_id', cid.toUpperCase())
+        .order('email')
+      if (error) return []
+      return (data ?? []).map((r: Record<string, any>) => ({
+        email: String(r.email),
+        name: r.name ?? undefined,
+        employeeRef: r.employee_ref ?? undefined,
+        enabled: !!r.enabled,
+        addedAt: toMs(r.added_at),
+        addedBy: r.added_by ?? undefined,
+        disabledAt: r.disabled_at ? toMs(r.disabled_at) : undefined,
+      })) as CompanyMember[]
+    },
+    async addCompanyMembers(rows: CompanyMemberDraft[]) {
+      const payload = rows
+        .map((r) => ({
+          email: r.email.trim().toLowerCase(),
+          name: r.name?.trim() || null,
+          employee_ref: r.employeeRef?.trim() || null,
+        }))
+        .filter((r) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email))
+      if (!payload.length) return 0
+      const { data, error } = await sb.rpc('hr_add_company_members', { p_rows: payload })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    async setCompanyMemberAccess(email: string, enabled: boolean) {
+      const { error } = await sb.rpc('hr_set_member_access', { p_email: email, p_enabled: enabled })
+      if (error) throw error
+    },
+    async removeCompanyMember(email: string) {
+      const { error } = await sb.rpc('hr_remove_company_member', { p_email: email })
+      if (error) throw error
+    },
+    async countUnlistedMembers() {
+      const { data, error } = await sb.rpc('hr_unlisted_member_count')
+      if (error) return 0
+      return Number(data ?? 0)
+    },
+    async revokeUnlistedMembers() {
+      const { data, error } = await sb.rpc('hr_revoke_unlisted_members')
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+    async checkCompanyEmail(companyCode: string, email: string) {
+      const { data, error } = await sb.rpc('company_email_status', {
+        p_company_id: companyCode.trim().toUpperCase(),
+        p_email: email.trim().toLowerCase(),
+      })
+      /* A database that has not run script 25 has no such function. The code
+         then behaves exactly as it did before the list existed, rather than
+         refusing every sign-up because a check could not be made. */
+      if (error) return 'no-roster' as const
+      const answer = String(data ?? '')
+      if (answer === 'OK') return 'ok' as const
+      if (answer === 'DENIED') return 'denied' as const
+      if (answer === 'NO_COMPANY') return 'no-company' as const
+      return 'no-roster' as const
     },
 
     // --- The Self Use home rails ---

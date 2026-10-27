@@ -225,6 +225,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error('Unknown company code — ask HR for the right one.')
           if ((pErr as { hint?: string }).hint === 'PROMO_UNKNOWN')
             throw new Error('This promo code is not valid. Check it, or leave the field empty.')
+          /* The company keeps a list of the addresses it approves, and this
+             one is not on it. The door checks this before submitting; the
+             database checks it again, and this is where that answer becomes
+             a sentence rather than a constraint violation. */
+          if ((pErr as { hint?: string }).hint === 'COMPANY_NOT_APPROVED')
+            throw new Error('This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.')
           throw pErr
         }
         if (role === 'therapist') {

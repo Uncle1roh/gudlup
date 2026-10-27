@@ -37,6 +37,32 @@ export interface TherapistActivationCode {
 export type RedeemResult =
   | { ok: true; companyId: string }
   | { ok: false; reason: 'unknown' | 'revoked' | 'already-used' | 'not-a-therapist' }
+
+/** One address an employer has approved. Nothing about an ACCOUNT is here —
+    not whether one exists, not what it did. HR keeps the list; the app reads
+    it only to decide whether the company code opens anything for a person. */
+export interface CompanyMember {
+  /** Folded to lower case: an address is the same person however it was typed. */
+  email: string
+  name?: string
+  /** The employer's own reference — badge number, payroll id. Never read by us. */
+  employeeRef?: string
+  enabled: boolean
+  addedAt: number
+  addedBy?: string
+  disabledAt?: number
+}
+
+export interface CompanyMemberDraft {
+  email: string
+  name?: string
+  employeeRef?: string
+}
+
+/** What a company code does for ONE address.
+    `no-roster` — the company approves nobody in particular, so the code alone
+    is the gate, which is how every tenant worked before the list existed. */
+export type CompanyEmailStatus = 'ok' | 'no-roster' | 'no-company' | 'denied'
 import type { Plan, PlanItem } from './plan'
 import type { PromoCode } from './promo'
 import type { PartnerProduct } from './partners'
@@ -189,6 +215,35 @@ export interface DataProvider {
   revokeCompanyTherapistCode(code: string): Promise<void>
   /** The therapist's side: present a code, join a company's list. */
   redeemCompanyTherapistCode(code: string): Promise<RedeemResult>
+
+  /* --- A company's approved addresses ----------------------------------
+     The second gate. A code says which company; this says who inside it may
+     use the code — so a code that leaks enrols nobody, and somebody who
+     leaves loses the convention without the whole company being reissued.
+     A company with an EMPTY list keeps the code-only behaviour it has had
+     all along: building the list is what arms the gate. */
+
+  /** The addresses a company approves, in alphabetical order. */
+  listCompanyMembers(companyId?: string): Promise<CompanyMember[]>
+  /** Add or update rows — one typed in, or a few hundred from a spreadsheet.
+      An address already on the list keeps its enabled flag. Returns how many
+      rows the list took. */
+  addCompanyMembers(rows: CompanyMemberDraft[], companyId?: string): Promise<number>
+  /** Turn one address on or off. OFF also unlinks the live account that has
+      it, the same second: that is what cancelling access has to mean. */
+  setCompanyMemberAccess(email: string, enabled: boolean, companyId?: string): Promise<void>
+  /** Off the list entirely — same consequence as disabling, and the row goes. */
+  removeCompanyMember(email: string, companyId?: string): Promise<void>
+  /** How many accounts hold the company code without being on the list. A
+      count and nothing else: no addresses, no names, nothing they did. */
+  countUnlistedMembers(companyId?: string): Promise<number>
+  /** Disconnect every one of them. Returns how many lost the convention. */
+  revokeUnlistedMembers(companyId?: string): Promise<number>
+  /** Asked at the door, BEFORE the account exists: does this code open
+      anything for this address? Never says whether an address is unknown or
+      turned off — both are `denied` — so a code cannot be used to read an
+      employer's list back out one guess at a time. */
+  checkCompanyEmail(companyCode: string, email: string): Promise<CompanyEmailStatus>
 
   // --- The Self Use home rails (admin-managed) ---
   /** Every rail, in order. Empty = the app's built-in rails. */

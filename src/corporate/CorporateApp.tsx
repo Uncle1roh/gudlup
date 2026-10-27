@@ -30,6 +30,7 @@ import { SetupWizard } from './Setup'
 import { Overview, Engagement, Wellbeing, Reports } from './Screens'
 import { Management } from './Management'
 import { CompanyTherapists } from './CompanyTherapists'
+import { Employees } from './Employees'
 import { Settings } from './Settings'
 import { buildAggregates, useCorporateState, FALLBACK_TENANT, tenantFromCode, tenantFromConvention, type Tenant } from './data'
 import { cellValue, PERIODS, type PeriodId, type ReportRow } from './metrics'
@@ -39,7 +40,7 @@ import { HelpNowButton } from '../legal/HelpNow'
 import { AddonBenefits, AddonChallenges, AddonPlan } from './Addon'
 import type { AddonInfo } from '../gamification/company'
 
-type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 'management' | 'settings'
+type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 'employees' | 'management' | 'settings'
   | 'addon_challenges' | 'addon_benefits' | 'plan'
 
 /* ---- what this dashboard is FOR ----------------------------------------
@@ -51,7 +52,9 @@ type Nav = 'overview' | 'engagement' | 'wellbeing' | 'reports' | 'therapists' | 
      · no individual records, ever — which is a property of the data this
        screen receives, not a filter applied to it;
      · an activation code that puts a therapist on the company's list;
-     · a panel to manage or remove the therapists on that list.
+     · a panel to manage or remove the therapists on that list;
+     · the addresses the company code is allowed to work for, so a code that
+       travels enrols nobody and somebody who leaves can be cut off alone.
 
    Wellbeing trends, the PDF reports and the licence tables are NOT gone —
    they are behind this flag, code and all, because "not now" and "never"
@@ -62,6 +65,7 @@ const EXTRAS = false
 const ALL_NAV: { id: Nav; label: string; extra?: boolean }[] = [
   { id: 'overview', label: 'Participation' },
   { id: 'therapists', label: 'Therapists' },
+  { id: 'employees', label: 'Employees' },
   { id: 'engagement', label: 'Engagement', extra: true },
   { id: 'wellbeing', label: 'Wellbeing', extra: true },
   { id: 'reports', label: 'Reports', extra: true },
@@ -269,6 +273,9 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
         )}
         {nav === 'therapists' && (
           <CompanyTherapists companyId={state.companyCode || undefined} actor={user?.email ?? undefined} />
+        )}
+        {nav === 'employees' && (
+          <Employees companyId={state.companyCode || undefined} licences={state.licences} />
         )}
         {nav === 'management' && EXTRAS && <Management state={state} agg={agg} update={update} />}
         {nav === 'addon_challenges' && addon && <AddonChallenges addon={addon} />}

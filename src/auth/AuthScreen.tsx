@@ -104,6 +104,17 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           throw new Error(t('This promo code is not valid. Check it, or leave the field empty.'))
         }
       }
+      if (signup && !isHr && normalizeCode(companyCode)) {
+        /* Asked again at submit for the same reason the promo code is: the
+           live check is a courtesy, and an address the company has not
+           approved must be refused BEFORE the account exists. The database
+           refuses it too — this is what turns that refusal into a sentence. */
+        const status = await dp.checkCompanyEmail(normalizeCode(companyCode), email.trim()).catch(() => 'no-roster' as const)
+        if (status === 'denied') {
+          setRosterOk(false)
+          throw new Error(t('This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.', { email: email.trim() }))
+        }
+      }
       if (signup) {
         /* Recorded BEFORE the account call, so a sign-up that succeeds can
            never land on a library with nothing behind it. Measurement is no
@@ -160,6 +171,37 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     return () => { alive = false; window.clearTimeout(id) }
   }, [promo, offersPromo, dp])
 
+  /**
+   * The second gate: is THIS address allowed to use that company code?
+   *
+   * A company may keep a list of the addresses it approves — because a code
+   * is one string shared with everybody, and a company that cannot take it
+   * back from one person cannot take it back at all. The list is enforced in
+   * the database; this asks the same question early, so a person reads why
+   * the code did nothing while they are still looking at the form instead of
+   * discovering it after the account exists.
+   *
+   * `null` means not asked (no code, no address, or still typing). A company
+   * with no list answers 'no-roster', which is the behaviour every tenant
+   * had before lists existed: the code alone.
+   */
+  const [rosterOk, setRosterOk] = useState<boolean | null>(null)
+  useEffect(() => {
+    const code = normalizeCode(companyCode)
+    const addr = email.trim().toLowerCase()
+    if (!signup || isHr || !code || !looksLikeCompanyCode(code) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+      setRosterOk(null)
+      return
+    }
+    let alive = true
+    const id = window.setTimeout(() => {
+      dp.checkCompanyEmail(code, addr)
+        .then((s) => { if (alive) setRosterOk(s !== 'denied') })
+        .catch(() => { if (alive) setRosterOk(null) })
+    }, 400)
+    return () => { alive = false; window.clearTimeout(id) }
+  }, [companyCode, email, signup, isHr, dp])
+
   const promoCheck = useMemo(() => {
     // nothing to say about the first couple of characters
     if (!offersPromo || promo.trim().length < 3) return null
@@ -205,12 +247,21 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     const raw = companyCode.trim()
     if (!raw) return null
     const found = resolveCompanyCode(raw)
+    /* The company approves addresses, and this one is not among them. Said
+       before anything else about the code: the plan it opens is irrelevant
+       while the door is shut. */
+    if (rosterOk === false) {
+      return {
+        ok: false,
+        text: t('This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.', { email: email.trim() }),
+      }
+    }
     if (found) return { ok: true, text: `${found.companyName} · ${t(conventionLabel(found.type))}` }
     if (!looksLikeCompanyCode(raw)) {
       return { ok: false, text: t('A company code looks like ACME-2026-K7. Check it with whoever gave it to you.') }
     }
     return { ok: false, text: t('We do not know this code yet. You can create your account without it and add it later.') }
-  }, [companyCode, t])
+  }, [companyCode, email, rosterOk, t])
 
   /* The two gates of screen 1. An age below eighteen or a territory where
      Good Loop is not offered blocks the button — the message says which. */
@@ -227,6 +278,8 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     // a code that was checked and is unknown blocks the button; one still
     // being checked does not — submit asks again
     (!offersPromo || !promo.trim() || promoPct !== null) &&
+    // an address the company has not approved cannot carry its code
+    rosterOk !== false &&
     // a listener account must say which recording it hears
     (!needsConsent || addressedAs !== null)
 

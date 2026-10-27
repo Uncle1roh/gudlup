@@ -534,6 +534,10 @@ export const IT_SELF_USE: Record<string, string> = {
     'Un codice aziendale ha questa forma: ACME-2026-K7. Verificalo con chi te l’ha dato.',
   'We do not know this code yet. You can create your account without it and add it later.':
     'Questo codice non ci risulta ancora. Puoi creare l’account senza e aggiungerlo più avanti.',
+  'This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.':
+    'Questa azienda accetta solo gli indirizzi che ha approvato, e {email} non è fra questi. Chiedi al tuo referente HR di aggiungerlo, oppure lascia il codice vuoto e crea l’account per conto tuo.',
+  'This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.':
+    'Questa azienda accetta solo gli indirizzi che ha approvato, e questo non è fra quelli. Chiedi al tuo referente HR di aggiungerlo, oppure crea l’account senza il codice.',
 
   /* ---- the promo code, at registration ---- */
   'Promo code (optional)': 'Codice promozionale (facoltativo)',
