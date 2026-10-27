@@ -80,7 +80,7 @@ const DEST_OF: Record<Tab, Dest> = {
 /* Only the library stands on the colour of the mood. Every other mockup is
    the same photograph under a dark wash — a room you go into, rather than
    the shelf you browse. A screen gets the deep surface once it is ported. */
-const DEEP: Tab[] = ['therapist', 'path', 'progress', 'benefits']
+const DEEP: Tab[] = ['therapist', 'path', 'progress', 'benefits', 'profile']
 
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',

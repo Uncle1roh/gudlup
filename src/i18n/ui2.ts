@@ -69,6 +69,11 @@ export const IT_UI2: Record<string, string> = {
   /* percurso */
   '{n}× this week': '{n}× questa settimana',
 
+  /* perfil — the unit under each figure, where the number is drawn apart */
+  'sessions': 'sedute',
+  'minutes': 'minuti',
+  'days in a row': 'giorni di fila',
+
   /* minha jornada */
   'of {n} weeks': 'di {n} settimane',
   'The {n} weeks': 'Le {n} settimane',
@@ -142,6 +147,11 @@ export const PT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× esta semana',
+
+  /* perfil — the unit under each figure, where the number is drawn apart */
+  'sessions': 'sessões',
+  'minutes': 'minutos',
+  'days in a row': 'dias seguidos',
 
   /* minha jornada */
   'of {n} weeks': 'de {n} semanas',

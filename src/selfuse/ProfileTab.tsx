@@ -27,11 +27,14 @@ import { useI18n, LOCALES, type Locale } from '../i18n'
 import { THEME_OPTIONS, readThemeChoice, setThemeChoice, type ThemeChoice } from './theme'
 import { SafetyLevel1 } from './Safety'
 import { DURATIONS, INTAKE_TIMES, durationLabel } from '../data/selfuse'
-import type { SelfUseState } from '../data/selfUseStore'
+import { streakDays, type SelfUseState } from '../data/selfUseStore'
 import type { Duration } from '../types/domain'
 import type { Convention } from '../data/convention'
 import { useBackLayer } from './backStack'
 import { useDataProvider } from '../data/provider'
+import { Icon } from './icons'
+import { TopBar, PageTitle } from '../ui2/TopBar'
+import { initialsOf } from '../ui2/Home'
 import { useLegal } from '../legal/LegalContext'
 import { useAuth, WRONG_PASSWORD } from '../auth/auth'
 import { LegalSheet } from '../legal/LegalPage'
@@ -82,44 +85,97 @@ export function ProfileTab(props: ProfileProps) {
     )
   }
 
+  /* The three figures: finished sessions, the minutes they came to, and the
+     run of days. All three are already counted — streakDays() is the app's
+     own rule about what breaks a run and what does not. */
+  const sessions = props.state.logs.length
+  const minutes = props.state.logs.reduce((n, l) => n + l.duration, 0)
+  const streak = streakDays(props.state.logs)
+
   const rows: { id: Page; label: string }[] = [
     { id: 'account', label: 'Account Settings' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'prefs', label: 'Session Preferences' },
     { id: 'privacy', label: 'Privacy & Data' },
+  ]
+
+  const about: { id: Page; label: string }[] = [
     { id: 'tutorial', label: 'How Good Loop Works' },
     { id: 'help', label: 'Help & Support' },
     { id: 'about', label: 'About Good Loop' },
   ]
 
   return (
-    <div className="su-page profile">
-      <h1 className="display su-h1">{t('Profile')}</h1>
-      <div className="profile__id">
-        <span className="avatar avatar--lg" aria-hidden="true">
-          {props.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')}
-        </span>
-        <div>
-          <strong>{props.name}</strong>
-          <div className="small muted">{props.email}</div>
-        </div>
-      </div>
+    <>
+      <TopBar name={props.name} />
+      <PageTitle title={t('Profile')} />
 
-      <ul className="menu">
-        {rows.map((r) => (
-          <li key={r.id}>
-            <button className="menu__row" onClick={() => setPage(r.id)}>
-              <span>{t(r.label)}</span>
-              <span aria-hidden="true">›</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* The mockup's three cards. Each one is a door the app already had —
+          the rows under "Preferências" are the same pages, in the same
+          order, and nothing here sets a preference it does not own. */}
+      <section className="g3">
+        <article className="glass pf2-card">
+          <div className="pf2-id">
+            <span className="pf2-avatar" aria-hidden="true">{initialsOf(props.name)}</span>
+            <div className="pf2-who">
+              <strong>{props.name}</strong>
+              <span className="call2-note">{props.email}</span>
+            </div>
+          </div>
 
-      <button className="btn btn--ghost" onClick={props.onLogout}>{t('Log Out')}</button>
+          <div className="pf2-stats">
+            <span className="pf2-stat"><b>{sessions}</b>{t('sessions')}</span>
+            <span className="pf2-stat"><b>{minutes}</b>{t('minutes')}</span>
+            <span className="pf2-stat"><b>{streak}</b>{t('days in a row')}</span>
+          </div>
+
+          <div style={{ flex: 1 }} />
+          <button type="button" className="glass-btn call2-pill" onClick={props.onLogout}>{t('Log Out')}</button>
+        </article>
+
+        <article className="glass pf2-card">
+          {/* "Settings", not "Session Preferences" — that is one of the rows
+              under it, and a heading that repeats a row is a heading that
+              says nothing. */}
+          <h2 className="call2-pane__h">{t('Settings')}</h2>
+          <ul className="pf2-rows">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <button type="button" className="pf2-row" onClick={() => setPage(r.id)}>
+                  <span>{t(r.label)}</span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="glass pf2-card">
+          <span className="pf2-tile" aria-hidden="true"><Icon name="therapist" size={20} /></span>
+          <h2 className="pf2-h">{t('Professional support, when you need it')}</h2>
+          <p className="call2-note">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>
+          <div style={{ flex: 1 }} />
+          <button type="button" className="call2-act" onClick={props.onFindProfessional}>
+            {props.hasTherapist ? t('Therapy') : t('Find a therapist')}
+          </button>
+        </article>
+      </section>
+
+      <section className="bn2-sect">
+        <ul className="pf2-rows pf2-rows--wide">
+          {about.map((r) => (
+            <li key={r.id}>
+              <button type="button" className="pf2-row glass" onClick={() => setPage(r.id)}>
+                <span>{t(r.label)}</span>
+                <span aria-hidden="true">›</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <SafetyLevel1 />
-    </div>
+    </>
   )
 }
 
