@@ -22,20 +22,31 @@ import { Icon } from './icons'
 import { Badge } from '../gamification/ui/Badge'
 import { GamDialog } from '../gamification/ui/Dialog'
 import { copyFor } from '../gamification/copy'
-import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
+import { fmtMinutes, type AchievementView } from '../gamification/achievements'
+import { isLive, type ChallengeView } from '../gamification/challenges'
+import { ChallengeCard } from './ChallengeCard'
+import { TopBar, PageTitle } from '../ui2/TopBar'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type Wallet } from '../gamification/economy'
 import {
   PILLARS, RedeemError, byPillar, missingLoops, standardSessionsFor,
   type BenefitView, type Redemption, type RedeemResult,
 } from '../gamification/benefits'
 
-export function BenefitsTab({ onStartSession, onSeeAchievements }: { onStartSession: () => void; onSeeAchievements: () => void }) {
+export function BenefitsTab({ name, onStartSession, onSeeAchievements, onSeeChallenges }: {
+  /** First name, when the account gives one — the top bar prints it. */
+  name: string | null
+  onStartSession: () => void
+  onSeeAchievements: () => void
+  onSeeChallenges: () => void
+}) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [list, setList] = useState<BenefitView[] | null>(null)
   const [mine, setMine] = useState<Redemption[]>([])
-  const [next, setNext] = useState<AchievementView | null>(null)
+  const [achievements, setAchievements] = useState<AchievementView[]>([])
+  const [challenge, setChallenge] = useState<ChallengeView | null>(null)
+  const [tab, setTab] = useState<'available' | 'mine'>('available')
   const [cfg, setCfg] = useState<EconomySettings>(DEFAULT_ECONOMY)
   const [open, setOpen] = useState<BenefitView | null>(null)
   const [failed, setFailed] = useState(false)
@@ -44,25 +55,35 @@ export function BenefitsTab({ onStartSession, onSeeAchievements }: { onStartSess
     Promise.all([dp.getWallet(), dp.getAvailableBenefits(), dp.listMyRedemptions()])
       .then(([w, b, r]) => { setWallet(w); setList(b); setMine(r) })
       .catch(() => setFailed(true))
-    dp.listMyAchievements().then((a) => setNext(nextAchievement(a))).catch(() => setNext(null))
+    /* The whole list, not only the next one: the top card shows three.
+       Same call the summary makes. */
+    dp.listMyAchievements().then(setAchievements).catch(() => setAchievements([]))
+    dp.listMyChallenges()
+      .then((all) => {
+        const live = all.filter((c) => isLive(c, Date.now()))
+        setChallenge(live.find((c) => c.companyId) ?? live[0] ?? null)
+      })
+      .catch(() => setChallenge(null))
     dp.getEconomySettings().then(setCfg).catch(() => { /* the defaults estimate well enough */ })
   }, [dp])
   useEffect(() => { load() }, [load])
 
   if (failed) {
     return (
-      <div className="su-page benefits">
-        <h1 className="display su-h1">{t('Benefits')}</h1>
-        <p className="small muted">{t('Your benefits could not be loaded right now.')}</p>
-      </div>
+      <>
+        <TopBar name={name} />
+        <PageTitle title={t('Benefits')} />
+        <p className="call2-note">{t('Your benefits could not be loaded right now.')}</p>
+      </>
     )
   }
   if (!wallet || !list) {
     return (
-      <div className="su-page benefits">
-        <h1 className="display su-h1">{t('Benefits')}</h1>
-        <p className="small muted" aria-busy="true">{t('Loading…')}</p>
-      </div>
+      <>
+        <TopBar name={name} />
+        <PageTitle title={t('Benefits')} />
+        <p className="call2-note" aria-busy="true">{t('Loading…')}</p>
+      </>
     )
   }
 
@@ -70,77 +91,104 @@ export function BenefitsTab({ onStartSession, onSeeAchievements }: { onStartSess
   const unlocked = list.filter((b) => b.challengeExclusive)
 
   return (
-    <div className="su-page benefits">
-      <h1 className="display su-h1">{t('Benefits')}</h1>
+    <>
+      <TopBar name={name} />
+      <PageTitle title={t('Benefits')} note={t('Every Loop is born from a minute of care for your mind.')} />
 
-      {/* 1 — the care, then the Loops it became */}
-      <section className="gam-care" aria-label={t('Your care')}>
-        <p className="eyebrow">{t('Your care')}</p>
-        <p className="gam-care__time">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</p>
-        <p className="gam-care__loops"><Icon name="loop" size={22} /> {t('= {n} Loops', { n: String(wallet.loops) })}</p>
-        <p className="small">{t('Every Loop is born from a minute of care for your mind.')}</p>
-        {wallet.multiplier !== null && (
-          <p className="small gam-care__mult">{t('Your company multiplies your Loops by {x}×', { x: wallet.multiplier.toLocaleString('pt-BR') })}</p>
-        )}
-        <button className="btn btn--ghost gam-care__start" onClick={onStartSession}>{t('Start a session')}</button>
-      </section>
-
-      {/* 2 — the next milestone */}
-      {next && (
-        <button className="card gam-milestone" onClick={onSeeAchievements}>
-          <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
-          <span className="gam-milestone__body">
-            <span className="eyebrow">{t('Next milestone of care')}</span>
-            <span className="gam-milestone__name">{t(copyFor(next.slug).name)}</span>
-            <span className="gam-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, ((next.value ?? 0) / next.threshold) * 100)}%` }} /></span>
+      {/* The mockup's three cards across the top: the balance, the company's
+          challenge, and what has been unlocked. Each one is the app's own
+          block, in the mockup's shape — the balance still leads with the TIME
+          the person gave themselves, because the habit is the hero and the
+          Loops are its consequence (SPEC §6). */}
+      <section className="g3">
+        <article className="glass bn2-card">
+          <span className="bn2-eyebrow">{t('Your care')}</span>
+          <span className="bn2-balance">
+            {displayLoops(wallet.balanceCenti).toLocaleString('pt-BR')}
+            <small>{t('Loops')}</small>
           </span>
-        </button>
-      )}
+          <span className="call2-note">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</span>
+          {wallet.multiplier !== null && (
+            <span className="call2-note">{t('Your company multiplies your Loops by {x}×', { x: wallet.multiplier.toLocaleString('pt-BR') })}</span>
+          )}
+          <div style={{ flex: 1 }} />
+          <button type="button" className="glass-btn call2-pill" onClick={onStartSession}>{t('Start a session')}</button>
+        </article>
 
-      {/* 3 — by pillar */}
-      {PILLARS.map((p) => {
-        const items = pillars.get(p.id) ?? []
-        if (!items.length) return null
-        return (
-          <section key={p.id} className="gam-pillar" aria-labelledby={`pillar-${p.id}`}>
-            <h2 id={`pillar-${p.id}`} className="home__sect gam-pillar__title">
-              <span className="gam-pillar__tile" aria-hidden="true"><Icon name={p.icon} size={18} /></span>
-              {t(p.label)}
-            </h2>
-            <ul className="gam-benefits">
-              {items.map((b) => (
-                <li key={b.id}>
-                  <BenefitCard b={b} wallet={wallet} cfg={cfg} onOpen={() => setOpen(b)} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+        {challenge ? (
+          <ChallengeCard c={challenge} onOpen={onSeeChallenges} />
+        ) : (
+          <article className="glass bn2-card">
+            <span className="bn2-eyebrow">{t('Challenges')}</span>
+            <span className="call2-note">{t('Nothing selected yet.')}</span>
+          </article>
+        )}
 
-      {/* 4 — unlocked by challenges */}
-      {unlocked.length > 0 && (
-        <section className="gam-pillar">
-          <h2 className="home__sect">{t('Unlocked by challenges')}</h2>
-          <ul className="gam-benefits">
-            {unlocked.map((b) => (
-              <li key={b.id}><BenefitCard b={b} wallet={wallet} cfg={cfg} onOpen={() => setOpen(b)} /></li>
+        <article className="glass bn2-card">
+          <h2 className="call2-pane__h">{t('Achievements')}</h2>
+          {!achievements.length && <span className="call2-note">{t('Nothing selected yet.')}</span>}
+          <ul className="bn2-achv">
+            {achievements.slice(0, 3).map((a) => (
+              <li key={a.slug}>
+                <Badge icon={a.icon} tier={a.tier} shape="circle" size={34} locked={!a.unlockedAt} />
+                <span className={a.unlockedAt ? undefined : 'call2-list__off'}>{t(copyFor(a.slug).name)}</span>
+              </li>
             ))}
           </ul>
-        </section>
+          <div style={{ flex: 1 }} />
+          <button type="button" className="glass-btn call2-pill" onClick={onSeeAchievements}>{t('See all {n} achievements', { n: achievements.length })}</button>
+        </article>
+      </section>
+
+      {/* Two tabs, as the mockup has them. The pillars survive inside the
+          first one: "care for the body" and "care for the mind" are how this
+          catalogue is organised, and a single undifferentiated grid would
+          throw that away. */}
+      <div className="segmented bn2-tabs" role="tablist" aria-label={t('Benefits')}>
+        <button role="tab" aria-selected={tab === 'available'} onClick={() => setTab('available')}>{t('Available')}</button>
+        <button role="tab" aria-selected={tab === 'mine'} onClick={() => setTab('mine')}>{t('My benefits')}</button>
+      </div>
+
+      {tab === 'available' && (
+        <>
+          {PILLARS.map((p) => {
+            const items = pillars.get(p.id) ?? []
+            if (!items.length) return null
+            return (
+              <section key={p.id} aria-labelledby={`pillar-${p.id}`} className="bn2-sect">
+                <h2 id={`pillar-${p.id}`} className="call2-pane__h">
+                  <span className="bn2-pill-icon" aria-hidden="true"><Icon name={p.icon} size={16} /></span>
+                  {t(p.label)}
+                </h2>
+                <div className="g4">
+                  {items.map((b) => <BenefitCard key={b.id} b={b} wallet={wallet} cfg={cfg} onOpen={() => setOpen(b)} />)}
+                </div>
+              </section>
+            )
+          })}
+
+          {unlocked.length > 0 && (
+            <section className="bn2-sect">
+              <h2 className="call2-pane__h">{t('Unlocked by challenges')}</h2>
+              <div className="g4">
+                {unlocked.map((b) => <BenefitCard key={b.id} b={b} wallet={wallet} cfg={cfg} onOpen={() => setOpen(b)} />)}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {/* 5 — what you redeemed */}
-      <section className="gam-pillar">
-        <h2 className="home__sect">{t('My benefits')}</h2>
-        {mine.length === 0 ? (
-          <p className="small muted">{t('What you redeem appears here, with its code and how to use it.')}</p>
-        ) : (
-          <ul className="gam-mine">
-            {mine.map((r) => <li key={r.id}><MyBenefit r={r} /></li>)}
-          </ul>
-        )}
-      </section>
+      {tab === 'mine' && (
+        <section className="bn2-sect">
+          {mine.length === 0 ? (
+            <p className="call2-note">{t('What you redeem appears here, with its code and how to use it.')}</p>
+          ) : (
+            <ul className="gam-mine">
+              {mine.map((r) => <li key={r.id}><MyBenefit r={r} /></li>)}
+            </ul>
+          )}
+        </section>
+      )}
 
       {open && (
         <BenefitSheet
@@ -151,7 +199,7 @@ export function BenefitsTab({ onStartSession, onSeeAchievements }: { onStartSess
           onRedeemed={() => load()}
         />
       )}
-    </div>
+    </>
   )
 }
 

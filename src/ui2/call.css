@@ -365,6 +365,72 @@
 .jr2-key__after { border-top: 2.5px solid #3db189; }
 .jr2-key__before { border-top: 2.5px dashed #e89d64; }
 
+/* ------------------------------------------------------------ benefícios ---
+   Three cards across the top, two tabs, and a grid of benefits. Care that
+   comes back to you — never a shop (SPEC §6.5). */
+
+.bn2-card { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.bn2-eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+
+.bn2-balance {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 54px;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.bn2-balance small { font-size: 18px; color: var(--ink-2); }
+
+.bn2-achv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bn2-achv li { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+
+.bn2-tabs { align-self: flex-start; display: inline-flex; gap: 4px; }
+.bn2-tabs button { padding: 0 20px; height: 40px; }
+
+.bn2-sect { display: flex; flex-direction: column; gap: 14px; }
+
+.bn2-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: var(--inset);
+  margin-right: 8px;
+  vertical-align: -6px;
+}
+
+/* The benefit card keeps its own markup; here it learns the surface. */
+.gl-root .gam-benefit {
+  border-radius: 22px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gl-root .gam-benefit__tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--inset);
+}
+
+.gl-root .gam-benefit__body { display: flex; flex-direction: column; gap: 4px; }
+.gl-root .gam-benefit__title { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
+.gl-root .gam-benefit__price { margin-top: 6px; font-size: 13px; color: var(--ink-2); }
+.gl-root .gam-benefit__price.is-ready { color: var(--link); }
+.gl-root .gam-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
 /* ------------------------------------------------------------ treatment ---
    No rail, no panes: a dim photograph, the orb, one line, and the two
    things the person is still allowed to do. */
