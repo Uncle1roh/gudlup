@@ -6,6 +6,9 @@ import './index.css'
 import './selfuse.css'
 // the dark "Studio" restyle of the Self Use surface — must follow selfuse.css
 import './selfuse-studio.css'
+// …and the mood colour on top of it — must follow BOTH, because it re-points
+// the same token names (docs/ui-redesign)
+import './selfuse-mood.css'
 import './corporate.css'
 import './workspace.css'
 // legal surfaces: Help now, the legal page, in-context notices (src/legal)

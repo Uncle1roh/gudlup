@@ -19,8 +19,9 @@
    on every screen, for everyone, always: static, never inferred.
    ============================================================================ */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/auth'
+import { MoodProvider, useMood } from '../mood/MoodContext'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useDataProvider } from '../data/provider'
@@ -53,7 +54,6 @@ import { dayKey } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 import { BrandLogo } from '../components/Brand'
-import { useSuTheme } from './theme'
 import { useBackLayer } from './backStack'
 import { UnlockSheet } from './UnlockSheet'
 import { unseenUnlocks, type AchievementView } from '../gamification/achievements'
@@ -97,7 +97,8 @@ interface SelfUseAppProps {
     player can never disagree about what a session offers. */
 export function SelfUseApp(props: SelfUseAppProps) {
   return (
-    <LiveCatalogProvider>
+    <MoodShell>
+      <LiveCatalogProvider>
       {/* One tap from every screen — the first run, the player, a call, every
           tab (CRS-01). It used to float over the surface as a direct child of
           #root, where `#root > * { width: 100% }` stretched it across the
@@ -111,15 +112,26 @@ export function SelfUseApp(props: SelfUseAppProps) {
         </div>
         <SelfUseSurface {...props} />
       </div>
-    </LiveCatalogProvider>
+      </LiveCatalogProvider>
+    </MoodShell>
   )
+}
+
+/** The surface's colour, from the person's own last check-in. It wraps the
+    catalog rather than the other way round so every frame — the library, the
+    player, a call, the first run — is painted before anything renders. */
+function MoodShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const userId = previewing() ? PREVIEW_USER_ID : user?.id
+  return <MoodProvider userId={userId}>{children}</MoodProvider>
 }
 
 function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { t } = useI18n()
-  /* The only thing in the app that reads the theme: the logo is a PNG in two
+  /* The surface's colour: what the tokens are built from, and the one thing
+     a component still has to read directly — the logo is a PNG in two
      colourways and CSS cannot repaint it. */
-  const theme = useSuTheme()
+  const mood = useMood()
   const catalog = useCatalog()
   const { user, role, signOut } = useAuth()
   const dp = useDataProvider()
@@ -789,7 +801,10 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             hidden at phone widths, where this nav is four icons at the foot
             of the screen and the search lives in the library's own header. */}
         <span className="tabbar__brand">
-          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} />
+          {/* The mark is a PNG in two colourways and CSS cannot repaint it.
+              Which one is needed follows the MOOD now, not the day/night
+              setting: on an amber afternoon the cream logo is a ghost. */}
+          <BrandLogo variant={mood.color.light ? 'green' : 'cream'} />
         </span>
 
         <label className="su-search su-search--bar">

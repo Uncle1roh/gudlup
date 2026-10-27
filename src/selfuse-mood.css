@@ -1,0 +1,364 @@
+/* ============================================================================
+   GOOD LOOP — Self Use in the colour of the day
+
+   The approved redesign (docs/ui-redesign/mockups/*.dc.html): the surface
+   stops being a fixed dark room and takes the colour of the person's last
+   emotional check-in, with glass over it.
+
+   ── how it reaches every screen ─────────────────────────────────────────────
+   `MoodProvider` writes ten `--mood-*` properties to the document and puts
+   `.su-mood` on it. This file does two things with them and nothing else:
+
+     1 · ALIAS — inside `.su-mood`, the brief's token names (`--ink`,
+         `--ink-2`, `--link`, `--glass`, `--btn`, `--line`, `--act-bg`,
+         `--act-fg`) are the mood ones;
+     2 · RE-POINT — the `--su-*` palette that `selfuse-studio.css` invented,
+         and the `--mist/--ink/--line` names that 1 644 lines of
+         `selfuse.css` read, point at those tokens too.
+
+   So nothing downstream had to be rewritten to follow the colour. The same
+   lever `selfuse-studio.css` used to take the surface dark now takes it
+   wherever the person is.
+
+   Loaded AFTER selfuse-studio.css (see main.tsx), so where the two disagree
+   at equal specificity, this wins.
+
+   ── the ground ──────────────────────────────────────────────────────────────
+   The mood colour, then a veil — white under dark text, near-black under
+   light text — then the mockup's two soft lights. The veil is not decoration:
+   a mood colour at the token-set boundary is a mid-tone, and a mid-tone
+   carries neither dark nor light text at 4.5:1. The strengths are measured
+   over the whole grid in tools/test-mood-color.ts. See src/mood/tokens.ts.
+
+   No photograph anywhere: the mockups' lake is a placeholder and the colour
+   replaces it.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- type ----
+   Outfit for display, DM Sans for body. Self-hosted, like Roboto: the
+   product has never fetched a font from Google, because that hands every
+   reader's address to a third party, and a redesign is not a reason to
+   start. Same families, same weights, same `display: swap`. */
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Roman-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/DMSans-Roman-latin.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/DMSans-Roman-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* -------------------------------------------------------------- ground ---- */
+
+html.su-mood,
+html.su-mood body {
+  background-color: var(--mood-bg);
+  transition: background-color 1.5s ease;
+}
+
+/* The page behind the frame, so a narrow window is not two colours. */
+html.su-mood body:has(.su-studio) { background: var(--mood-bg); }
+
+/* The shell around the frame carried the Studio's void (#070d0c) and painted
+   it over everything this file does. It is a layout wrapper; the ground is
+   the document's. */
+html.su-mood .su-shell,
+html.su-mood .su-shell__bar,
+html.su-mood .su-shell__bar.su-studio { background: transparent; }
+
+html.su-mood .su-studio {
+  /* ---- the brief's tokens, inside the surface that owns them ---- */
+  --ink: var(--mood-ink);
+  --ink-2: var(--mood-ink-2);
+  --link: var(--mood-link);
+  --glass: var(--mood-glass);
+  --btn: var(--mood-btn);
+  --line: var(--mood-line);
+  --act-bg: var(--mood-act-bg);
+  --act-fg: var(--mood-act-fg);
+
+  /* ---- the Studio palette, re-pointed ----
+     Every one of these names is read by rules in selfuse-studio.css and
+     selfuse.css. Re-pointing them is what moves ~4 600 lines of stylesheet
+     onto the mood colour without touching a rule. */
+  --su-void:     var(--mood-bg);
+  --su-ground:   transparent;
+  --su-raised:   var(--glass);
+  --su-well:     var(--glass);
+  --su-hair:     var(--line);
+  --su-hair-2:   var(--line);
+
+  --su-fg:       var(--ink);
+  --su-fg-2:     var(--ink);
+  --su-muted:    var(--ink-2);
+  --su-faint:    var(--ink-2);
+  --su-meta:     var(--ink-2);
+
+  /* Emerald was "the one accent" on a near-black ground. On a ground that
+     changes colour hourly it cannot also be a text colour, so accents point
+     at the link token — measured against every mood colour — and the brand
+     green survives as a FILL under `--su-seal` below. */
+  --su-accent:   var(--link);
+  --su-accent-2: var(--link);
+  --su-cream:    var(--act-bg);
+  --su-cream-2:  var(--act-bg);
+  --su-on-accent: var(--act-fg);
+  --su-hover:    var(--btn);
+  --su-fill:     var(--btn);
+  --su-fill-2:   var(--glass);
+  --su-on:       var(--glass);
+  --su-bloom:    transparent;
+  --su-glow:     transparent;
+  --su-cast:     rgba(0, 0, 0, 0.18);
+
+  /* the brand mark keeps its own green, everywhere, in every mood */
+  --su-seal:     #3db189;
+
+  /* ---- the shared names in index.css ---- */
+  --mist:        transparent;
+  --mist-2:      var(--glass);
+  --slate:       var(--ink-2);
+  --aura:        var(--link);
+  --aura-deep:   var(--link);
+  --core:        var(--act-bg);
+  --halo:        var(--link);
+  --shadow-soft: 0 10px 30px -18px rgba(0, 0, 0, 0.35);
+  --shadow-lift: 0 22px 50px -26px rgba(0, 0, 0, 0.4);
+
+  /* ---- type ---- */
+  --display: 'Outfit', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  /* `body` picked up the OLD --sans before this block redefined it, so the
+     surface has to say which family it is in. */
+  font-family: var(--sans);
+  transition: color 1.5s ease;
+}
+
+html.su-mood .su-studio :where(h1, h2, h3, .display, .su-h1, .cat-hero__title, .sess-full__title) {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
+}
+
+/* The veil and the two soft lights, as one layer under everything. The
+   mockup paints them as radial gradients on its root; the veil is the flat
+   first stop, and it is what makes the text legible (tokens.ts). */
+html.su-mood .su-studio::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  filter: none;
+  animation: none;
+  pointer-events: none;
+  z-index: -1;
+  background-color: var(--mood-veil);
+  background-image:
+    radial-gradient(ellipse at 75% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(ellipse at 0% 100%, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 55%);
+  transition: background-color 1.5s ease;
+}
+
+/* The grain was mixed for near-black and smears a pale ground. */
+html.su-mood .gl-grain,
+html.su-mood .su-grained::after { opacity: 0.07; }
+
+/* ---------------------------------------------------------------- glass ---
+
+   Cards are translucent with a blur, a hairline and a large radius. They are
+   addressed by the classes the surface already uses rather than by a new
+   wrapper, so every screen gets it at once. Buttons are flat glass pills:
+   no bevel, no 3D — that was tried and rejected. */
+
+html.su-mood .su-studio :where(
+  .card, .panel, .sheet, .tile, .su-card, .cat-card-wrap, .metric, .week,
+  .daylist, .notes, .check, .chip, .filter-chip, .mood-chip, .pw-big,
+  .cat-hero, .su-callout, .legal-ack, .toggle-row, .benefit, .conq
+) {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  transition: background-color 1.5s ease, border-color 1.5s ease;
+}
+
+html.su-mood .su-studio :where(.card, .panel, .sheet, .su-card) { border-radius: 26px; }
+
+html.su-mood .su-studio :where(.btn, .chip, .filter-chip, .tabbar__btn) {
+  border-radius: var(--r-pill);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+html.su-mood .su-studio .btn {
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+
+html.su-mood .su-studio :where(.btn--primary, .btn--light) {
+  background: var(--act-bg);
+  color: var(--act-fg);
+  border-color: transparent;
+}
+
+html.su-mood .su-studio .btn--ghost,
+html.su-mood .su-studio .btn--quiet {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html.su-mood .su-studio a { color: var(--link); }
+
+/* Focus has to be visible on any ground, so it is drawn in both inks. */
+html.su-mood .su-studio :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* ----------------------------------------------------------- the rail -----
+
+   Desktop: a vertical rail on the left — logo, then the five destinations in
+   the mockups' order, as icon circles. The active one is a solid --act-bg
+   circle. Phone: the same five as a bottom tab bar.
+
+   The markup is the tab bar that was already there; what changes is where it
+   stands and what it looks like. */
+
+@media (min-width: 900px) {
+  /* The frame fills the window from 900px, not 1100px: a 76px rail and a
+     readable column fit here, which is the whole reason the rail is icons. */
+  html.su-mood .su-studio.app-frame,
+  html.su-mood .su-studio.app-frame--tabs {
+    max-width: none;
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  html.su-mood .su-studio.app-frame--tabs {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'rail main';
+  }
+  html.su-mood .su-studio .tabview { grid-area: main; min-width: 0; }
+  html.su-mood .app-frame--tabs .tabbar {
+    grid-area: rail;
+    height: 100dvh;
+    width: 92px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 22px 0;
+    border: none;
+    border-bottom: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+  html.su-mood .app-frame--tabs .tabbar__brand {
+    display: flex;
+    width: 52px;
+    height: 52px;
+    margin: 0 0 14px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  html.su-mood .app-frame--tabs .tabbar__brand .gl-logo { height: 30px; width: auto; }
+  html.su-mood .app-frame--tabs .tabbar__btn {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--btn);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    opacity: 1;
+    transition: background-color 1.5s ease, color 1.5s ease;
+  }
+  html.su-mood .app-frame--tabs .tabbar__btn.is-on {
+    background: var(--act-bg);
+    color: var(--act-fg);
+    border-color: transparent;
+  }
+  /* The label is the accessible name, not a caption: a 76px rail has no room
+     for five words, and the icon alone would be a guess for a screen reader. */
+  html.su-mood .app-frame--tabs .tabbar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  html.su-mood .app-frame--tabs .tabbar__icon { filter: none; font-size: 22px; }
+  html.su-mood .app-frame--tabs .tabbar__help { margin-top: auto; }
+}
+
+/* The search left the bar with the bar: on a desk it is the big pill beside
+   the billboard (HomeMood.dc.html), on a phone it is in the library's own
+   header. Either way it is not a field wedged into a 92px rail. */
+html.su-mood .su-search--bar { display: none !important; }
+
+/* Phone: the bottom bar, on glass. */
+@media (max-width: 899px) {
+  html.su-mood .tabbar {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    backdrop-filter: blur(22px) saturate(140%);
+    border-top: 1px solid var(--line);
+  }
+  html.su-mood .tabbar__btn { color: var(--ink); opacity: 0.7; }
+  html.su-mood .tabbar__btn.is-on { opacity: 1; }
+  html.su-mood .tabbar__brand { display: none; }
+}
+
+/* ------------------------------------------------------------- motion ----- */
+
+@media (prefers-reduced-motion: reduce) {
+  html.su-mood,
+  html.su-mood body,
+  html.su-mood .su-studio,
+  html.su-mood .su-studio::before,
+  html.su-mood .su-studio * {
+    transition-duration: 0.01ms !important;
+    animation: none !important;
+  }
+}
