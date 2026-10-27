@@ -694,7 +694,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             topCard={homeChallenge ? <ChallengeCard c={homeChallenge} onOpen={() => setChallengeOpen(homeChallenge.id)} /> : null}
             name={displayName(user?.email, legal.profile?.name)}
             pathway={state.pathway}
-            completed={state.completedPathways.map((c) => c.id)}
             onStartPathway={startPathway}
             onStart={startFromExplore}
             query={query}

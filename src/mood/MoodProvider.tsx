@@ -25,6 +25,11 @@ interface MoodState {
   label: string | null
   /** They opened the check-in and said "Pular". */
   skipped: boolean
+  /** Where the dot is right now: the live point while dragging, else the
+      committed one, else the centre. The WORDS come from here too — reading
+      them off the committed point meant a drag changed the colour and left
+      the four words behind in the quadrant you started in. */
+  point: Mood
   /** The colour on screen right now — the live point while dragging. */
   color: MoodColor
   /** Follow the dot while it moves, without committing to it. */
@@ -42,7 +47,8 @@ export function MoodProvider({ children }: { children: ReactNode }) {
   const [skipped, setSkipped] = useState(false)
   const [live, setLive] = useState<Mood | null>(null)
 
-  const color = useMemo(() => moodColor(live ?? mood ?? CENTRE), [live, mood])
+  const point = live ?? mood ?? CENTRE
+  const color = useMemo(() => moodColor(point), [point])
 
   useEffect(() => {
     const root = document.documentElement
@@ -62,6 +68,7 @@ export function MoodProvider({ children }: { children: ReactNode }) {
       mood,
       label,
       skipped,
+      point,
       color,
       preview: (m) => setLive(m),
       commit: (m, l) => {
@@ -75,7 +82,7 @@ export function MoodProvider({ children }: { children: ReactNode }) {
         setLive(null)
       },
     }),
-    [mood, label, skipped, color],
+    [mood, label, skipped, point, color],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

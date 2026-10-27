@@ -12,15 +12,14 @@
    session has a clinical identity, and the person listening never sees it.
    ============================================================================ */
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { useLegal } from '../legal/LegalContext'
 import { LibraryNotice } from '../legal/LibraryNotice'
-import { greeting, longDate } from './greeting'
 import { PathwayFinder } from './PathwayFinder'
-import { Icon, type IconName } from './icons'
+import { Icon } from './icons'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
-import { Catalog } from './Catalog'
+import { Home } from '../ui2/Home'
 import { useDataProvider } from '../data/provider'
 import type { ExploreRail } from '../data/rails'
 import { coverFor, coverStyle } from './artwork'
@@ -38,7 +37,6 @@ interface ExploreProps {
   /** First name, when the account gives one. Null says hello without it. */
   name: string | null
   pathway: PathwayState | null
-  completed: PathwayId[]
   onStartPathway: (id: PathwayId) => void
   onStart: (l: Launch) => void
   /** What is typed in the top bar's search field. */
@@ -66,7 +64,7 @@ type View =
   | { kind: 'weekly' }
   | { kind: 'session'; slug: string }
 
-export function Explore({ name, pathway, completed, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard }: ExploreProps) {
+export function Explore({ name, pathway, onStartPathway, onStart, query = '', onQuery, sponsored = false, professionalOffered = false, onFindProfessional, saved = [], onToggleSave, recent = [], topCard }: ExploreProps) {
   const { t } = useI18n()
   const { m } = useLegal()
   const catalog = useCatalog()
@@ -97,29 +95,6 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
   /* Every view here has the same ‹ Back: it returns to the library. */
   useBackLayer(view.kind !== 'list', () => setView({ kind: 'list' }))
 
-  /* The catalog's hero leads with what the person is already doing, so the
-     library opens on something relevant rather than on whatever sorts first. */
-  const activePathway = pathway ? findPathway(catalog.pathways, pathway.id) : undefined
-  const todayWeek =
-    pathway && activePathway
-      ? activePathway.plan.find((w) => w.week === currentWeek(pathway, activePathway))
-      : undefined
-  const todaySlug = todayWeek ? primaryBlock(todayWeek)?.slug : undefined
-
-  /* The pathway's state travels INTO the hero rather than sitting in a second
-     card above it: one card about one thing. */
-  const heroPathway = useMemo(() => {
-    if (!pathway || !activePathway) return undefined
-    const week = currentWeek(pathway, activePathway)
-    const plan = activePathway.plan.find((w) => w.week === week)
-    return {
-      name: activePathway.name,
-      week,
-      weeks: activePathway.weeks,
-      done: pathway.done[week] ?? 0,
-      target: plan ? weekCount(plan) : 0,
-    }
-  }, [pathway, activePathway])
 
   if (catalog.loading) {
     return <div className="su-page"><p className="small muted">{t('Loading…')}</p></div>
@@ -159,83 +134,39 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
     if (s) return <SessionDetail session={s} catalog={catalog} onBack={() => setView({ kind: 'list' })} onStart={onStart} />
   }
 
+  /* The library, ported from HomeMood.dc.html. The two legal elements this
+     screen owes are not in the mockup and are not optional, so they travel
+     into it: the category notice under the top bar (MN-25) and the static
+     link to a professional at the foot (LIB-2 / LIB-3). */
   return (
-    <div className="su-page explore">
-      {/* The date above, the greeting below — the shape the app opens with.
-          A person arriving at a library of clinical material should be
-          greeted by name before they are shown a shelf. */}
-      <header className="su-hello">
-        <span className="su-hello__date">{t(longDate())}</span>
-        <h1 className="display su-hello__line">
-          {name ? `${t(greeting())}, ${name}` : t(greeting())}
-        </h1>
-      </header>
-
-      {/* The ONE legal element of this screen (MN-25): on the first visit the
-          category note (CAT-1 / CAT-2 — this library is made for the working
-          day), afterwards the one-line header (LIB-1) with the full notice
-          one tap away. Both static: the same for everyone, on the same
-          trigger (D-17). */}
-      <LibraryNotice sponsored={sponsored} />
-
-      {topCard}
-
-      {/* No search field on this screen below the desktop breakpoint. The
-          narrow layout has no top bar to hold one and an in-page copy sat in
-          front of the library taking a whole row for a thing few people type
-          into on a phone — the categories and the rails are how you browse
-          here. The state stays: the desktop bar still drives `query`. */}
-
-      <Catalog
+    <>
+      <Home
+        name={name}
         catalog={catalog}
         storedRails={rails}
-        featuredSlug={todaySlug}
-        onOpen={(slug) => setView({ kind: 'session', slug })}
-        onQuickStart={(slug, duration) => onStart({ slug, duration })}
-        heroPathway={heroPathway}
-        onOpenPathway={() => setView({ kind: 'weekly' })}
-        moodsSlot={
-          <MoodRail
-            moods={catalog.moodCards}
-            onOpen={(slug) => setView({ kind: 'session', slug })}
-          />
-        }
-        pathwaysSlot={
-          <PathwayRail
-            pathways={catalog.pathways}
-            active={pathway?.id ?? null}
-            completed={completed}
-            onOpen={(id) => setView({ kind: 'pathway', id })}
-          />
-        }
-        query={query}
-        onClearQuery={() => onQuery?.('')}
+        recent={recent}
         saved={saved}
         onToggleSave={onToggleSave}
-        recent={recent}
         top={top}
+        query={query}
+        onQuery={(q) => onQuery?.(q)}
+        onOpen={(slug) => setView({ kind: 'session', slug })}
+        onStart={(slug, duration) => onStart({ slug, duration })}
+        noticeSlot={
+          <>
+            <LibraryNotice sponsored={sponsored} />
+            {topCard}
+          </>
+        }
+        footSlot={
+          <p className="legal-line legal-line--foot">
+            <button type="button" className="legal-link" onClick={onFindProfessional}>
+              {m(professionalOffered ? 'LIB-2' : 'LIB-3')}
+            </button>
+          </p>
+        }
       />
 
-      {/* LIB-2 / LIB-3 — the static footer link to a professional, the same
-          for every user (M1-11). */}
-      <p className="legal-line legal-line--foot">
-        <button type="button" className="legal-link" onClick={onFindProfessional}>
-          {m(professionalOffered ? 'LIB-2' : 'LIB-3')}
-        </button>
-      </p>
-
-      {/* The four intake questions, one tap from anywhere on the library.
-          They used to be a gate everybody answered before seeing the app,
-          then a text link in the Pathways rail header — which is where a
-          person who is already lost is least likely to look. */}
-      {/* On a phone a 52px circle in the thumb's corner is the right shape:
-          screen space is the scarce thing and the gesture is cheap.
-
-          On a desktop neither is true. The same circle sat in the bottom
-          right of a 1400px window — the furthest point from where the eye
-          is, marked with a question mark that could mean help with the app,
-          help with the account, or a chat nobody is on the other end of. It
-          says what it does there, in words, because there is room for them. */}
       <button
         className="btn cat-rail__help"
         onClick={() => setView({ kind: 'finder' })}
@@ -245,93 +176,11 @@ export function Explore({ name, pathway, completed, onStartPathway, onStart, que
         <Icon name="help" size={22} />
         <span className="cat-rail__help__label">{t('Help me choose')}</span>
       </button>
-    </div>
+    </>
   )
 }
 
-/* ----------------------------------------------------------- mood rail ---
 
-   The other way in. Browsing by category asks a person to know what kind of
-   thing they want; this asks how they feel and picks. It is the one part of
-   the old Home the library does not otherwise replace, so it moved here
-   rather than being lost with that screen.
-
-   Tapping opens the session rather than starting it: a mood is a rougher
-   signal than a category, and the length is still the person's to choose. */
-function MoodRail({
-  moods,
-  onOpen,
-}: {
-  moods: { id: string; icon: IconName; label: string; slug: string }[]
-  onOpen: (slug: string) => void
-}) {
-  const { t } = useI18n()
-  if (!moods.length) return null
-  return (
-    <section className="cat-rail mood-rail">
-      <header className="cat-rail__head">
-        <h3 className="cat__railtitle">{t('How are you feeling right now?')}</h3>
-      </header>
-      <div className="cat-rail__track mood-rail__track">
-        {moods.map((m) => (
-          <button key={m.id} className="mood-chip" onClick={() => onOpen(m.slug)}>
-            <span className="mood-chip__icon" aria-hidden="true"><Icon name={m.icon} size={22} /></span>
-            <span className="mood-chip__label">{t(m.label)}</span>
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-/* ------------------------------------------------------- pathways rail ---
-
-   A category among the categories. The tab that used to hold these is gone:
-   a pathway is one more thing to browse, and putting it behind a mode switch
-   made the library feel like two apps. Big buttons rather than cover cards,
-   because a pathway is a commitment of weeks and should not look like a
-   six-minute session. */
-function PathwayRail({
-  pathways,
-  active,
-  completed,
-  onOpen,
-}: {
-  pathways: ResolvedPathway[]
-  active: PathwayId | null
-  completed: PathwayId[]
-  onOpen: (id: PathwayId) => void
-}) {
-  const { t } = useI18n()
-  if (!pathways.length) return null
-  return (
-    <section className="cat-rail pw-rail">
-      <header className="cat-rail__head">
-        <h3 className="cat__railtitle">{t('Journeys')}</h3>
-      </header>
-      <div className="cat-rail__track pw-rail__track">
-        {pathways.map((p) => (
-          <button
-            key={p.id}
-            className={`pw-big${active === p.id ? ' is-active' : ''}`}
-            onClick={() => onOpen(p.id)}
-          >
-            <span className="pw-big__name">{t(p.name)}</span>
-            {/* A journey is named by what it is for, not by how many weeks it
-                runs: a length on the card reads as a commitment to make before
-                you have been told what it is. Where it stands in YOUR copy of
-                it still shows — that is status, not a category. */}
-            {(active === p.id || completed.includes(p.id)) && (
-              <span className="pw-big__meta">
-                {active === p.id ? t('In progress') : t('Completed')}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
 
 /* ------------------------------------------------------------- EXP-1 -----
 

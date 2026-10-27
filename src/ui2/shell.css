@@ -73,6 +73,20 @@ html.gl2 .su-shell__bar {
   border: 0;
 }
 
+/* …and the button itself becomes glass, like every other control here. It
+   keeps its own shape and its own words — only the surface changes. */
+html.gl2 .helpnow--bar {
+  background: var(--mood-btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--mood-line);
+  color: var(--mood-ink);
+  box-shadow: none;
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+
+html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55; }
+
 /* ------------------------------------------------------------------ root ---
    The token names the mockups use, pointed at the namespaced ones the
    provider writes. The admin, HR and workspace consoles read `--ink` and
@@ -237,10 +251,107 @@ html.gl2 .su-shell__bar {
   gap: 30px;
 }
 
+/* The surface keys its tab content on `.tabview` so a re-tap remounts the
+   screen at the top. That div sits between `.gl-main` and the screen's own
+   children, which would swallow the column's rhythm — so it carries it. */
+.gl-root .tabview {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-width: 0;
+  padding: 0;
+  max-width: none;
+}
+
 .gl-wordmark {
   font-family: 'Outfit', system-ui, sans-serif;
   font-size: 22px;
   font-weight: 500;
+}
+
+/* The label of the search field: read aloud, never drawn (the mockup hides
+   it with the same clip rectangle). */
+.gl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.gl-search::placeholder { color: var(--ink-2); }
+/* A search input draws its own clear button in a colour we do not control. */
+.gl-search::-webkit-search-cancel-button { filter: invert(var(--mood-invert, 0)); }
+
+/* ----------------------------------------------- what the mockup omits ---
+   Two things stand on this screen that are not in any mockup and are not
+   ours to drop: the library notice (MN-25 / CAT-1 / CAT-2) and the company
+   challenge card. They keep their own markup and their own words; here they
+   only learn the surface, so they stop reading as leftovers from the old
+   design. Nothing about what they say changes. */
+
+.gl-root .legal-line,
+.gl-root .legal-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.gl-root .legal-line--foot { justify-content: center; padding-top: 8px; }
+
+.gl-root .legal-note {
+  border-radius: 999px;
+  padding: 10px 10px 10px 20px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  justify-content: space-between;
+}
+
+.gl-root .legal-note__text { margin: 0; }
+
+.gl-root .legal-note__ok,
+.gl-root .legal-line__link,
+.gl-root .legal-link {
+  background: none;
+  border: 0;
+  padding: 0 8px;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.gl-root .gam-challenge {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+  border-radius: 28px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: none;
+  padding: 18px 22px;
+}
+
+.gl-root .gam-challenge__body { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.gl-root .gam-challenge__title { font-family: 'Outfit', system-ui, sans-serif; font-size: 20px; font-weight: 500; }
+.gl-root .eyebrow { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+
+.gl-tile { transition: transform 0.25s ease; }
+.gl-tile:hover { transform: translateY(-2px); }
+.gl-root :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-tile, .gl-tile:hover { transition: none; transform: none; }
 }
 
 /* ------------------------------------------------------------ the phone ---
@@ -252,7 +363,15 @@ html.gl2 .su-shell__bar {
     padding: 24px 18px 18px;
     gap: 16px;
     flex-direction: column;
+    /* `flex-wrap: wrap` in a COLUMN is not the same thing it is in a row: it
+       lets the content spill into a second column off the side of the phone
+       instead of growing downward. The page then measures seven thousand
+       pixels wide, which `overflow-x: clip` quietly hides. */
+    flex-wrap: nowrap;
   }
+
+  .gl-main,
+  .gl-root .tabview { width: 100%; max-width: 100%; min-width: 0; }
 
   .gl-nav {
     order: 2;
