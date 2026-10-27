@@ -204,12 +204,14 @@ html.su-mood .su-studio :where(
   transition: background-color 1.5s ease, border-color 1.5s ease;
 }
 
-/* The BLUR is expensive — each blurred element is its own composited layer —
-   and the library puts eighty cards on one screen. Eighty blur layers took
-   the renderer down in testing, so the blur is reserved for the few big
-   surfaces that read as panes of glass; the small ones are translucent and
-   look the same against a flat colour. */
-html.su-mood .su-studio :where(.card, .panel, .sheet, .su-card) {
+/* The BLUR is expensive — each blurred element is its own composited layer,
+   and a screen of cards is a screen of layers. Eighty of them took the
+   renderer down in testing, and the tabs that are lists of cards took it
+   down again, so the blur is reserved for the few elements that are
+   genuinely a pane in front of something: the check-in popover, the search
+   field, a sheet, and the phone's tab bar. Everything else is translucent,
+   which against a flat colour looks the same and costs nothing. */
+html.su-mood .su-studio :where(.sheet, .panel) {
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
 }
