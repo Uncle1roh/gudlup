@@ -52,6 +52,29 @@ const DEMO_PERSIST = (() => {
   const env = import.meta.env as ImportMetaEnv | undefined
   return !(env?.VITE_SUPABASE_URL && env?.VITE_SUPABASE_ANON_KEY)
 })()
+/* The fixtures that claim a RELATIONSHIP the signed-in person does not
+   have: a company code, and a therapist. They belong to the commercial
+   team's presentation and nowhere else, so they are off unless a
+   deployment asks for them with VITE_DEMO_FIXTURES=1.
+
+   They used to be on for everyone, which is why an account with no
+   company code still met Dra. Ana Silva: `getMyCompanyCode` handed
+   DEMO-2026-GL to whoever asked, that convention includes Professional
+   Support, and so the therapist that a plan opens was correctly opened —
+   for a person who had no plan. The app's gates were right; what they were
+   reading was a lie.
+
+   This switches off only those two. The demo world's sessions, offers,
+   challenges and wallet stay: they are what makes a preview worth looking
+   at, and they do not assert anything about who the person is. The
+   company-scoped parts of them are filtered in the app by company code,
+   which without this flag is now null. */
+const DEMO_FIXTURES = (() => {
+  const env = import.meta.env as ImportMetaEnv | undefined
+  const v = env?.VITE_DEMO_FIXTURES
+  return v === '1' || v === 'true'
+})()
+
 const PERSIST_PREFIX = 'gl.mock.admin.'
 function restored<T>(name: string, fallback: T): T {
   if (!DEMO_PERSIST) return fallback
@@ -592,7 +615,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     /* The demo tenant, so an account that types no code at all still shows
        the full app — Professional Support included. Typing a code at sign-up
        overrides this: NOVA-2026 is the without-Professional-Support state. */
-    getMyCompanyCode: () => delay('DEMO-2026-GL' as string | null),
+    getMyCompanyCode: () => delay((DEMO_FIXTURES ? 'DEMO-2026-GL' : null) as string | null),
     getMyAddressedAs: async () => {
       try { const v = localStorage.getItem('gl.mock.addressedAs'); return v === 'm' || v === 'f' ? v : null } catch { return null }
     },
@@ -600,7 +623,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
       try { localStorage.setItem('gl.mock.addressedAs', to) } catch { /* private mode */ }
       await wait()
     },
-    getMyTherapistLink: () => delay({ ...link }),
+    getMyTherapistLink: () => delay(DEMO_FIXTURES ? { ...link } : null),
     redeemTherapistCode: async (code: string) => {
       await wait()
       const known = therapistCodes.find((c) => c.active && c.code.toUpperCase() === code.trim().toUpperCase())

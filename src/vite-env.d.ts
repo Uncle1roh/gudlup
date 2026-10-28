@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string
   readonly VITE_SUPABASE_ANON_KEY?: string
+  /** '1' only in the commercial team's demo build: hands out a company code and a therapist. */
+  readonly VITE_DEMO_FIXTURES?: string
   /** Spoken language of the protocol voice lines (BCP-47). See tts/settings.ts. */
   readonly VITE_TTS_LANG?: string
   readonly VITE_AZURE_TTS_KEY?: string
