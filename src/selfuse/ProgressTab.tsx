@@ -140,12 +140,15 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
   const vas = therapy.link?.vas ?? []
   const felt = vas.length > 1
 
-  /* The blocks, in the mockup's rhythm: a wide one and a narrow one to a
-     row. The desk's extras (care, milestone, challenge) step out below
-     900px, so a row that would be left with one narrow block on a phone is
-     still one column there. */
+  /* Two columns that do not wait for each other. They used to be three
+     rows of a 3-up grid, a wide block beside a narrow one, and a grid row
+     is as tall as its tallest cell — so a short check-in next to a tall
+     care block left a 170px hole under the check-in, and another under the
+     calendar. Each column is its own stack now, so a block ends where its
+     content ends. The desk's extras (care, milestone, challenge) still
+     step out below 900px, which leaves the main column alone there. */
   const care = wallet && (
-    <section className="glass jr2-card jr2-care prog-desk" aria-label={t('Your care')}>
+    <section className="glass jr2-card jr2-care" aria-label={t('Your care')}>
       <p className="eyebrow">{t('Your care')}</p>
       <p className="jr2-care__time">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</p>
       <p className="jr2-care__loops"><Icon name="loop" size={22} /> {t('= {n} Loops', { n: String(wallet.loops) })}</p>
@@ -155,7 +158,7 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
   )
 
   const milestone = next && (
-    <button type="button" className="glass jr2-card gam-milestone prog-desk" onClick={() => onView('achievements')}>
+    <button type="button" className="glass jr2-card gam-milestone" onClick={() => onView('achievements')}>
       <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
       <span className="gam-milestone__body">
         <span className="eyebrow">{t('Next milestone of care')}</span>
@@ -166,7 +169,7 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
   )
 
   const live = challenge && (
-    <div className="prog-desk jr2-cell"><ChallengeCard c={challenge} onOpen={() => onView('challenges')} /></div>
+    <div className="jr2-cell"><ChallengeCard c={challenge} onOpen={() => onView('challenges')} /></div>
   )
 
   return (
@@ -175,10 +178,10 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
         <PathwayPanels pathway={state.pathway} active={pw.active} week={pw.week} onStart={onStartLaunch} />
       )}
 
-      {/* How the week felt, set against the week before it — and the care
-          block beside it. */}
-      <section className="g3">
-        <section className="glass jr2-card s2">
+      <div className="jr2-bento">
+       <div className="jr2-bento__main">
+        {/* How the week felt, set against the week before it. */}
+        <section className="glass jr2-card">
           <h2 className="call2-pane__h">{t('Weekly check-in')}</h2>
           {last ? (
             <GlCheckWeek last={last} previous={prev} />
@@ -190,13 +193,10 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
           )}
           {!due && last && <p className="call2-ok">{t('Done for this week.')}</p>}
         </section>
-        {care}
-      </section>
 
-      {/* The one thing on this tab a person writes rather than is told. The
-          same calendar as before — the month, a square a day. */}
-      <section className="g3">
-        <section className="glass jr2-card s2">
+        {/* The one thing on this tab a person writes rather than is told.
+            The same calendar as before — the month, a square a day. */}
+        <section className="glass jr2-card">
           <h2 className="call2-pane__h">{t('Mood calendar')}</h2>
           <MoodCalendar moods={state.moods} />
           {!state.moods.length && (
@@ -204,19 +204,18 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
           )}
           <button type="button" className="glass-btn jr2-btn" onClick={onMood}>{t('How was your day?')}</button>
         </section>
-        {(milestone || live) && (
-          <div className="jr2-stack prog-desk">
-            {milestone}
-            {live}
-          </div>
-        )}
-      </section>
 
-      {felt && (
-        <section className="g3">
-          <VasPanel points={vas} className="s2" />
-        </section>
-      )}
+        {felt && <VasPanel points={vas} />}
+       </div>
+
+       {(care || milestone || live) && (
+         <aside className="jr2-bento__side prog-desk">
+           {care}
+           {milestone}
+           {live}
+         </aside>
+       )}
+      </div>
 
       {/* The WHO-5 monthly snapshot is gone from self-guided use: a validated
           instrument scored back to the person is a clinical measurement

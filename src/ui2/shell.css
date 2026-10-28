@@ -765,7 +765,7 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   .gl-nav__btn { width: 44px; height: 44px; border: none; background: transparent; }
   .gl-nav__btn.is-on { background: var(--act-bg); color: var(--act-fg); }
 
-  .gl-main { gap: 20px; padding-bottom: 84px; }
+  .gl-main { gap: 20px; padding-bottom: 112px; }
 }
 
 /* --------------------------------------------------- the phone's faces ---

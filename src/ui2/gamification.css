@@ -1,0 +1,374 @@
+/* ============================================================================
+   Conquistas · Rankings · Desafios, on the redesigned surface
+
+   These three screens were never ported — the brief said to keep them where
+   they are and only let them take the new tokens. But their layout lived
+   entirely under `.su-studio`, which this surface does not carry, so what
+   survived was the markup with no CSS at all: browser bullets next to a
+   rank number ("1. 1Florianópolis"), sibling spans with no gap
+   ("Primeiro LoopDesbloqueada"), badges spilling out of a card, chips as
+   plain white pills.
+
+   This sheet gives them the system's spacing, cards and controls. It
+   changes nothing about what they say or count.
+   ============================================================================ */
+
+/* ------------------------------------------------------------- the frame ---
+   One rhythm down the screen, and lists that stop drawing markers the
+   content already draws. */
+
+.gl-root .gam-stack,
+.gl-root .gam-section { display: flex; flex-direction: column; gap: 20px; }
+
+.gl-root .gam-list,
+.gl-root .gam-grid,
+.gl-root .gam-rank__list,
+.gl-root .gam-ach__block ul,
+.gl-root .gam-benefits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gl-root .gam-list { display: flex; flex-direction: column; gap: 14px; }
+.gl-root .gam-list > li { min-width: 0; }
+
+.gl-root .home__sect {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------- chips ---
+   The scope switches (Cidades / Estados / Regiões, Individuais /
+   Coletivas) are the same control as everywhere else here. */
+
+.gl-root .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.gl-root .chip-row--start { justify-content: flex-start; }
+
+.gl-root .chip {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  width: auto;
+  flex: none;
+}
+
+.gl-root .chip:hover { background: var(--inset); }
+.gl-root .chip[aria-pressed='true'] { background: var(--act-bg); color: var(--act-fg); border-color: transparent; }
+.gl-root .gam-seg { align-self: flex-start; }
+
+/* --------------------------------------------------------- city & part ---
+   The city's goal and the person's own minutes. Both were loose text with
+   a progress bar bleeding to the edge of the screen. */
+
+.gl-root .gam-city,
+.gl-root .gam-part,
+.gl-root .gam-rank,
+.gl-root .gam-next,
+.gl-root .gam-note,
+.gl-root .gam-optin,
+.gl-root .gam-history {
+  border-radius: 28px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow, 0 12px 40px rgba(31, 43, 42, 0.14));
+  color: var(--ink);
+}
+
+.gl-root .gam-city__where { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
+.gl-root .gam-city__goal { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+.gl-root .gam-city__big {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.gl-root .gam-city__wait { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+/* The bar belongs to the card, so it ends where the card ends. */
+.gl-root .gam-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--inset);
+  overflow: hidden;
+  display: block;
+}
+
+.gl-root .gam-bar > span,
+.gl-root .gam-bar > i { display: block; height: 100%; border-radius: 999px; background: #3db189; }
+
+/* "3h 30min" and "this month" are two facts, not one word. */
+.gl-root .gam-part__figs { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+
+.gl-root .gam-part__figs > div {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.gl-root .gam-part__value { font-family: 'Outfit', system-ui, sans-serif; font-size: 24px; line-height: 1.1; }
+
+/* ------------------------------------------------------------ rankings ---
+   A numbered row: the place's own rank, then its name. The <ol> marker is
+   off because the rank is already drawn. */
+
+.gl-root .gam-rank { width: 100%; }
+.gl-root .gam-rank__list { width: 100%; display: flex; flex-direction: column; }
+
+.gl-root .gam-rank__list > li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--hair);
+  font-size: 15px;
+}
+
+.gl-root .gam-rank__list > li:last-child { border-bottom: 0; }
+
+.gl-root .gam-rank__pos {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.gl-root .gam-rank__name { flex: 1; min-width: 0; }
+.gl-root .gam-rank__name em { font-style: normal; color: var(--ink-2); }
+.gl-root .gam-rank__list > li.is-mine .gam-rank__pos { background: var(--act-bg); color: var(--act-fg); border-color: transparent; }
+.gl-root .gam-rank__mine { border-top: 1px solid var(--line); margin-top: 6px; }
+.gl-root .gam-foot { font-size: 12px; color: var(--ink-2); }
+
+/* --------------------------------------------------------- conquistas ---
+   A badge, then the name and what it asks for, on their own lines. */
+
+.gl-root .gam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.gl-root .gam-ach {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-radius: 22px;
+  padding: 16px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow, 0 12px 40px rgba(31, 43, 42, 0.14));
+  text-align: left;
+  min-width: 0;
+}
+
+.gl-root .gam-ach__block { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.gl-root .gam-ach__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; }
+.gl-root .gam-ach__line { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.gl-root .gam-ach__name { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
+.gl-root .gam-ach__label,
+.gl-root .gam-ach__status { font-size: 13px; color: var(--ink-2); }
+.gl-root .gam-ach__rule { font-size: 13px; color: var(--ink-2); }
+.gl-root .gam-ach__mine { font-size: 13px; color: var(--link); }
+.gl-root .gam-ach__collective { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.gl-root .gam-cell__name { font-size: 15px; }
+.gl-root .gam-cell__state { font-size: 13px; color: var(--ink-2); }
+
+.gl-root .gam-next { width: 100%; }
+.gl-root .gam-next .gam-bar { margin-top: 4px; }
+
+.gl-root .gam-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.gl-root .gam-chip--done { background: #3db189; color: #06140f; border-color: transparent; }
+.gl-root .gam-chip--muted { color: var(--ink-2); }
+
+/* ----------------------------------------------------------- desafios ---
+   The cards already read; what they lacked was a row and a gap. */
+
+.gl-root .gam-history {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  border-radius: 22px;
+  width: 100%;
+}
+
+.gl-root .gam-history__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-root .gam-history__title { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
+.gl-root .gam-challenge { width: 100%; }
+.gl-root .gam-challenge__reward { color: var(--link); }
+.gl-root .gam-inline-btn { align-self: flex-start; }
+
+@media (max-width: 900px) {
+  .gl-root .gam-part__figs > div { flex: 1 1 100%; }
+  .gl-root .gam-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ------------------------------------------------- the rest of the parts ---
+   A second pass over what the first one missed: the grid cell is a
+   `.gam-cell` button, not `.gam-ach`; the next-badge card has its own row;
+   and `.segmented` had no active state at all, so "Este mês / Desde o
+   início" read as one pill with two words in it. */
+
+.gl-root .segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+}
+
+.gl-root .segmented > button {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font: 500 13px 'DM Sans', system-ui, sans-serif;
+  color: var(--ink-2);
+  width: auto;
+  flex: none;
+}
+
+.gl-root .segmented > button[aria-pressed='true'] { background: var(--act-bg); color: var(--act-fg); }
+
+/* One badge, its name, and whether it is open yet — stacked, in a card. */
+.gl-root .gam-cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  gap: 8px;
+  padding: 18px 14px;
+  border-radius: 22px;
+  cursor: pointer;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow, 0 12px 40px rgba(31, 43, 42, 0.14));
+  color: var(--ink);
+}
+
+.gl-root .gam-cell:hover { background: var(--inset); }
+.gl-root .gam-cell--locked { opacity: 0.62; }
+.gl-root .gam-grid > li { display: flex; }
+
+/* The next badge: picture on the left, name and rule on the right. */
+.gl-root .gam-next { width: 100%; text-align: left; cursor: pointer; }
+.gl-root .gam-next__row { display: flex; align-items: center; gap: 16px; width: 100%; }
+.gl-root .gam-next__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-root .gam-next__name { font-family: 'Outfit', system-ui, sans-serif; font-size: 18px; font-weight: 500; }
+.gl-root .gam-progress { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+
+.gl-root .gam-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+}
+
+.gl-root .gam-chips { margin: 0; }
+.gl-root .gam-ach__foot { font-size: 12px; color: var(--ink-2); }
+.gl-root .gam-inline-btn { align-self: center; }
+
+/* ---------------------------------------------------- Resumo's two columns ---
+   A grid row is as tall as its tallest cell, so the old three rows of a
+   3-up grid left a hole under every short block. Two independent stacks
+   instead: each block ends where its content ends. */
+
+.gl-root .jr2-bento {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.gl-root .jr2-bento__main,
+.gl-root .jr2-bento__side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) { .gl-root .jr2-bento { grid-template-columns: minmax(0, 1fr); } }
+
+/* A challenge card's body should use the width it was given. */
+.gl-root .gam-challenge__body,
+.gl-root .gam-history__body { flex: 1; min-width: 0; text-align: left; }
+
+/* ------------------------------------------------------ on a phone ---
+   Four tabs do not fit 390px, and the fourth was simply cut off the
+   right edge. The row scrolls sideways instead, so "Desafios" is
+   reachable without shrinking the other three into abbreviations. */
+
+@media (max-width: 900px) {
+  .gl-root .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .gl-root .segmented::-webkit-scrollbar { display: none; }
+  .gl-root .segmented > button { flex: none; white-space: nowrap; }
+  .gl-root .gam-rank__list > li { gap: 12px; }
+}
