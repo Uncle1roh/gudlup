@@ -1,118 +1,69 @@
 /* ============================================================================
-   The headphone check, as a state machine
+   The headphone check
 
-   A Good Loop treatment moves between the ears. Headphones that are mono,
-   reversed, in one ear only, or not really connected make the session do
-   nothing — so the check is not decoration, and the one moment to run it is
-   before the session starts.
+   A Good Loop treatment moves between the ears. Headphones that are mono, in
+   one ear only, or not really connected make the session do nothing, so the
+   check runs before the first session.
 
-   WHAT WAS WRONG WITH THE OLD ONE. It asked about the left ear, then the
-   right ear, in that order, every time. A fixed order is a test you can pass
-   without hearing anything: tap "Left", tap "Right", and you are in, with the
-   headphones on the desk. It also let a wrong answer through — the warning
-   offered "Continue anyway", which went into the protocol — and it kept the
-   first ear's correct answer after a wrong second one, so two attempts of
-   guessing got there as well.
+   TWO BUTTONS, and the owner's shape for them: "o usuário tem que clicar nos
+   dois e cada um deles tem que fazer o som no devido lado, assim que ele
+   clicar e der certo o botão fica verde ou vermelho se der errado, assim que
+   os dois estiverem verde aparece o botão iniciar."
 
-   WHAT THIS DOES INSTEAD.
+   So: tap LEFT, a tone plays in the left ear, the button goes green. Tap
+   RIGHT, same on the other side. Two greens and Start appears. Under each
+   button there is a way to say you heard nothing, which turns it red and
+   says what to check — that is the only way a side goes red, and it is what
+   makes green mean something rather than "was tapped".
 
-     · The two ears are asked in a RANDOM order, drawn per attempt.
-     · BOTH have to be right, in one unbroken run. A wrong answer ends the
-       attempt and the next one is reshuffled, so the order cannot be learned
-       and a guess is a one-in-four shot at the whole thing rather than a
-       coin flip at each half.
-     · There is no way through except passing. Leaving is still allowed —
-       the person goes back, they do not enter the session.
+   WHAT THIS GAVE UP, said plainly because it was a deliberate trade. The
+   version before this played the two ears in a random order and asked which
+   one you heard, so it could tell a reversed pair from a working one and
+   could not be passed without listening. This one trusts the answer. It
+   catches a dead side, a mono adapter and a disconnected pair — which is
+   most of what goes wrong — and it does not catch headphones worn backwards.
+   Three taps instead of six, which is what was asked for.
 
-   Pure, and asserted in tools/test-stereo-check.ts. The component holds one
-   of these and plays the tone for `currentEar`; nothing about which ear is
-   being asked about lives in the view.
+   Pure, and asserted in tools/test-stereo-check.ts.
    ============================================================================ */
 
 export type Ear = 'left' | 'right'
 
-export type StereoPhase =
-  /** Nothing played yet. */
-  | 'intro'
-  /** A tone has played and is waiting to be named. */
-  | 'asking'
-  /** One ear right, the other not played yet. */
-  | 'between'
-  /** Both ears right, in a row. */
-  | 'passed'
-  /** The last answer was wrong: this attempt is over. */
-  | 'failed'
+/** What one side is showing. */
+export type SideState = 'idle' | 'ok' | 'failed'
 
 export interface StereoState {
-  /** The two ears, in the order this attempt asks about them. */
-  order: readonly [Ear, Ear]
-  /** How many have been named correctly so far in this attempt: 0, 1 or 2. */
-  correct: 0 | 1 | 2
-  phase: StereoPhase
-  /** How many attempts have ended in a wrong answer. The screen uses it to
-      stop repeating the same sentence at somebody who has read it twice. */
-  misses: number
+  left: SideState
+  right: SideState
 }
 
-/** `Math.random` by default; the tests hand in their own. */
-export type Rng = () => number
+export const FRESH: StereoState = { left: 'idle', right: 'idle' }
 
-function shuffled(rnd: Rng): readonly [Ear, Ear] {
-  return rnd() < 0.5 ? ['left', 'right'] : ['right', 'left']
+export function startCheck(): StereoState {
+  return FRESH
 }
 
-/** A fresh attempt, with its own order. */
-export function startCheck(rnd: Rng = Math.random): StereoState {
-  return { order: shuffled(rnd), correct: 0, phase: 'intro', misses: 0 }
+/** The tone for that side played. The side is good until told otherwise. */
+export function tonePlayed(s: StereoState, ear: Ear): StereoState {
+  return { ...s, [ear]: 'ok' }
 }
 
-/** The ear whose tone is playing, or is about to. Null once the attempt is
-    over either way — there is nothing left to play. */
-export function currentEar(s: StereoState): Ear | null {
-  if (s.phase === 'passed' || s.phase === 'failed') return null
-  return s.correct === 2 ? null : s.order[s.correct]
+/** "I heard nothing." Only this turns a side red. */
+export function markFailed(s: StereoState, ear: Ear): StereoState {
+  return { ...s, [ear]: 'failed' }
 }
 
-/**
- * The tone for the current ear has been played; the question is now open.
- *
- * Only from a phase that has a question to open. Calling it on a passed or
- * failed attempt is a no-op rather than a way to reopen one.
- */
-export function tonePlayed(s: StereoState): StereoState {
-  if (s.phase !== 'intro' && s.phase !== 'between') return s
-  return { ...s, phase: 'asking' }
+/** Tapping a red side again plays it again, so it starts from nothing. */
+export function retryEar(s: StereoState, ear: Ear): StereoState {
+  return { ...s, [ear]: 'idle' }
 }
 
-/**
- * The person named an ear.
- *
- * Right: the attempt advances, and the second one in a row passes it.
- * Wrong: the attempt is over. Nothing partial survives — `correct` goes back
- * to zero — because half a check is not half a guarantee about a pair of
- * headphones, it is no guarantee at all.
- */
-export function answerEar(s: StereoState, said: Ear): StereoState {
-  if (s.phase !== 'asking' || s.correct === 2) return s
-  const wanted = s.order[s.correct]
-  if (said !== wanted) {
-    return { ...s, correct: 0, phase: 'failed', misses: s.misses + 1 }
-  }
-  const correct = (s.correct + 1) as 0 | 1 | 2
-  return { ...s, correct, phase: correct === 2 ? 'passed' : 'between' }
-}
-
-/** Start over after a wrong answer, with a newly drawn order. */
-export function retryCheck(s: StereoState, rnd: Rng = Math.random): StereoState {
-  return { order: shuffled(rnd), correct: 0, phase: 'intro', misses: s.misses }
-}
-
-/** The only way in. Nothing else in the app should test `phase` for this. */
+/** Both sides heard. The only thing that opens the session. */
 export function checkPassed(s: StereoState): boolean {
-  return s.phase === 'passed'
+  return s.left === 'ok' && s.right === 'ok'
 }
 
-/** "Tone 1 of 2" — which question this is, 1-based. */
-export function toneNumber(s: StereoState): 1 | 2 {
-  return s.correct === 0 ? 1 : 2
+/** A side was reported silent: the screen says what to check. */
+export function anyFailed(s: StereoState): boolean {
+  return s.left === 'failed' || s.right === 'failed'
 }

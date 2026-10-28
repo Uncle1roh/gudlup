@@ -12,7 +12,6 @@ import './selfuse-studio.css'
 import './ui2/shell.css'
 import './ui2/gamification.css'
 import './ui2/profile.css'
-import './ui2/mood.css'
 // the three rooms: waiting, call, treatment
 import './ui2/call.css'
 import './corporate.css'

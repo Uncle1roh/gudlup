@@ -18,7 +18,6 @@
 import { useRef, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { BrandIcon } from '../components/Brand'
-import { useMoodSet } from '../mood/MoodProvider'
 
 export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'benefits' | 'profile'
 
@@ -89,9 +88,12 @@ function Glyph({ dest }: { dest: Dest }) {
   )
 }
 
-/** The brand colourway for whatever ground the mood has set. */
+/** The brand colourway this surface asks for. The ground is one darkened
+    photograph (ui2/shell.css), so it is always the cream mark. Kept as a
+    hook because every caller reads it as one, and the day a light surface
+    appears this is the one place that has to learn about it. */
 export function useBrandVariant(): 'green' | 'cream' {
-  return useMoodSet() === 'dark' ? 'cream' : 'green'
+  return 'cream'
 }
 
 export function Shell({

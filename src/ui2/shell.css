@@ -360,6 +360,7 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 
 .gl-root {
   /* The scroller. Fills what the strip leaves of the 100dvh shell. */
+  position: relative; /* the containing block for a full-bleed screen inside it */
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -935,6 +936,160 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 /* The studio's emerald bloom belongs to the console, not over a photograph. */
 .su-session.app-frame::before,
 .su-session.app-frame--tabs::before { display: none; }
+
+/* The Loops chip in the top bar. It lived in `mood.css` while it also wore
+   the check-in colour; the check-in is gone and the chip is just a chip. */
+.gl-loops {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------- the headphone check, twice ---
+   Two buttons, one per ear. Green once that side has been heard, red if the
+   person says it was silent. The same pair serves the pre-session screen
+   and the waiting room's pane (`selfuse/Session.tsx`, `ui2/EarTest.tsx`),
+   so the check looks the same in both places.
+
+   The colours are fixed, not tokens: green and red mean pass and fail here,
+   and that must not move with a surface. */
+
+.stereo2-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; width: 100%; }
+
+.stereo2-side { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 1 180px; }
+
+.stereo2-btn {
+  width: 100%;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 18px;
+  border-radius: 22px;
+  cursor: pointer;
+  font: 600 17px 'DM Sans', system-ui, sans-serif;
+  color: #faf8df;
+  background: rgba(250, 248, 223, 0.10);
+  border: 2px solid rgba(250, 248, 223, 0.28);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.stereo2-btn:hover { background: rgba(250, 248, 223, 0.16); }
+.stereo2-btn__mark { font-size: 24px; line-height: 1; }
+
+.stereo2-btn.is-ok {
+  background: rgba(61, 177, 137, 0.22);
+  border-color: #3db189;
+  color: #d8f3e7;
+}
+
+.stereo2-btn.is-failed {
+  background: rgba(214, 106, 106, 0.18);
+  border-color: #d66a6a;
+  color: #f6d9d9;
+}
+
+.stereo2-silent {
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+  font: 400 12px 'DM Sans', system-ui, sans-serif;
+  color: rgba(250, 248, 223, 0.66);
+  text-decoration: underline;
+}
+.stereo2-silent:hover { color: #faf8df; }
+
+.stereo2-again { font-size: 12px; color: rgba(250, 248, 223, 0.66); }
+
+/* Appears only when both sides are green — it is the whole point of the
+   screen, so it arrives rather than sitting there greyed out. */
+.stereo2-go {
+  margin-top: 8px;
+  min-width: 220px;
+  animation: stereo2-go-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes stereo2-go-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stereo2-go { animation: none; }
+}
+
+/* ------------------------------------------- a protocol, before it plays ---
+   The screen you reach by tapping a session: what it is, what to expect,
+   and the three lengths.
+
+   It carries the protocol's cover, like the session itself does — but it
+   was painting it INSIDE the content column, as the background of a box in
+   the middle of the page, with the surface's photograph still showing
+   around it. Two pictures at once, and then tapping a length switched to
+   the full-bleed one, so the background changed between two screens that
+   are the same moment.
+
+   It is the whole screen now, on the same `--gl-session-dim` dial as the
+   player (docs/BACKGROUNDS.md), so choosing a length changes nothing but
+   the words. Fixed rather than in the flow, because `.gl-main` is a
+   centred column and this is not a column. */
+
+.gl-root .sess-full {
+  /* ABSOLUTE, not fixed. Fixed would cover the Help now bar above the
+     surface, and that bar is one tap from every screen by requirement
+     (CRS-01, see `selfuse/SelfUseApp.tsx`). An absolutely positioned child
+     is laid out against `.gl-root`'s padding box, which is exactly the area
+     below that bar — the same area the session player fills. */
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  /* The base rule is `space-between`: back at the top, words pinned to the
+     bottom over a scrim. That reads as a hole on a desk. */
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 28px max(24px, calc((100% - 760px) / 2)) 48px;
+  color: #faf8df;
+
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(4, 16, 14, var(--gl-session-dim, 0.6)) 0%,
+      rgba(4, 16, 14, calc(var(--gl-session-dim, 0.6) - 0.06)) 38%,
+      rgba(3, 11, 10, calc(var(--gl-session-dim, 0.6) + 0.26)) 100%),
+    var(--gl-session-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-color: #07140f;
+}
+
+/* The markup carries its own scrim element for the old surface. Here the
+   gradient above is the scrim, and two of them is a black screen. */
+.gl-root .sess-full__scrim { display: none; }
+
+.gl-root .sess-full__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gl-root .sess-full__back { color: inherit; font: 500 15px 'DM Sans', system-ui, sans-serif; opacity: 0.85; }
+.gl-root .sess-full__back:hover { opacity: 1; }
+.gl-root .sess-full__body { display: flex; flex-direction: column; gap: 14px; }
+.gl-root .sess-full__title { font-family: 'Outfit', system-ui, sans-serif; font-weight: 400; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; margin: 0; }
+.gl-root .sess-full__about { font-size: 17px; line-height: 1.6; max-width: 56ch; opacity: 0.9; }
+.gl-root .sess-full__eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; margin: 0; }
+.gl-root .sess-full__expect { display: flex; flex-direction: column; gap: 8px; margin: 0; padding-left: 20px; opacity: 0.9; }
+.gl-root .sess-full__note { font-size: 14px; opacity: 0.8; }
+.gl-root .sess-full__label { font-size: 14px; font-weight: 500; margin-top: 6px; }
 
 /* --------------------------------------------------- the phone's faces ---
    Five taps instead of a pad. Inside the white popover, so the colours are

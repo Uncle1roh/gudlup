@@ -23,8 +23,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
 import {
-  startCheck, retryCheck, tonePlayed, answerEar, currentEar, checkPassed, toneNumber,
-  type Ear, type StereoState,
+  startCheck, tonePlayed, markFailed, retryEar, checkPassed, anyFailed,
+  type Ear, type SideState, type StereoState,
 } from '../lib/stereoCheck'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
@@ -331,46 +331,67 @@ function PreSession({
 /* ------------------------------------------------------------- SES-2 ----- */
 
 /**
- * Two ears, in an order drawn fresh each attempt, and both have to be right.
+ * Two buttons. Tap each one, hear each side, Start appears.
  *
- * The machine is in `lib/stereoCheck.ts`, with the reasoning for every rule
- * and the tests that hold them. What lives here is the screen: one question
- * at a time, each one visibly its own, and the tone played from inside the
- * tap that asked for it — browsers start audio only in a user-gesture call
- * stack, so a tone played from an effect comes out of a suspended context,
- * silent, while the screen asks what you heard.
+ * The rules are in `lib/stereoCheck.ts`, with what this shape gives up and
+ * why. What lives here is the screen, and the one thing it must not get
+ * wrong: the tone plays from inside the TAP. Browsers start audio only in a
+ * user-gesture call stack, so a tone played from an effect comes out of a
+ * suspended context — silent, while the button turns green.
  *
- * There is no way past this into the session except passing it. A wrong
- * answer used to offer "Continue anyway", which meant the check was advice;
- * the only other door is Back, which leaves the session altogether.
+ * Passing is the only way into the session. Back is the other door, and it
+ * leaves the session rather than entering it.
  */
+function SideButton({ ear, state, label, onPlay, onSilent }: {
+  ear: Ear
+  state: SideState
+  label: string
+  onPlay(ear: Ear): void
+  onSilent(ear: Ear): void
+}) {
+  const { t } = useI18n()
+  return (
+    <div className="stereo2-side">
+      <button
+        type="button"
+        className={`stereo2-btn is-${state}`}
+        onClick={() => onPlay(ear)}
+        aria-pressed={state === 'ok'}
+      >
+        <span className="stereo2-btn__mark" aria-hidden="true">
+          {state === 'ok' ? '✓' : state === 'failed' ? '✕' : '♪'}
+        </span>
+        <span className="stereo2-btn__label">{label}</span>
+      </button>
+      {/* The only way a side goes red. Without it, green would mean "was
+          tapped" rather than "was heard". */}
+      {state !== 'failed' && (
+        <button type="button" className="stereo2-silent" onClick={() => onSilent(ear)}>
+          {t('I heard nothing on this side')}
+        </button>
+      )}
+      {state === 'failed' && (
+        <span className="stereo2-again">{t('Tap again to retry')}</span>
+      )}
+    </div>
+  )
+}
+
 function StereoCheck({ ground, onDone, onBack }: { ground: CSSProperties; onDone: (passed: boolean) => void; onBack: () => void }) {
   const { t } = useI18n()
   const [check, setCheck] = useState<StereoState>(() => startCheck())
-  /* No audio on this machine at all — the tone cannot be produced, so the
-     screen says that instead of asking which ear heard nothing. */
+  /* No audio on this machine at all: the screen says so rather than asking
+     somebody to confirm a sound that cannot be produced. */
   const [noAudio, setNoAudio] = useState(false)
 
-  const playCurrent = useCallback((s: StereoState) => {
-    const ear = currentEar(s)
-    if (!ear) return s
+  const play = useCallback((ear: Ear) => {
     const ok = playEarTone(ear)
     setNoAudio(!ok)
-    return ok ? tonePlayed(s) : s
+    setCheck((s) => (ok ? tonePlayed(s, ear) : retryEar(s, ear)))
   }, [])
 
-  function begin() { setCheck((s) => playCurrent(s)) }
-  function again() { const ear = currentEar(check); if (ear) setNoAudio(!playEarTone(ear)) }
-
-  function answer(side: Ear) {
-    setCheck((s) => {
-      const next = answerEar(s, side)
-      if (checkPassed(next)) onDone(true)
-      return next
-    })
-  }
-
-  const asking = check.phase === 'asking'
+  const silent = useCallback((ear: Ear) => { setCheck((s) => markFailed(s, ear)) }, [])
+  const passed = checkPassed(check)
 
   return (
     <SessionFrame ground={ground}>
@@ -378,58 +399,17 @@ function StereoCheck({ ground, onDone, onBack }: { ground: CSSProperties; onDone
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
           <h2 className="display">{t("Let's check your headphones")}</h2>
+          <p className="lead">{t('Put your headphones on and tap each side. You should hear a tone in that ear.')}</p>
 
-          {check.phase === 'intro' && (
-            <>
-              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear, then in the other — and you tell us which.')}</p>
-              <button className="btn btn--primary" onClick={begin}>{t('Play the tone')}</button>
-            </>
-          )}
+          <div className="stereo2-row">
+            <SideButton ear="left" state={check.left} label={t('Left')} onPlay={play} onSilent={silent} />
+            <SideButton ear="right" state={check.right} label={t('Right')} onPlay={play} onSilent={silent} />
+          </div>
 
-          {asking && (
-            <>
-              {/* WHICH of the two questions this is. Without it the second
-                  one looked like the first and the check read as one. */}
-              <span className="stereo__step">
-                {t('Tone {n} of 2', { n: toneNumber(check) })}
-              </span>
-              <p className="lead">{t('Which ear hears the tone?')}</p>
-              <div className="chip-row stereo__answers">
-                <button className="chip" onClick={() => answer('left')}>
-                  <span className="chip__label">{t('Left')}</span>
-                </button>
-                <button className="chip" onClick={() => answer('right')}>
-                  <span className="chip__label">{t('Right')}</span>
-                </button>
-              </div>
-              <button className="btn btn--quiet" onClick={again}>{t('Play the tone again')}</button>
-            </>
-          )}
-
-          {check.phase === 'between' && (
-            <>
-              {/* The first answer is ACKNOWLEDGED. Which ear it was is not
-                  named: saying "left: correct" would hand over the order,
-                  and the order is the thing the next attempt reshuffles. */}
-              <p className="lead stereo__ok">{t('Correct. One more.')}</p>
-              <p className="small muted">{t('The next tone is in the other ear.')}</p>
-              <button className="btn btn--primary" onClick={begin}>{t('Play the second tone')}</button>
-            </>
-          )}
-
-          {check.phase === 'failed' && (
-            <div className="stereo__warn fade-in">
-              <p className="lead">{t('That was the other ear.')}</p>
-              <p className="small">
-                {check.misses === 1
-                  ? t('Check that both sides are plugged in and worn the right way round, then try again.')
-                  : t('Wired stereo headphones work best. The session moves between your ears, so it needs both of them working.')}
-              </p>
-              <div className="chip-row">
-                <button className="btn btn--primary" onClick={() => setCheck((s) => retryCheck(s))}>{t('Try again')}</button>
-                <button className="btn btn--quiet" onClick={onBack}>{t('Go back')}</button>
-              </div>
-            </div>
+          {anyFailed(check) && (
+            <p className="small stereo__warn">
+              {t('Check that both sides are plugged in and worn the right way round, then tap that side again.')}
+            </p>
           )}
 
           {noAudio && (
@@ -437,6 +417,15 @@ function StereoCheck({ ground, onDone, onBack }: { ground: CSSProperties; onDone
               {t('This device cannot play a sound right now, so the check cannot run.')}
             </p>
           )}
+
+          {/* Only once both sides have been heard. */}
+          {passed && (
+            <button className="btn btn--primary stereo2-go" onClick={() => onDone(true)}>
+              {t('Start')}
+            </button>
+          )}
+
+          <button className="btn btn--quiet" onClick={onBack}>{t('Go back')}</button>
         </div>
       </div>
     </SessionFrame>

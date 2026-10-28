@@ -21,7 +21,6 @@ import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { BrandIcon } from '../components/Brand'
-import { initialsOf } from './Home'
 import { LoopsChip } from './LoopsChip'
 import { useBrandVariant } from './Shell'
 
@@ -50,12 +49,8 @@ export function TopBar({ name, role }: { name: string | null; role?: string }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <LoopsChip loops={loops} />
-        <span
-          aria-hidden="true"
-          style={{ width: 44, height: 44, borderRadius: '50%', background: '#E89D64', color: '#2a1608', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}
-        >
-          {initialsOf(name)}
-        </span>
+        {/* No initials disc. It named the person whose name is printed
+            immediately to the right of it, and it was not a button. */}
         {name && (
           <span style={{ display: 'flex', flexDirection: 'column', fontSize: 14, lineHeight: 1.25 }}>
             <strong style={{ fontWeight: 600 }}>{name}</strong>

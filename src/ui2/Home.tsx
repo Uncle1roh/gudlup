@@ -29,7 +29,6 @@ import { SELF_USE_THEMES, durationLabel, type SelfUseTheme } from '../data/selfu
 import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_ICON, THEME_TINT, tilePosition } from './theme'
-import { CheckIn, MoodChip } from './CheckIn'
 import { LoopsChip } from './LoopsChip'
 import { BrandIcon } from '../components/Brand'
 import { useBrandVariant } from './Shell'
@@ -58,7 +57,6 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
   const { t, d } = useI18n()
   const dp = useDataProvider()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
-  const [checkInOpen, setCheckInOpen] = useState(false)
   const [loops, setLoops] = useState<number | null>(null)
   const variant = useBrandVariant()
 
@@ -150,19 +148,12 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>
             {name ? `${t(greeting())}, ${name}` : t(greeting())}
           </span>
-          <MoodChip open={checkInOpen} onToggle={() => setCheckInOpen((v) => !v)} />
-          {checkInOpen && <CheckIn onClose={() => setCheckInOpen(false)} />}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <LoopsChip loops={loops} />
-          <span
-            aria-hidden="true"
-            style={{ width: 44, height: 44, borderRadius: '50%', background: '#E89D64', color: '#2a1608', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}
-          >
-            {initialsOf(name)}
-          </span>
-        </div>
+        {/* The initials disc that stood here is gone: it was decoration.
+            It named the person who is already named in the greeting two
+            columns to the left, and it opened nothing. */}
+        <LoopsChip loops={loops} />
       </header>
 
       {noticeSlot}

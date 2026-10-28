@@ -220,40 +220,23 @@ export const IT_SELF_USE: Record<string, string> = {
   'Get comfortable.': 'Mettiti comodo.',
   'Headphones recommended': 'Cuffie consigliate',
   'Begin Session': 'Inizia la sessione',
-  'Put your headphones on. We will play a short tone in one ear, then in the other.':
-    'Metti le cuffie. Riproduciamo un suono breve in un orecchio, poi nell’altro.',
-  'Tone 1 of 2': 'Suono 1 di 2',
+  /* the headphone check: two buttons, one per ear */
+  'Put your headphones on and tap each side. You should hear a tone in that ear.':
+    'Metti le cuffie e tocca ogni lato. Dovresti sentire un suono in quell’orecchio.',
+  'Check that both sides are plugged in and worn the right way round, then tap that side again.':
+    'Controlla che tutti e due i lati siano collegati e indossati nel verso giusto, poi tocca di nuovo quel lato.',
+  'I heard nothing on this side':
+    'Non ho sentito niente da questo lato',
+  'Tap again to retry':
+    'Tocca di nuovo per riprovare',
   /* the headphone check — two ears, random order, both required */
-  'Put your headphones on. We will play a short tone in one ear, then in the other — and you tell us which.':
-    'Metti le cuffie. Riproduciamo un suono breve in un orecchio, poi nell’altro — e tu ci dici quale.',
-  'Tone {n} of 2':
-    'Suono {n} di 2',
-  'Correct. One more.':
-    'Giusto. Ancora uno.',
-  'The next tone is in the other ear.':
-    'Il prossimo suono è nell’altro orecchio.',
-  'Play the second tone':
-    'Riproduci il secondo suono',
-  'That was the other ear.':
-    'Era l’altro orecchio.',
   'Check that both sides are plugged in and worn the right way round, then try again.':
     'Controlla che tutti e due i lati siano collegati e indossati nel verso giusto, poi riprova.',
-  'Wired stereo headphones work best. The session moves between your ears, so it needs both of them working.':
-    'Le cuffie stereo con filo sono le migliori. La seduta si muove tra le orecchie: le servono tutte e due.',
   'This device cannot play a sound right now, so the check cannot run.':
     'Questo dispositivo non riesce a riprodurre un suono adesso, quindi la verifica non può partire.',
-  'That was the other ear. Check that both sides are plugged in and worn the right way round, then try again.':
-    'Era l’altro orecchio. Controlla che tutti e due i lati siano collegati e indossati nel verso giusto, poi riprova.',
-  'Tone 2 of 2': 'Suono 2 di 2',
-  'Left ear: correct.': 'Orecchio sinistro: giusto.',
-  'Now the other ear — the tone moves to the right.': 'Ora l’altro orecchio: il suono passa a destra.',
-  'Play the right-ear tone': 'Riproduci il suono a destra',
   "Let's check your headphones": 'Controlliamo le cuffie',
-  'Which ear hears the tone?': 'Da quale orecchio senti il suono?',
   'Left': 'Sinistro',
   'Right': 'Destro',
-  'Play the tone again': 'Riproduci di nuovo il suono',
-  'Play the tone': 'Riproduci il suono',
   'See pathway': 'Vedi la serie',
   'Help me choose': 'Aiutami a scegliere',
   'Book a session': 'Prenota una sessione',
@@ -283,8 +266,6 @@ export const IT_SELF_USE: Record<string, string> = {
     'Il contenuto che la genera non è più nel catalogo. Il tuo professionista potrà sceglierla di nuovo quando sarà ripubblicato.',
   'Put your headphones on. We will play a short tone in one ear.':
     'Indossa le cuffie. Riprodurremo un breve suono in un orecchio solo.',
-  'We recommend wired stereo headphones. Continue anyway?':
-    'Consigliamo cuffie stereo con filo. Vuoi continuare lo stesso?',
   'Go back': 'Torna indietro',
   "Find a comfortable position. Close your eyes when you're ready.":
     'Mettiti in una posizione comoda. Chiudi gli occhi quando te la senti.',

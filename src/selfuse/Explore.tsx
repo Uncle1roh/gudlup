@@ -17,12 +17,11 @@ import { useI18n } from '../i18n'
 import { useLegal } from '../legal/LegalContext'
 import { LibraryNotice } from '../legal/LibraryNotice'
 import { PathwayFinder } from './PathwayFinder'
-import { Icon } from './icons'
 import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/selfuse'
 import { Home } from '../ui2/Home'
 import { useDataProvider } from '../data/provider'
 import type { ExploreRail } from '../data/rails'
-import { coverFor, coverStyle } from './artwork'
+import { coverFor, sessionGround } from './artwork'
 import {
   useCatalog,
   findPathway,
@@ -167,15 +166,11 @@ export function Explore({ name, pathway, onStartPathway, onStart, query = '', on
         }
       />
 
-      <button
-        className="btn cat-rail__help"
-        onClick={() => setView({ kind: 'finder' })}
-        title={t('Help me choose')}
-        aria-label={t('Help me choose')}
-      >
-        <Icon name="help" size={22} />
-        <span className="cat-rail__help__label">{t('Help me choose')}</span>
-      </button>
+      {/* The floating "Me ajude a escolher" is gone. The library is a short
+          shelf a person reads in one screen; a permanent button over it,
+          offering to choose for them, was answering a question nobody had.
+          `PathwayFinder` is untouched and still reachable from the pathway
+          screens — only this float is removed. */}
     </>
   )
 }
@@ -221,7 +216,7 @@ function PathwayDetail({
 
   return (
     <div className="pw-full">
-      <section className="sess-full sess-full--hero" style={coverStyle(cover)}>
+      <section className="sess-full sess-full--hero" style={sessionGround(cover)}>
         <div className="sess-full__scrim" aria-hidden="true" />
 
         <div className="sess-full__top">
@@ -415,7 +410,7 @@ function SessionDetail({
      grows rather than clips: on a short phone the words push the screen
      longer and the picture scrolls with them. */
   return (
-    <div className="sess-full" style={coverStyle(cover)}>
+    <div className="sess-full" style={sessionGround(cover)}>
       <div className="sess-full__scrim" aria-hidden="true" />
 
       <div className="sess-full__top">

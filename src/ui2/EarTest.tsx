@@ -1,30 +1,25 @@
 /* ============================================================================
-   "Teste de fones" — the block the waiting room was missing
+   "Teste de fones" — the waiting room's copy of the headphone check
 
-   From WSalaEspera.dc.html: play a sound, say which ear it came out of, get
-   told whether that is right. It is not decoration. A Good Loop treatment
-   moves between the ears, so headphones that are mono, reversed, or not
-   really connected make the session do nothing — and the only moment to find
-   that out is before the professional joins, not during.
+   Same two buttons and the same rules as the one before a session
+   (`lib/stereoCheck.ts`); only the frame differs, because here it is one
+   pane in a waiting room rather than a whole screen.
 
-   It asked about ONE ear and called that a pass, which tests half a pair of
-   headphones: a left channel that works and a right one that does not came
-   through clean half the time. It now runs the same two-ear check the
-   session runs (`lib/stereoCheck.ts`) — random order, both ears, one
-   unbroken run — so the two places that ask this question ask the same
-   question. The presentation stays the waiting room's: one pane, not a
-   full screen.
+   It is not decoration. A Good Loop treatment moves between the ears, so
+   headphones that are mono, reversed or not really connected make the
+   session do nothing — and the moment to find that out is before the
+   professional joins, not during.
 
    The tone always plays from inside the tap: browsers start audio only in a
    user-gesture call stack, and a tone played from an effect comes out of a
-   suspended context — silent, while the screen asks what you heard.
+   suspended context — silent, while the button turns green.
    ============================================================================ */
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useI18n } from '../i18n'
 import { playEarTone } from '../lib/audio'
 import {
-  startCheck, retryCheck, tonePlayed, answerEar, currentEar, checkPassed, toneNumber,
+  startCheck, tonePlayed, markFailed, retryEar, checkPassed, anyFailed,
   type Ear, type StereoState,
 } from '../lib/stereoCheck'
 
@@ -33,61 +28,57 @@ export function EarTest({ onPass }: { onPass?(): void }) {
   const [check, setCheck] = useState<StereoState>(() => startCheck())
   const [noAudio, setNoAudio] = useState(false)
 
-  function play() {
+  const play = useCallback((ear: Ear) => {
+    const ok = playEarTone(ear)
+    setNoAudio(!ok)
     setCheck((s) => {
-      const ear = currentEar(s)
-      if (!ear) return s
-      const ok = playEarTone(ear)
-      setNoAudio(!ok)
-      return ok ? tonePlayed(s) : s
-    })
-  }
-
-  function answer(said: Ear) {
-    setCheck((s) => {
-      const next = answerEar(s, said)
+      const next = ok ? tonePlayed(s, ear) : retryEar(s, ear)
       if (checkPassed(next)) onPass?.()
       return next
     })
-  }
+  }, [onPass])
+
+  const passed = checkPassed(check)
 
   return (
     <article className="glass call2-pane">
       <div className="call2-pane__top">
         <h2 className="call2-pane__h">{t('Headphone test')}</h2>
-        {check.phase !== 'passed' && (
-          <button type="button" className="glass-btn call2-pill" onClick={play} disabled={check.phase === 'asking'}>
-            {check.phase === 'intro' ? t('Play the tone') : t('Play the second tone')}
-          </button>
-        )}
       </div>
 
-      {check.phase === 'intro' && (
-        <p className="call2-note">{t('Put your headphones on. We will play a short tone in one ear, then in the other — and you tell us which.')}</p>
-      )}
+      <p className="call2-note">{t('Put your headphones on and tap each side. You should hear a tone in that ear.')}</p>
 
-      {check.phase === 'asking' && (
-        <>
-          <p className="call2-note">{t('Tone {n} of 2', { n: toneNumber(check) })} · {t('Which ear hears the tone?')}</p>
-          <div className="call2-ears">
-            <button type="button" className="call2-ear" onClick={() => answer('left')}>{t('Left')}</button>
-            <button type="button" className="call2-ear" onClick={() => answer('right')}>{t('Right')}</button>
+      <div className="stereo2-row">
+        {(['left', 'right'] as Ear[]).map((ear) => (
+          <div key={ear} className="stereo2-side">
+            <button
+              type="button"
+              className={`stereo2-btn is-${check[ear]}`}
+              onClick={() => play(ear)}
+              aria-pressed={check[ear] === 'ok'}
+            >
+              <span className="stereo2-btn__mark" aria-hidden="true">
+                {check[ear] === 'ok' ? '✓' : check[ear] === 'failed' ? '✕' : '♪'}
+              </span>
+              <span className="stereo2-btn__label">{ear === 'left' ? t('Left') : t('Right')}</span>
+            </button>
+            {check[ear] !== 'failed'
+              ? (
+                <button type="button" className="stereo2-silent" onClick={() => setCheck((s) => markFailed(s, ear))}>
+                  {t('I heard nothing on this side')}
+                </button>
+              )
+              : <span className="stereo2-again">{t('Tap again to retry')}</span>}
           </div>
-        </>
-      )}
+        ))}
+      </div>
 
-      {check.phase === 'between' && <p className="call2-ok">{t('Correct. One more.')}</p>}
-      {check.phase === 'passed' && <p className="call2-ok">{t('Perfect: stereo audio is working.')}</p>}
+      {passed && <p className="call2-ok">{t('Perfect: stereo audio is working.')}</p>}
 
-      {check.phase === 'failed' && (
-        <>
-          <p className="call2-warn">
-            {t('That was the other ear. Check that both sides are plugged in and worn the right way round, then try again.')}
-          </p>
-          <button type="button" className="glass-btn call2-pill" onClick={() => setCheck((s) => retryCheck(s))}>
-            {t('Try again')}
-          </button>
-        </>
+      {anyFailed(check) && (
+        <p className="call2-warn">
+          {t('Check that both sides are plugged in and worn the right way round, then tap that side again.')}
+        </p>
       )}
 
       {noAudio && <p className="call2-warn">{t('This device cannot play a sound right now, so the check cannot run.')}</p>}

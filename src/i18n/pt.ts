@@ -781,41 +781,22 @@ export const PT: Record<string, string> = {
   'Begin Session': 'Começar a sessão',
   'Put your headphones on. We will play a short tone in one ear.':
     'Coloque os fones. Vamos tocar um som curto em um dos ouvidos.',
-  'Put your headphones on. We will play a short tone in one ear, then in the other.':
-    'Coloque os fones. Vamos tocar um som curto em um ouvido e depois no outro.',
-  'Tone 1 of 2': 'Som 1 de 2',
+  /* the headphone check: two buttons, one per ear */
+  'Put your headphones on and tap each side. You should hear a tone in that ear.':
+    'Coloque os fones e toque em cada lado. Você deve ouvir um som naquele ouvido.',
+  'Check that both sides are plugged in and worn the right way round, then tap that side again.':
+    'Veja se os dois lados estão conectados e no lado certo da cabeça, e toque naquele lado de novo.',
+  'I heard nothing on this side':
+    'Não ouvi nada deste lado',
+  'Tap again to retry':
+    'Toque de novo para tentar outra vez',
   /* the headphone check — two ears, random order, both required */
-  'Put your headphones on. We will play a short tone in one ear, then in the other — and you tell us which.':
-    'Coloque os fones. Vamos tocar um som curto em um ouvido e depois no outro — e você diz qual.',
-  'Tone {n} of 2':
-    'Som {n} de 2',
-  'Correct. One more.':
-    'Certo. Mais um.',
-  'The next tone is in the other ear.':
-    'O próximo som é no outro ouvido.',
-  'Play the second tone':
-    'Tocar o segundo som',
-  'That was the other ear.':
-    'Era o outro ouvido.',
   'Check that both sides are plugged in and worn the right way round, then try again.':
     'Veja se os dois lados estão conectados e no lado certo da cabeça, e tente de novo.',
-  'Wired stereo headphones work best. The session moves between your ears, so it needs both of them working.':
-    'Fones estéreo com fio funcionam melhor. A sessão se move entre os seus ouvidos, então precisa dos dois.',
   'This device cannot play a sound right now, so the check cannot run.':
     'Este aparelho não consegue tocar um som agora, então a verificação não pode rodar.',
-  'That was the other ear. Check that both sides are plugged in and worn the right way round, then try again.':
-    'Era o outro ouvido. Veja se os dois lados estão conectados e no lado certo da cabeça, e tente de novo.',
-  'Tone 2 of 2': 'Som 2 de 2',
-  'Left ear: correct.': 'Ouvido esquerdo: certo.',
-  'Now the other ear — the tone moves to the right.': 'Agora o outro ouvido: o som passa para a direita.',
-  'Play the right-ear tone': 'Tocar o som da direita',
-  'Play the tone': 'Tocar o som',
-  'Which ear hears the tone?': 'Qual ouvido escutou o som?',
   'Left': 'Esquerdo',
   'Right': 'Direito',
-  'Play the tone again': 'Tocar o som de novo',
-  'We recommend wired stereo headphones. Continue anyway?':
-    'Recomendamos fones estéreo com fio. Continuar mesmo assim?',
   'This session is not available at the moment. Your therapist or the Good Loop team can restore it.':
     'Esta sessão não está disponível no momento. Seu terapeuta ou a equipe Good Loop podem restaurá-la.',
   'No recorded voice is published for this length yet — this plays an ambient bed.':

@@ -3,9 +3,16 @@
    1. A person linked to a language is offered protocols in THAT language
       only, never another (English included: not voiced yet, so nothing).
    2. A man's recording never plays for a woman, nor a woman's for a man.
-   3. A clinical protocol ("Clinico" in the console, or one of the six
-      clinical-only codes) is never chosen by the person on their own; it is
-      played only when a therapist prescribes or leads it.
+   3. A clinical protocol is never chosen by the person on their own; it is
+      played only when a therapist prescribes or leads it. THREE things make
+      a protocol clinical, and all three are tested below:
+        · `audience` on the row — the general rule, and the only one that
+          scales. It applies to the nineteen editorial Self Use sessions too
+          now: they are matched to a catalogue row by code, and that row
+          decides. They used to skip it, which put GL-STRESS and GL-ANX
+          material in front of people browsing alone.
+        · tier "Clinico" (amber) in the console.
+        · one of the six clinical-only codes.
 
    Run: npm test -- audio-pick                                              */
 
@@ -43,19 +50,23 @@ const proto = (code: string, files: Record<number, Record<string, string>>, extr
 
 /* ---- 3: clinical is never chosen alone --------------------------------------- */
 {
-  const spine = SELF_USE_SESSIONS.slice(0, 3).map((s) => s.protocolCode)
+  const spine = SELF_USE_SESSIONS.slice(0, 4).map((s) => s.protocolCode)
   const files = { 12: { 'pt-BR:f': 'x', 'pt-BR': 'y' } }
+  const lib = { audience: 'library' } as Partial<CatalogProtocol>
   const catalog = [
-    proto(spine[0], files, { tier: 'green' }),
+    proto(spine[0], files, { ...lib, tier: 'green' }),
     proto(spine[1], files, { tier: 'amber' }),                  // labelled "Clinico" in the console
-    proto(spine[2], files),
+    proto(spine[2], files, lib),
+    proto(spine[3] ?? 'GL-X 0.0', files),                       // audience left at clinical
     proto(CLINICAL_ONLY_CODES[0], files, { audience: 'clinical' } as never),
   ]
   const sessions = resolveSessions(catalog, 'pt-BR', { locale: 'pt-BR', to: 'f' })
   const browse = browsableSessions(sessions).map((s) => s.protocolCode)
-  assert(browse.includes(spine[0]) && browse.includes(spine[2]), 'non-clinical sessions are in the library')
+  assert(browse.includes(spine[0]) && browse.includes(spine[2]), 'a session whose row says "library" is in the library')
   assert(!browse.includes(spine[1]), 'a "Clinico" protocol is NOT in the library, search, shelves or pathways')
   assert(!browse.includes(CLINICAL_ONLY_CODES[0]), 'a clinical-only protocol is not in the library')
+  /* The new gate: an editorial session is only as self-service as its row. */
+  assert(!browse.includes(spine[3] ?? 'GL-X 0.0'), 'and one whose row says "clinical" is not, editorial name or no')
   assert(playableSessions(sessions).some((s) => s.protocolCode === spine[1]), '…but it can still be played when a therapist prescribes it')
   const clinical = resolveClinical(catalog, 'pt-BR', sessions)
   const rx = prescribableEntries(clinical, sessions).map((c) => c.code)

@@ -1,20 +1,17 @@
 /* ============================================================================
-   The headphone check actually checks
+   The headphone check
 
-   The old one asked about the left ear and then the right ear, in that order,
-   every time — so it could be passed with the headphones on the desk, by
-   tapping "Left" and then "Right". It also let a wrong answer through: the
-   warning offered "Continue anyway", which went into the protocol.
-
-   These are the rules that replace it (src/lib/stereoCheck.ts).
+   Two buttons, one per ear. Tap one, hear that side, it goes green; say you
+   heard nothing and it goes red. Two greens is the only thing that opens the
+   session.
 
        npx esbuild tools/test-stereo-check.ts --bundle --platform=node \
-         --format=esm --outfile=<tmp>/sc.mjs && node <tmp>/sc.mjs
+         --format=cjs --outfile=<tmp>/sc.cjs && node <tmp>/sc.cjs
    ============================================================================ */
 
 import {
-  startCheck, retryCheck, tonePlayed, answerEar, currentEar, checkPassed, toneNumber,
-  type Ear, type StereoState,
+  startCheck, tonePlayed, markFailed, retryEar, checkPassed, anyFailed,
+  type Ear,
 } from '../src/lib/stereoCheck'
 
 let pass = 0
@@ -24,79 +21,54 @@ function assert(cond: boolean, what: string): void {
   else { fails.push(what); console.log('FAIL:', what) }
 }
 
-/** An rng that returns the numbers it was given, then 0. */
-function fakeRng(...values: number[]): () => number {
-  let i = 0
-  return () => values[i++] ?? 0
-}
+/* ------------------------------------------------------------ both sides */
+console.log('\n--- one side is not enough ---')
+const fresh = startCheck()
+assert(!checkPassed(fresh), 'nothing tapped yet is not a pass')
 
-/** Play the current tone and answer it. */
-function step(s: StereoState, said: Ear): StereoState {
-  return answerEar(tonePlayed(s), said)
-}
+const l = tonePlayed(fresh, 'left')
+assert(l.left === 'ok', 'the left tone turns the left button green')
+assert(l.right === 'idle', 'and does not touch the right one')
+assert(!checkPassed(l), 'one green is NOT a pass — a dead right channel would walk through')
 
-/* ------------------------------------------------------- the order varies */
-console.log('\n--- the order is drawn, not fixed ---')
-assert(startCheck(fakeRng(0.1)).order[0] === 'left', 'a low draw asks the left ear first')
-assert(startCheck(fakeRng(0.9)).order[0] === 'right', 'a high draw asks the right ear first')
-assert(startCheck(fakeRng(0.9)).order[1] === 'left', 'and the other ear is always the second one')
+const both = tonePlayed(l, 'right')
+assert(checkPassed(both), 'both green passes')
 
-/* The whole point: the sequence "left, right" is not a passing answer every
-   time, so it cannot be learned and replayed without listening. */
-const rightFirst = startCheck(fakeRng(0.9))
-assert(step(rightFirst, 'left').phase === 'failed',
-  'answering "left" first fails when the tone was in the right ear')
+/* ------------------------------------------------- green has to mean heard */
+console.log('\n--- saying you heard nothing is the only way to go red ---')
+const silent = markFailed(both, 'right')
+assert(silent.right === 'failed', 'the right side goes red')
+assert(!checkPassed(silent), 'and the check is no longer passed')
+assert(anyFailed(silent), 'so the screen can say what to check')
+assert(silent.left === 'ok', 'while the side that WAS heard is left alone')
 
-/* --------------------------------------------------------- both are asked */
-console.log('\n--- one ear is not a pass ---')
-const a0 = startCheck(fakeRng(0.1))
-const a1 = step(a0, 'left')
-assert(a1.phase === 'between', 'the first correct answer moves on')
-assert(!checkPassed(a1), 'and is NOT a pass on its own')
-assert(currentEar(a1) === 'right', 'the second question is the other ear')
-assert(toneNumber(a1) === 2, 'and says so')
+/* A red side can be tried again, and it starts from nothing. */
+const again = retryEar(silent, 'right')
+assert(again.right === 'idle', 'retrying a side clears it')
+assert(!checkPassed(again), 'and clearing it is not passing it')
+assert(checkPassed(tonePlayed(again, 'right')), 'playing it again passes')
 
-const a2 = step(a1, 'right')
-assert(checkPassed(a2), 'both correct, in a row, passes')
-assert(currentEar(a2) === null, 'and there is nothing left to play')
+/* --------------------------------------------------------------- no order */
+console.log('\n--- the two sides are independent ---')
+let rightFirst = startCheck()
+for (const ear of ['right', 'left'] as Ear[]) rightFirst = tonePlayed(rightFirst, ear)
+assert(checkPassed(rightFirst), 'right then left passes just as left then right does')
 
-/* --------------------------------------------------- a wrong answer resets */
-console.log('\n--- a wrong answer ends the attempt ---')
-const b1 = step(startCheck(fakeRng(0.1)), 'left')
-const b2 = step(b1, 'left') // the second tone is in the RIGHT ear
-assert(b2.phase === 'failed', 'getting the second ear wrong fails')
-assert(b2.correct === 0, 'and the first ear does not carry over — half a check is no check')
-assert(b2.misses === 1, 'the miss is counted, so the screen can stop repeating itself')
-
-/* Guessing twice must not add up to a pass. */
-const b3 = retryCheck(b2, fakeRng(0.9))
-assert(b3.correct === 0 && b3.phase === 'intro', 'a retry starts from nothing')
-assert(b3.order[0] === 'right', 'with a newly drawn order')
-assert(b3.misses === 1, 'while remembering how many attempts have missed')
-
-/* ------------------------------------------- nothing is answerable early */
-console.log('\n--- an answer needs a tone first ---')
-for (const phase of ['intro', 'between'] as const) {
-  const s: StereoState = { order: ['left', 'right'], correct: phase === 'between' ? 1 : 0, phase, misses: 0 }
-  for (const said of ['left', 'right'] as Ear[]) {
-    assert(answerEar(s, said) === s, `answering during "${phase}" (${said}) changes nothing`)
-  }
-}
-const done = step(step(startCheck(fakeRng(0.1)), 'left'), 'right')
-assert(answerEar(done, 'left') === done, 'and a passed check cannot be un-passed by answering again')
-assert(tonePlayed(done) === done, 'nor reopened by playing another tone')
+/* Nothing is mutated in place: every helper returns a new state. */
+assert(fresh.left === 'idle' && fresh.right === 'idle', 'the first state was never written to')
+assert(both.right === 'ok' && silent !== both, 'and neither was the passing one')
 
 /* ----------------------------------------------------- the tone's routing
    Not asserted here: this runner has no Web Audio, and a fake one would only
-   be testing the fake. It was measured against a real browser instead, on
-   the exact graph `playEarTone` builds — an oscillator through a gain into
-   one input of a two-channel merger — rendered through an OfflineAudioContext:
+   be testing the fake. It was measured against a real browser on the exact
+   graph `playEarTone` builds — an oscillator through a gain into one input
+   of a two-channel merger, rendered through an OfflineAudioContext:
 
        left  tone → channel 0 RMS 0.07096, channel 1 RMS 0
        right tone → channel 0 RMS 0,       channel 1 RMS 0.07096
 
-   So the question on screen has exactly one right answer, which is what the
-   rules above are allowed to assume. */
+   So tapping a side really does sound in that ear and nowhere else, which
+   is what the green is reporting. */
 
 console.log(`\n${pass} passed, ${fails.length} failed`)
 if (fails.length) { for (const f of fails) console.log('  FAIL:', f); process.exit(1) }

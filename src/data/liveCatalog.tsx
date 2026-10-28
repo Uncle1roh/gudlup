@@ -258,7 +258,23 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale, list
     const durations = playableDurations(entry, listener)
     return {
       ...s,
-      therapistOnly: isTherapistOnly(entry),
+      /* `therapistOnly` keeps this out of the library, the search, the
+         shelves, the pathways and the mood cards (`browsableSessions`) —
+         and leaves it PLAYABLE, which is what a prescription needs. The
+         distinction matters: a clinical protocol is not unavailable, it is
+         not self-service.
+
+         The row's audience now counts as well as the tier and the six
+         codes. The nineteen editorial sessions are matched to a catalogue
+         row by code and used to skip the audience question entirely — the
+         spine was written when the catalogue held nothing BUT clinical
+         codes, and each editorial session named one as "the protocol that
+         carries the audio". So GL-STRESS, GL-ANX, GL-BURN, GL-RESIL and
+         GL-DEP material was listed under editorial names for people
+         browsing alone, which is what the owner's rule of 2026-10-21 exists
+         to prevent. Any of the nineteen comes back the moment its protocol
+         says `audience: 'library'`. */
+      therapistOnly: isTherapistOnly(entry) || audienceOf(entry) !== 'library',
       /* CLAUDE.md: a patient-facing screen prints patientTitle(). Where no PO
          has written a public name, that resolves to the clinical title — which
          is NOT what a person should read, so the editorial name stays instead.
