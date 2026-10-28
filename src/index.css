@@ -2420,6 +2420,23 @@ img, svg, video, canvas { max-width: 100%; }
 
 /* 5-action row + mastered state */
 .adm-plain__actions--5 { grid-template-columns: repeat(5, minmax(140px, 200px)); }
+
+/* Who a protocol is for, on the publish screen. A row, above the actions,
+   because it changes what Pubblica does and has to be read before it. */
+.adm-plain__audience {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.adm-plain__audience-q { font-size: 15px; font-weight: 700; }
+.adm-plain__audience .b2b-btn[aria-pressed='true'] {
+  background: var(--gl-ink, #16211f);
+  border-color: var(--gl-ink, #16211f);
+  color: #fff;
+}
+.adm-plain__audience .b2b-sub { flex: 1 1 100%; }
 .adm-plain__act--done { border-color: var(--accent, #2e7d5b); background: #eef8f1; }
 
 /* ============================================================================

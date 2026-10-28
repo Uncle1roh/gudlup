@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>C1 · Grade bento · Progresso</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .wrap, .top__in { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+  .top .search { width: 260px; margin-left: auto; }
+  main { padding: 36px 0 80px; display: flex; flex-direction: column; gap: 28px; }
+  .headrow { display: flex; align-items: flex-end; justify-content: space-between; }
+  .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+  .s8 { grid-column: span 8; } .s4 { grid-column: span 4; } .s6 { grid-column: span 6; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; height: 150px; }
+  .week div { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .week i { width: 100%; max-width: 40px; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, var(--accent), #127a5f); }
+  .week span { font-size: 12px; color: var(--muted); }
+  .big { font-size: 34px; font-weight: 700; line-height: 1.1; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal i { aspect-ratio: 1; border-radius: 8px; background: var(--fill); }
+  .cal i.a { background: #1fbf94; } .cal i.b { background: #5fa98f; } .cal i.c { background: #E89D64; } .cal i.d { background: #3c6b5d; }
+  .row { display: flex; gap: 14px; align-items: center; }
+  .rank li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: 14px; }
+  .rank li.me { color: var(--accent2); font-weight: 700; }
+  .rank { list-style: none; padding: 0; }
+  .empty { grid-column: span 12; border: 1px dashed var(--hair2); background: transparent; flex-direction: row; align-items: center; gap: 28px; padding: 28px 32px; }
+  .empty .art { width: 96px; aspect-ratio: 1; border-radius: 24px; flex: none; }
+</style></head>
+<body>
+<header class="top"><div class="top__in">
+  <span class="logo"><i></i>goodloop</span>
+  <nav class="nav"><a>Início</a><a>Terapeuta</a><a class="on">Progresso</a><a>Benefícios</a><a>Perfil</a></nav>
+  <div class="search">⌕ &nbsp;Buscar sessões</div>
+  <span class="help">Ajuda agora</span>
+</div></header>
+
+<div class="wrap"><main>
+  <div class="headrow"><h1>Progresso</h1><div class="seg"><span class="on">Resumo</span><span>Conquistas</span><span>Rankings</span><span>Desafios</span></div></div>
+
+  <div class="bento">
+    <section class="card s8">
+      <div class="row" style="justify-content:space-between"><h2>Sua semana</h2><span class="small muted">14 – 20 out</span></div>
+      <div class="week">
+        <div><i style="height:30%"></i><span>Seg</span></div><div><i style="height:55%"></i><span>Ter</span></div><div><i style="height:10%"></i><span>Qua</span></div>
+        <div><i style="height:80%"></i><span>Qui</span></div><div><i style="height:45%"></i><span>Sex</span></div><div><i style="height:0%"></i><span>Sáb</span></div><div><i style="height:20%"></i><span>Dom</span></div>
+      </div>
+      <p class="small muted">5 dias com pelo menos uma pausa · 1h 52min no total</p>
+    </section>
+    <section class="card s4" style="background:var(--care);border:0">
+      <p class="eyebrow" style="color:#B7DBAD">Seu cuidado este mês</p>
+      <p class="big" style="color:#F4F0BE">3h 30min</p>
+      <p class="small" style="color:#E3EDC6">= 347 Loops · multiplicados por 1,5× pela sua empresa</p>
+      <span class="btn" style="color:#FAF8DF;border-color:rgba(250,248,223,.4)">Ver benefícios</span>
+    </section>
+
+    <section class="card s6">
+      <div class="row" style="justify-content:space-between"><h2>Calendário do humor</h2><span class="small muted">Outubro</span></div>
+      <div class="cal">
+        <i class="a"></i><i class="b"></i><i></i><i class="a"></i><i class="c"></i><i></i><i></i>
+        <i class="b"></i><i class="a"></i><i class="a"></i><i class="d"></i><i class="b"></i><i></i><i class="a"></i>
+        <i class="c"></i><i class="b"></i><i class="a"></i><i></i><i class="a"></i><i class="b"></i><i></i>
+      </div>
+    </section>
+    <section class="card s6">
+      <h2>Check-in semanal</h2>
+      <p class="muted">Quatro perguntas rápidas sobre como foi a sua semana. Só você vê.</p>
+      <div class="row"><span class="btn btn--primary">Fazer check-in</span><span class="small muted">último: há 6 dias</span></div>
+    </section>
+
+    <section class="card s4">
+      <p class="eyebrow">Próxima conquista</p>
+      <div class="row"><span class="badge lock" style="width:56px;height:56px">◷</span><div style="flex:1"><h3>Horas de escuta II</h3><p class="small muted">faltam 1h 30min</p></div></div>
+      <div class="bar"><i style="width:70%"></i></div>
+    </section>
+    <section class="card s4" style="border-color:rgba(36,101,171,.55)">
+      <p class="eyebrow">Desafio da empresa · 12 dias</p>
+      <h3>Novembro em Loop</h3>
+      <div class="bar"><i style="width:68%"></i></div>
+      <p class="small muted">41% da empresa · meta 60%</p>
+    </section>
+    <section class="card s4" style="background:var(--violet);border:0">
+      <p class="eyebrow" style="color:#F4F0BE">São Paulo · SP</p>
+      <h3 style="color:#FAF8DF">84% da meta do mês</h3>
+      <div class="bar bar--sand" style="background:rgba(250,248,223,.22)"><i style="width:84%"></i></div>
+      <p class="small" style="color:#F4F0BE">Sua parte: 3h 30min</p>
+    </section>
+
+    <section class="card empty">
+      <div class="art"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:60ch"><h3>Estado vazio, na mesma grade</h3><p class="small muted">Quando ainda não há dados, cada bloco mostra o seu próprio convite (ex.: "Seu check-in aparece aqui") em vez de um único card vazio de 1.800px.</p></div>
+    </section>
+  </div>
+</main></div>
+
+<div class="ruler"><i style="left:calc(50% - 640px)"></i><span style="left:calc(50% - 640px)">1280px · 12 colunas</span><i style="left:calc(50% + 640px)"></i></div>
+<div class="note"><b>Proposta C — Grade bento de 12 colunas</b>Para telas de painel (Progresso › Resumo, Rankings), os blocos ocupam 8/4, 6/6 e 4/4/4 colunas de uma grade fixa. Cada bloco tem um tamanho natural, e nada se estica além da sua coluna. Combina com A ou B.</div>
+</body></html>

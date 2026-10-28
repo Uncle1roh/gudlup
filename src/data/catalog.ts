@@ -444,6 +444,34 @@ export function audienceOf(p: Pick<CatalogProtocol, 'audience' | 'family'>): Aud
   return p.audience ?? (p.family === 'GL-LIB' ? 'library' : 'clinical')
 }
 
+/**
+ * The code prefixes that are SELF-GUIDED material.
+ *
+ * `GL-ANX`, `GL-DEP`, `GL-BURN`, `GL-STRESS` and `GL-RESIL` are the clinical
+ * families: a professional puts them in a pathway and nobody browses to
+ * them. Everything the catalogue has been filled with since — `GL-CALM`,
+ * `GL-FOCUS`, `GL-ENER`, `GL-GROW`, `GL-VIT`, `GL-INTRO` — is the opposite:
+ * a person opens it alone, which is the whole point of it.
+ *
+ * The list is explicit, and unknown prefixes stay CLINICAL on purpose. The
+ * two mistakes are not symmetrical: a self-guided protocol filed as clinical
+ * is invisible, which is annoying and reversible, while a clinical protocol
+ * filed as self-guided is treatment material offered to somebody browsing on
+ * their own. The second is the one worth being wrong about in the safe
+ * direction — and the publish screen now PRINTS which way it went, so the
+ * first one stops being silent, which is how the whole catalogue came to be
+ * marked clinical without anyone deciding that.
+ */
+export const LIBRARY_CODE_PREFIXES = [
+  'GL-LIB', 'GL-CALM', 'GL-FOCUS', 'GL-ENER', 'GL-GROW', 'GL-VIT', 'GL-INTRO',
+]
+
+/** The audience a code implies. A guess, shown to the operator, never silent. */
+export function audienceFromCode(code: string | null | undefined): Audience {
+  const prefix = (code ?? '').trim().split(/\s+/)[0].toUpperCase()
+  return LIBRARY_CODE_PREFIXES.includes(prefix) ? 'library' : 'clinical'
+}
+
 /** Entries a person may browse and start on their own. */
 export function libraryEntries(all: CatalogProtocol[]): CatalogProtocol[] {
   return all.filter((p) => p.enabled && audienceOf(p) === 'library')

@@ -20,7 +20,7 @@ import { withAudioUrl } from '../src/admin/attachAudio'
 import { parseVoiceName, registerVoices, defaultPrimary, type CatalogVoice } from '../src/tts/voiceCatalog'
 import { toCatalogVoice } from '../src/tts/voiceSync'
 import { canonicalVoiceClip, isTextMissing, switchClipLang } from '../src/studio/sessionLang'
-import { audioLangSummary, audioLangs, audioVariants, durationState, plainFor, type CatalogProtocol } from '../src/data/catalog'
+import { audienceFromCode, audienceOf, audioLangSummary, audioLangs, audioVariants, durationState, plainFor, type CatalogProtocol } from '../src/data/catalog'
 import { audioUrlFor } from '../src/data/liveCatalog'
 import { patientTitle, protocolTitle } from '../src/types/domain'
 import { newProtocolEntry } from '../src/admin/CatalogAdmin'
@@ -296,6 +296,33 @@ async function main() {
   const bothForms = withAudioUrl(femOnly, 6, 'it', 'https://x/6-it-m.mp3', Date.now(), 'm')
   assert(audioVariants(bothForms, 6).length === 2, 'publishing the other form adds to it')
   assert(audioUrlFor(bothForms, 6, 'it', 'f') === 'https://x/6-it-f.mp3', 'and does not overwrite hers')
+
+  /* ------------------------------------------ 11. who a protocol is for */
+  console.log('\n--- the code says who a protocol is for, and publishing writes it ---')
+  /* The whole catalogue came out 'clinical' because `entryForPublish` never
+     wrote the column and the database default did. A clinical protocol is
+     not listed in the library, so every self-guided session published from
+     a workbook was invisible with its audio attached. */
+  assert(audienceFromCode('GL-CALM 1.1') === 'library', 'GL-CALM is self-guided')
+  assert(audienceFromCode('GL-FOCUS 4.1') === 'library', 'so is GL-FOCUS')
+  assert(audienceFromCode('GL-ENER 3.2') === 'library', 'and GL-ENER')
+  assert(audienceFromCode('GL-ANX 1.1') === 'clinical', 'GL-ANX is clinical')
+  assert(audienceFromCode('GL-DEP 2.4') === 'clinical', 'and GL-DEP')
+  /* Unknown prefixes stay clinical: a clinical protocol offered to somebody
+     browsing alone is the worse of the two mistakes. */
+  assert(audienceFromCode('GL-WHATEVER 9.9') === 'clinical', 'an unknown family stays clinical')
+  assert(audienceFromCode('') === 'clinical' && audienceFromCode(null) === 'clinical', 'and so does nothing at all')
+  assert(audienceFromCode('gl-calm 1.1') === 'library', 'the prefix is read without case mattering')
+
+  const anxEntry = entryForPublish({ timeline: itOnly, existing: undefined, selected: 6 })
+  assert(audienceOf(anxEntry) === 'clinical', 'a GL-ANX workbook publishes as clinical')
+  const calmEntry = entryForPublish({ timeline: { ...itOnly, code: 'GL-CALM 9.9' }, existing: undefined, selected: 6 })
+  assert(audienceOf(calmEntry) === 'library', 'and a GL-CALM one publishes into the library')
+  const overruled = entryForPublish({ timeline: { ...itOnly, code: 'GL-CALM 9.9' }, existing: undefined, selected: 6, audience: 'clinical' })
+  assert(audienceOf(overruled) === 'clinical', 'the operator can overrule the guess')
+  /* Re-importing a workbook must not re-classify something already placed. */
+  const placed = entryForPublish({ timeline: { ...itOnly, code: 'GL-CALM 9.9' }, existing: { ...calmEntry, audience: 'clinical' }, selected: 6 })
+  assert(audienceOf(placed) === 'clinical', 'and a second import keeps what the row already says')
 
   console.log(`\n${pass} passed, ${fails.length} failed`)
   if (fails.length) { for (const f of fails) console.log('  FAIL:', f); process.exit(1) }

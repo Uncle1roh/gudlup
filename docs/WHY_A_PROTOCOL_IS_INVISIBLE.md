@@ -16,10 +16,35 @@ anteriores, e nenhum deles tem a ver com o arquivo.
 |---|--------|---------------------|---------|
 | 1 | `enabled = true` | `supabase/23-protocols-read-scope.sql` | O protocolo nem chega ao navegador de quem não é admin. A policy exige `enabled`. |
 | 2 | `tenants` | mesma policy | Se não for `"all"`, só quem é da empresa listada vê. |
-| 3 | `audience = 'library'` | `data/liveCatalog.tsx:286` | **O mais comum.** O padrão da coluna é `'clinical'`. Um protocolo clínico nunca aparece na biblioteca — só quando um terapeuta prescreve. |
+| 3 | `audience = 'library'` | `data/liveCatalog.tsx:286` | **Era o caso de 28/10/2026** — veja a nota abaixo. O padrão da coluna é `'clinical'`, e protocolo clínico nunca aparece na biblioteca. |
 | 4 | ~~tier / código clínico~~ | — | **NÃO existe hoje.** Ver a nota abaixo. |
 | 5 | Arquivo **na língua E na forma** do ouvinte | `audioPick`, `playableDurations` | Sem o arquivo exato, a duração não é oferecida. Uma das dezenove sessões fixas fica visível porém **sem botão de tocar**; qualquer outro protocolo some da lista. |
 | 6 | O arquivo abre | bucket `protocol-audio` | Se o bucket não for público, o protocolo **aparece** e falha ao tocar. |
+
+### O que aconteceu em 28/10/2026 (portão 3)
+
+O catálogo inteiro — mais de quarenta protocolos — estava com
+`audience = 'clinical'`, inclusive `GL-CALM`, `GL-FOCUS`, `GL-ENER`,
+`GL-GROW` e `GL-VIT`, que são autoguiados por definição.
+
+Causa: `entryForPublish` (`src/admin/publishPlain.ts`) **nunca escrevia a
+coluna**. Todo protocolo importado de um workbook PLAIN ficava com o default
+do banco. Não havia campo nenhum no console que mostrasse isso, então nada
+denunciava.
+
+Consequência: só as dezenove sessões fixas do Self Use podiam aparecer, e
+qualquer protocolo novo ia para o ar com o áudio certo e visível para
+ninguém.
+
+Corrigido em duas partes:
+
+- **Código** — o publish agora escreve `audience`, com um palpite a partir
+  do prefixo GL, e a tela de publicação tem o controle **"Chi lo usa?"**
+  (Biblioteca / Clinico) logo acima dos botões. Prefixo desconhecido
+  continua clínico de propósito: clínico aparecendo na biblioteca é o erro
+  pior dos dois.
+- **Dados** — `supabase/26-protocol-audience.sql` arruma as linhas que já
+  existem. Rode no SQL Editor; ele mostra as contas antes e depois.
 
 ### Nota sobre o portão 4 — ele não está ligado
 

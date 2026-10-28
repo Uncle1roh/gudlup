@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Agendar com psicólogo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-m{background-image:linear-gradient(rgba(4,16,13,.25),rgba(4,16,13,.55)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:40% center}
+.glass{background:rgba(10,32,27,.44);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14)}
+.glass-btn{background:rgba(250,248,223,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.2);color:#FAF8DF;cursor:pointer}
+
+</style>
+</helmet>
+<div class="gl-m" style="width: 390px; height: 844px; box-sizing: border-box; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF; overflow: hidden">
+
+  <header style="display: flex; align-items: center; gap: 12px">
+    <a href="PsiAgenda.dc.html" class="glass-btn" aria-label="Voltar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <h1 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 500; font-size: 24px">Agendar sessão</h1>
+  </header>
+
+  <span style="font-size: 13px; color: rgba(250,248,223,.85)">Psicólogos credenciados pela sua empresa</span>
+
+  <section role="radiogroup" aria-label="Escolha o psicólogo" style="display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{pros}}" as="p" hint-placeholder-count="3">
+      <button role="radio" aria-checked="{{p.checked}}" onClick="{{p.pick}}" class="glass" style="border-radius: 22px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer; color: #FAF8DF; font-family: 'DM Sans', sans-serif; outline: {{p.ring}}">
+        <span style="width: 46px; height: 46px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 16px; background: {{p.color}}; color: #06140f">{{p.ini}}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+          <span style="font-size: 15px; font-weight: 500">{{p.name}}</span>
+          <span style="font-size: 12px; color: rgba(250,248,223,.8)">{{p.focus}}</span>
+        </span>
+        <span style="font-size: 12px; color: #B7DBAD; flex: none">{{p.next}}</span>
+      </button>
+    </sc-for>
+  </section>
+
+  <section class="glass" style="border-radius: 24px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+    <div role="radiogroup" aria-label="Dia" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{days}}" as="d" hint-placeholder-count="5">
+        <button role="radio" aria-checked="{{d.checked}}" onClick="{{d.pick}}" style="height: 56px; border-radius: 16px; border: 1px solid rgba(250,248,223,.18); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; background: {{d.bg}}; color: {{d.fg}}">
+          <span style="font: 400 11px 'DM Sans', sans-serif">{{d.wd}}</span>
+          <span style="font: 500 17px Outfit, sans-serif">{{d.n}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div role="radiogroup" aria-label="Horário" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{slots}}" as="s" hint-placeholder-count="6">
+        <button role="radio" aria-checked="{{s.checked}}" onClick="{{s.pick}}" style="height: 44px; border-radius: 999px; border: 1px solid rgba(250,248,223,.18); cursor: pointer; font: 500 14px 'DM Sans', sans-serif; background: {{s.bg}}; color: {{s.fg}}">{{s.t}}</button>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="flex: 1"></div>
+
+  <a href="PsiAgenda.dc.html" style="height: 58px; border-radius: 999px; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 600; font-size: 16px">Confirmar · {{summary}}</a>
+  <p style="margin: 0; text-align: center; font-size: 12px; color: rgba(250,248,223,.75)">Você recebe um lembrete antes da sessão.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { pro: 'ma', day: 'qui', slot: '18:00' }; }
+  renderVals() {
+    const S = this.state;
+    const pros = [
+      { id: 'ma', ini: 'MA', name: 'Dra. Marina Alves', focus: 'Ansiedade e estresse no trabalho', next: 'Hoje', color: '#7AC69B' },
+      { id: 'rc', ini: 'RC', name: 'Dr. Rafael Costa', focus: 'Esgotamento e sono', next: 'Amanhã', color: '#E89D64' },
+      { id: 'jl', ini: 'JL', name: 'Dra. Júlia Lima', focus: 'Humor e autoestima', next: 'Sexta', color: '#B7DBAD' }
+    ].map((p) => ({ ...p, checked: S.pro === p.id ? 'true' : 'false', ring: S.pro === p.id ? '2px solid #FAF8DF' : 'none', pick: () => this.setState({ pro: p.id }) }));
+    const days = [['ter', 'Ter', '27'], ['qua', 'Qua', '28'], ['qui', 'Qui', '29'], ['sex', 'Sex', '30'], ['seg', 'Seg', '02']].map(([id, wd, n]) => {
+      const on = S.day === id;
+      return { wd, n, checked: on ? 'true' : 'false', bg: on ? '#FAF8DF' : 'transparent', fg: on ? '#0B2620' : '#FAF8DF', pick: () => this.setState({ day: id }) };
+    });
+    const slots = ['08:00', '09:30', '12:00', '17:00', '18:00', '19:30'].map((t) => {
+      const on = S.slot === t;
+      return { t, checked: on ? 'true' : 'false', bg: on ? '#3DB189' : 'transparent', fg: on ? '#06140f' : '#FAF8DF', pick: () => this.setState({ slot: t }) };
+    });
+    const dayLabel = { ter: 'ter 27', qua: 'qua 28', qui: 'qui 29', sex: 'sex 30', seg: 'seg 02' }[S.day];
+    return { pros, days, slots, summary: dayLabel + ', ' + S.slot };
+  }
+}
+</script>
+</body>
+</html>

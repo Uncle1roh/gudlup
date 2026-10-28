@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Protocolos (app)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-m{background-image:linear-gradient(rgba(4,16,13,.25),rgba(4,16,13,.55)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:80% center}
+.glass{background:rgba(10,32,27,.44);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14)}
+.glass-btn{background:rgba(250,248,223,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.2);color:#FAF8DF;cursor:pointer}
+.gl-search::placeholder{color:rgba(250,248,223,.7)}
+
+</style>
+</helmet>
+<div class="gl-m" style="width: 390px; height: 844px; box-sizing: border-box; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 500; font-size: 26px">Protocolos</h1>
+    <span class="glass-btn" style="height: 36px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 13px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg>Estéreo ok
+    </span>
+  </header>
+
+  <label class="glass" style="height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 16px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar protocolo</span>
+    <input class="gl-search" type="search" placeholder="Como você quer se sentir?" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #FAF8DF; font: 400 15px 'DM Sans', sans-serif">
+  </label>
+
+  <div role="radiogroup" aria-label="Duração da sessão" class="glass" style="border-radius: 999px; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">
+    <sc-for list="{{levels}}" as="l" hint-placeholder-count="3">
+      <button role="radio" aria-checked="{{l.checked}}" onClick="{{l.pick}}" style="height: 44px; border-radius: 999px; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; background: {{l.bg}}; color: {{l.fg}}">
+        <span style="font: 600 14px 'DM Sans', sans-serif">{{l.label}}</span>
+        <span style="font: 400 11px 'DM Sans', sans-serif">{{l.time}}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{protocols}}" as="p" hint-placeholder-count="6">
+      <article class="glass" style="border-radius: 22px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px">
+        <span style="width: 44px; height: 44px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: {{p.tint}}; color: #FAF8DF">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg>
+        </span>
+        <div style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+          <span style="display: flex; align-items: center; gap: 8px"><span style="font-family: Outfit, sans-serif; font-size: 17px; font-weight: 500">{{p.name}}</span><span style="font-size: 10px; letter-spacing: .08em; color: rgba(250,248,223,.7)">{{p.code}}</span></span>
+          <span style="font-size: 12px; color: rgba(250,248,223,.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.desc}}</span>
+        </div>
+        <button aria-label="Ouvir {{p.name}}" style="width: 44px; height: 44px; flex: none; border-radius: 50%; border: none; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"></path></svg></button>
+      </article>
+    </sc-for>
+  </section>
+
+  <div style="flex: 1"></div>
+
+  <nav class="glass" aria-label="Navegação" style="height: 68px; border-radius: 999px; display: flex; align-items: center; justify-content: space-around; padding: 0 8px">
+    <a href="Mobile.dc.html" aria-label="Início" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg></a>
+    <a href="PsiAgenda.dc.html" aria-label="Terapia" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4zM12 13.6s-3-1.8-3-4a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2.2-3 4-3 4z"></path></svg></a>
+    <a href="Jornada.dc.html" aria-label="Minha jornada" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="5" r="2"></circle><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"></path></svg></a>
+    <a href="Protocolos.dc.html" aria-label="Protocolos" aria-current="page" style="width: 48px; height: 48px; border-radius: 50%; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg></a>
+    <a href="Beneficios.dc.html" aria-label="Benefícios" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"></path><path d="M12 9.5v5M9.5 12h5"></path></svg></a>
+    <a href="Perfil.dc.html" aria-label="Perfil" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3DB189","options":["#3DB189","#7AC69B","#E89D64","#2465AB"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { level: 'rapida' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#3DB189';
+    const levels = [
+      { id: 'rapida', label: 'Rápida', time: '6 min' },
+      { id: 'padrao', label: 'Padrão', time: 'média' },
+      { id: 'profunda', label: 'Profunda', time: '24 min' }
+    ].map((l) => {
+      const on = this.state.level === l.id;
+      return { ...l, checked: on ? 'true' : 'false', bg: on ? '#FAF8DF' : 'transparent', fg: on ? '#0B2620' : '#FAF8DF', pick: () => this.setState({ level: l.id }) };
+    });
+    const protocols = [
+      { code: 'GL-CALM', name: 'Calma', desc: 'Desacelerar o corpo e a mente', tint: 'rgba(61,177,137,.45)', icon: 'M3 12c3-4 6 4 9 0s6 4 9 0' },
+      { code: 'GL-FOCUS', name: 'Foco', desc: 'Atenção para o que importa agora', tint: 'rgba(36,101,171,.55)', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+      { code: 'GL-ENER', name: 'Energia', desc: 'Recarregar para o resto do dia', tint: 'rgba(232,157,100,.5)', icon: 'M13 3L5 14h6l-1 7 8-11h-6z' },
+      { code: 'GL-GROW', name: 'Crescimento', desc: 'Confiança para novos passos', tint: 'rgba(122,198,155,.4)', icon: 'M12 21v-9M12 12c0-4 3-7 7-7 0 4-3 7-7 7zM12 15c0-3-2.5-5-6-5 0 3 2.5 5 6 5z' },
+      { code: 'GL-STRESS', name: 'Menos estresse', desc: 'Soltar a tensão acumulada', tint: 'rgba(83,51,96,.6)', icon: 'M4 8h10a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 16h7' },
+      { code: 'GL-RESIL', name: 'Resiliência', desc: 'Voltar ao centro depois do impacto', tint: 'rgba(244,240,190,.25)', icon: 'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z' }
+    ];
+    return { accent, levels, protocols };
+  }
+}
+</script>
+</body>
+</html>

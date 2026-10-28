@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>B1 · Painel lateral · Início</title>
+<link rel="stylesheet" href="mock.css"><link rel="stylesheet" href="shell-b.css">
+<style>
+  .date { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .hero { border-radius: 28px; min-height: 300px; padding: 36px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;
+          background: radial-gradient(circle at 80% 38%, #b9f0dd 0 64px, transparent 65px), radial-gradient(circle at 80% 38%, rgba(185,240,221,.12) 0 140px, transparent 141px), linear-gradient(160deg,#1d5546,#0c231d); }
+  .hero h2 { font-size: 32px; } .hero p { max-width: 36ch; color: var(--fg2); }
+  .rail-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .path { padding: 18px 20px; border-radius: 18px; background: var(--raised); border: 1px solid var(--hair); font-weight: 600; min-height: 88px; display: flex; flex-direction: column; justify-content: space-between; }
+  .path small { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+  .moods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .mood { padding: 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--hair); display: flex; flex-direction: column; gap: 10px; font-weight: 600; font-size: 14px; }
+  .chal { border-color: rgba(36,101,171,.55); }
+</style></head>
+<body>
+<aside class="sb">
+  <span class="logo"><i></i>goodloop</span>
+  <div class="search">⌕ &nbsp;Buscar sessões</div>
+  <nav><a class="on"><span>▦</span>Início</a><a><span>◠</span>Terapeuta</a><a><span>↗</span>Progresso</a><a><span>◎</span>Benefícios</a><a><span>◯</span>Perfil</a></nav>
+  <div class="foot"><span class="help" style="width:max-content">Ajuda agora</span><div class="me"><i>N</i>Natalya · Perfil</div></div>
+</aside>
+
+<div class="main"><div class="col">
+  <div><p class="date">Quarta-feira, 21 de outubro</p><h1>Boa noite</h1></div>
+  <div class="hero">
+    <p class="eyebrow">Um bom lugar para começar</p>
+    <h2>Calma e segurança</h2>
+    <p>Encontre calma antes de situações de muita pressão.</p>
+    <div style="display:flex;gap:10px;margin-top:6px"><span class="btn btn--primary">▶ Ouvir · 6 min</span><span class="btn">Detalhes</span></div>
+  </div>
+  <section>
+    <div class="rail-h"><h2>Jornadas</h2><span class="small muted">Ver todas →</span></div>
+    <div class="paths">
+      <div class="path">Foco e desempenho<small>4 semanas · 12 sessões</small></div>
+      <div class="path">Dia de trabalho<small>4 semanas · 12 sessões</small></div>
+      <div class="path">Energia e descanso<small>4 semanas · 12 sessões</small></div>
+    </div>
+  </section>
+  <section>
+    <div class="rail-h"><h2>Seis minutos</h2><span class="small muted">‹ ›</span></div>
+    <div class="rail">
+      <div class="sess"><div class="art b"><span class="durs"><b>6</b><b>12</b><b>24</b></span></div><h4>Foco e clareza</h4><p>Afine a atenção e pense com clareza.</p></div>
+      <div class="sess"><div class="art"><span class="durs"><b>6</b><b>12</b></span></div><h4>Equilíbrio pessoal</h4><p>A linha entre o que você dá e guarda.</p></div>
+      <div class="sess"><div class="art d"><span class="durs"><b>6</b><b>24</b></span></div><h4>Força interior</h4><p>Firme quando as demandas sobem.</p></div>
+      <div class="sess"><div class="art c"><span class="durs"><b>6</b></span></div><h4>Permissão para parar</h4><p>Parar sem ter de merecer antes.</p></div>
+    </div>
+  </section>
+  <section>
+    <div class="rail-h"><h2>Como você está agora?</h2></div>
+    <div class="moods">
+      <div class="mood"><span class="ico">☺</span>Tenso, agitado</div><div class="mood"><span class="ico">↻</span>Mente acelerada</div>
+      <div class="mood"><span class="ico">▭</span>Exausto</div><div class="mood"><span class="ico">≡</span>Soterrado de tarefas</div>
+    </div>
+  </section>
+</div></div>
+
+<aside class="aside">
+  <h4>Seu cuidado</h4>
+  <div class="card care"><p class="eyebrow">Este mês</p><p class="big">3h 30min</p><p class="small" style="color:#E3EDC6">= 347 Loops · sua empresa multiplica por 1,5×</p></div>
+  <div class="card chal"><p class="eyebrow">Desafio da sua empresa · 12 dias</p><h3>Novembro em Loop</h3><div class="bar"><i style="width:68%"></i></div><p class="small muted">41% da empresa · meta 60%</p></div>
+  <div class="card"><p class="eyebrow">Próxima conquista</p><div class="row"><span class="badge lock">◷</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><h3>Horas de escuta II</h3><div class="bar"><i style="width:70%"></i></div><p class="small muted">faltam 1h 30min</p></div></div></div>
+  <p class="small muted">Para momentos do seu dia de trabalho. Relaxamento, não tratamento — e o seu empregador não vê o que você usa.</p>
+</aside>
+
+<div class="note"><b>Proposta B — Barra lateral + coluna + painel "Seu cuidado" (recomendada)</b>Padrão de apps de bem-estar no desktop (Calm, Headspace, Spotify). A navegação desce para a esquerda; o conteúdo fica numa coluna de leitura de 860px; à direita, um painel fixo resume cuidado, desafio e próxima conquista — o que hoje empilha no topo da Home. Abaixo de 1280px o painel some e volta para dentro da coluna.</div>
+</body></html>

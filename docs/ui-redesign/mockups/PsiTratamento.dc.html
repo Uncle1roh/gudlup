@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Tratamento em andamento</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-m{background-image:linear-gradient(rgba(3,10,8,.72),rgba(3,10,8,.86)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:68% center}
+.glass{background:rgba(10,32,27,.44);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.12)}
+
+</style>
+</helmet>
+<div class="gl-m" style="width: 390px; height: 844px; box-sizing: border-box; padding: 22px 18px 22px; display: flex; flex-direction: column; align-items: center; gap: 16px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF; overflow: hidden; position: relative; text-align: center">
+
+  <div style="align-self: stretch; display: flex; justify-content: space-between; align-items: flex-start">
+    <span class="glass" style="height: 36px; padding: 0 14px; border-radius: 999px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(250,248,223,.85)">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: #E89D64"></span>Tratamento · guiado pela Dra. Marina
+    </span>
+    <div class="glass" style="width: 72px; height: 96px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px">
+      <span style="width: 38px; height: 38px; border-radius: 50%; background: #7AC69B; color: #06140f; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 14px">MA</span>
+      <span style="font-size: 10px; color: rgba(250,248,223,.75)">ao vivo</span>
+    </div>
+  </div>
+
+  <div style="flex: 1"></div>
+
+  <svg viewBox="0 0 280 280" width="280" height="280" aria-hidden="true">
+    <circle cx="140" cy="140" r="134" fill="none" stroke="rgba(250,248,223,.08)"></circle>
+    <circle cx="140" cy="140" r="110" fill="rgba(61,177,137,.06)" stroke="rgba(183,219,173,.16)"></circle>
+    <circle cx="140" cy="140" r="84" fill="rgba(61,177,137,.12)" stroke="rgba(183,219,173,.26)"></circle>
+    <circle cx="140" cy="140" r="56" fill="#3DB189" opacity=".55"></circle>
+    <path d="M10 140c18-24 36 24 54 0s36 24 54 0 36 24 54 0 36 24 54 0 36 24 54 0" fill="none" stroke="#F4F0BE" stroke-width="1.4" opacity=".35"></path>
+  </svg>
+
+  <p style="margin: 0; font-family: Outfit, sans-serif; font-weight: 300; font-size: 28px; line-height: 1.2">Feche os olhos<br>e apenas escute.</p>
+  <p style="margin: 0; font-size: 13px; color: rgba(250,248,223,.75)">A tela vai escurecendo aos poucos.</p>
+
+  <div style="flex: 1"></div>
+
+  <div style="align-self: stretch; display: flex; flex-direction: column; gap: 8px">
+    <div style="height: 4px; border-radius: 999px; background: rgba(250,248,223,.12)"><div style="width: 60%; height: 100%; border-radius: 999px; background: rgba(183,219,173,.7)"></div></div>
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: rgba(250,248,223,.75)"><span>14:20</span><span>Profunda · 24:00</span></div>
+  </div>
+
+  <div style="display: flex; gap: 10px; align-items: center">
+    <button class="glass" style="height: 44px; padding: 0 18px; border-radius: 999px; color: #FAF8DF; font: 500 13px 'DM Sans', sans-serif; cursor: pointer">Pedir uma pausa</button>
+    <a href="PsiChamada.dc.html" style="font-size: 13px">Ver vídeo</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

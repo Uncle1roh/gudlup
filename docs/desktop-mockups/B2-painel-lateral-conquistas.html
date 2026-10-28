@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>B2 · Painel lateral · Conquistas</title>
+<link rel="stylesheet" href="mock.css"><link rel="stylesheet" href="shell-b.css">
+<style>
+  body { grid-template-columns: 248px minmax(0, 1fr) 400px; }
+  .tabs { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .chip { white-space: nowrap; }
+  .next { flex-direction: row; align-items: center; gap: 20px; }
+  .next .body { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 18px 8px 14px; border-radius: 18px; border: 1px solid transparent; }
+  .cell b { font-size: 13.5px; } .cell small { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; color: var(--faint); text-transform: uppercase; }
+  .cell.sel { background: var(--raised); border-color: var(--accent); }
+  .detail { align-items: center; text-align: center; gap: 12px; }
+  .detail .badge { width: 104px; height: 104px; font-size: 36px; border-width: 5px; }
+  .block { text-align: left; border: 1px solid var(--hair2); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .lbl { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 99px; background: var(--on); color: var(--muted); }
+</style></head>
+<body>
+<aside class="sb">
+  <span class="logo"><i></i>goodloop</span>
+  <div class="search">⌕ &nbsp;Buscar sessões</div>
+  <nav><a><span>▦</span>Início</a><a><span>◠</span>Terapeuta</a><a class="on"><span>↗</span>Progresso</a><a><span>◎</span>Benefícios</a><a><span>◯</span>Perfil</a></nav>
+  <div class="foot"><span class="help" style="width:max-content">Ajuda agora</span><div class="me"><i>N</i>Natalya · Perfil</div></div>
+</aside>
+
+<div class="main"><div class="col">
+  <h1>Progresso</h1>
+  <div class="tabs">
+    <div class="seg"><span>Resumo</span><span class="on">Conquistas</span><span>Rankings</span><span>Desafios</span></div>
+    <div style="display:flex;gap:8px"><span class="chip on">Individuais · 9 de 14</span><span class="chip">Coletivas · 0 de 8</span></div>
+  </div>
+  <div class="card next">
+    <span class="badge lock">◷</span>
+    <div class="body"><p class="eyebrow">Próxima conquista</p><h3>Horas de escuta II</h3><div class="bar"><i style="width:70%"></i></div><p class="small muted">3h 30min de 5h · faltam 1h 30min</p></div>
+  </div>
+  <div class="grid">
+    <div class="cell sel"><span class="badge">✦</span><b>Primeiro Loop</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge">◠</span><b>Fones a postos</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge">◷</span><b>Horas de escuta I</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge lock">◷</span><b>Horas de escuta II</b><small>Bloqueada</small></div>
+    <div class="cell"><span class="badge lock">◷</span><b>Horas de escuta III</b><small>Bloqueada</small></div>
+    <div class="cell"><span class="badge">≋</span><b>Mergulho profundo</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge">⊘</span><b>Explorador</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge">▤</span><b>Ritmo próprio</b><small>Desbloqueada</small></div>
+    <div class="cell"><span class="badge lock">☾</span><b>Noites serenas</b><small>Bloqueada</small></div>
+    <div class="cell"><span class="badge lock">☼</span><b>Pausa no expediente</b><small>Bloqueada</small></div>
+  </div>
+</div></div>
+
+<aside class="aside">
+  <div class="card detail">
+    <span class="badge">✦</span>
+    <p class="eyebrow">Conquista individual · Semente</p>
+    <h2>Primeiro Loop</h2>
+    <p class="muted">Conclua sua primeira sessão.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><span class="pill" style="background:var(--accent);color:#070d0c">Desbloqueada em 2 de outubro</span><span class="pill" style="background:var(--sand);color:#2b1606">+20 Loops</span></div>
+    <p class="small" style="color:var(--fg2)">Você concluiu sua primeira sessão. Que bom ter dedicado esse tempo a você.</p>
+  </div>
+  <div class="card" style="gap:10px">
+    <p class="lbl">Exemplo: conquista coletiva selecionada</p>
+    <div class="block"><p class="lbl">Sua cidade: São Paulo</p><div class="bar"><i style="width:84%;background:#9C6FB0"></i></div><p class="small">84% da meta</p></div>
+    <div class="block"><p class="lbl">Sua parte</p><p style="font-size:20px;font-weight:700">3h 30min este mês</p><p class="small muted">Sua parte já conta: quando a meta for alcançada, esta conquista também é sua.</p></div>
+  </div>
+</aside>
+
+<div class="note"><b>Proposta B — Mestre-detalhe no lugar do popup</b>No desktop, clicar numa conquista não abre um popup: o detalhe aparece no painel da direita e a grade continua visível. Assim dá para comparar conquistas sem abrir/fechar janelas. No celular continua a folha que sobe.</div>
+</body></html>

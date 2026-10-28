@@ -16,10 +16,12 @@
 
 import {
   CATALOG_DURATIONS,
+  audienceFromCode,
   catalogDuration,
   mergeVersions,
   narrowTimeline,
   timelinesByDuration,
+  type Audience,
   type CatalogProtocol,
 } from '../data/catalog'
 import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
@@ -66,6 +68,21 @@ export interface PublishInput {
    * session in front of a person.
    */
   keepDraft?: boolean
+  /**
+   * WHO this protocol is for: a person browsing alone, or a professional
+   * putting it in a pathway.
+   *
+   * It was never set here, so every protocol imported from a workbook took
+   * the column's default — 'clinical' — and the whole catalogue ended up
+   * marked clinical whether or not anybody meant it. A clinical protocol is
+   * not listed in the library (`resolveSessions`, data/liveCatalog.tsx), so
+   * a self-guided session published this way was invisible to everyone, with
+   * its audio attached and nothing wrong with it.
+   *
+   * Omitted = `audienceFromCode`, which guesses from the GL prefix. The
+   * publish screen shows the guess and lets the operator overrule it.
+   */
+  audience?: Audience
   /**
    * File this workbook under the protocol that is already open, keeping ITS
    * code and title.
@@ -116,7 +133,7 @@ export interface PublishInput {
  *   which is what the Studio reopens through. A publish that cannot be
  *   reopened is the failure this whole file exists to make impossible.
  */
-export function entryForPublish({ timeline: t, existing, selected, keepDraft, intoExisting, mode = 'import', now = Date.now() }: PublishInput): CatalogProtocol {
+export function entryForPublish({ timeline: t, existing, selected, keepDraft, intoExisting, audience, mode = 'import', now = Date.now() }: PublishInput): CatalogProtocol {
   const code = intoExisting ? existing?.code ?? t.code : t.code
   if (!code) throw new Error('Il file non ha un codice GL (foglio README) — serve per pubblicare.')
 
@@ -167,6 +184,10 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
     ...(existing ?? {}),
     code,
     family: existing?.family ?? familyFromCode(code),
+    /* An explicit choice wins; then whatever the row already says, because
+       re-importing a workbook must not re-classify a protocol somebody has
+       already placed; then the guess from the code. */
+    audience: audience ?? existing?.audience ?? audienceFromCode(code),
     title: intoExisting && existing?.title ? existing.title : (t.title ?? code).trim(),
     blurb: existing?.blurb ?? '',
     phases: catalogPhases.length ? catalogPhases : existing?.phases ?? [],

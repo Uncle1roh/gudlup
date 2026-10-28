@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Início (app)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-m{background-image:linear-gradient(rgba(4,16,13,.1),rgba(4,16,13,.45)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:62% center}
+.glass{background:rgba(10,32,27,.44);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14)}
+.glass-btn{background:rgba(250,248,223,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.2);color:#FAF8DF;cursor:pointer}
+
+</style>
+</helmet>
+<div class="gl-m" style="width: 390px; height: 844px; box-sizing: border-box; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 16px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF; position: relative; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 19.5c-3.2-2-5.2-4.2-5.2-6.6a2.6 2.6 0 0 1 5.2-.6 2.6 2.6 0 0 1 5.2.6c0 2.4-2 4.6-5.2 6.6z"></path><circle cx="12" cy="8.2" r="1.7"></circle></svg>
+      <span style="font-family: Outfit, sans-serif; font-size: 20px; font-weight: 500">goodloop</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span class="glass-btn" style="height: 36px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; font-size: 13px; font-weight: 600">1.240 Loops</span>
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600">AS</span>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px">
+    <h1 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 400; font-size: 28px; line-height: 1.1">Olá, Ana.<br>Como você está agora?</h1>
+    <div role="group" aria-label="Seu humor agora" style="display: flex; justify-content: space-between">
+      <sc-for list="{{moods}}" as="m" hint-placeholder-count="5">
+        <button aria-label="{{m.label}}" aria-pressed="{{m.pressed}}" onClick="{{m.pick}}" style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(250,248,223,.22); background: {{m.bg}}; color: {{m.fg}}; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"></circle><circle cx="9" cy="10" r="0.6" fill="currentColor"></circle><circle cx="15" cy="10" r="0.6" fill="currentColor"></circle><path d="{{m.mouth}}"></path></svg>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Main CTA -->
+  <section class="glass" style="border-radius: 30px; padding: 20px; display: flex; flex-direction: column; gap: 14px; flex: 0 0 262px; box-sizing: border-box">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #B7DBAD">Recomendado hoje</span>
+      <span style="font-size: 12px; color: rgba(250,248,223,.75)">Semana 4 de 12</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px">
+      <svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true">
+        <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(250,248,223,.14)"></circle>
+        <circle cx="60" cy="60" r="44" fill="rgba(61,177,137,.14)" stroke="rgba(183,219,173,.3)"></circle>
+        <circle cx="60" cy="60" r="30" fill="{{accent}}" opacity=".85"></circle>
+        <path d="M8 60c8-11 16 11 26 0s16 11 26 0 16 11 26 0 16 11 26 0" fill="none" stroke="#F4F0BE" stroke-width="1.3" opacity=".6"></path>
+      </svg>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h2 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 500; font-size: 26px">Calma</h2>
+        <p style="margin: 0; font-size: 13px; color: rgba(250,248,223,.82)">Sessão rápida · 6 min<br>Desacelerar o corpo e a mente</p>
+      </div>
+    </div>
+    <div style="flex: 1"></div>
+    <a href="#" style="height: 60px; border-radius: 999px; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 17px">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"></path></svg>Iniciar sessão
+    </a>
+    <a href="#" style="text-align: center; font-size: 14px">Escolher outro protocolo</a>
+  </section>
+
+  <!-- Therapy shortcut -->
+  <section class="glass" style="border-radius: 24px; padding: 10px 10px 10px 12px; display: flex; align-items: center; gap: 12px">
+    <span style="width: 44px; height: 44px; flex: none; border-radius: 50%; background: #7AC69B; color: #06140f; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 15px">MA</span>
+    <span style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+      <span style="font-size: 14px; font-weight: 600">Sessão com a Dra. Marina</span>
+      <span style="font-size: 12px; color: rgba(250,248,223,.82)">Hoje · 18:00 · em 2 h</span>
+    </span>
+    <a href="PsiSalaEspera.dc.html" style="height: 44px; padding: 0 16px; border-radius: 999px; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; text-decoration: none; font-weight: 600; font-size: 14px; flex: none">Entrar</a>
+  </section>
+
+  <!-- Mini cards -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+    <article class="glass" style="border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 13px; color: rgba(250,248,223,.82)">Antes e depois</span>
+      <span style="font-family: Outfit, sans-serif; font-size: 30px">+3,1</span>
+      <svg viewBox="0 0 140 36" width="100%" height="30" aria-hidden="true"><polyline points="0,26 23,22 47,30 70,18 93,26 117,22 140,26" fill="none" stroke="#E89D64" stroke-width="2" stroke-dasharray="4 4"></polyline><polyline points="0,14 23,10 47,18 70,10 93,14 117,4 140,10" fill="none" stroke="{{accent}}" stroke-width="2.5" stroke-linecap="round"></polyline></svg>
+    </article>
+    <a href="#" class="glass" style="border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: #FAF8DF">
+      <span style="font-size: 13px; color: rgba(250,248,223,.82)">SOS rápido</span>
+      <span style="font-family: Outfit, sans-serif; font-size: 22px; line-height: 1.15">Respirar agora</span>
+      <span style="font-size: 12px; color: #F2C29A">6 min · fones estéreo</span>
+    </a>
+  </div>
+
+  <div style="flex: 1"></div>
+
+  <!-- Tab bar -->
+  <nav class="glass" aria-label="Navegação" style="height: 68px; border-radius: 999px; display: flex; align-items: center; justify-content: space-around; padding: 0 8px">
+    <a href="Mobile.dc.html" aria-label="Início" style="width: 48px; height: 48px; border-radius: 50%; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg></a>
+    <a href="PsiAgenda.dc.html" aria-label="Terapia" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4zM12 13.6s-3-1.8-3-4a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2.2-3 4-3 4z"></path></svg></a>
+    <a href="Jornada.dc.html" aria-label="Minha jornada" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="5" r="2"></circle><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"></path></svg></a>
+    <a href="Protocolos.dc.html" aria-label="Protocolos" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg></a>
+    <a href="Beneficios.dc.html" aria-label="Benefícios" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"></path><path d="M12 9.5v5M9.5 12h5"></path></svg></a>
+    <a href="Perfil.dc.html" aria-label="Perfil" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #FAF8DF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3DB189","options":["#3DB189","#7AC69B","#E89D64","#2465AB"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { mood: 'bem' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#3DB189';
+    const list = [
+      { id: 'muito-mal', label: 'Muito mal', mouth: 'M8 16.5c2.5-2.5 5.5-2.5 8 0' },
+      { id: 'mal', label: 'Mal', mouth: 'M8.5 16c2.2-1.4 4.8-1.4 7 0' },
+      { id: 'neutro', label: 'Neutro', mouth: 'M8.5 15h7' },
+      { id: 'bem', label: 'Bem', mouth: 'M8.5 14.5c2.2 1.6 4.8 1.6 7 0' },
+      { id: 'muito-bem', label: 'Muito bem', mouth: 'M8 14c2.5 3 5.5 3 8 0' }
+    ];
+    const moods = list.map((m) => {
+      const on = this.state.mood === m.id;
+      return { ...m, pressed: on ? 'true' : 'false', bg: on ? '#FAF8DF' : 'rgba(250,248,223,.08)', fg: on ? '#0B2620' : '#FAF8DF', pick: () => this.setState({ mood: m.id }) };
+    });
+    return { accent, moods };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+/* Proposal B shell: sidebar · main column · companion panel. Mockups only. */
+body { display: grid; grid-template-columns: 248px minmax(0, 1fr) 360px; min-height: 100vh; }
+.sb { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--hair); padding: 26px 18px; display: flex; flex-direction: column; gap: 26px; background: var(--void); }
+.sb .search { height: 40px; }
+.sb nav { display: flex; flex-direction: column; gap: 4px; }
+.sb nav a { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px; color: var(--fg2); font-weight: 500; }
+.sb nav a span { width: 20px; text-align: center; color: var(--muted); }
+.sb nav a.on { background: var(--raised); color: var(--fg); box-shadow: inset 3px 0 0 var(--accent); }
+.sb nav a.on span { color: var(--accent2); }
+.sb .foot { margin-top: auto; display: flex; flex-direction: column; gap: 14px; }
+.sb .me { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--fg2); }
+.sb .me i { width: 32px; height: 32px; border-radius: 50%; background: var(--well); display: grid; place-items: center; font-style: normal; font-weight: 700; }
+.main { padding: 40px 48px 80px; }
+.main > .col { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+.aside { position: sticky; top: 0; height: 100vh; overflow: auto; border-left: 1px solid var(--hair); padding: 40px 28px; display: flex; flex-direction: column; gap: 18px; background: linear-gradient(180deg, rgba(31,191,148,.05), transparent 40%); }
+.aside .care { background: var(--care); border: 0; }
+.aside .care .eyebrow { color: #B7DBAD; }
+.aside .big { font-size: 28px; font-weight: 700; color: #F4F0BE; line-height: 1.1; }
+.aside .row { display: flex; gap: 14px; align-items: center; }
+.aside .badge { width: 52px; height: 52px; font-size: 19px; border-width: 3px; }
+.aside h4 { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+@media (max-width: 1280px) { body { grid-template-columns: 220px minmax(0,1fr); } .aside { display: none; } }

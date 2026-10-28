@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>A2 · Coluna central · Benefícios</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .wrap, .top__in { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+  .top .search { width: 280px; margin-left: auto; }
+  main { padding: 36px 0 80px; display: flex; flex-direction: column; gap: 36px; }
+  .head { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
+  .care { background: var(--care); border: 0; padding: 32px; gap: 10px; }
+  .care .eyebrow { color: #B7DBAD; }
+  .care h2 { font-size: 26px; color: #FAF8DF; }
+  .care .loops { font-size: 22px; font-weight: 700; color: #F4F0BE; }
+  .care p.small { color: #E3EDC6; }
+  .care .btn { color: #FAF8DF; border-color: rgba(250,248,223,.4); margin-top: 8px; }
+  .ms { justify-content: center; }
+  .ms .row { display: flex; gap: 16px; align-items: center; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pillar { display: flex; flex-direction: column; gap: 16px; }
+  .pillar h2 { display: flex; align-items: center; gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .ben { flex-direction: row; gap: 16px; align-items: flex-start; }
+  .ben .body { display: flex; flex-direction: column; gap: 4px; }
+  .ben .partner { font-size: 12px; color: var(--faint); letter-spacing: .04em; }
+  .ben .price { font-size: 13.5px; font-weight: 700; color: var(--accent2); margin-top: 6px; }
+  .company { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--company); color: #fff; width: max-content; }
+</style></head>
+<body>
+<header class="top"><div class="top__in">
+  <span class="logo"><i></i>goodloop</span>
+  <nav class="nav"><a>Início</a><a>Terapeuta</a><a>Progresso</a><a class="on">Benefícios</a><a>Perfil</a></nav>
+  <div class="search">⌕ &nbsp;Buscar sessões</div>
+  <span class="help">Ajuda agora</span>
+</div></header>
+
+<div class="wrap"><main>
+  <h1>Benefícios</h1>
+  <section class="head">
+    <div class="card care">
+      <p class="eyebrow">Seu cuidado</p>
+      <h2>Você dedicou 3h 30min a você este mês</h2>
+      <p class="loops">◎ = 347 Loops</p>
+      <p class="small">Cada Loop nasce de um minuto de cuidado com a sua mente. Sua empresa multiplica seus Loops em 1,5×.</p>
+      <span class="btn">Iniciar sessão</span>
+    </div>
+    <div class="card ms">
+      <p class="eyebrow">Próximo marco de cuidado</p>
+      <div class="row"><span class="badge lock">◷</span><div style="flex:1;display:flex;flex-direction:column;gap:8px"><h3>Horas de escuta II</h3><div class="bar"><i style="width:70%"></i></div><p class="small muted">3h 30min de 5h · faltam 1h 30min</p></div></div>
+    </div>
+  </section>
+
+  <div class="filters"><span class="chip on">Todos</span><span class="chip">☾ Sono</span><span class="chip">◌ Mente</span><span class="chip">♡ Corpo</span><span class="chip">⚲ Movimento</span><span class="chip">❦ Alimentação</span><span class="chip">☕ Pausas e lazer</span><span class="chip">Meus benefícios · 2</span></div>
+
+  <section class="pillar">
+    <h2><span class="ico">☾</span>Sono</h2>
+    <div class="grid">
+      <div class="card ben"><span class="ico">☾</span><div class="body"><h3>30% em travesseiro anatômico</h3><span class="partner">PARCEIRO</span><p class="small muted">Um apoio certo para o pescoço deixa o sono mais contínuo.</p><span class="price">Trocar por 90 Loops</span></div></div>
+      <div class="card ben"><span class="ico">☾</span><div class="body"><h3>Máscara de dormir em seda</h3><span class="partner">PARCEIRO</span><p class="small muted">Escuridão de verdade ajuda o corpo a reconhecer a hora de descansar.</p><span class="price">Trocar por 60 Loops</span></div></div>
+      <div class="card ben"><span class="ico">☾</span><div class="body"><span class="company">Da sua empresa</span><h3>Uma manhã livre</h3><p class="small muted">Dormir sem despertador, uma vez.</p><span class="price">Resgatar</span></div></div>
+    </div>
+  </section>
+
+  <section class="pillar">
+    <h2><span class="ico">◌</span>Mente</h2>
+    <div class="grid">
+      <div class="card ben"><span class="ico">◌</span><div class="body"><h3>3 meses de app de diário</h3><span class="partner">PARCEIRO</span><p class="small muted">Escrever o que pesa tira da cabeça e põe no papel.</p><span class="price">Trocar por 50 Loops</span></div></div>
+      <div class="card ben"><span class="ico">◌</span><div class="body"><h3>Livro sobre atenção plena</h3><span class="partner">PARCEIRO</span><p class="small muted">Ler devagar, sem tela, é descanso para a atenção.</p><span class="price">Trocar por 70 Loops</span></div></div>
+    </div>
+  </section>
+</main></div>
+
+<div class="ruler"><i style="left:calc(50% - 600px)"></i><span style="left:calc(50% - 600px)">1200px</span><i style="left:calc(50% + 600px)"></i></div>
+<div class="note"><b>Proposta A — Benefícios em grade de 3</b>O cabeçalho de cuidado vira 2 colunas (cuidado + marco). Os pilares viram filtros no topo, e cada pilar mostra cards em grade de 3 — nenhum card passa de ~370px de largura.</div>
+</body></html>

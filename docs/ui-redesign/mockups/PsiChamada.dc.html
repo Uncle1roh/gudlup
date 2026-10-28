@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Chamada com psicólogo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-m{background-image:linear-gradient(rgba(4,16,13,.55),rgba(4,16,13,.7)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:45% center}
+.glass{background:rgba(10,32,27,.44);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14)}
+.glass-btn{background:rgba(250,248,223,.1);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.22);color:#FAF8DF;cursor:pointer}
+
+</style>
+</helmet>
+<div class="gl-m" style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px 14px 18px; display: flex; flex-direction: column; gap: 12px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF; overflow: hidden; position: relative">
+
+  <!-- Top -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; position: relative; z-index: 2">
+    <span class="glass" style="height: 38px; padding: 0 14px; border-radius: 999px; display: flex; align-items: center; gap: 8px; font-size: 13px">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: #7AC69B"></span>Acolhimento · 12:40
+    </span>
+    <span class="glass" style="height: 38px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 12px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"></path></svg>Chamada protegida
+    </span>
+  </div>
+
+  <!-- Therapist video (placeholder) -->
+  <section style="flex: 1; border-radius: 32px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(122,198,155,.12); border: 1px solid rgba(250,248,223,.14)">
+    <span style="width: 132px; height: 132px; border-radius: 50%; background: #7AC69B; color: #06140f; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 44px">MA</span>
+    <span style="position: absolute; left: 16px; bottom: 14px; padding: 6px 12px; border-radius: 999px; background: rgba(6,20,15,.65); font-size: 13px">Dra. Marina Alves</span>
+    <!-- self pip -->
+    <div class="glass" style="position: absolute; right: 14px; top: 14px; width: 96px; height: 128px; border-radius: 20px; display: flex; align-items: center; justify-content: center">
+      <span style="width: 48px; height: 48px; border-radius: 50%; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 18px">AS</span>
+    </div>
+  </section>
+
+  <!-- Phases -->
+  <section class="glass" style="border-radius: 22px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 5px; border-radius: 999px; background: #3DB189"></span><span style="font-size: 12px; font-weight: 600">Acolhimento</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 5px; border-radius: 999px; background: rgba(250,248,223,.2)"></span><span style="font-size: 12px; color: rgba(250,248,223,.8)">Tratamento</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 5px; border-radius: 999px; background: rgba(250,248,223,.2)"></span><span style="font-size: 12px; color: rgba(250,248,223,.8)">Conversa final</span></div>
+    </div>
+    <a href="PsiTratamento.dc.html" style="font-size: 13px; color: #F2C29A; text-decoration: none">A psicóloga vai iniciar o tratamento em breve. Deixe os fones no ouvido.</a>
+  </section>
+
+  <!-- Controls -->
+  <nav class="glass" aria-label="Controles da chamada" style="height: 76px; border-radius: 999px; display: flex; align-items: center; justify-content: space-around; padding: 0 10px">
+    <sc-for list="{{ctrls}}" as="c" hint-placeholder-count="3">
+      <button class="glass-btn" aria-label="{{c.label}}" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{c.bg}}; color: {{c.fg}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+      </button>
+    </sc-for>
+    <a href="PsiAgenda.dc.html" aria-label="Sair da chamada" style="width: 64px; height: 52px; border-radius: 999px; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14c5-5 13-5 18 0l-2.5 2.5-3-1.5v-2.5c-2-.7-5-.7-7 0V15l-3 1.5z"></path></svg>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { mic: true, cam: true, chat: false }; }
+  renderVals() {
+    const mk = (key, label, icon) => {
+      const on = this.state[key];
+      return { label, icon, pressed: on ? 'true' : 'false', bg: on ? 'rgba(250,248,223,.1)' : '#FAF8DF', fg: on ? '#FAF8DF' : '#0B2620', pick: () => this.setState({ [key]: !this.state[key] }) };
+    };
+    const ctrls = [
+      mk('mic', 'Microfone', 'M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0zM5 11a7 7 0 0 0 14 0M12 18v3'),
+      mk('cam', 'Câmera', 'M3 8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM16 10l5-3v10l-5-3'),
+      { ...mk('chat', 'Mensagem', 'M4 5h16v11H9l-5 4z'), bg: this.state.chat ? '#FAF8DF' : 'rgba(250,248,223,.1)', fg: this.state.chat ? '#0B2620' : '#FAF8DF' }
+    ];
+    return { ctrls };
+  }
+}
+</script>
+</body>
+</html>

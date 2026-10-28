@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Chamada (web, lago)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b1c1c}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-root{background-image:linear-gradient(180deg,rgba(6,22,20,.72),rgba(6,22,20,.78)),url(../assets/bg-lago.jpg);background-size:cover;background-position:center;background-attachment:fixed}
+.glass{background:rgba(10,30,30,.5);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14);box-shadow:0 12px 40px rgba(0,0,0,.22)}
+.glass-btn{background:rgba(250,248,223,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.2);color:#FAF8DF;cursor:pointer}
+.glass-btn:hover{background:rgba(250,248,223,.16)}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.s2{grid-column:span 2}
+@media (max-width:900px){.g3,.g4{grid-template-columns:repeat(1,minmax(0,1fr))}.s2{grid-column:auto}}
+
+</style>
+</helmet>
+<div class="gl-root" style="min-height: 1000px; box-sizing: border-box; padding: 28px; display: flex; flex-wrap: wrap; gap: 24px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF">
+  <nav aria-label="Navegação principal" style="flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+    <a href="WebLago.dc.html" aria-label="Good Loop" style="width: 56px; height: 56px; border-radius: 18px; background: #3DB189; display: flex; align-items: center; justify-content: center; color: #06140f; margin-bottom: 18px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 19.5c-3.2-2-5.2-4.2-5.2-6.6a2.6 2.6 0 0 1 5.2-.6 2.6 2.6 0 0 1 5.2.6c0 2.4-2 4.6-5.2 6.6z"></path><circle cx="12" cy="8.2" r="1.7"></circle></svg></a>
+    <a href="WebLago.dc.html" class="glass-btn" aria-label="Início" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg></a>
+    <a href="BibliotecaLago.dc.html" class="glass-btn" aria-label="Biblioteca" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M10 8l4 2-4 2z" fill="currentColor"></path><path d="M7 20h10"></path></svg></a>
+    <a href="WTerapia.dc.html" aria-label="Terapia" aria-current="page" style="width: 52px; height: 52px; border-radius: 50%; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4zM12 13.6s-3-1.8-3-4a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2.2-3 4-3 4z"></path></svg></a>
+    <a href="WJornada.dc.html" class="glass-btn" aria-label="Minha jornada" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="5" r="2"></circle><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"></path></svg></a>
+    <a href="WBeneficios.dc.html" class="glass-btn" aria-label="Benefícios" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"></path><path d="M12 9.5v5M9.5 12h5"></path></svg></a>
+    <a href="WPerfil.dc.html" class="glass-btn" aria-label="Perfil" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></a>
+  </nav>
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column"><span style="font-family: Outfit, sans-serif; font-size: 26px">Sessão com a Dra. Marina Alves</span><span style="font-size: 13px; color: rgba(250,248,223,.82)">Chamada protegida · só vocês duas</span></div>
+      <span class="glass" style="height: 44px; padding: 0 16px; border-radius: 999px; display: flex; align-items: center; gap: 8px; font-size: 14px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7AC69B"></span>Acolhimento · 12:40</span>
+    </header>
+    <section class="g3" style="flex: 1">
+      <article class="glass s2" style="border-radius: 32px; min-height: 620px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(122,198,155,.12)">
+        <span style="width: 170px; height: 170px; border-radius: 50%; background: #7AC69B; color: #06140f; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 58px">MA</span>
+        <span style="position: absolute; left: 18px; bottom: 18px; padding: 6px 12px; border-radius: 999px; background: rgba(6,20,15,.65); font-size: 13px">Dra. Marina Alves</span>
+        <div class="glass" style="position: absolute; right: 18px; top: 18px; width: 180px; height: 120px; border-radius: 20px; display: flex; align-items: center; justify-content: center"><span style="width: 52px; height: 52px; border-radius: 50%; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif">AS</span></div>
+        <nav class="glass" aria-label="Controles da chamada" style="position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); height: 72px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 12px">
+          <sc-for list="{{ctrls}}" as="c" hint-placeholder-count="2">
+            <button class="glass-btn" aria-label="{{c.label}}" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{c.bg}}; color: {{c.fg}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg></button>
+          </sc-for>
+          <a href="WTerapia.dc.html" aria-label="Sair da chamada" style="width: 68px; height: 52px; border-radius: 999px; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14c5-5 13-5 18 0l-2.5 2.5-3-1.5v-2.5c-2-.7-5-.7-7 0V15l-3 1.5z"></path></svg></a>
+        </nav>
+      </article>
+      <aside style="display: flex; flex-direction: column; gap: 20px; min-width: 0">
+        <article class="glass" style="border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+          <h2 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 500; font-size: 20px">Como é a sessão</h2>
+          <div style="display: flex; gap: 12px; align-items: flex-start"><span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: #3DB189; color: #06140f; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600">1</span><span style="display: flex; flex-direction: column"><strong style="font-weight: 600">Acolhimento</strong><span style="font-size: 13px; color: rgba(250,248,223,.82)">Vocês conversam sobre como você está.</span></span></div>
+          <div style="display: flex; gap: 12px; align-items: flex-start"><span style="width: 30px; height: 30px; flex: none; border-radius: 50%; border: 1px solid rgba(250,248,223,.35); display: flex; align-items: center; justify-content: center; font-size: 13px">2</span><span style="display: flex; flex-direction: column"><strong style="font-weight: 600">Tratamento</strong><span style="font-size: 13px; color: rgba(250,248,223,.82)">24 min de áudio guiado, de olhos fechados.</span></span></div>
+          <div style="display: flex; gap: 12px; align-items: flex-start"><span style="width: 30px; height: 30px; flex: none; border-radius: 50%; border: 1px solid rgba(250,248,223,.35); display: flex; align-items: center; justify-content: center; font-size: 13px">3</span><span style="display: flex; flex-direction: column"><strong style="font-weight: 600">Conversa final</strong><span style="font-size: 13px; color: rgba(250,248,223,.82)">Vocês falam sobre o que você sentiu.</span></span></div>
+        </article>
+        <a href="WTratamento.dc.html" class="glass" style="border-radius: 24px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: #FAF8DF">
+          <span style="font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #F2C29A">A seguir</span>
+          <span style="font-size: 15px; line-height: 1.45">A psicóloga vai iniciar o tratamento em breve. Deixe os fones no ouvido.</span>
+        </a>
+      </aside>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { mic: true, cam: true }; }
+  renderVals() {
+    const mk = (key, label, icon) => {
+      const on = this.state[key];
+      return { label, icon, pressed: on ? 'true' : 'false', bg: on ? 'rgba(250,248,223,.1)' : '#FAF8DF', fg: on ? '#FAF8DF' : '#0B2620', pick: () => this.setState({ [key]: !this.state[key] }) };
+    };
+    return { ctrls: [
+      mk('mic', 'Microfone', 'M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0zM5 11a7 7 0 0 0 14 0M12 18v3'),
+      mk('cam', 'Câmera', 'M3 8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM16 10l5-3v10l-5-3')
+    ] };
+  }
+}
+</script>
+</body>
+</html>

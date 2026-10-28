@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Good Loop — Agenda do psicólogo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#06140f}
+a{color:#B7DBAD}a:hover{color:#FAF8DF}
+.gl-root{background-image:linear-gradient(rgba(4,16,13,.35),rgba(4,16,13,.55)),url(../assets/bg-colinas.jpg);background-size:cover;background-position:center}
+.glass{background:rgba(10,32,27,.46);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(250,248,223,.14);box-shadow:0 12px 40px rgba(0,0,0,.22)}
+.glass-btn{background:rgba(250,248,223,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(250,248,223,.2);color:#FAF8DF;cursor:pointer}
+.glass-btn:hover{background:rgba(250,248,223,.16)}
+.ta-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
+.ta-list{grid-column:span 2}.ta-card{grid-column:span 3}
+@media (max-width:900px){.ta-grid{grid-template-columns:repeat(1,minmax(0,1fr))}.ta-list,.ta-card{grid-column:auto}}
+
+</style>
+</helmet>
+<div class="gl-root" style="min-height: 1000px; box-sizing: border-box; padding: 28px; display: flex; flex-wrap: wrap; gap: 24px; font-family: 'DM Sans', system-ui, sans-serif; color: #FAF8DF">
+
+  <nav aria-label="Navegação do psicólogo" style="flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+    <a href="#" aria-label="Good Loop" style="width: 56px; height: 56px; border-radius: 18px; background: #3DB189; display: flex; align-items: center; justify-content: center; color: #06140f; margin-bottom: 18px">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 19.5c-3.2-2-5.2-4.2-5.2-6.6a2.6 2.6 0 0 1 5.2-.6 2.6 2.6 0 0 1 5.2.6c0 2.4-2 4.6-5.2 6.6z"></path><circle cx="12" cy="8.2" r="1.7"></circle></svg>
+    </a>
+    <button aria-label="Agenda" style="width: 52px; height: 52px; border-radius: 50%; border: none; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></button>
+    <button class="glass-btn" aria-label="Pacientes" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"></path></svg></button>
+    <button class="glass-btn" aria-label="Protocolos" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg></button>
+    <button class="glass-btn" aria-label="Mensagens" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg></button>
+    <button class="glass-btn" aria-label="Perfil profissional" style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></button>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: Outfit, sans-serif; font-size: 22px; font-weight: 500">goodloop <span style="font-weight: 300; color: #B7DBAD">profissional</span></span>
+        <span style="font-size: 13px; color: rgba(250,248,223,.75)">Terça, 27 de outubro</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+        <span class="glass-btn" style="height: 44px; padding: 0 16px; border-radius: 999px; display: flex; align-items: center; gap: 8px; font-size: 14px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7AC69B"></span>Disponível</span>
+        <span class="glass-btn" style="height: 44px; padding: 0 16px; border-radius: 999px; display: flex; align-items: center; gap: 8px; font-size: 14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg>Fones com fio ok</span>
+        <span style="width: 44px; height: 44px; border-radius: 50%; background: #7AC69B; color: #06140f; display: flex; align-items: center; justify-content: center; font-weight: 600">MA</span>
+        <span style="display: flex; flex-direction: column; font-size: 14px; line-height: 1.25"><strong style="font-weight: 600">Dra. Marina Alves</strong><span style="font-size: 12px; color: rgba(250,248,223,.75)">CRP [número]</span></span>
+      </div>
+    </header>
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 24px 8px 0">
+      <h1 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 400; font-size: 46px; line-height: 1.05; letter-spacing: -0.02em">Bom dia, Marina.<br><span style="color: rgba(250,248,223,.8)">4 sessões hoje.</span></h1>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap">
+        <a href="#" class="glass-btn" style="height: 48px; padding: 0 20px; border-radius: 999px; display: flex; align-items: center; text-decoration: none; font-size: 14px">Disponibilidade</a>
+        <a href="#" class="glass-btn" style="height: 48px; padding: 0 20px; border-radius: 999px; display: flex; align-items: center; text-decoration: none; font-size: 14px">Convidar paciente</a>
+      </div>
+    </section>
+
+    <section class="ta-grid">
+      <!-- Today list -->
+      <section class="glass ta-list" style="border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px">
+          <h2 style="margin: 0; font-family: Outfit, sans-serif; font-weight: 500; font-size: 19px">Hoje</h2>
+          <a href="#" style="font-size: 13px">Semana</a>
+        </div>
+        <sc-for list="{{sessions}}" as="s" hint-placeholder-count="4">
+          <button onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="border-radius: 20px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer; font-family: 'DM Sans', sans-serif; color: {{s.fg}}; background: {{s.bg}}; border: 1px solid rgba(250,248,223,.14)">
+            <span style="width: 56px; flex: none; font-family: Outfit, sans-serif; font-size: 18px">{{s.time}}</span>
+            <span style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+              <span style="font-size: 15px; font-weight: 600">{{s.name}}</span>
+              <span style="font-size: 12px; opacity: .8">{{s.reason}}</span>
+            </span>
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; flex: none">{{s.status}}</span>
+          </button>
+        </sc-for>
+      </section>
+
+      <!-- Patient card -->
+      <section class="glass ta-card" style="border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <span style="width: 56px; height: 56px; border-radius: 50%; background: #E89D64; color: #2a1608; display: flex; align-items: center; justify-content: center; font-family: Outfit, sans-serif; font-size: 20px">{{p.ini}}</span>
+            <div style="display: flex; flex-direction: column">
+              <span style="font-family: Outfit, sans-serif; font-size: 24px; font-weight: 500">{{p.name}}</span>
+              <span style="font-size: 13px; color: rgba(250,248,223,.8)">{{p.demo}}</span>
+            </div>
+          </div>
+          <a href="TerapeutaSessao.dc.html" style="height: 52px; padding: 0 24px 0 8px; border-radius: 999px; background: #FAF8DF; color: #0B2620; display: flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 600">
+            <span style="width: 38px; height: 38px; border-radius: 50%; background: #3DB189; color: #06140f; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg></span>
+            Abrir sala
+          </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+          <div style="border-radius: 18px; padding: 12px 14px; background: rgba(250,248,223,.06)"><div style="font-size: 12px; color: rgba(250,248,223,.75)">Motivo</div><div style="font-size: 15px; font-weight: 500">{{p.reason}}</div></div>
+          <div style="border-radius: 18px; padding: 12px 14px; background: rgba(250,248,223,.06)"><div style="font-size: 12px; color: rgba(250,248,223,.75)">Protocolo indicado</div><div style="font-size: 15px; font-weight: 500">{{p.proto}}</div></div>
+          <div style="border-radius: 18px; padding: 12px 14px; background: rgba(250,248,223,.06)"><div style="font-size: 12px; color: rgba(250,248,223,.75)">Sessões</div><div style="font-size: 15px; font-weight: 500">{{p.count}}</div></div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px">
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 14px; font-weight: 500">Antes e depois (0–10)</span>
+            <svg viewBox="0 0 300 100" width="100%" height="100" role="img" aria-label="Evolução antes e depois das sessões">
+              <line x1="0" y1="95" x2="300" y2="95" stroke="rgba(250,248,223,.15)"></line>
+              <polyline points="0,70 75,65 150,60 225,55 300,50" fill="none" stroke="#E89D64" stroke-width="2.5" stroke-dasharray="5 5"></polyline>
+              <polyline points="0,45 75,40 150,30 225,30 300,20" fill="none" stroke="#3DB189" stroke-width="3" stroke-linecap="round"></polyline>
+            </svg>
+            <span style="font-size: 12px; color: rgba(250,248,223,.8)">— Depois · - - Antes</span>
+          </div>
+          <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 14px; font-weight: 500">Nota da última sessão</span>
+            <p style="margin: 0; font-size: 14px; line-height: 1.5; color: rgba(250,248,223,.88); border-radius: 16px; padding: 12px 14px; background: rgba(250,248,223,.06)">{{p.note}}</p>
+          </div>
+        </div>
+        <span style="font-size: 12px; color: rgba(250,248,223,.75)">As notas são visíveis apenas para você. A empresa vê só dados agregados e anônimos.</span>
+      </section>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'as' }; }
+  renderVals() {
+    const data = [
+      { id: 'bm', time: '14:00', name: 'Bruno M.', ini: 'BM', reason: 'Esgotamento', status: 'Concluída', demo: '41 anos · Operações', proto: 'GL-BURN', count: '6 de 8', note: 'Relata sono melhor. Manter Profunda e revisar carga de trabalho.' },
+      { id: 'cr', time: '16:00', name: 'Carla R.', ini: 'CR', reason: 'Estresse', status: 'Concluída', demo: '29 anos · Atendimento', proto: 'GL-STRESS', count: '3 de 8', note: 'Boa resposta ao bilateral. Preferiu voz masculina.' },
+      { id: 'as', time: '18:00', name: 'Ana S.', ini: 'AS', reason: 'Ansiedade', status: 'Em 15 min', demo: '34 anos · Financeiro', proto: 'GL-ANX 1.1', count: '3 de 8', note: 'Ansiedade antes de reuniões. Antes 3 → depois 7 na última sessão.' },
+      { id: 'dp', time: '19:30', name: 'Diego P.', ini: 'DP', reason: 'Humor', status: 'Confirmada', demo: '45 anos · Logística', proto: 'GL-DEP', count: '1 de 8', note: 'Primeira sessão de tratamento. Revisar cadastro antes.' }
+    ];
+    const sessions = data.map((d) => {
+      const on = this.state.sel === d.id;
+      return { ...d, pressed: on ? 'true' : 'false', bg: on ? '#FAF8DF' : 'rgba(250,248,223,.05)', fg: on ? '#0B2620' : '#FAF8DF', pick: () => this.setState({ sel: d.id }) };
+    });
+    const p = data.find((d) => d.id === this.state.sel);
+    return { sessions, p };
+  }
+}
+</script>
+</body>
+</html>

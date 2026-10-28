@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>B3 · Painel lateral · Benefícios</title>
+<link rel="stylesheet" href="mock.css"><link rel="stylesheet" href="shell-b.css">
+<style>
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pillar { display: flex; flex-direction: column; gap: 14px; }
+  .pillar h2 { display: flex; align-items: center; gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .ben { flex-direction: row; gap: 16px; align-items: flex-start; }
+  .ben .body { display: flex; flex-direction: column; gap: 4px; }
+  .ben .partner { font-size: 12px; color: var(--faint); letter-spacing: .04em; }
+  .ben .price { font-size: 13.5px; font-weight: 700; color: var(--accent2); margin-top: 6px; }
+  .ben.sel { border-color: var(--accent); }
+  .company { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--company); color: #fff; width: max-content; }
+  .why { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 14px; background: var(--well); }
+</style></head>
+<body>
+<aside class="sb">
+  <span class="logo"><i></i>goodloop</span>
+  <div class="search">⌕ &nbsp;Buscar sessões</div>
+  <nav><a><span>▦</span>Início</a><a><span>◠</span>Terapeuta</a><a><span>↗</span>Progresso</a><a class="on"><span>◎</span>Benefícios</a><a><span>◯</span>Perfil</a></nav>
+  <div class="foot"><span class="help" style="width:max-content">Ajuda agora</span><div class="me"><i>N</i>Natalya · Perfil</div></div>
+</aside>
+
+<div class="main"><div class="col">
+  <h1>Benefícios</h1>
+  <div class="filters"><span class="chip on">Todos</span><span class="chip">☾ Sono</span><span class="chip">◌ Mente</span><span class="chip">♡ Corpo</span><span class="chip">⚲ Movimento</span><span class="chip">❦ Alimentação</span><span class="chip">☕ Pausas</span></div>
+  <section class="pillar">
+    <h2><span class="ico">☾</span>Sono</h2>
+    <div class="grid">
+      <div class="card ben sel"><span class="ico">☾</span><div class="body"><h3>30% em travesseiro anatômico</h3><span class="partner">PARCEIRO</span><p class="small muted">Um apoio certo para o pescoço deixa o sono mais contínuo.</p><span class="price">Trocar por 90 Loops</span></div></div>
+      <div class="card ben"><span class="ico">☾</span><div class="body"><h3>Máscara de dormir em seda</h3><span class="partner">PARCEIRO</span><p class="small muted">Escuridão de verdade ajuda o corpo a reconhecer a hora de descansar.</p><span class="price">Trocar por 60 Loops</span></div></div>
+    </div>
+  </section>
+  <section class="pillar">
+    <h2><span class="ico">◌</span>Mente</h2>
+    <div class="grid">
+      <div class="card ben"><span class="ico">◌</span><div class="body"><h3>3 meses de app de diário</h3><span class="partner">PARCEIRO</span><p class="small muted">Escrever o que pesa tira da cabeça.</p><span class="price">Trocar por 50 Loops</span></div></div>
+      <div class="card ben"><span class="ico">◌</span><div class="body"><h3>Livro sobre atenção plena</h3><span class="partner">PARCEIRO</span><p class="small muted">Ler devagar, sem tela, é descanso.</p><span class="price">Trocar por 70 Loops</span></div></div>
+    </div>
+  </section>
+  <section class="pillar">
+    <h2><span class="ico">❦</span>Alimentação</h2>
+    <div class="grid">
+      <div class="card ben"><span class="ico">❦</span><div class="body"><span class="company">Da sua empresa</span><h3>Café da manhã da empresa</h3><p class="small muted">Uma pausa juntos, sem pressa.</p><span class="price">Resgatar</span></div></div>
+      <div class="card ben"><span class="ico">❦</span><div class="body"><h3>Consulta com nutricionista, 30%</h3><span class="partner">PARCEIRO</span><p class="small muted">Sem regras impostas.</p><span class="price">Trocar por 100 Loops</span></div></div>
+    </div>
+  </section>
+</div></div>
+
+<aside class="aside">
+  <div class="card care"><p class="eyebrow">Seu cuidado</p><p class="big">347 Loops</p><p class="small" style="color:#E3EDC6">3h 30min dedicadas a você este mês</p></div>
+  <div class="card">
+    <p class="eyebrow">Selecionado</p>
+    <h2>30% em travesseiro anatômico</h2>
+    <p class="small muted">Parceiro · válido uma vez por pessoa</p>
+    <div class="why"><b>Por que isso cuida de você</b><p class="small" style="color:var(--fg2)">Um apoio certo para o pescoço deixa o sono mais contínuo.</p></div>
+    <span class="btn btn--primary" style="width:100%">Trocar por 90 Loops</span>
+    <p class="small muted">Depois da troca: 257 Loops</p>
+  </div>
+  <div class="card"><h4>Meus benefícios · 2</h4><p class="small">Ingresso de cinema <span class="muted">· código pronto</span></p><p class="small">Um dia de folga <span class="muted">· aguardando RH</span></p></div>
+</aside>
+
+<div class="note"><b>Proposta B — Benefícios com detalhe ao lado</b>Grade de 2 na coluna; o benefício selecionado aparece à direita com o "porquê" e a troca, mostrando o saldo depois. "Meus benefícios" fica sempre à mão no painel.</div>
+</body></html>

@@ -19,6 +19,8 @@ import { attachRenderedAudio } from './attachAudio'
 import type { Duration } from '../types/domain'
 import {
   CATALOG_DURATIONS,
+  audienceFromCode,
+  audienceOf,
   audioLangSummary,
   audioVariants,
   durationState,
@@ -29,6 +31,7 @@ import {
   studioFor,
   studioStale,
   timelinesByDuration,
+  type Audience,
   type CatalogProtocol,
   type DurationState,
 } from '../data/catalog'
@@ -375,6 +378,14 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
      women it was recorded for resolved `it:f`, found nothing, and lost the
      protocol from their library entirely (`audioPick`, liveCatalog.tsx —
      a listener gets their language AND their form, with no fallback). */
+  /* WHO the protocol is for. Seeded from the GL prefix and shown next to the
+     publish button, because the alternative is what happened: `audience` was
+     never written here at all, every import took the column's default
+     ('clinical'), and a self-guided protocol published with its audio was
+     listed for nobody. `null` = follow the code; a value = the operator
+     overruled it. */
+  const [audience, setAudience] = useState<Audience | null>(null)
+
   const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer; lang: VoiceLang; to: Addressee } | null>(null)
   const masteredRef = useRef<HTMLInputElement>(null)
 
@@ -551,7 +562,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     /* `intoExisting` whenever the protocol exists: the protocol keeps ITS
        clinical title. Without it Publish renamed the protocol after whatever
        the README's first line said. */
-    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, intoExisting: !!existing, mode: 'keep' })
+    const proto = entryForPublish({ timeline: t, existing, selected: versionDuration, intoExisting: !!existing, audience: audience ?? undefined, mode: 'keep' })
     const durations = plainDurations(proto)
     // verified: a write rejected by RLS used to leave a protocol that looked
     // published until the next screen change
@@ -724,6 +735,10 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   const canUpload = !busy
   /* Publish ships either a render (needs a clean timeline) or an uploaded
      file (needs the file). */
+  /* What Pubblica will write, and what the row says today. */
+  const effectiveAudience: Audience = audience ?? (published ? audienceOf(published) : audienceFromCode(t.code))
+  const publishedAudience: Audience | null = published ? audienceOf(published) : null
+
   const canPublish = !busy && (mastered ? true : hasTimeline && errors.length === 0 && !poolsLoading)
   const publishWhy = canPublish
     ? undefined
@@ -784,6 +799,40 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           })}
         </div>
       </header>
+
+      {/* WHO this protocol is for, said out loud before it is published.
+
+          It used to be said nowhere: `audience` was never written by this
+          screen, the column defaulted to 'clinical', and the library lists
+          only 'library' — so a self-guided protocol went live, with audio,
+          visible to no one, and the console had no field that would have
+          shown it. The guess comes from the GL prefix; the two buttons are
+          here so a guess is never the last word. */}
+      <div className="adm-plain__audience">
+        <span className="adm-plain__audience-q">Chi lo usa?</span>
+        {(['library', 'clinical'] as Audience[]).map((a) => (
+          <button
+            key={a}
+            type="button"
+            className="b2b-btn"
+            aria-pressed={effectiveAudience === a}
+            onClick={() => setAudience(a)}
+            title={a === 'library'
+              ? 'Biblioteca — la persona lo apre da sola. Appare in “Libreria”, nelle ricerche e negli scaffali.'
+              : 'Clinico — solo quando un professionista lo mette in un percorso. NON appare nella libreria.'}
+          >
+            {a === 'library' ? '👤 Biblioteca' : '🩺 Clinico'}
+          </button>
+        ))}
+        <span className="b2b-sub">
+          {audience === null
+            ? `dal codice ${t.code ?? '—'}`
+            : 'scelto a mano'}
+          {publishedAudience && publishedAudience !== effectiveAudience
+            ? ` · in catalogo è «${publishedAudience === 'library' ? 'Biblioteca' : 'Clinico'}»: Pubblica lo cambia`
+            : ''}
+        </span>
+      </div>
 
       <div className="adm-plain__actions adm-plain__actions--5">
         <button
