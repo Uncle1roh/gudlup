@@ -68,6 +68,8 @@ export const IT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× questa settimana',
+  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
+    'Il percorso è fatto di tracciati pensati per accompagnare la tua terapia. Parlane con le Risorse Umane della tua azienda e prova Good Loop per le aziende, con il supporto professionale.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sedute',
@@ -147,6 +149,8 @@ export const PT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× esta semana',
+  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
+    'Percurso são trilhas desenhadas para acompanhar sua terapia. Fale com o RH da sua empresa e experimente o Good Loop para empresas, com o apoio profissional.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sessões',

@@ -30,7 +30,7 @@ import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_ICON, THEME_TINT, tilePosition } from './theme'
 import { CheckIn, MoodChip } from './CheckIn'
-import { BrandLogo } from '../components/Brand'
+import { BrandIcon } from '../components/Brand'
 import { useBrandVariant } from './Shell'
 
 interface HomeProps {
@@ -54,7 +54,7 @@ interface HomeProps {
 }
 
 export function Home({ name, catalog, storedRails, recent = [], saved = [], onToggleSave, top = [], query, onQuery, onOpen, onStart, noticeSlot, footSlot }: HomeProps) {
-  const { t } = useI18n()
+  const { t, d } = useI18n()
   const dp = useDataProvider()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
   const [checkInOpen, setCheckInOpen] = useState(false)
@@ -135,7 +135,15 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
     <>
       {/* ------------------------------------------------------- top bar --- */}
       <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 5 }}>
-        <span className="gl-brand"><BrandLogo variant={variant} /></span>
+        {/* The rail's square is the logo; this corner is the date. See
+            `ui2/TopBar.tsx` — the mark returns beside it on a phone, where
+            the rail has become the bar at the foot of the screen. */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="gl-phonemark glass" aria-hidden="true"><BrandIcon variant={variant} /></span>
+          <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+            {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+        </span>
 
         <div style={{ flex: '0 1 560px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>

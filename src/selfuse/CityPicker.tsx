@@ -44,7 +44,9 @@ export function CityPicker({ value, onPick }: { value: Municipality | null; onPi
         autoComplete="off"
         aria-describedby={`${id}-hint`}
       />
-      <p id={`${id}-hint`} className="small muted">{t('We only use the city you tell us — never your location.')}</p>
+      {/* What you typed brings its matches up directly under the field. They
+          used to come up under the privacy line, which put a sentence
+          between the thing being answered and the answers. */}
       {hits.length > 0 && (
         <ul className="gam-city-picker__list" role="listbox" aria-label={t('Cities')}>
           {hits.map((m) => (
@@ -57,6 +59,7 @@ export function CityPicker({ value, onPick }: { value: Municipality | null; onPi
         </ul>
       )}
       {!busy && q.trim().length >= 2 && hits.length === 0 && <p className="small muted">{t('No city found with that name.')}</p>}
+      <p id={`${id}-hint`} className="small muted">{t('We only use the city you tell us — never your location.')}</p>
     </div>
   )
 }

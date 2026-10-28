@@ -1,13 +1,16 @@
 /* ============================================================================
    The two token sets
 
-   Copied from the `theme` object in HomeMood.dc.html, unchanged. Which one
-   applies is decided by one number: the OKLab lightness of the mood colour.
-   At 0.65 and above the surface is light enough to carry dark text; below it
-   the text goes cream.
+   Copied from the `theme` object in HomeMood.dc.html, unchanged. They are the
+   two ways of writing on a surface: dark ink for a light ground, cream for a
+   dark one.
 
-   There is no light/dark MODE any more. The surface is the mood colour, and
-   these are the two ways of writing on it.
+   Which one applies USED to be decided by the mood: the page was painted the
+   mood colour, and the OKLab lightness of that colour picked the ink. The page
+   is a darkened photograph now (shell.css, "the ground"), the same one every
+   day, so there is one ground and therefore one set. `LIGHT_TOKENS` stays
+   written down because the ground is a decision that is still being made, not
+   because anything reads it today.
    ============================================================================ */
 
 import { type MoodColor } from './moodColor'
@@ -45,6 +48,9 @@ export const DARK_TOKENS: Tokens = {
   actFg: '#0B2620',
 }
 
+/** What the shell wears. The ground is fixed, so this does not vary. */
+export const GROUND_TOKENS: Tokens = DARK_TOKENS
+
 export function tokensFor(color: MoodColor): Tokens {
   return color.light ? LIGHT_TOKENS : DARK_TOKENS
 }
@@ -56,9 +62,14 @@ export function tokensFor(color: MoodColor): Tokens {
  * short names inside the shell's own scope. The admin, the HR console and the
  * therapist's workspace all read `--ink` and `--line` from `:root`, and the
  * mood must not reach them.
+ *
+ * `--mood-bg` is still published, and still the colour of the day. Nothing in
+ * the stylesheets paints with it any more: the mood is information, and the
+ * surfaces that show it (the check-in dot, the chip, the faces) read
+ * `color.hex` straight from the provider.
  */
 export function moodVars(color: MoodColor): Record<string, string> {
-  const t = tokensFor(color)
+  const t = GROUND_TOKENS
   return {
     '--mood-bg': color.hex,
     '--mood-ink': t.ink,

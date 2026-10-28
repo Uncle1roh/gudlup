@@ -244,6 +244,21 @@
    The mockup's row, laid out three to a desk. */
 
 .path2-card { border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* No prescription yet — which is the state almost everyone is in, because a
+   path is something a professional builds. One pane saying what the screen
+   is for and how it comes to have anything in it. */
+.path2-empty {
+  border-radius: 28px;
+  padding: 36px 32px;
+  max-width: 620px;
+  width: 100%;
+  align-self: center;
+  margin: clamp(4px, 3vh, 36px) 0;
+  text-align: center;
+}
+
+.path2-empty__text { margin: 0; font-size: 17px; line-height: 1.6; color: var(--ink-2); }
 .path2-top { display: flex; align-items: center; gap: 12px; }
 
 .path2-icon {

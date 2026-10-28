@@ -53,7 +53,8 @@ const DEMO_PERSIST = (() => {
   return !(env?.VITE_SUPABASE_URL && env?.VITE_SUPABASE_ANON_KEY)
 })()
 /* The fixtures that claim a RELATIONSHIP the signed-in person does not
-   have: a company code, and a therapist. They belong to the commercial
+   have: a company code, a therapist, and that therapist's plan. They belong
+   to the commercial
    team's presentation and nowhere else, so they are off unless a
    deployment asks for them with VITE_DEMO_FIXTURES=1.
 
@@ -64,11 +65,12 @@ const DEMO_PERSIST = (() => {
    for a person who had no plan. The app's gates were right; what they were
    reading was a lie.
 
-   This switches off only those two. The demo world's sessions, offers,
-   challenges and wallet stay: they are what makes a preview worth looking
-   at, and they do not assert anything about who the person is. The
-   company-scoped parts of them are filtered in the app by company code,
-   which without this flag is now null. */
+   This switches off only those: the company code, the therapist link, and
+   the therapist's PLAN, which is the prescription list Percurso draws. The
+   demo world's sessions, offers, challenges and wallet stay — they are what
+   makes a preview worth looking at, and they do not assert anything about
+   who the person is. The company-scoped parts of them are filtered in the
+   app by company code, which without this flag is now null. */
 const DEMO_FIXTURES = (() => {
   const env = import.meta.env as ImportMetaEnv | undefined
   const v = env?.VITE_DEMO_FIXTURES
@@ -515,7 +517,13 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
       await wait()
     },
 
-    getMyPlan: () => delay(clonePlan(plans.get(LINKED_PATIENT_ID) ?? null)),
+    /* A plan is what a named professional wrote for a named patient, which
+       makes it the third fixture that claims a relationship the signed-in
+       person does not have — the same class as the company code and the
+       therapist link above. It handed `LINKED_PATIENT_ID`'s prescriptions
+       to whoever asked, so Percurso arrived full for an account with no
+       therapist to have filled it. */
+    getMyPlan: () => delay(DEMO_FIXTURES ? clonePlan(plans.get(LINKED_PATIENT_ID) ?? null) : null),
     markPlanItemDone: async (itemId) => {
       for (const plan of plans.values()) {
         const item = plan.items.find((i) => i.id === itemId)

@@ -24,7 +24,6 @@
 
 import { useEffect, useState } from 'react'
 import { useI18n, LOCALES, type Locale } from '../i18n'
-import { THEME_OPTIONS, readThemeChoice, setThemeChoice, type ThemeChoice } from './theme'
 import { SafetyLevel1 } from './Safety'
 import { DURATIONS, INTAKE_TIMES, durationLabel } from '../data/selfuse'
 import { streakDays, type SelfUseState } from '../data/selfUseStore'
@@ -33,6 +32,7 @@ import type { Convention } from '../data/convention'
 import { useBackLayer } from './backStack'
 import { useDataProvider } from '../data/provider'
 import { Icon } from './icons'
+import { BreathingOrb } from '../components/BreathingOrb'
 import { TopBar, PageTitle } from '../ui2/TopBar'
 import { initialsOf } from '../ui2/Home'
 import { useLegal } from '../legal/LegalContext'
@@ -202,7 +202,6 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
   const { t, locale, setLocale } = useI18n()
   const dp = useDataProvider()
   const legal = useLegal()
-  const [theme, setTheme] = useState<ThemeChoice>(() => readThemeChoice())
   const [draftName, setDraftName] = useState(name)
   const [personalEmail, setPersonalEmail] = useState('')
   const [country, setCountry] = useState('')
@@ -311,21 +310,10 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
         <span className="legal-consent__hint">{t('Changes straight away here. Save to keep it on your account, on every device.')}</span>
       </label>
 
-      <div className="ob-field__label">{t('Appearance')}</div>
-      <div className="chip-row">
-        {THEME_OPTIONS.map((o) => (
-          <button
-            key={o.id}
-            className="chip"
-            aria-pressed={theme === o.id}
-            onClick={() => { setTheme(o.id); setThemeChoice(o.id) }}
-          >
-            <span className="chip__label">{t(o.label)}</span>
-          </button>
-        ))}
-      </div>
-      <p className="small muted">{t('A session always plays on a dark screen, whichever you pick.')}</p>
-      <p className="small muted">{t('Kept on this device — nothing to save.')}</p>
+      {/* Appearance — Dia / Noite / Sistema — is gone. The surface has one
+          ground now, a darkened photograph (`ui2/shell.css`), so the three
+          choices had nothing left to choose between. `selfuse/theme.ts` is
+          untouched: the Studio and the other old surfaces still read it. */}
 
       {/* End of the screen: the same button, because the last field is where
           somebody finishes and the top of the page is not where they are. */}
@@ -751,7 +739,9 @@ export function Tutorial({
   return (
     <div className="tutorial">
       <button className="tutorial__skip" onClick={onDone}>{t('Skip')}</button>
-      <div className="tutorial__art" aria-hidden="true"><span className="ob-art__glow" /></div>
+      {/* The same orb the registration screens open on — see the note in
+          `selfuse/TherapistTab.tsx`. */}
+      <div className="tutorial__art" aria-hidden="true"><BreathingOrb size={150} /></div>
       <h2 className="display su-h1">{t(screens[i].title)}</h2>
       <p className="lead">{t(screens[i].body)}</p>
       <div className="progress-dots">

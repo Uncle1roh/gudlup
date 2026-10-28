@@ -1,0 +1,337 @@
+/* ============================================================================
+   PERFIL — the four settings pages, on the new surface
+
+   These screens were never ported. Their markup is the old one's, and their
+   CSS still lives in `selfuse.css` and `legal.css`, both written for a cream
+   page with dark ink. Under `.gl-root` the ink is CREAM (`--ink` is #FAF8DF
+   on the dark token set, mood/tokens.ts) — so every panel that had hard-coded
+   a light background went on drawing it, and printed cream type on it:
+
+     .consent-row      background: #fff          Notificações, Privacidade
+     .acct__bar        background: var(--mist)   Configurações da conta
+     .sheet            background: var(--mist)   every popup
+     .legal-consent__hint  colour: #4a6158       the line under each toggle
+     .profile__sponsor background: var(--su-well), a variable that does not
+                       exist outside `.su-studio`, so: nothing at all
+
+   Cream on white is the "fundo branco com letras amarelas" these screens
+   were reported for. It is one bug with five faces, and the fix is the same
+   each time: the panes are the surface's own glass, and the ink is the
+   surface's own ink.
+
+   Nothing here changes a control's behaviour or a page's structure. It is
+   the ground under them.
+   ============================================================================ */
+
+/* ------------------------------------------------------------- the page ---
+   A settings page is a column of fields and sections. `.su-page` sets a
+   14px gap for all of them, which is right between two fields of a form and
+   much too tight between a section heading and the paragraph above it. */
+
+/* A settings page is a FORM, and a form 1300px wide is a form nobody can
+   read across. The menu keeps the full width — it is three cards in a row —
+   so the measure is set on the subscreens, by the back button that only they
+   have. 760px is the same measure the fields were drawn at in the mockups. */
+.gl-root .su-page.profile { gap: 18px; }
+.gl-root .su-page.profile:has(> .su-back) { max-width: 760px; }
+
+.gl-root .su-page .home__sect { margin: 16px 0 0; font-size: 19px; }
+.gl-root .su-page > p.small,
+.gl-root .su-page > p.lead { max-width: 64ch; }
+
+/* The label over a field, and the one over a row of chips. It was `--slate`,
+   a mid grey-green chosen to sit quietly on cream; on this ground it sat so
+   quietly it was gone. */
+.gl-root .ob-field__label {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 0;
+}
+
+/* The sticky Save bar.
+
+   Reported as "the Save button is as wide as the screen": it is not the
+   button, it is this bar behind it. `.acct__bar` is opaque on purpose — a
+   form must not scroll visibly under the control that commits it — and the
+   colour it was given, `--mist`, is the old page's cream. A cream slab the
+   width of the column, with a cream-inked title on it and the button
+   somewhere inside, reads as one enormous button.
+
+   Opaque is still right. It is just opaque in this surface's terms: a
+   frosted pane with a hairline under it, so you can see the form pass
+   beneath without reading two layers of type at once. */
+.gl-root .acct__bar {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0 12px;
+  margin-bottom: 2px;
+  gap: 16px;
+}
+
+.gl-root .acct__bar .su-h1 { font-size: 24px; }
+
+/* Both Saves — the one in the bar and the one at the foot — are the same
+   control at the same size, because they are the same button. */
+.gl-root .acct__bar .btn,
+.gl-root .acct__end .btn {
+  width: auto;
+  min-width: 170px;
+  flex: none;
+  align-self: flex-start;
+  padding-inline: 26px;
+}
+
+.gl-root .acct__end { gap: 10px; margin-top: 28px; }
+
+/* ----------------------------------------------------------- the toggles ---
+   Notificações, and the consent list in Privacidade. One row per setting:
+   the name, the sentence that says what it means, and the switch. */
+
+.gl-root .consent-row {
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px 18px;
+  color: var(--ink);
+}
+
+/* `.su-page` is already a flex column with a gap, so the old margin between
+   rows stacked on top of it and made the list wander. */
+.gl-root .consent-row + .consent-row { margin-top: 0; }
+.gl-root .consent-row__main { gap: 18px; align-items: center; }
+.gl-root .consent-row__text { gap: 6px; }
+.gl-root .consent-row__title { font-size: 15px; font-weight: 600; line-height: 1.35; }
+
+/* The explanatory line under every toggle, every field and every consent.
+   It was a dark slate green — legible on cream, invisible here. */
+.gl-root .legal-consent__hint {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 0;
+}
+
+.gl-root .switch { flex: none; }
+.gl-root .switch.is-on { background: #3db189; border-color: transparent; }
+.gl-root .switch__knob { background: #faf8df; }
+
+/* Privacidade wraps each consent in a bare <div> so it can hang the city
+   picker under the geo one. Without this the wrapper collapses the column's
+   gap and the rows touch. */
+.gl-root .su-page > div:has(> .consent-row) { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---------------------------------------------------------- the city row ---
+   Perfil › Privacidade › "Participar dos rankings", and the same picker in
+   the Rankings tab. Its only styling lived under `.su-studio`, so here the
+   label, the input and the hint were three unstyled lines in a stack with
+   no space between them — "Sua cidade" sitting on the field below it. */
+
+.gl-root .gam-city-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+}
+
+/* "Sua cidade" — the label, not another sentence. It was the same weight
+   and colour as the hint under the field, with no space between it and the
+   city it labels. */
+.gl-root .gam-city-picker > label.small {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.gl-root .gam-city-picker__current {
+  margin: 0 0 8px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.gl-root .gam-city-picker > p.small { margin: 2px 0 0; }
+
+.gl-root .gam-city-picker input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 400 16px 'DM Sans', system-ui, sans-serif;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.gl-root .gam-city-picker input::placeholder { color: var(--ink-2); }
+.gl-root .gam-city-picker input:focus { outline: none; border-color: var(--ink); }
+.gl-root .gam-city-picker input::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
+
+.gl-root .gam-city-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--shadow);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.gl-root .gam-city-picker__list button {
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: 400 15px 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.gl-root .gam-city-picker__list button:hover,
+.gl-root .gam-city-picker__list button[aria-selected='true'] { background: var(--act-bg); color: var(--act-fg); }
+
+/* The city under "Participar dos rankings". It belongs TO that toggle, so
+   it is indented under it and spaced off the row below, rather than being a
+   third loose line pressed against the field it labels. */
+.gl-root .gam-profile-city {
+  margin: 4px 0 8px 18px;
+  padding: 16px 18px;
+  border-left: 2px solid var(--line);
+}
+
+
+
+/* --------------------------------------------------------- odds and ends ---
+   The remaining old panels on these pages. */
+
+.gl-root .profile__sponsor {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.gl-root .menu { margin: 4px 0; border-top: 1px solid var(--hair); }
+.gl-root .menu__row { padding: 16px 2px; border-bottom: 1px solid var(--hair); color: var(--ink); }
+.gl-root .menu__row:hover { color: var(--link); }
+
+.gl-root .pwd-form { display: flex; flex-direction: column; gap: 14px; }
+.gl-root .ob-error { color: var(--warn); font-size: 14px; margin: 0; }
+
+.gl-root .btn--danger {
+  background: transparent;
+  color: #f0a9a9;
+  border: 1px solid rgba(240, 169, 169, 0.42);
+}
+.gl-root .btn--danger:hover { background: rgba(240, 169, 169, 0.12); }
+
+/* "Como funciona o Good Loop" — the five tutorial cards. The art is the
+   signature orb now (`selfuse/ProfileTab.tsx`), which brings its own light
+   and wants room around it rather than a 200px box to be blurred inside. */
+.gl-root .tutorial { gap: 18px; }
+.gl-root .tutorial__art {
+  width: auto;
+  height: auto;
+  aspect-ratio: auto;
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+/* The card reads centre; so does what is under it. The Avançar button was
+   left-aligned because `.su-page .btn` pins every button on these pages to
+   `flex-start`, which is right for a form and wrong for this. */
+.gl-root .tutorial .btn { width: auto; min-width: 220px; align-self: center; }
+.gl-root .tutorial__skip { align-self: flex-end; color: var(--ink-2); font-size: 15px; font-weight: 500; }
+.gl-root .tutorial .lead { max-width: 52ch; }
+.gl-root .tutorial .su-h1 { font-size: 30px; }
+
+/* The dots: `--line` on `--line` was five invisible bars. */
+.gl-root .progress-dots { display: flex; gap: 8px; width: 100%; max-width: 280px; align-self: center; margin: 4px 0 2px; }
+.gl-root .progress-dots span { height: 4px; background: var(--btn); border: 1px solid var(--line); }
+.gl-root .progress-dots span.is-on { background: #3db189; border-color: transparent; }
+
+/* ------------------------------------------------------------- the sheet ---
+   Every popup on this surface — a legal notice, the achievement detail, the
+   unlock sheet — is one `.sheet`. It was painted `--mist`, the old page's
+   cream, which is the same colour as this surface's ink. */
+
+.gl-root .sheet-scrim { background: rgba(3, 14, 19, 0.62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+.gl-root .sheet {
+  background: rgba(10, 28, 34, 0.86);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.42);
+  padding: 16px 24px max(24px, env(safe-area-inset-bottom));
+  gap: 14px;
+}
+
+.gl-root .sheet__grip { background: var(--line); }
+.gl-root .sheet .small,
+.gl-root .sheet .muted { color: var(--ink-2); }
+
+.gl-root .gam-dialog { position: relative; }
+
+.gl-root .gam-dialog__x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--btn);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.gl-root .gam-dialog__x:hover { background: var(--glass); color: var(--ink); }
+
+@media (min-width: 900px) {
+  .gl-root .gam-scrim { align-items: center; justify-content: center; padding: 32px; }
+  .gl-root .gam-dialog {
+    max-width: 520px;
+    border-radius: 28px;
+    max-height: 82dvh;
+    overflow-y: auto;
+    padding: 28px 30px 30px;
+  }
+  .gl-root .gam-dialog > .sheet__grip { display: none; }
+}
+
+@media (max-width: 899px) {
+  .gl-root .acct__bar .btn,
+  .gl-root .acct__end .btn { min-width: 0; }
+  .gl-root .acct__bar { flex-wrap: wrap; }
+}

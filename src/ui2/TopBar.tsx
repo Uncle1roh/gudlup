@@ -1,9 +1,17 @@
 /* ============================================================================
    The top bar the deep screens share
 
-   From the <header> of WTerapia.dc.html: the wordmark with today's date
-   under it on the left, the Loops pill, the avatar and the person's name
-   with their role on the right.
+   From the <header> of WTerapia.dc.html: today's date on the left, the Loops
+   pill, the avatar and the person's name with their role on the right.
+
+   The mockup set the wordmark above that date, and the port did too — but the
+   rail already carries the mark, in its own rounded square, two centimetres
+   to the left of it. Written twice on every screen it stopped being a logo
+   and became furniture, so the date stands alone.
+
+   Below 900px the rail is the tab bar at the foot of the screen and its
+   square is hidden (shell.css, "the phone"). There the mark comes back here,
+   beside the date, because on a phone this is the top left corner.
 
    The library has its own header — the greeting and the mood chip — so this
    one is for the screens that stand on the photograph.
@@ -12,7 +20,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
-import { BrandLogo } from '../components/Brand'
+import { BrandIcon } from '../components/Brand'
 import { initialsOf } from './Home'
 import { useBrandVariant } from './Shell'
 
@@ -32,8 +40,8 @@ export function TopBar({ name, role }: { name: string | null; role?: string }) {
 
   return (
     <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="gl-brand"><BrandLogo variant={variant} /></span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="gl-phonemark glass" aria-hidden="true"><BrandIcon variant={variant} /></span>
         <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
           {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
         </span>

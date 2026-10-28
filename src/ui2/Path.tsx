@@ -60,8 +60,15 @@ export function Path({ name, therapistName, prescriptions, onStart }: {
         note={therapistName ? m('SES-6', { name: therapistName }) : undefined}
       />
 
+      {/* Nobody arrives here by accident — Percurso is a destination on the
+          rail — so an empty one said "Nada escolhido ainda" to a person who
+          had never been offered the chance to choose anything, and did not
+          say what the screen is or how it fills. It is a company plan with
+          professional support that fills it, so it says that. */}
       {!prescriptions.length && (
-        <p style={{ margin: 0, fontSize: 15, color: 'var(--ink-2)' }}>{t('Nothing selected yet.')}</p>
+        <section className="glass path2-empty">
+          <p className="path2-empty__text">{t('Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.')}</p>
+        </section>
       )}
 
       <section className="g3">

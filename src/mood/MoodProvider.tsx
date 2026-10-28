@@ -55,7 +55,9 @@ export function MoodProvider({ children }: { children: ReactNode }) {
     const vars = moodVars(color)
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
     root.classList.add('gl2')
-    root.dataset.moodSet = color.light ? 'light' : 'dark'
+    /* The ground is one darkened photograph now, not the mood colour, so the
+       set it asks for does not change with the day (shell.css, "the ground"). */
+    root.dataset.moodSet = 'dark'
     return () => {
       for (const k of Object.keys(vars)) root.style.removeProperty(k)
       root.classList.remove('gl2')
@@ -94,9 +96,9 @@ export function useMood(): MoodState {
   return v
 }
 
-/** Which token set the ground is wearing — 'light' before any provider. The
-    shell reads it for the brand colourway and nothing else. */
+/** Which token set the ground is wearing. The shell reads it for the brand
+    colourway and nothing else; the ground is a dark photograph on every
+    screen that has a provider, and green on the light surfaces that do not. */
 export function useMoodSet(): 'light' | 'dark' {
-  const v = useContext(Ctx)
-  return v && !v.color.light ? 'dark' : 'light'
+  return useContext(Ctx) ? 'dark' : 'light'
 }

@@ -40,34 +40,37 @@
   margin: 0;
 }
 
-/* --------------------------------------------------------------- chips ---
-   The scope switches (Cidades / Estados / Regiões, Individuais /
-   Coletivas) are the same control as everywhere else here. */
+/* The chip itself is a system control and lives in `shell.css`; Rankings
+   only asks that its period switch does not stretch. */
+.gl-root .gam-seg { align-self: flex-start; }
 
-.gl-root .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
-.gl-root .chip-row--start { justify-content: flex-start; }
-
-.gl-root .chip {
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 999px;
+/* "Ver todas as 14 conquistas" and "Ir para Rankings". They sit directly in
+   the tab's column rather than inside a card, so the rule in `shell.css`
+   that makes a button in a block an action and not a banner did not reach
+   them: they were cream slabs the full width of the screen. */
+.gl-root .gam-stack > .btn,
+.gl-root .gam-section > .btn {
+  align-self: center;
+  width: auto;
+  min-width: 220px;
+  min-height: 50px;
+  padding: 0 24px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font: 500 14px 'DM Sans', system-ui, sans-serif;
-  color: var(--ink);
+  justify-content: center;
+  border-radius: 999px;
+  font: 600 15px 'DM Sans', system-ui, sans-serif;
+}
+
+/* `.btn--quiet` is a text button in the old sheet — transparent, slate, no
+   edge. On this ground it needs an edge to be a button at all. */
+.gl-root .gam-stack > .btn--quiet {
   background: var(--btn);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border: 1px solid var(--line);
-  width: auto;
-  flex: none;
+  color: var(--ink);
 }
-
-.gl-root .chip:hover { background: var(--inset); }
-.gl-root .chip[aria-pressed='true'] { background: var(--act-bg); color: var(--act-fg); border-color: transparent; }
-.gl-root .gam-seg { align-self: flex-start; }
 
 /* --------------------------------------------------------- city & part ---
    The city's goal and the person's own minutes. Both were loose text with
@@ -184,32 +187,59 @@
   width: 100%;
 }
 
-.gl-root .gam-ach {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  border-radius: 22px;
-  padding: 16px;
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow, 0 12px 40px rgba(31, 43, 42, 0.14));
-  text-align: left;
-  min-width: 0;
-}
-
-.gl-root .gam-ach__block { display: flex; flex-direction: column; gap: 14px; width: 100%; }
-.gl-root .gam-ach__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; }
-.gl-root .gam-ach__line { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
-.gl-root .gam-ach__name { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
-.gl-root .gam-ach__label,
-.gl-root .gam-ach__status { font-size: 13px; color: var(--ink-2); }
-.gl-root .gam-ach__rule { font-size: 13px; color: var(--ink-2); }
-.gl-root .gam-ach__mine { font-size: 13px; color: var(--link); }
-.gl-root .gam-ach__collective { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .gl-root .gam-cell__name { font-size: 15px; }
 .gl-root .gam-cell__state { font-size: 13px; color: var(--ink-2); }
+
+/* ------------------------------------------------- the achievement sheet ---
+   What opens when a badge is tapped (`selfuse/Conquistas.tsx`). The sheet is
+   a bottom sheet on a phone and a centred dialog from 900px; it is NOT under
+   `.gl-root`, because it renders at the end of the shell, so these rules are
+   written against `.gam-dialog` on its own.
+
+   The badge changed size from one achievement to the next, which is the
+   whole complaint, and it was this file's doing: the first pass read
+   `.gam-ach__head` as a list row and gave it `justify-content: space-between`
+   with no `flex-shrink`. The badge is an `<svg>` with width and height
+   attributes, and a flex item shrinks — so a badge beside a short name kept
+   its 104px, and the same badge beside a long one was squeezed to whatever
+   the sentence left over, at full height. Different achievements, different
+   badge, for no reason but the length of their titles.
+
+   A column, then, centred, and the badge never shrinks. */
+
+.gam-dialog.gam-ach { display: flex; flex-direction: column; gap: 18px; text-align: center; }
+.gam-dialog.gam-ach > * { margin: 0; }
+
+.gam-dialog .gam-ach__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+/* The badge is artwork at a stated size, in both the sheet and the lists. */
+.gam-badge { flex: none; }
+
+.gam-dialog .gam-ach__name { font-family: 'Outfit', system-ui, sans-serif; font-size: 26px; font-weight: 500; line-height: 1.15; padding-inline: 36px; }
+.gam-dialog .gam-ach__rule { font-size: 15px; line-height: 1.5; max-width: 38ch; opacity: 0.82; }
+.gam-dialog .gam-ach__status { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.gam-dialog .gam-ach__line { font-size: 15px; line-height: 1.5; }
+.gam-dialog .gam-ach__collective { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+
+.gam-dialog .gam-ach__block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--su-hair-2, rgba(255, 255, 255, 0.12));
+}
+.gam-dialog .gam-ach__block > * { margin: 0; }
+.gam-dialog .gam-ach__label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.gam-dialog .gam-ach__mine { font-size: 20px; font-weight: 700; }
+.gam-dialog .gam-ach__foot { text-align: center; }
+.gam-dialog .gam-progress { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
 .gl-root .gam-next { width: 100%; }
 .gl-root .gam-next .gam-bar { margin-top: 4px; }
@@ -270,6 +300,9 @@
 .gl-root .segmented > button {
   height: 32px;
   padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: 999px;
   background: transparent;

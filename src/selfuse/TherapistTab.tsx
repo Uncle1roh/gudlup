@@ -61,6 +61,7 @@ import { INSTRUMENTS } from '../data/assessments'
 import { useBackLayer } from './backStack'
 import { Therapy } from '../ui2/Therapy'
 import { TopBar, PageTitle } from '../ui2/TopBar'
+import { BreathingOrb } from '../components/BreathingOrb'
 
 interface TherapistTabProps {
   /** First name, when the account gives one — the top bar prints it. */
@@ -216,7 +217,11 @@ export function TherapistTab(props: TherapistTabProps) {
         <TopBar name={props.name} />
         <PageTitle title={t('Therapy')} />
         <div className="su-page thr-info thr2-info">
-          <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
+          {/* The signature orb, the one the registration screens open on
+              (`selfuse/FirstRun.tsx`) — not the blurred disc that stood here,
+              which was a radial gradient under an 8px blur and read as a
+              smudge on the glass. Same component, so it cannot drift. */}
+          <div className="thr-art" aria-hidden="true"><BreathingOrb size={150} /></div>
           <h2 className="thr-info__h">{t('Professional support')}</h2>
           <p className="lead">
             {t("Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.")}
@@ -277,7 +282,7 @@ export function TherapistTab(props: TherapistTabProps) {
         <TopBar name={props.name} />
         <PageTitle title={t('Therapy')} note={t('Confidential: your company does not see your sessions or what you talk about.')} />
         <div className="su-page thr-info thr2-info">
-          <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
+          <div className="thr-art" aria-hidden="true"><BreathingOrb size={150} /></div>
           <h2 className="thr-info__h">{t('Professional support, when you need it')}</h2>
           <p className="lead">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>
           <button className="btn btn--primary" onClick={() => setView({ kind: 'list' })}>{t('Find a therapist')}</button>

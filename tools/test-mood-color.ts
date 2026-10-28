@@ -21,7 +21,7 @@ import {
   clampAxis, roundAxis, CHROMA_CAP, LIGHT_THRESHOLD, FACE_POINTS,
   QUADRANT_LABELS, NEUTRAL_LABEL,
 } from '../src/mood/moodColor'
-import { tokensFor, moodVars, LIGHT_TOKENS, DARK_TOKENS } from '../src/mood/tokens'
+import { tokensFor, moodVars, GROUND_TOKENS, LIGHT_TOKENS, DARK_TOKENS } from '../src/mood/tokens'
 
 let pass = 0
 const fails: string[] = []
@@ -73,10 +73,21 @@ for (let i = -100; i <= 100; i += 5) {
 }
 assert(!fails.includes('token set disagrees with L'), `the rule is exactly L >= ${LIGHT_THRESHOLD}, everywhere`)
 
-const vars = moodVars(at(0, 0))
-assert(vars['--mood-bg'] === '#beb6a9', 'the custom properties carry the colour')
-assert(vars['--mood-ink'] === LIGHT_TOKENS.ink, 'and the ink of the chosen set')
-assert(Object.keys(vars).every((k) => k.startsWith('--mood-')),
+/* `tokensFor` is still the mapping above, and is still right. What the
+   SHELL wears is a separate question now, and the answer no longer depends
+   on the mood: the page is a fixed darkened photograph (ui2/shell.css), so
+   `moodVars` publishes the ground's set whatever the colour of the day is.
+   The colour itself is still published — the check-in dot, the chip and the
+   faces are what the mood paints now. */
+const centre = moodVars(at(0, 0))
+const amber = moodVars(at(1, 1))
+assert(centre['--mood-bg'] === '#beb6a9', 'the custom properties carry the colour')
+assert(centre['--mood-ink'] === GROUND_TOKENS.ink, 'and the ink of the GROUND, not of the colour')
+assert(amber['--mood-ink'] === centre['--mood-ink'],
+  'so the amber and the slate write the same way: one ground, one set')
+assert(tokensFor(at(1, 1)) !== tokensFor(at(-1, -1)),
+  'while tokensFor still maps lightness to a set, for whenever the ground moves again')
+assert(Object.keys(centre).every((k) => k.startsWith('--mood-')),
   'every property is namespaced, so no other console inherits the mood')
 
 /* ------------------------------------------------------------ the axes --- */
