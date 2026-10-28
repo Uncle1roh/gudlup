@@ -54,7 +54,7 @@ import { TopBar, PageTitle } from '../ui2/TopBar'
 import { Badge } from '../gamification/ui/Badge'
 import { copyFor } from '../gamification/copy'
 import { fmtMinutes, nextAchievement, type AchievementView } from '../gamification/achievements'
-import { isLive, type ChallengeView } from '../gamification/challenges'
+import { isLive, type ChallengeView, visibleChallenges } from '../gamification/challenges'
 import type { Wallet } from '../gamification/economy'
 
 export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges'
@@ -62,6 +62,8 @@ export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges
 interface ProgressProps {
   /** First name, when the account gives one — the top bar prints it. */
   name: string | null
+  /** The person belongs to a company, so an employer's challenge is theirs. */
+  hasCompany: boolean
   state: SelfUseState
   therapy: TherapyState
   view: ProgressView
@@ -105,13 +107,13 @@ export function ProgressTab(props: ProgressProps) {
       </div>
       {view === 'achievements' && <Conquistas onGoRankings={() => onView('rankings')} />}
       {view === 'rankings' && <RankingsTab />}
-      {view === 'challenges' && <ChallengesTab onStartSession={props.onStartSession} />}
+      {view === 'challenges' && <ChallengesTab hasCompany={props.hasCompany} onStartSession={props.onStartSession} />}
       {view === 'summary' && <Summary {...props} />}
     </>
   )
 }
 
-function Summary({ state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
+function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const [wallet, setWallet] = useState<Wallet | null>(null)
@@ -126,7 +128,7 @@ function Summary({ state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSe
     dp.listMyAchievements().then((a) => { if (alive) setNext(nextAchievement(a)) }).catch(() => {})
     dp.listMyChallenges().then((list) => {
       if (!alive) return
-      const live = list.filter((c) => isLive(c, Date.now()))
+      const live = visibleChallenges(list, hasCompany).filter((c) => isLive(c, Date.now()))
       setChallenge(live.find((c) => c.companyId) ?? live[0] ?? null)
     }).catch(() => {})
     return () => { alive = false }

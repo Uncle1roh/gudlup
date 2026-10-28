@@ -55,7 +55,7 @@ import type { Duration } from '../types/domain'
 import { useBackLayer } from './backStack'
 import { UnlockSheet } from './UnlockSheet'
 import { unseenUnlocks, type AchievementView } from '../gamification/achievements'
-import { pickHomeChallenge, type ChallengeView } from '../gamification/challenges'
+import { pickHomeChallenge, visibleChallenges, type ChallengeView } from '../gamification/challenges'
 import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
 import { Shell, type Dest } from '../ui2/Shell'
@@ -210,10 +210,12 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }, [dp])
   useEffect(() => { loadChallenges() }, [loadChallenges, storeId])
   useBackLayer(challengeOpen !== null, () => setChallengeOpen(null))
-  const homeChallenge = pickHomeChallenge(challenges, Date.now())
-  const openChallenge = challenges.find((c) => c.id === challengeOpen) ?? null
-
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
+
+  const hasCompany = Boolean(state.companyCode)
+  const mine = useMemo(() => visibleChallenges(challenges, hasCompany), [challenges, hasCompany])
+  const homeChallenge = pickHomeChallenge(mine, Date.now())
+  const openChallenge = mine.find((c) => c.id === challengeOpen) ?? null
   const eap = convention?.eap ?? null
 
   /* The real appointment is what makes a call possible: its id is the ROOM
@@ -295,7 +297,27 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     return () => { alive = false }
   }, [dp, state.companyCode, update])
 
+  /* A therapist is what `self-use-plus` opens and nothing else opens
+     (data/convention.ts). This read used to run for everybody and write
+     whatever came back, so any surface that hands out a link — the demo
+     provider does, to whoever signs in — gave a person with no company code
+     a professional, a next session and a treatment plan. Ask only when the
+     plan allows one.
+
+     A link already in use is left alone: somebody mid-treatment whose
+     company lapses must not lose their therapist from under them. What is
+     dropped is an UNUSED link that should never have been written. */
+  const professional = hasProfessionalSupport(convention)
   useEffect(() => {
+    if (!professional) {
+      updateTherapy((s) => {
+        const l = s.link
+        if (!l) return s
+        const untouched = !l.sessions.length && !l.prescriptions.length && !l.goals.length
+        return untouched ? { ...s, link: null } : s
+      })
+      return
+    }
     let alive = true
     void dp.getMyTherapistLink()
       .then((found) => {
@@ -751,6 +773,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'progress' && (
           <ProgressTab
+            hasCompany={hasCompany}
             name={displayName(user?.email, legal.profile?.name)}
             state={state}
             therapy={therapy}
@@ -768,6 +791,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'benefits' && (
           <BenefitsTab
+            hasCompany={hasCompany}
             name={displayName(user?.email, legal.profile?.name)}
             onSeeChallenges={() => { setProgressView('challenges'); setTab('progress') }}
             onStartSession={() => setTab('home')}

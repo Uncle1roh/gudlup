@@ -23,7 +23,7 @@ import { Badge } from '../gamification/ui/Badge'
 import { GamDialog } from '../gamification/ui/Dialog'
 import { copyFor } from '../gamification/copy'
 import { fmtMinutes, type AchievementView } from '../gamification/achievements'
-import { isLive, type ChallengeView } from '../gamification/challenges'
+import { isLive, visibleChallenges, type ChallengeView } from '../gamification/challenges'
 import { ChallengeCard } from './ChallengeCard'
 import { TopBar, PageTitle } from '../ui2/TopBar'
 import { DEFAULT_ECONOMY, displayLoops, type EconomySettings, type Wallet } from '../gamification/economy'
@@ -32,9 +32,11 @@ import {
   type BenefitView, type Redemption, type RedeemResult,
 } from '../gamification/benefits'
 
-export function BenefitsTab({ name, onStartSession, onSeeAchievements, onSeeChallenges }: {
+export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievements, onSeeChallenges }: {
   /** First name, when the account gives one — the top bar prints it. */
   name: string | null
+  /** The person belongs to a company, so an employer's challenge is theirs. */
+  hasCompany: boolean
   onStartSession: () => void
   onSeeAchievements: () => void
   onSeeChallenges: () => void
@@ -60,7 +62,7 @@ export function BenefitsTab({ name, onStartSession, onSeeAchievements, onSeeChal
     dp.listMyAchievements().then(setAchievements).catch(() => setAchievements([]))
     dp.listMyChallenges()
       .then((all) => {
-        const live = all.filter((c) => isLive(c, Date.now()))
+        const live = visibleChallenges(all, hasCompany).filter((c) => isLive(c, Date.now()))
         setChallenge(live.find((c) => c.companyId) ?? live[0] ?? null)
       })
       .catch(() => setChallenge(null))
@@ -108,7 +110,10 @@ export function BenefitsTab({ name, onStartSession, onSeeAchievements, onSeeChal
             <small>{t('Loops')}</small>
           </span>
           <span className="call2-note">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</span>
-          {wallet.multiplier !== null && (
+          {/* "Your company multiplies your Loops" is a sentence about an
+              employer. Without a company code there is no employer to
+              multiply anything. */}
+          {hasCompany && wallet.multiplier !== null && (
             <span className="call2-note">{t('Your company multiplies your Loops by {x}×', { x: wallet.multiplier.toLocaleString('pt-BR') })}</span>
           )}
           <div style={{ flex: 1 }} />

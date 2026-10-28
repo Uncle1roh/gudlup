@@ -168,6 +168,19 @@ export function shareOf(c: ChallengeView): number {
 
 /** At most ONE card on Home (§5.5): a company challenge first, then the one
     closest to completion, then the one ending soonest (PLAN A5). */
+/**
+ * The challenges a person may see.
+ *
+ * A challenge an employer is running belongs to that employer's people. A
+ * person with no company code has no employer, so "the challenge at your
+ * company" is somebody else's: the open ones stay, the company ones go.
+ * The server scopes these too; this is the client refusing to draw what it
+ * was handed anyway.
+ */
+export function visibleChallenges<T extends { companyId?: string | null }>(all: T[], hasCompany: boolean): T[] {
+  return hasCompany ? all : all.filter((c) => !c.companyId)
+}
+
 export function pickHomeChallenge(list: ChallengeView[], now: number): ChallengeView | null {
   const live = list.filter((c) => isLive(c, now) && !(c.format === 'individual' && c.myCompletedAt !== null))
   if (!live.length) return null

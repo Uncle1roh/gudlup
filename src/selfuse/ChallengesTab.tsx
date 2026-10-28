@@ -13,11 +13,11 @@ import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { Badge } from '../gamification/ui/Badge'
 import { displayLoops } from '../gamification/economy'
-import { isLive, type ChallengeView } from '../gamification/challenges'
+import { isLive, visibleChallenges, type ChallengeView } from '../gamification/challenges'
 import { ChallengeCard, asIcon, challengeProgressText } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
 
-export function ChallengesTab({ onStartSession }: { onStartSession: () => void }) {
+export function ChallengesTab({ hasCompany, onStartSession }: { hasCompany: boolean; onStartSession: () => void }) {
   const { t, d } = useI18n()
   const dp = useDataProvider()
   const [list, setList] = useState<ChallengeView[] | null>(null)
@@ -25,9 +25,9 @@ export function ChallengesTab({ onStartSession }: { onStartSession: () => void }
 
   useEffect(() => {
     let alive = true
-    dp.listMyChallenges().then((r) => { if (alive) setList(r) }).catch(() => { if (alive) setList([]) })
+    dp.listMyChallenges().then((r) => { if (alive) setList(visibleChallenges(r, hasCompany)) }).catch(() => { if (alive) setList([]) })
     return () => { alive = false }
-  }, [dp])
+  }, [dp, hasCompany])
 
   if (!list) return <p className="small muted" aria-busy="true">{t('Loading…')}</p>
   const now = Date.now()
