@@ -17,11 +17,14 @@ import { useEffect, useRef, type PointerEvent as RPointerEvent, type KeyboardEve
 import { useI18n } from '../i18n'
 import { useMood } from '../mood/MoodProvider'
 import { labelsFor, moodWord, roundAxis } from '../mood/moodColor'
+import { Faces } from './Faces'
+import { useNarrow } from './useNarrow'
 
 export function CheckIn({ onClose }: { onClose(): void }) {
   const { t, locale } = useI18n()
   const mood = useMood()
   const box = useRef<HTMLDivElement | null>(null)
+  const narrow = useNarrow()
 
   /* The dot — and the four words beside it — follow the live point. */
   const point = mood.point
@@ -72,6 +75,26 @@ export function CheckIn({ onClose }: { onClose(): void }) {
   }
 
   const words = labelsFor(point)
+
+  /* Below 900px the grid becomes five faces: a two-axis pad is a pointer
+     instrument, and a phone is held in one hand. Same engine, same words
+     (brief §6.3). */
+  if (narrow) {
+    return (
+      <section
+        ref={box}
+        id="gl-checkin"
+        aria-label={t('Emotional check-in')}
+        style={{
+          position: 'absolute', top: 60, left: 0, right: 0, maxWidth: '100%', zIndex: 20,
+          borderRadius: 28, padding: 20, background: 'rgba(255,255,255,.94)', color: '#1F2B2A',
+          boxShadow: '0 24px 60px rgba(0,0,0,.25)',
+        }}
+      >
+        <Faces onClose={onClose} />
+      </section>
+    )
+  }
 
   return (
     <section

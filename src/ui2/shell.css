@@ -502,6 +502,61 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
   .gl-main,
   .gl-root .tabview { width: 100%; max-width: 100%; min-width: 0; }
 
+  /* The phone is its own design, not the desk squeezed (brief §3.4). Every
+     screen stands on the hills under the same dark wash — including the
+     library, whose colour of the day lives in the chip and the faces rather
+     than in the ground, because a photograph is what the mobile mockups
+     draw and a phone screen held at arm's length needs the contrast. */
+  .gl-root,
+  .gl-root--deep {
+    --ink: #faf8df;
+    --ink-2: rgba(250, 248, 223, 0.85);
+    --link: #b7dbad;
+    --glass: rgba(10, 32, 27, 0.44);
+    --btn: rgba(250, 248, 223, 0.08);
+    --line: rgba(250, 248, 223, 0.2);
+    --act-bg: #faf8df;
+    --act-fg: #0b2620;
+    --hair: rgba(250, 248, 223, 0.1);
+    --inset: rgba(250, 248, 223, 0.06);
+
+    background-color: #06140f;
+    background-image:
+      linear-gradient(rgba(4, 16, 13, 0.25), rgba(4, 16, 13, 0.55)),
+      url('/ui/bg-colinas.jpg');
+    background-size: cover;
+    background-position: 62% center;
+    background-attachment: scroll;
+    color: var(--ink);
+  }
+
+  html.gl2,
+  html.gl2 body { background: #06140f; }
+
+  /* The chip's disc is the only place the mood colour is drawn here, so it
+     grows: it is the whole readout. */
+  .gl-root header .glass > span:first-child { width: 36px; height: 36px; }
+
+  /* The library's top bar is three things on one row on a desk. On a phone
+     it is two rows: who this is and what you have, then the greeting with
+     the check-in across the full width (Mobile.dc.html). */
+  /* The header carries its layout inline, as a port of the mockup should;
+     the phone's two-row arrangement therefore has to say so louder. */
+  .gl-root > .gl-main > .tabview > header:first-child {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+  }
+  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(1) { grid-area: 1 / 1; }
+  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(3) { grid-area: 1 / 2; }
+  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(2) { grid-area: 2 / 1 / 3 / 3; flex-basis: auto; }
+
+  /* 76px is the desk's billboard. On a phone the mockup sets its headline
+     at 28px, and anything near the desk's size runs off the screen. */
+  .gl-root h1 { font-size: 34px !important; line-height: 1.05 !important; }
+  .gl-root .gl-main section[style*="min-height: 420px"] { min-height: 0 !important; padding-top: 8px !important; }
+
   .gl-nav {
     order: 2;
     position: fixed;
@@ -528,6 +583,54 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
 
   .gl-main { gap: 20px; padding-bottom: 84px; }
 }
+
+/* --------------------------------------------------- the phone's faces ---
+   Five taps instead of a pad. Inside the white popover, so the colours are
+   fixed rather than taken from the surface. */
+
+.fc2 { display: flex; flex-direction: column; gap: 12px; color: #1f2b2a; }
+.fc2__q { margin: 0; font-size: 14px; font-weight: 500; }
+.fc2__row { display: flex; justify-content: space-between; gap: 6px; }
+
+.fc2__face {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid rgba(31, 43, 42, 0.18);
+  background: #fff;
+  color: #1f2b2a;
+}
+
+.fc2__words { display: flex; flex-direction: column; gap: 8px; }
+
+.fc2__word {
+  height: 40px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  border: 1px solid rgba(31, 43, 42, 0.18);
+  background: #fff;
+  color: #1f2b2a;
+}
+
+.fc2__word[aria-pressed='true'] { background: #1f2b2a; color: #faf8df; }
+
+.fc2__skip {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  color: #55615f;
+  font: 400 13px 'DM Sans', system-ui, sans-serif;
+  text-decoration: underline;
+}
+
+.fc2__note { margin: 0; font-size: 12px; color: #55615f; }
 
 /* --------------------------------------------------------------- motion ---
    The 1.5s colour walk is the one animation on this surface. Somebody who
