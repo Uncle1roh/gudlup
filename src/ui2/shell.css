@@ -50,29 +50,60 @@
    The ground used to BE the mood: `--mood-bg` painted the page, and a cheerful
    answer to "how was your day" turned the whole product a different colour.
    That reading of the check-in is being reworked, so until it is settled the
-   mood is information and nothing else — the dot, the chip and the faces still
-   carry it (`ui2/CheckIn.tsx`, `ui2/Faces.tsx`), and the page does not move.
+   mood is information and nothing else — the check-in's own sliders, swatch
+   and glasses carry it (`ui2/MoodSliders.tsx`, `ui2/MoodReveal.tsx`) and the
+   Loops chip keeps it, but the page does not move.
 
-   `media/ground.jpg` is Klein Curaçao from `Good Loop Visual ID/`, scaled to
-   2000px for the web and nothing else — no crop, no recolour. It is a bright
-   midday beach, so it carries a scrim: the glass panes need something dark
-   and even under them or a frosted pane over white sand is just a lighter
-   patch of sand. The scrim is also what makes the ground a CONSTANT one, so
-   the token set below can be constant with it.
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║  TO CHANGE THE BACKGROUND OR THE FILTER, EDIT THE FOUR LINES BELOW.  ║
+   ║  Nothing else in the codebase needs to know. See docs/BACKGROUNDS.md ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   `--gl-ground` is the picture. Drop a file in `public/media/` and point at
+   it: `url('/media/whatever.jpg')`. The path is from `public/`, so a file at
+   `public/media/sunset.jpg` is `/media/sunset.jpg`.
+
+   `--gl-ground-dim` is how dark the filter over it is, 0 to 1. 0 is the bare
+   photograph; 1 is nearly black. The three stops of the scrim are derived
+   from this one number, so the top stays a little lighter than the bottom
+   whatever you set — the controls live at the bottom of the screen.
+
+   `--gl-ground-pos` is which part of the picture you see once it is cropped
+   to the window: `50% 42%` is centred horizontally, slightly above centre
+   vertically. Raise the second number to show more of the bottom.
+
+   Why there is a filter at all: the glass panes need something dark and even
+   under them, or a frosted pane over white sand is just a lighter patch of
+   sand. The filter is also what keeps the ground CONSTANT, which is what
+   lets the token set below be constant with it — a bright background would
+   need dark text, and the whole surface is built in cream.
 
    `background-attachment` is deliberately absent. `.gl-root` is the scroller
    (see "scrolling" below), so the body never moves and a fixed attachment —
    which iOS only pretends to honour — would buy nothing. */
 
+html.gl2 {
+  --gl-ground: url('/media/ground.jpg');
+  --gl-ground-dim: 0.78;
+  --gl-ground-pos: 50% 42%;
+  /* The colour behind the picture, for the instant before it decodes and for
+     any edge it does not reach. Keep it close to the picture's dark end. */
+  --gl-ground-base: #07181e;
+}
+
 html.gl2,
-html.gl2 body { background-color: #07181e; }
+html.gl2 body { background-color: var(--gl-ground-base); }
 
 html.gl2 body {
   background-image:
-    linear-gradient(176deg, rgba(5, 22, 28, 0.78) 0%, rgba(6, 26, 31, 0.70) 46%, rgba(3, 14, 19, 0.88) 100%),
-    url('/media/ground.jpg');
+    linear-gradient(
+      176deg,
+      rgba(5, 22, 28, var(--gl-ground-dim)) 0%,
+      rgba(6, 26, 31, calc(var(--gl-ground-dim) - 0.08)) 46%,
+      rgba(3, 14, 19, calc(var(--gl-ground-dim) + 0.10)) 100%),
+    var(--gl-ground);
   background-size: cover, cover;
-  background-position: center, 50% 42%;
+  background-position: center, var(--gl-ground-pos);
   background-repeat: no-repeat, no-repeat;
 }
 
@@ -876,9 +907,29 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   width: 100%;
   border-radius: 0;
   box-shadow: none;
-  /* The ground is an inline style on this element; nothing underneath it
-     should show through at any width. */
-  background-attachment: scroll;
+
+  /* `--gl-session-image` is set on the element by `sessionGround`
+     (selfuse/artwork.ts): it is the protocol's own cover, and it changes
+     with the protocol, so it cannot live here.
+
+     `--gl-session-dim` CAN, and does — it is the same dial as the page's
+     `--gl-ground-dim` above, for the same reason, and it is the one to turn
+     if a session reads too dark or too busy. 0 is the bare cover, 1 is
+     nearly black. Session covers are brighter than the page photograph and
+     carry no body text, so this sits lower than the page's. */
+  --gl-session-dim: 0.60;
+
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(4, 16, 14, var(--gl-session-dim)) 0%,
+      rgba(4, 16, 14, calc(var(--gl-session-dim) - 0.06)) 38%,
+      rgba(3, 11, 10, calc(var(--gl-session-dim) + 0.26)) 100%),
+    var(--gl-session-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-color: #07140f;
 }
 
 /* The studio's emerald bloom belongs to the console, not over a photograph. */

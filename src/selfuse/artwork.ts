@@ -346,33 +346,25 @@ export function coverDataUri(c: Cover): string {
 }
 
 /**
- * The ground a SESSION stands on: the protocol's own cover, full bleed,
- * under a scrim heavy enough to read white type on.
+ * The ground a SESSION stands on: the protocol's own cover, full bleed.
  *
  * The session used to paint itself flat `su-dark` while the page behind it
  * was the surface's photograph (ui2/shell.css). Two grounds, meeting at the
  * edge of a 460px frame — which is what "when entering a protocol we have 2
- * backgrounds" is. One ground now, and it belongs to the protocol you are
+ * backgrounds" was. One ground now, and it belongs to the protocol you are
  * about to listen to: a session about sleep opens on the sleep cover.
  *
  * It is set on the FRAME, not on <body>, so it lasts exactly as long as the
  * element does. Leaving the session takes the standard ground back with no
  * cleanup to forget.
  *
- * The scrim is two stops: a near-flat wash so no corner of the picture is
- * ever bright enough to fight the cream primary action, and a bottom-heavy
- * gradient because that is where the controls are.
+ * ONLY THE PICTURE is set here. The filter over it is `--gl-session-dim` in
+ * `ui2/shell.css`, next to the page's own `--gl-ground-dim`, so both dials
+ * are in one place and neither needs a rebuild of this file to turn. See
+ * docs/BACKGROUNDS.md.
  */
 export function sessionGround(c: Cover): React.CSSProperties {
-  return {
-    backgroundImage:
-      `linear-gradient(180deg, rgba(4,16,14,.62) 0%, rgba(4,16,14,.56) 38%, rgba(3,11,10,.86) 100%), ` +
-      `url("${c.imageUrl ?? coverDataUri(c)}")`,
-    backgroundSize: 'cover, cover',
-    backgroundPosition: 'center, center',
-    backgroundRepeat: 'no-repeat, no-repeat',
-    backgroundColor: '#07140f',
-  }
+  return { ['--gl-session-image' as string]: `url("${c.imageUrl ?? coverDataUri(c)}")` }
 }
 
 /** The inline style a cover element needs. Kept here so a component never has
