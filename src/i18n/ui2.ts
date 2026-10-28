@@ -17,6 +17,11 @@ export const IT_UI2: Record<string, string> = {
 
   /* the check-in */
   'Emotional check-in': 'Check-in emotivo',
+  /* the check-in: two sliders, a word, and the glasses */
+  'Energy': 'Energia',
+  'Mood': 'Umore',
+  'This is how you are seeing the world right now.': 'È così che stai vedendo il mondo adesso.',
+  'The colour of your check-in.': 'Il colore del tuo check-in.',
   'about ten seconds': 'circa dieci secondi',
   'Which word fits best?': 'Quale parola descrive meglio?',
   'Today you feel: {word}': 'Oggi ti senti: {word}',
@@ -98,6 +103,11 @@ export const PT_UI2: Record<string, string> = {
 
   /* the check-in */
   'Emotional check-in': 'Check-in emocional',
+  /* the check-in: two sliders, a word, and the glasses */
+  'Energy': 'Energia',
+  'Mood': 'Humor',
+  'This is how you are seeing the world right now.': 'É assim que você está vendo o mundo agora.',
+  'The colour of your check-in.': 'A cor do seu check-in.',
   'about ten seconds': 'cerca de 10 segundos',
   'Which word fits best?': 'Qual palavra descreve melhor?',
   'Today you feel: {word}': 'Hoje você se sente: {word}',

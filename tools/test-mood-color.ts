@@ -18,7 +18,7 @@
 
 import {
   moodColor, labelsFor, moodWord, quadrantOf, distanceFromCentre,
-  clampAxis, roundAxis, CHROMA_CAP, LIGHT_THRESHOLD, FACE_POINTS,
+  clampAxis, roundAxis, CHROMA_CAP, LIGHT_THRESHOLD,
   QUADRANT_LABELS, NEUTRAL_LABEL,
 } from '../src/mood/moodColor'
 import { tokensFor, moodVars, GROUND_TOKENS, LIGHT_TOKENS, DARK_TOKENS } from '../src/mood/tokens'
@@ -121,15 +121,9 @@ for (const q of ['q1', 'q2', 'q3', 'q4'] as const) {
 }
 assert(!fails.some((f) => f.startsWith('word ')), 'all sixteen words exist in both languages')
 
-/* ------------------------------------------------------- the five faces --- */
-console.log('\n--- the phone’s faces run through the same engine ---')
-assert(FACE_POINTS.length === 5, 'five faces')
-assert(FACE_POINTS[2].mood.valence === 0 && FACE_POINTS[2].mood.arousal === 0,
-  'the middle face is the centre of the grid')
-const faceHexes = new Set(FACE_POINTS.map((f) => moodColor(f.mood).hex))
-assert(faceHexes.size === 5, 'and the five produce five different colours')
-assert(moodColor(FACE_POINTS[2].mood).hex === at(0, 0).hex,
-  'the neutral face and the centre of the grid are the same colour')
+/* The five-faces control is gone: the check-in is two sliders now, on every
+   width (ui2/MoodSliders.tsx), so `FACE_POINTS` went with it rather than
+   staying as data whose only reader was this block. */
 
 console.log(`\n${pass} passed, ${fails.length} failed`)
 if (fails.length) { for (const f of fails) console.log('  -', f); process.exit(1) }

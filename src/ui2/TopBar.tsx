@@ -22,10 +22,11 @@ import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { BrandIcon } from '../components/Brand'
 import { initialsOf } from './Home'
+import { LoopsChip } from './LoopsChip'
 import { useBrandVariant } from './Shell'
 
 export function TopBar({ name, role }: { name: string | null; role?: string }) {
-  const { t, d } = useI18n()
+  const { d } = useI18n()
   const dp = useDataProvider()
   const [loops, setLoops] = useState<number | null>(null)
   const variant = useBrandVariant()
@@ -48,11 +49,7 @@ export function TopBar({ name, role }: { name: string | null; role?: string }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {loops !== null && (
-          <span className="glass-btn" style={{ height: 44, padding: '0 16px', borderRadius: 999, display: 'flex', alignItems: 'center', fontSize: 14, fontWeight: 600 }}>
-            {t('{n} Loops', { n: loops.toLocaleString() })}
-          </span>
-        )}
+        <LoopsChip loops={loops} />
         <span
           aria-hidden="true"
           style={{ width: 44, height: 44, borderRadius: '50%', background: '#E89D64', color: '#2a1608', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}

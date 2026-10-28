@@ -345,6 +345,36 @@ export function coverDataUri(c: Cover): string {
   return uri
 }
 
+/**
+ * The ground a SESSION stands on: the protocol's own cover, full bleed,
+ * under a scrim heavy enough to read white type on.
+ *
+ * The session used to paint itself flat `su-dark` while the page behind it
+ * was the surface's photograph (ui2/shell.css). Two grounds, meeting at the
+ * edge of a 460px frame — which is what "when entering a protocol we have 2
+ * backgrounds" is. One ground now, and it belongs to the protocol you are
+ * about to listen to: a session about sleep opens on the sleep cover.
+ *
+ * It is set on the FRAME, not on <body>, so it lasts exactly as long as the
+ * element does. Leaving the session takes the standard ground back with no
+ * cleanup to forget.
+ *
+ * The scrim is two stops: a near-flat wash so no corner of the picture is
+ * ever bright enough to fight the cream primary action, and a bottom-heavy
+ * gradient because that is where the controls are.
+ */
+export function sessionGround(c: Cover): React.CSSProperties {
+  return {
+    backgroundImage:
+      `linear-gradient(180deg, rgba(4,16,14,.62) 0%, rgba(4,16,14,.56) 38%, rgba(3,11,10,.86) 100%), ` +
+      `url("${c.imageUrl ?? coverDataUri(c)}")`,
+    backgroundSize: 'cover, cover',
+    backgroundPosition: 'center, center',
+    backgroundRepeat: 'no-repeat, no-repeat',
+    backgroundColor: '#07140f',
+  }
+}
+
 /** The inline style a cover element needs. Kept here so a component never has
     to know how a cover is built — swapping in commissioned art means changing
     this one function. */

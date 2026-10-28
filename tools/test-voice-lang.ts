@@ -20,7 +20,7 @@ import { withAudioUrl } from '../src/admin/attachAudio'
 import { parseVoiceName, registerVoices, defaultPrimary, type CatalogVoice } from '../src/tts/voiceCatalog'
 import { toCatalogVoice } from '../src/tts/voiceSync'
 import { canonicalVoiceClip, isTextMissing, switchClipLang } from '../src/studio/sessionLang'
-import { audioLangSummary, audioLangs, durationState, plainFor, type CatalogProtocol } from '../src/data/catalog'
+import { audioLangSummary, audioLangs, audioVariants, durationState, plainFor, type CatalogProtocol } from '../src/data/catalog'
 import { audioUrlFor } from '../src/data/liveCatalog'
 import { patientTitle, protocolTitle } from '../src/types/domain'
 import { newProtocolEntry } from '../src/admin/CatalogAdmin'
@@ -231,7 +231,10 @@ async function main() {
   console.log('\n--- 7. publishing Portuguese leaves the Italian audio alone ---')
   const pub = withAudioUrl(stored6, 6, 'pt-BR', 'https://x/6-pt.mp3', 99)
   assert(pub.versions[0].audioUrl?.it === 'https://x/6-it.mp3' && pub.versions[0].audioUrl?.['pt-BR'] === 'https://x/6-pt.mp3', 'only audioUrl["pt-BR"] is written')
-  assert(audioLangs(pub, 6).join() === 'it,pt-BR' && audioLangSummary(pub, 6) === 'IT ✓ · PT ✓', 'the console reads "IT ✓ · PT ✓"')
+  /* The summary names the FORM as well as the language. Both files here are
+     the male take, so the two female slots are honestly empty. */
+  assert(audioLangs(pub, 6).join() === 'it,pt-BR', 'both languages are live for this duration')
+  assert(audioLangSummary(pub, 6) === 'IT·M ✓ · IT·F — · PT·M ✓ · PT·F —', 'and the console says which forms')
   const itOnlyRow: CatalogProtocol = { ...stored6, versions: [{ duration: 6, audioUrl: { it: 'https://x/6-it.mp3' } }] }
   assert(durationState(itOnlyRow, 6) === 'published', 'an Italian-only duration is published (it used to need a pt-BR key)')
 
@@ -271,6 +274,28 @@ async function main() {
   const ptSaved = applyCardDraft(ptDraft, stored6)
   assert(protocolTitle(ptSaved, 'pt-BR') === 'Clinico PT' && patientTitle(ptSaved, 'pt-BR') === 'Clinico PT',
     'a row that only ever had a Portuguese clinical title keeps it — as the one Portuguese name')
+
+  /* ------------------------------------------- 10. the second axis, seen */
+  console.log('\n--- 10. the console counts variants, not languages ---')
+  /* A file published for a woman is a file. The summary used to test the
+     bare key only — which is the MALE form — so a protocol live only as
+     `it:f` read "IT —", no audio at all, and the operator published the
+     male take again instead of the missing one. */
+  const base6: CatalogProtocol = { ...stored6, versions: [{ duration: 6 }] }
+  const femOnly = withAudioUrl(base6, 6, 'it', 'https://x/6-it-f.mp3', Date.now(), 'f')
+  assert(audioVariants(femOnly, 6).length === 1, 'one variant is on the air')
+  assert(audioVariants(femOnly, 6)[0].to === 'f', 'and it is the female one')
+  assert(audioLangs(femOnly, 6).includes('it'), 'Italian IS live for this duration')
+  assert(audioLangSummary(femOnly, 6).includes('IT·F ✓'), 'and the summary says which form')
+  assert(audioLangSummary(femOnly, 6).includes('IT·M —'), 'and which one is still missing')
+
+  /* The consequence the summary exists to prevent: a man cannot play it. */
+  assert(audioUrlFor(femOnly, 6, 'it', 'f') === 'https://x/6-it-f.mp3', 'she hears it')
+  assert(audioUrlFor(femOnly, 6, 'it', 'm') === undefined, 'he hears nothing — no fallback across the form')
+
+  const bothForms = withAudioUrl(femOnly, 6, 'it', 'https://x/6-it-m.mp3', Date.now(), 'm')
+  assert(audioVariants(bothForms, 6).length === 2, 'publishing the other form adds to it')
+  assert(audioUrlFor(bothForms, 6, 'it', 'f') === 'https://x/6-it-f.mp3', 'and does not overwrite hers')
 
   console.log(`\n${pass} passed, ${fails.length} failed`)
   if (fails.length) { for (const f of fails) console.log('  FAIL:', f); process.exit(1) }

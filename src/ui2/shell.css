@@ -864,6 +864,27 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   .gl-main { gap: 20px; padding-bottom: 112px; }
 }
 
+/* ------------------------------------------------------- the session ---
+   A session is the one full-screen thing this app does, and it stands on
+   the protocol's own cover (`selfuse/Session.tsx`, `sessionGround`). Below
+   1100px `.app-frame` is a 460px column centred in the window, which left
+   the surface's photograph showing down both sides of it — the second of
+   the "2 backgrounds". During a session the frame is the window. */
+
+.su-session {
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  /* The ground is an inline style on this element; nothing underneath it
+     should show through at any width. */
+  background-attachment: scroll;
+}
+
+/* The studio's emerald bloom belongs to the console, not over a photograph. */
+.su-session.app-frame::before,
+.su-session.app-frame--tabs::before { display: none; }
+
 /* --------------------------------------------------- the phone's faces ---
    Five taps instead of a pad. Inside the white popover, so the colours are
    fixed rather than taken from the surface. */

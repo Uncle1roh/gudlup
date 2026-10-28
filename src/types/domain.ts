@@ -56,11 +56,24 @@ export interface ProtocolVersion {
   /** Real length of the pre-rendered audio, in seconds. Defaults to duration*60. */
   lengthSeconds?: number
   /**
-   * Path/URL to the pre-rendered audio per language (the MVP model — FN-21).
+   * Path/URL to the pre-rendered audio per VARIANT (the MVP model — FN-21).
+   *
+   * The key is `variantKey(lang, to)` from `tts/voiceLang.ts`: `it`, `it:f`,
+   * `pt-BR`, `pt-BR:f` — a language and the form it addresses the listener
+   * in, because a recording that says "sei pronta" is not the same file as
+   * one that says "sei pronto". The male form keeps the bare language code
+   * so nothing published before the second form existed had to move.
+   *
+   * It was typed `Partial<Record<Language, string>>`, which is the shape it
+   * had before the second axis, and every reader of a `:f` key cast its way
+   * around the type instead. A key the type will not admit is a key the
+   * compiler cannot help with — which is how an upload tagged "Femminile"
+   * came to be published as the male form with nothing complaining.
+   *
    * Optional in seed data because real voice assets don't exist yet; when a
    * URL is absent the player falls back to a synthesized placeholder bed.
    */
-  audioUrl?: Partial<Record<Language, string>>
+  audioUrl?: Partial<Record<string, string>>
 }
 
 export interface Protocol {

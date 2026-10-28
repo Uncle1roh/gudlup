@@ -187,13 +187,3 @@ export function moodWord(id: string | null | undefined, locale: string): string 
   const table = MOOD_WORDS[locale] ?? MOOD_WORDS[locale.split('-')[0]] ?? MOOD_WORDS['pt-BR']
   return table[id] ?? ''
 }
-
-/* The five faces on the phone are five fixed points of this same grid, so the
-   two instruments produce the same colour from the same engine (brief §6.3). */
-export const FACE_POINTS: { id: string; mood: Mood }[] = [
-  { id: 'very-bad', mood: { valence: -0.8, arousal: -0.4 } },
-  { id: 'bad', mood: { valence: -0.5, arousal: -0.2 } },
-  { id: 'neutral', mood: { valence: 0, arousal: 0 } },
-  { id: 'good', mood: { valence: 0.5, arousal: -0.3 } },
-  { id: 'very-good', mood: { valence: 0.8, arousal: 0.4 } },
-]

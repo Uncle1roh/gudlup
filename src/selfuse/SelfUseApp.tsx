@@ -60,6 +60,7 @@ import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
 import { Shell, type Dest } from '../ui2/Shell'
 import { MoodProvider } from '../mood/MoodProvider'
+import { MoodReveal } from '../ui2/MoodReveal'
 import { Path } from '../ui2/Path'
 import { usePrescriptions } from '../ui2/prescriptions'
 
@@ -119,6 +120,9 @@ export function SelfUseApp(props: SelfUseAppProps) {
         </div>
         <SelfUseSurface {...props} />
       </div>
+      {/* Above everything, and outside the surface: the reveal has to be
+          able to fly across the whole window to reach the Loops chip. */}
+      <MoodReveal />
       </MoodProvider>
     </LiveCatalogProvider>
   )

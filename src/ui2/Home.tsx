@@ -30,6 +30,7 @@ import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_ICON, THEME_TINT, tilePosition } from './theme'
 import { CheckIn, MoodChip } from './CheckIn'
+import { LoopsChip } from './LoopsChip'
 import { BrandIcon } from '../components/Brand'
 import { useBrandVariant } from './Shell'
 
@@ -154,11 +155,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {loops !== null && (
-            <span className="glass-btn" style={{ height: 44, padding: '0 16px', borderRadius: 999, display: 'flex', alignItems: 'center', fontSize: 14, fontWeight: 600 }}>
-              {t('{n} Loops', { n: loops.toLocaleString() })}
-            </span>
-          )}
+          <LoopsChip loops={loops} />
           <span
             aria-hidden="true"
             style={{ width: 44, height: 44, borderRadius: '50%', background: '#E89D64', color: '#2a1608', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}

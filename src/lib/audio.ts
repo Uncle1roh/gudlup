@@ -17,25 +17,55 @@ function newCtx(): Ctx {
 }
 
 /**
+ * The one AudioContext the ear tone uses, for the life of the page.
+ *
+ * It used to build a NEW context per tone and close it on a 1.5 s timer. Two
+ * things are wrong with that. A browser allows a small number of concurrent
+ * AudioContexts — six in Chrome, about four on iOS — and `close()` is async,
+ * so a person tapping "play again" a few times runs the page out of them;
+ * `new AudioContext()` then THROWS, inside a click handler, uncaught, and the
+ * tone is silent for the rest of the visit with the screen still asking which
+ * ear heard it. And a context built fresh each time starts `suspended` and
+ * has to be resumed each time, which is the other way the tone goes missing.
+ *
+ * One context, kept, resumed on every gesture. It is created lazily so no
+ * context exists until somebody asks for a sound.
+ */
+let earCtx: AudioContext | null = null
+
+function earContext(): AudioContext | null {
+  try {
+    if (!earCtx || earCtx.state === 'closed') {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (!AC) return null
+      earCtx = new AC()
+    }
+    /* Resumed from inside the tap that asked for the tone. A context that is
+       suspended does not advance its clock, so an oscillator scheduled on it
+       is scheduled for a moment that never arrives. */
+    if (earCtx.state === 'suspended') void earCtx.resume()
+    return earCtx
+  } catch {
+    /* No audio on this machine. The caller shows the tone as unplayable
+       rather than asking about a sound that cannot happen. */
+    return null
+  }
+}
+
+/**
  * Play a 440 Hz tone in a single ear to verify stereo routing (UC-B2C-07).
  *
- * Two things here are load-bearing and were not.
+ * Returns false when no audio could be produced at all, so the screen can say
+ * so instead of asking which ear heard nothing.
  *
- * RESUME. A context created outside a user-gesture call stack comes up
- * `suspended` on Safari, iOS and some Android WebViews, and stays there: the
- * oscillator is scheduled but the clock never advances, so the tone is SILENT.
- * The person is asked which ear hears a tone that never sounded, answers
- * wrong, and is told their headphones are broken. Every other context in this
- * codebase resumes; this one did not.
- *
- * CLOSE ON A TIMER, not on `onended`. A suspended context never fires
- * `onended`, so the close never ran and every attempt leaked a live context.
- * iOS allows about four, after which even the gesture-driven "play again"
- * button goes quiet and the check is unusable for the rest of the session.
+ * The routing itself is asserted in tools/test-stereo-check.ts against an
+ * OfflineAudioContext: a left tone must put energy in channel 0 and silence
+ * in channel 1, and the reverse for a right one.
  */
-export function playEarTone(side: 'left' | 'right', durationMs = 1100): void {
-  const ctx = newCtx()
-  if (ctx.state === 'suspended') void ctx.resume()
+export function playEarTone(side: 'left' | 'right', durationMs = 1100): boolean {
+  const ctx = earContext()
+  if (!ctx) return false
+
   const osc = ctx.createOscillator()
   osc.type = 'sine'
   osc.frequency.value = 440
@@ -57,12 +87,11 @@ export function playEarTone(side: 'left' | 'right', durationMs = 1100): void {
 
   osc.start(t)
   osc.stop(end + 0.05)
-  /* Belt and braces: close when the note ends, and again on a wall clock in
-     case the context was never allowed to run and `onended` never comes. */
-  let closed = false
-  const close = () => { if (!closed) { closed = true; void ctx.close() } }
-  osc.onended = close
-  setTimeout(close, durationMs + 400)
+  /* The nodes are what gets released, not the context: an oscillator that has
+     stopped is collected once it is disconnected, and the context stays for
+     the next tone. */
+  osc.onended = () => { try { osc.disconnect(); gain.disconnect(); merger.disconnect() } catch { /* already gone */ } }
+  return true
 }
 
 /* -------------------------------------------------------------------------- */

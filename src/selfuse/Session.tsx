@@ -19,9 +19,13 @@
    post-session screen fades in only after the audio has finished.
    ============================================================================ */
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
+import {
+  startCheck, retryCheck, tonePlayed, answerEar, currentEar, checkPassed, toneNumber,
+  type Ear, type StereoState,
+} from '../lib/stereoCheck'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useI18n } from '../i18n'
@@ -33,6 +37,7 @@ import type { Addressee } from '../tts/voiceLang'
 import type { Duration } from '../types/domain'
 import { VAS_OPTIONS } from '../data/assessments'
 import { Icon } from './icons'
+import { coverFor, sessionGround } from './artwork'
 import { useBackLayer } from './backStack'
 
 /* A catalog row can arrive without phases (an import that only carried a
@@ -143,12 +148,36 @@ type Stage = 'pre' | 'stereo' | 'play' | 'post'
    rest of the app is set to daylight — see selfuse-studio.css § 06. */
 const SESSION_FRAME = 'app-frame su-studio su-dark'
 
+/**
+ * Every screen of the session flow, standing on the protocol's own cover.
+ *
+ * The flow used to paint itself flat `su-dark` while the page behind it was
+ * the surface's photograph (ui2/shell.css) — two grounds, meeting at the edge
+ * of the frame. There is one now, and it is the picture of the session you
+ * are about to hear, darkened enough to read on (`sessionGround`).
+ *
+ * The style sits on the ELEMENT, so leaving the session takes the standard
+ * ground back by itself: there is no global to set and no cleanup to forget.
+ */
+function SessionFrame({ ground, children }: { ground: CSSProperties; children: ReactNode }) {
+  return <div className={`${SESSION_FRAME} su-session`} style={ground}>{children}</div>
+}
+
+/** The cover of the session being played, as a full-bleed ground. */
+function useSessionGround(session: ResolvedSession): CSSProperties {
+  return useMemo(
+    () => sessionGround(coverFor(session.slug, session.theme, session.coverUrl)),
+    [session.slug, session.theme, session.coverUrl],
+  )
+}
+
 export function SessionFlow(props: SessionFlowProps) {
   const { session, duration, needsStereoCheck, onCancel } = props
   /* The player kill switch. Checked HERE, above every stage, because this is
      the one door into playback: the pre-session screen, the stereo check and
      the player itself are all behind it. */
   const playerOn = useFeature('player')
+  const ground = useSessionGround(session)
   const [stage, setStage] = useState<Stage>('pre')
   /* Before the audio starts, back is the screen's own back: leave the session.
      While it plays, the player catches it (below). Afterwards there is nothing
@@ -190,6 +219,7 @@ export function SessionFlow(props: SessionFlowProps) {
   if (stage === 'stereo') {
     return (
       <StereoCheck
+        ground={ground}
         onDone={(passed) => { stereoChecked.current = passed; props.onStereoChecked(passed); setStage('play') }}
         onBack={onCancel}
       />
@@ -254,8 +284,9 @@ function PreSession({
   const { m } = useLegal()
   const [vas, setVas] = useState<number | null>(null)
   const [safeNote, setSafeNote] = useState(() => !safeUseSeen())
+  const ground = useSessionGround(session)
   return (
-    <div className={SESSION_FRAME}>
+    <SessionFrame ground={ground}>
       <div className="screen screen--center pre-session">
         <div className="screen__body pre-session__body">
           <span className="pre-session__len">{t('{n} min', { n: duration })}</span>
@@ -293,99 +324,74 @@ function PreSession({
           <button className="btn btn--quiet" onClick={onCancel}>{t('Cancel')}</button>
         </div>
       </div>
-    </div>
+    </SessionFrame>
   )
 }
 
 /* ------------------------------------------------------------- SES-2 ----- */
 
-/* ---- the stereo check, as a state machine ----
-
-   It asks about the LEFT ear, then the RIGHT one. The two questions used to
-   look identical: answering the first correctly played the second tone and
-   changed nothing on screen, so a person tapped "Left", saw no reaction,
-   tapped "Right" — and landed in the session. Two questions were asked and
-   one was experienced, which is the same as not checking at all.
-
-   Every step is now its own screen, and an answer is only accepted for an ear
-   whose tone has actually been played. Pure, so it can be argued with in
-   tools/test-stereo-check.ts rather than by clicking. */
-
-export type StereoStage = 'intro' | 'ask-left' | 'confirmed-left' | 'ask-right'
-
-export function stereoAnswer(stage: StereoStage, side: 'left' | 'right'):
-  { next: StereoStage; warn: boolean; pass: boolean } {
-  if (stage === 'ask-left') {
-    return side === 'left'
-      ? { next: 'confirmed-left', warn: false, pass: false }
-      : { next: 'ask-left', warn: true, pass: false }
-  }
-  if (stage === 'ask-right') {
-    return side === 'right'
-      ? { next: 'ask-right', warn: false, pass: true }
-      : { next: 'ask-right', warn: true, pass: false }
-  }
-  /* No tone has been played for this stage: nothing to answer. */
-  return { next: stage, warn: false, pass: false }
-}
-
 /**
- * Two ears, one at a time, each one visible. A wrong or mono answer warns and
- * still lets the person continue — a headphone problem is a quality problem,
- * not a safety one — but it is not recorded as a pass.
+ * Two ears, in an order drawn fresh each attempt, and both have to be right.
+ *
+ * The machine is in `lib/stereoCheck.ts`, with the reasoning for every rule
+ * and the tests that hold them. What lives here is the screen: one question
+ * at a time, each one visibly its own, and the tone played from inside the
+ * tap that asked for it — browsers start audio only in a user-gesture call
+ * stack, so a tone played from an effect comes out of a suspended context,
+ * silent, while the screen asks what you heard.
+ *
+ * There is no way past this into the session except passing it. A wrong
+ * answer used to offer "Continue anyway", which meant the check was advice;
+ * the only other door is Back, which leaves the session altogether.
  */
-function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; onBack: () => void }) {
+function StereoCheck({ ground, onDone, onBack }: { ground: CSSProperties; onDone: (passed: boolean) => void; onBack: () => void }) {
   const { t } = useI18n()
-  const [stage, setStage] = useState<StereoStage>('intro')
-  const [warn, setWarn] = useState(false)
+  const [check, setCheck] = useState<StereoState>(() => startCheck())
+  /* No audio on this machine at all — the tone cannot be produced, so the
+     screen says that instead of asking which ear heard nothing. */
+  const [noAudio, setNoAudio] = useState(false)
 
-  const play = useCallback((side: 'left' | 'right') => playEarTone(side), [])
+  const playCurrent = useCallback((s: StereoState) => {
+    const ear = currentEar(s)
+    if (!ear) return s
+    const ok = playEarTone(ear)
+    setNoAudio(!ok)
+    return ok ? tonePlayed(s) : s
+  }, [])
 
-  /* The tone is played from a TAP, never from an effect on mount.
-     Browsers only let audio start inside a user-gesture call stack; an
-     auto-played tone comes out of a suspended context and is silent, so the
-     person is asked about a sound that never happened. Each step plays its own
-     tone from inside the tap that opened it. */
-  function begin() {
-    setStage('ask-left')
-    play('left')
+  function begin() { setCheck((s) => playCurrent(s)) }
+  function again() { const ear = currentEar(check); if (ear) setNoAudio(!playEarTone(ear)) }
+
+  function answer(side: Ear) {
+    setCheck((s) => {
+      const next = answerEar(s, side)
+      if (checkPassed(next)) onDone(true)
+      return next
+    })
   }
 
-  function toRightEar() {
-    setStage('ask-right')
-    play('right')
-  }
-
-  function answer(side: 'left' | 'right') {
-    const r = stereoAnswer(stage, side)
-    setWarn(r.warn)
-    if (r.pass) { onDone(true); return }
-    setStage(r.next)
-  }
-
-  const asking = stage === 'ask-left' || stage === 'ask-right'
-  const ear: 'left' | 'right' = stage === 'ask-right' ? 'right' : 'left'
+  const asking = check.phase === 'asking'
 
   return (
-    <div className={SESSION_FRAME}>
+    <SessionFrame ground={ground}>
       <div className="screen screen--center stereo">
         <div className="screen__body stereo__body">
           <div className="stereo__art" aria-hidden="true"><Icon name="headphones" size={54} /></div>
           <h2 className="display">{t("Let's check your headphones")}</h2>
 
-          {stage === 'intro' && (
+          {check.phase === 'intro' && (
             <>
-              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear, then in the other.')}</p>
+              <p className="lead">{t('Put your headphones on. We will play a short tone in one ear, then in the other — and you tell us which.')}</p>
               <button className="btn btn--primary" onClick={begin}>{t('Play the tone')}</button>
             </>
           )}
 
           {asking && (
             <>
-              {/* WHICH of the two questions this is — the whole point of the
-                  fix: the second one has to look like a second one. */}
+              {/* WHICH of the two questions this is. Without it the second
+                  one looked like the first and the check read as one. */}
               <span className="stereo__step">
-                {stage === 'ask-left' ? t('Tone 1 of 2') : t('Tone 2 of 2')}
+                {t('Tone {n} of 2', { n: toneNumber(check) })}
               </span>
               <p className="lead">{t('Which ear hears the tone?')}</p>
               <div className="chip-row stereo__answers">
@@ -396,38 +402,44 @@ function StereoCheck({ onDone, onBack }: { onDone: (passed: boolean) => void; on
                   <span className="chip__label">{t('Right')}</span>
                 </button>
               </div>
-              <button className="btn btn--quiet" onClick={() => play(ear)}>{t('Play the tone again')}</button>
+              <button className="btn btn--quiet" onClick={again}>{t('Play the tone again')}</button>
             </>
           )}
 
-          {stage === 'confirmed-left' && (
+          {check.phase === 'between' && (
             <>
-              {/* The first answer is ACKNOWLEDGED. Without this the check ran
-                  two questions behind one screen and read as one. */}
-              <p className="lead stereo__ok">{t('Left ear: correct.')}</p>
-              <p className="small muted">{t('Now the other ear — the tone moves to the right.')}</p>
-              <button className="btn btn--primary" onClick={toRightEar}>{t('Play the right-ear tone')}</button>
+              {/* The first answer is ACKNOWLEDGED. Which ear it was is not
+                  named: saying "left: correct" would hand over the order,
+                  and the order is the thing the next attempt reshuffles. */}
+              <p className="lead stereo__ok">{t('Correct. One more.')}</p>
+              <p className="small muted">{t('The next tone is in the other ear.')}</p>
+              <button className="btn btn--primary" onClick={begin}>{t('Play the second tone')}</button>
             </>
           )}
 
-          {warn && (
+          {check.phase === 'failed' && (
             <div className="stereo__warn fade-in">
+              <p className="lead">{t('That was the other ear.')}</p>
               <p className="small">
-                {t('We recommend wired stereo headphones. Continue anyway?')}
+                {check.misses === 1
+                  ? t('Check that both sides are plugged in and worn the right way round, then try again.')
+                  : t('Wired stereo headphones work best. The session moves between your ears, so it needs both of them working.')}
               </p>
               <div className="chip-row">
-                {/* Continuing is allowed — a headphone problem is a quality
-                    problem, not a safety one — but it is NOT recorded as a
-                    pass, so the check comes back next time instead of being
-                    silently retired for good. */}
-                <button className="btn btn--ghost" onClick={() => onDone(false)}>{t('Continue')}</button>
+                <button className="btn btn--primary" onClick={() => setCheck((s) => retryCheck(s))}>{t('Try again')}</button>
                 <button className="btn btn--quiet" onClick={onBack}>{t('Go back')}</button>
               </div>
             </div>
           )}
+
+          {noAudio && (
+            <p className="small stereo__warn">
+              {t('This device cannot play a sound right now, so the check cannot run.')}
+            </p>
+          )}
         </div>
       </div>
-    </div>
+    </SessionFrame>
   )
 }
 
@@ -467,6 +479,7 @@ function ImmersiveSession({
   onEnd: (completed: boolean, listenedSec: number) => void
 }) {
   const { t, locale } = useI18n()
+  const ground = useSessionGround(session)
   /*
    * The CATALOG ROW the session already carries is the authority, not the
    * runtime registry.
@@ -717,7 +730,7 @@ function ImmersiveSession({
      played: rather than substituting another protocol, say so. */
   if (!protocol) {
     return (
-      <div className={SESSION_FRAME}>
+      <SessionFrame ground={ground}>
         <div className="player">
           <div className="fade-in player__ready">
             <p className="lead player__readytext">
@@ -726,13 +739,13 @@ function ImmersiveSession({
             <button className="btn btn--light player__begin" onClick={() => onEnd(false, 0)}>{t('Back')}</button>
           </div>
         </div>
-      </div>
+      </SessionFrame>
     )
   }
 
   if (!started) {
     return (
-      <div className={SESSION_FRAME}>
+      <SessionFrame ground={ground}>
         <div className="player">
           <div className="fade-in player__ready">
             <BreathingOrb size={150} breathing={false} />
@@ -747,7 +760,7 @@ function ImmersiveSession({
             )}
           </div>
         </div>
-      </div>
+      </SessionFrame>
     )
   }
 
@@ -755,7 +768,7 @@ function ImmersiveSession({
   const pct = total > 0 ? Math.max(0, Math.min(100, (shown / total) * 100)) : 0
 
   return (
-    <div className={SESSION_FRAME}>
+    <SessionFrame ground={ground}>
       <div className="player" onClick={armFade}>
         {/* The orb, for the WHOLE session, not only phase 2.
             It used to appear during the breathing phase and be replaced by a
@@ -877,7 +890,7 @@ function ImmersiveSession({
           </div>
         )}
       </div>
-    </div>
+    </SessionFrame>
   )
 }
 
@@ -900,6 +913,7 @@ function PostSession({
   const { m } = useLegal()
   const [picked, setPicked] = useState<PostFeedback | null>(null)
   const [vas, setVas] = useState<number | null>(null)
+  const ground = useSessionGround(session)
   const isDeep = duration === 24
 
   function choose(f: PostFeedback) {
@@ -910,7 +924,7 @@ function PostSession({
   }
 
   return (
-    <div className={SESSION_FRAME}>
+    <SessionFrame ground={ground}>
       <div className="screen screen--center post fade-in">
         <div className="screen__body post__body">
           <h2 className="display">{t('Well done')}</h2>
@@ -951,7 +965,7 @@ function PostSession({
           </button>
         </div>
       </div>
-    </div>
+    </SessionFrame>
   )
 }
 

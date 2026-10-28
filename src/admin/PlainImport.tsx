@@ -20,7 +20,7 @@ import type { Duration } from '../types/domain'
 import {
   CATALOG_DURATIONS,
   audioLangSummary,
-  audioLangs,
+  audioVariants,
   durationState,
   hasAnyAudio,
   catalogDuration,
@@ -39,7 +39,7 @@ import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { buildScriptIndex, missingScripts, plainToStudioTracks } from './plainStudio'
 import { plainWavFileName, renderPlainWav } from './renderPlain'
 import { secToMmss, type PlainTimeline } from './plainTimeline'
-import { LANG_IN, LANG_LABEL, LANG_SHORT, VOICE_VARIANTS, variantKey, variantLabel, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { LANG_IN, LANG_LABEL, VOICE_VARIANTS, variantKey, variantLabel, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { hasVoicesFor } from '../tts/voiceCatalog'
 
 interface Props {
@@ -366,7 +366,16 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
 
   /* ---- externally-mastered file (PO workflow: download WAV → masterize
      outside → upload the mastered version → Publish ships THAT file) ---- */
-  const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer; lang: VoiceLang } | null>(null)
+  /* `to` is part of what a mastered file IS, not a detail of how it was
+     uploaded. It used to be asked for and then dropped on the floor: the
+     dialog collected it into `uploadTo`, `setMastered` stored only the
+     language, and Pubblica called `publish(mastered.lang)` with no second
+     argument — which defaults to the male form. So a file uploaded as
+     "Italiano · Femminile" was published as "Italiano · Maschile", and the
+     women it was recorded for resolved `it:f`, found nothing, and lost the
+     protocol from their library entirely (`audioPick`, liveCatalog.tsx —
+     a listener gets their language AND their form, with no fallback). */
+  const [mastered, setMastered] = useState<{ name: string; buffer: AudioBuffer; lang: VoiceLang; to: Addressee } | null>(null)
   const masteredRef = useRef<HTMLInputElement>(null)
 
   /* ---- which LANGUAGE an audio is for ----
@@ -408,7 +417,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         } else {
           setStatus(null)
         }
-        setMastered({ name: file.name, buffer, lang: uploadLang.current })
+        setMastered({ name: file.name, buffer, lang: uploadLang.current, to: uploadTo.current })
       } finally {
         await ctx.close().catch(() => undefined)
       }
@@ -583,7 +592,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
        mastered outside the app against a time signature that has no Excel. */
     if (!version && !mastered) return
     // an uploaded file is filed under the language it was uploaded for
-    if (mastered && mastered.lang !== lang) return
+    if (mastered && (mastered.lang !== lang || mastered.to !== to)) return
     setBusy(true)
     setError(null)
     try {
@@ -639,7 +648,17 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         `In linea — ${proto.code} · ${dur} min in ${LANG_LABEL[lang]}: ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate per chi usa l’app ${LANG_IN[lang]}${lang === 'pt-BR' ? ' o in inglese' : ''}${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
         (otherBefore && otherAfter === otherBefore
           ? ` L’audio in ${LANG_LABEL[otherLang]} di questa durata resta invariato.`
-          : !otherAfter ? ` In ${LANG_LABEL[otherLang]} non c’è ancora un audio per questa durata: finché manca, anche chi usa quella lingua sente questo.` : '') +
+          : !otherAfter ? ` In ${LANG_LABEL[otherLang]} non c’è ancora un audio per questa durata: chi usa l’app in quella lingua NON sente questo file — per loro i ${dur} min restano non disponibili finché non ne pubblichi uno.` : '') +
+        /* And the other FORM, which nothing used to mention at all. A file is
+           one language and one addressee, and a listener is offered only
+           their own pair (`audioPick`, data/liveCatalog.tsx). Publishing the
+           male take and saying nothing is how a protocol goes live for half
+           the people who were waiting for it. */
+        (() => {
+          const otherTo: Addressee = to === 'm' ? 'f' : 'm'
+          const has = !!(attached.protocol.versions.find((v) => v.duration === dur)?.audioUrl as Record<string, string | undefined> | undefined)?.[variantKey(lang, otherTo)]
+          return has ? '' : ` Manca ancora ${variantLabel(lang, otherTo)}: per chi ha scelto quella forma questa durata non esiste.`
+        })() +
         (others.length ? ` Le versioni da ${others.map((d) => `${d}`).join(' e ')} min restano invariate.` : '') +
         (attached.demo ? ' (Demo: il file vive solo in questa scheda del browser.)' : '') +
         lengthWarning +
@@ -757,8 +776,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                 }
               >
                 {d}m
-                {audioLangs(published ?? undefined, d).length > 0 && (
-                  <small className="adm-pill__langs"> {audioLangs(published ?? undefined, d).map((l) => LANG_SHORT[l]).join('+')}</small>
+                {audioVariants(published ?? undefined, d).length > 0 && (
+                  <small className="adm-pill__langs"> {audioVariants(published ?? undefined, d).map((v) => variantShort(v.lang, v.to)).join('+')}</small>
                 )}
               </button>
             )
@@ -787,17 +806,17 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           disabled={!canUpload}
           title={`Carica il WAV/MP3 per la versione da ${picked} minuti — prima si sceglie la lingua; Pubblica userà esattamente questo file, con o senza Excel`}
         >
-          <span className="adm-plain__act-ico">🎧</span> {mastered ? `Masterizzato ${LANG_SHORT[mastered.lang]} ✓` : 'Carica audio'}
+          <span className="adm-plain__act-ico">🎧</span> {mastered ? `Masterizzato ${variantShort(mastered.lang, mastered.to)} ✓` : 'Carica audio'}
         </button>
         {/* With a mastered file the language was asked at upload: Pubblica
             ships it under that one. Without, it asks. */}
         <button
           className="adm-plain__act adm-plain__act--primary"
-          onClick={() => (mastered ? void publish(mastered.lang) : setAsk('publish'))}
+          onClick={() => (mastered ? void publish(mastered.lang, mastered.to) : setAsk('publish'))}
           disabled={!canPublish}
           title={publishWhy}
         >
-          <span className="adm-plain__act-ico">🚀</span> Pubblica{mastered ? ` · ${LANG_SHORT[mastered.lang]}` : ''}
+          <span className="adm-plain__act-ico">🚀</span> Pubblica{mastered ? ` · ${variantShort(mastered.lang, mastered.to)}` : ''}
         </button>
         <input ref={masteredRef} type="file" accept="audio/*,.wav,.mp3,.flac,.m4a" hidden onChange={(e) => void onMasteredFile(e.target.files?.[0])} />
         {fileInput}
@@ -899,7 +918,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
 
       {mastered && (
         <div className="adm-plain__status">
-          Audio caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) per la versione da {picked} min in <b>{LANG_LABEL[mastered.lang]}</b> — Pubblica userà questo file
+          Audio caricato: <b>{mastered.name}</b> ({secToMmss(Math.round(mastered.buffer.duration))}) per la versione da {picked} min, <b>{variantLabel(mastered.lang, mastered.to)}</b> — Pubblica userà questo file
 
           {hasTimeline ? ' invece del render.' : '; per questa durata non c’è ancora un Excel, e non serve.'}
           {' '}

@@ -12,7 +12,7 @@
    from `:root` — the mood belongs to one surface, not to the whole app.
    ============================================================================ */
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { moodColor, type Mood, type MoodColor } from './moodColor'
 import { moodVars } from './tokens'
 
@@ -37,6 +37,28 @@ interface MoodState {
   /** Commit a point and a word. */
   commit(mood: Mood, label: string | null): void
   skip(): void
+
+  /* ---- the reveal ----
+     Committing a word does not just set a colour, it SHOWS one: a pair of
+     glasses in that colour, "this is how you see the world", and then the
+     panel folds itself into the Loops chip, which keeps the colour. The
+     provider owns the handover because the three parts live in three
+     different components — the check-in commits, the overlay animates, the
+     chip is somewhere else in the tree entirely. */
+
+  /** A commit the overlay has not shown yet. Cleared by `endReveal`. */
+  reveal: MoodColor | null
+  /** The overlay has finished; the chip keeps the colour from here. */
+  endReveal(): void
+  /** The colour the Loops chip wears, or null before any check-in. The whole
+      colour, not its hex: the chip needs `light` to know which ink reads on
+      it, and a hex alone would have it guessing. */
+  chipTone: MoodColor | null
+  /** The chip tells the provider where it is, so the reveal knows where to
+      fold into. A function rather than a rect: the chip moves with the
+      layout, and the overlay needs its position at the moment it flies. */
+  setChipRect(get: (() => DOMRect | null) | null): void
+  chipRect(): DOMRect | null
 }
 
 const Ctx = createContext<MoodState | null>(null)
@@ -46,6 +68,12 @@ export function MoodProvider({ children }: { children: ReactNode }) {
   const [label, setLabel] = useState<string | null>(null)
   const [skipped, setSkipped] = useState(false)
   const [live, setLive] = useState<Mood | null>(null)
+  const [reveal, setReveal] = useState<MoodColor | null>(null)
+  /** Set only when the reveal has run: the chip takes the colour at the end
+      of the flight, not at the moment of the tap, or it would already be
+      wearing the colour the glasses are flying towards. */
+  const [chipTone, setChipTone] = useState<MoodColor | null>(null)
+  const chipRectRef = useRef<(() => DOMRect | null) | null>(null)
 
   const point = live ?? mood ?? CENTRE
   const color = useMemo(() => moodColor(point), [point])
@@ -78,13 +106,22 @@ export function MoodProvider({ children }: { children: ReactNode }) {
         setLabel(l)
         setSkipped(false)
         setLive(null)
+        setReveal(moodColor(m))
       },
       skip: () => {
         setSkipped(true)
         setLive(null)
       },
+      reveal,
+      endReveal: () => {
+        setChipTone(reveal)
+        setReveal(null)
+      },
+      chipTone,
+      setChipRect: (get) => { chipRectRef.current = get },
+      chipRect: () => chipRectRef.current?.() ?? null,
     }),
-    [mood, label, skipped, point, color],
+    [mood, label, skipped, point, color, reveal, chipTone],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

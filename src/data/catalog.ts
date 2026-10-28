@@ -18,7 +18,7 @@ import type { PlainTimeline, PlainVersion } from '../admin/plainTimeline'
 import type { AssetMap } from '../admin/assets'
 import { PROTOCOLS } from './protocols'
 import { libraryProtocols, type LibraryMeta } from './library'
-import { LANG_SHORT, VOICE_LANGS, type VoiceLang } from '../tts/voiceLang'
+import { ADDRESSEES, VOICE_LANGS, variantKey, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
 
 export type ProtocolSource = 'seed' | 'imported'
 
@@ -298,7 +298,34 @@ export function audioLangs(
   duration: Duration,
 ): VoiceLang[] {
   const urls = p?.versions.find((v) => v.duration === duration)?.audioUrl
-  return VOICE_LANGS.filter((l) => !!urls?.[l])
+  return VOICE_LANGS.filter((l) => ADDRESSEES.some((to) => !!urls?.[variantKey(l, to)]))
+}
+
+/**
+ * Every variant a duration actually has a file for.
+ *
+ * `audioLangs` above answers "is this duration live in Italian", which is the
+ * question the shelves ask. It is NOT the question an operator publishing a
+ * file is asking, and for a while it was the only answer the console gave:
+ * it tested the bare key `it`, which is the MALE form (tts/voiceLang.ts), so
+ * a protocol published only for a woman read as "IT —" — no audio at all —
+ * and a protocol published only for a man read as "IT ✓", with nothing to
+ * say that half the catalogue's listeners could not play it.
+ *
+ * A listener gets one file and one only: their language AND their form
+ * (`audioPick`, data/liveCatalog.tsx). So the console has to count the same
+ * way, or it reports a protocol as shipped to people who cannot hear it.
+ */
+export function audioVariants(
+  p: Pick<CatalogProtocol, 'versions'> | undefined,
+  duration: Duration,
+): { lang: VoiceLang; to: Addressee }[] {
+  const urls = p?.versions.find((v) => v.duration === duration)?.audioUrl
+  const out: { lang: VoiceLang; to: Addressee }[] = []
+  for (const lang of VOICE_LANGS) for (const to of ADDRESSEES) {
+    if (urls?.[variantKey(lang, to)]) out.push({ lang, to })
+  }
+  return out
 }
 
 /** True when a duration has a file in ANY language, including the ones the
@@ -308,10 +335,14 @@ export function hasAnyAudio(p: Pick<CatalogProtocol, 'versions'> | undefined, du
     (duration == null || v.duration === duration) && !!v.audioUrl && Object.values(v.audioUrl).some(Boolean))
 }
 
-/** "IT ✓ · PT —": which languages are live for one duration, at a glance. */
+/** "IT·M ✓ · IT·F — · PT·M — · PT·F —": every variant, because every one of
+    them is a different set of people who can or cannot play this. */
 export function audioLangSummary(p: Pick<CatalogProtocol, 'versions'> | undefined, duration: Duration): string {
-  const have = audioLangs(p, duration)
-  return VOICE_LANGS.map((l) => `${LANG_SHORT[l]} ${have.includes(l) ? '✓' : '—'}`).join(' · ')
+  const have = audioVariants(p, duration)
+  const has = (l: VoiceLang, to: Addressee) => have.some((v) => v.lang === l && v.to === to)
+  return VOICE_LANGS.flatMap((l) =>
+    ADDRESSEES.map((to) => `${variantShort(l, to)} ${has(l, to) ? '✓' : '—'}`),
+  ).join(' · ')
 }
 
 /** The durations that actually have a timeline, ascending. */
