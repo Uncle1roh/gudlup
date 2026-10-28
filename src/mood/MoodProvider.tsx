@@ -93,3 +93,10 @@ export function useMood(): MoodState {
   if (!v) throw new Error('useMood outside MoodProvider')
   return v
 }
+
+/** Which token set the ground is wearing — 'light' before any provider. The
+    shell reads it for the brand colourway and nothing else. */
+export function useMoodSet(): 'light' | 'dark' {
+  const v = useContext(Ctx)
+  return v && !v.color.light ? 'dark' : 'light'
+}

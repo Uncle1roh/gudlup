@@ -46,8 +46,8 @@
 
 /* -------------------------------------------------------------- the ground ---
    `MoodProvider` puts `.gl2` and the `--mood-*` properties on <html>. The
-   page behind the app has to be the mood colour too, or a dark strip shows
-   past the end of the content on a short screen. */
+   page behind the app is the mood colour: the column scrolls inside it, so
+   the ground never ends before the content does. */
 
 html.gl2,
 html.gl2 body {
@@ -64,39 +64,60 @@ html.gl2 body {
   background-attachment: fixed;
 }
 
+/* The grain. Glass over a flat colour is invisible — a blur has nothing to
+   blur, so a pane reads as a lighter rectangle and a button as a painted
+   disc. The Studio laid one tile of fractal noise over its ground for the
+   same reason (`.gl-grain`, selfuse-studio.css); here it is the same tile,
+   fixed behind the column, so every frosted surface smooths it and reads as
+   frosted. Faint on purpose: the ground is still the colour of the day. */
+html.gl2 body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.11;
+  mix-blend-mode: overlay;
+  background-size: 170px 170px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+html[data-mood-set='dark'].gl2 body::before { opacity: 0.18; }
+
 /* ------------------------------------------------------------- scrolling ---
-   The old surface scrolled INSIDE `.app-frame`, so `selfuse-studio.css`
-   locked the document: `body:has(.su-studio) { overflow: hidden }`, and
-   `.su-shell` was pinned to exactly 100dvh. The redesigned screens are long
-   — a library of rails, four panels of a journey — and they are not that
-   frame, so everything past the first viewport was simply cut off.
+   The old surface scrolled INSIDE `.app-frame`: the document was locked
+   (`body:has(.su-studio) { overflow: hidden }`, selfuse-studio.css) and the
+   frame was exactly one viewport tall. The first port let the page scroll
+   instead — and it did not, twice over: `body` is a scroll container of its
+   own (index.css gives html AND body `overflow-x: hidden`, which makes
+   body's overflow its own rather than the viewport's) with
+   `overscroll-behavior: none`, so a wheel over the page stopped at body and
+   never reached the viewport; and `.tabview` carries `overflow: auto` with
+   `overscroll-behavior: contain`, which stopped it one level earlier.
 
-   Here the page scrolls the way a page does. The tab bar is fixed, so it
-   stays; nothing else needs to. */
-
-html.gl2 body,
-html.gl2 body:has(.su-studio) {
-  overflow-x: hidden;
-  overflow-y: visible;
-  height: auto;
-  min-height: 100%;
-}
+   So the column scrolls the way the frame did. `.su-shell` stays one
+   viewport tall (legal.css), the Help now strip stays put at its top, and
+   `.gl-root` is the scroller — explicit, and independent of what any global
+   sheet does to the document. */
 
 html.gl2 .su-shell {
-  height: auto;
-  min-height: 100dvh;
-}
-
-html.gl2 .pvw-shell .su-shell { height: auto; min-height: calc(100dvh - var(--pvw-h, 44px)); }
-html.gl2 .pvw-shell { height: auto; }
-
-/* `.su-shell` is the wrapper that carries the Help now strip above every
-   screen (legal.css). It paints itself dark and centres its children, which
-   would leave the redesigned surface as a column in a black room. Under the
-   mood it steps back: no colour of its own, and its child fills it. */
-html.gl2 .su-shell {
-  background: transparent;
+  /* Not centred children: the column takes the full width and centres
+     itself, so its scrollbar sits at the edge of the monitor. */
   align-items: stretch;
+  background: transparent;
+}
+
+/* The Day theme paints the shell a solid cream (legal.css). Under the mood
+   that is the one rule that hid the colour: the shell went opaque over the
+   ground and the Home stopped changing. Same specificity, whichever order
+   the sheets load in. */
+html[data-su-theme='light'].gl2 .su-shell { background: transparent; }
+
+html.gl2 .gl-root .tabview {
+  overflow: visible;
+  overscroll-behavior: auto;
+  height: auto;
+  max-height: none;
 }
 
 /* The Help now strip above the surface (CRS-01 — one tap from every screen)
@@ -107,6 +128,7 @@ html.gl2 .su-shell__bar {
   background: transparent;
   border: 0;
   /* Aligned with the column, not pinned to the corner of the monitor. */
+  width: 100%;
   max-width: 1480px;
   margin-inline: auto;
   padding-inline: 28px;
@@ -150,6 +172,9 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
      own hexes, which vanished the moment the ground went light. */
   --warn: #9a5a22;
   --ok: #0f6b47;
+  /* The lift under a pane. The deep mockups draw it (`0 12px 40px` at .22
+     over the photograph); over the light set it is softer. */
+  --shadow: 0 12px 40px rgba(31, 43, 42, 0.14);
 
   /* No ground of its own: the page carries the colour and the two lights,
      so they run the full width of the monitor. */
@@ -161,7 +186,7 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
 
 .gl-root a { color: var(--link); }
 
-html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
+html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 0 12px 40px rgba(0, 0, 0, 0.22); }
 
 /* ------------------------------------------------------- the deep room ---
    There used to be two grounds here: the mood colour on the library and the
@@ -206,16 +231,23 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
    Real translucency, not a painted panel: the card takes the colour of the
    mood behind it. Amber ground, amber card.
 
+   Three things make it read as glass over a ground that is one colour: the
+   grain behind it (above), which the blur smooths; the pane's lift, which
+   the deep mockups draw; and the saturate, which leaves the inside of the
+   pane a touch richer than the outside. Nothing bevelled, nothing inset —
+   tried and rejected.
+
    `backdrop-filter` is expensive — each element carrying it is its own
    composited layer, and a library of eighty of them killed the renderer in
-   the first attempt. It belongs on panes, never on list items. */
+   the first attempt. It belongs on panes and controls, never on list items. */
 
 .glass {
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--line);
-  transition: background-color 1.5s ease;
+  box-shadow: var(--shadow);
+  transition: background-color 1.5s ease, box-shadow 0.25s ease;
 }
 
 .glass-btn {
@@ -225,8 +257,19 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   border: 1px solid var(--line);
   color: var(--ink) !important;
   cursor: pointer;
-  transition: background-color 1.5s ease, color 1.5s ease;
+  transition: background-color 0.2s ease, color 1.5s ease;
 }
+
+/* A control answers the pointer the way the mockup's does: a step lighter,
+   no movement. The chosen state is the solid act colour. */
+.glass-btn:hover,
+.gl-nav__btn:hover { background: var(--glass); }
+.glass-btn.is-on,
+.glass-btn[aria-selected='true'],
+.glass-btn[aria-pressed='true'] { background: var(--act-bg); color: var(--act-fg) !important; border-color: transparent; }
+.glass-btn.is-on:hover,
+.glass-btn[aria-selected='true']:hover,
+.glass-btn[aria-pressed='true']:hover { background: var(--act-bg); }
 
 /* No bevel, no inner shadow, no 3-D. Tried and rejected. */
 .gl-root button { font-family: inherit; }
@@ -271,24 +314,26 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
    the glass tab bar at the foot of the screen (the mobile mockups). */
 
 .gl-root {
+  /* The scroller. Fills what the strip leaves of the 100dvh shell. */
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
   box-sizing: border-box;
-  padding: 28px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+
   /* Mockups are drawn at 1440. Past that the column stops growing and
      centres instead — a 2560px monitor was stretching a rail of tiles and a
-     line of body text across the whole desk. At 1440 and below nothing
-     changes, so the port still matches the drawing pixel for pixel. */
-  max-width: 1480px;
-  margin-inline: auto;
-
-  /* Nothing on this surface scrolls sideways: a rail scrolls inside itself,
-     and a child wide enough to push the page is a bug in that child. */
-  overflow-x: clip;
+     line of body text across the whole desk. The centring is done with the
+     padding so the scrollbar stays at the edge of the monitor. */
+  padding: 28px max(28px, calc((100% - 1480px) / 2 + 28px));
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 24px;
 }
 
 .gl-nav {
@@ -299,18 +344,25 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   gap: 14px;
 }
 
+/* The head of the rail: the mockup's 56px rounded square, carrying the
+   official mark (`components/Brand`) — green on a light ground, cream on a
+   dark one. Not a reconstruction: the brand files are the only logo. */
 .gl-nav__logo {
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: #3db189;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #06140f;
   margin-bottom: 18px;
   flex: none;
 }
+
+.gl-nav__logo .gl-icon { width: 38px; height: 38px; }
+
+/* The lockup in the top bar, where the mockup sets the word in Outfit. */
+.gl-brand { display: flex; align-items: center; }
+.gl-brand .gl-logo { height: 26px; }
 
 .gl-nav__btn {
   width: 52px;
@@ -330,7 +382,8 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   transition: background-color 1.5s ease, color 1.5s ease;
 }
 
-.gl-nav__btn.is-on {
+.gl-nav__btn.is-on,
+.gl-nav__btn.is-on:hover {
   background: var(--act-bg);
   color: var(--act-fg);
   border-color: transparent;
@@ -378,29 +431,11 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
 .gl-search::-webkit-search-cancel-button { filter: invert(var(--mood-invert, 0)); }
 
 /* ------------------------------------------------- the leftover blocks ---
-   The summary's bento was laid out only under `.su-studio`, which this
-   surface does not carry — so every block fell to full width and its button
-   stretched across 1280px. The same twelve-column arrangement, here. */
+   The desk's extras on Minha jornada — the care block, the next milestone,
+   the live challenge — step out on a phone, which keeps the person's own
+   cards (Jornada.dc.html). */
 
-.gl-root .prog-bento { display: flex; flex-direction: column; gap: 20px; }
-
-@media (min-width: 1100px) {
-  .gl-root .prog-bento {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 20px;
-    align-items: start;
-  }
-
-  .gl-root .prog-b8 { grid-column: span 8; }
-  .gl-root .prog-b4 { grid-column: span 4; }
-  .gl-root .prog-b6 { grid-column: span 6; }
-  .gl-root .prog-b8:not(:has(+ .prog-b4)),
-  .gl-root .prog-b6:not(.prog-col):not(:has(+ .prog-col)) { grid-column: 1 / -1; }
-  .gl-root .prog-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-}
-
-@media (max-width: 1099px) { .gl-root .prog-desk { display: none; } }
+@media (max-width: 899px) { .gl-root .prog-desk { display: none; } }
 
 /* These blocks were written for a narrow column: their children sat flush
    against each other because the column itself did the spacing. Here they
@@ -445,10 +480,15 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   padding: 0 22px;
   border-radius: 999px;
   background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   color: var(--ink);
   box-shadow: none;
+  cursor: pointer;
 }
+
+.gl-root .cat-rail__help:hover { background: var(--glass); }
 
 /* A button in one of these blocks is an action, not a banner. */
 .gl-root .card > .btn,
@@ -513,7 +553,29 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
    prescriptions, the goals — keeps its own markup until Percurso takes the
    prescriptions at its own stop. Until then it at least stops being a stack
    of white boxes on a photograph. */
-.gl-root .thr-extra { display: flex; flex-direction: column; gap: 14px; }
+.gl-root .thr-extra { display: flex; flex-direction: column; gap: 20px; }
+.gl-root .thr-extra .thr-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (min-width: 900px) { .gl-root .thr-extra .thr-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.gl-root .thr-extra .thr-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  border-radius: 28px;
+  padding: 22px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.gl-root .thr-extra .thr-col > * { margin: 0; }
+.gl-root .thr-extra .home__sect { font-size: 20px; }
+.gl-root .thr-extra .thr-empty { border: 0; background: none; padding: 0; margin: 0; font-size: 14px; color: var(--ink-2); text-align: left; }
+.gl-root .thr-extra .goals:empty, .gl-root .thr-extra .chron:empty { display: none; }
+.gl-root .thr-extra .card { box-shadow: none; background: var(--inset); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .gl-root .card,
 .gl-root .empty,
 .gl-root .gam-care,
@@ -526,7 +588,7 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--line);
   color: var(--ink);
-  box-shadow: none;
+  box-shadow: var(--shadow);
 }
 
 .gl-root .home__sect {
@@ -556,6 +618,11 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 4px;
+  box-shadow: var(--shadow);
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
 }
 
 .gl-root .segmented button {
@@ -565,6 +632,17 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   color: var(--ink-2);
   font: 500 14px 'DM Sans', system-ui, sans-serif;
   cursor: pointer;
+  height: 40px;
+  padding: 0 22px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.gl-root .segmented button:hover { color: var(--ink); }
+
+@media (max-width: 899px) {
+  .gl-root .segmented { align-self: stretch; display: flex; overflow-x: auto; scrollbar-width: none; }
+  .gl-root .segmented button { flex: 1 0 auto; white-space: nowrap; padding: 0 14px; height: 38px; }
 }
 
 .gl-root .segmented button[aria-selected='true'] { background: var(--act-bg); color: var(--act-fg); }
@@ -580,9 +658,15 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
 .gl-root .btn--ghost,
 .gl-root .btn--quiet {
   background: var(--btn);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   color: var(--ink);
+  box-shadow: none;
 }
+
+.gl-root .btn--ghost:hover,
+.gl-root .btn--quiet:hover { background: var(--glass); color: var(--ink); }
 
 .gl-root .gam-challenge {
   display: flex;
@@ -595,7 +679,7 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--line);
   color: var(--ink);
-  box-shadow: none;
+  box-shadow: var(--shadow);
   padding: 18px 22px;
 }
 
@@ -744,3 +828,262 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
   .glass-btn,
   .gl-nav__btn { transition: none !important; }
 }
+
+/* ----------------------------------------------------- minha jornada ---
+   One card system for the whole screen: the mockup's 28px pane, 22px of
+   padding, an Outfit title, DM Sans notes, and the two kinds of button the
+   mockup draws — the solid act pill and the 48px glass pill. The ported
+   panels (`Journey.tsx`) and the app's own blocks share it, so the screen
+   stops reading as two designs stacked. */
+
+.gl-root .jr2-card {
+  border-radius: 28px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  color: var(--ink);
+  text-align: left;
+}
+
+.gl-root .jr2-card > * { margin: 0; }
+.gl-root .jr2-card .eyebrow { margin: 0; }
+.gl-root .jr2-spring { flex: 1; }
+
+.gl-root .jr2-btn {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  font: 500 15px 'DM Sans', system-ui, sans-serif;
+}
+
+.gl-root .jr2-btn--loose { align-self: flex-start; }
+.gl-root .jr2-act { align-self: flex-start; padding: 0 26px; }
+
+/* Two blocks stacked in the narrow column, sharing its height. */
+.gl-root .jr2-stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.gl-root .jr2-stack > * { flex: 1 1 auto; }
+.gl-root .jr2-cell { display: flex; }
+.gl-root .jr2-cell > * { flex: 1; }
+
+/* The care block. */
+.gl-root .jr2-care__time { font-family: 'Outfit', system-ui, sans-serif; font-size: 22px; font-weight: 500; line-height: 1.25; }
+.gl-root .jr2-care__loops { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; }
+
+/* The milestone, as a card you can press. */
+.gl-root .gam-milestone.jr2-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 28px;
+  padding: 22px;
+}
+.gl-root .gam-milestone__body { flex: 1; gap: 6px; }
+.gl-root .gam-milestone__name { font-family: 'Outfit', system-ui, sans-serif; font-size: 18px; font-weight: 500; }
+.gl-root .gam-bar { display: block; width: 100%; height: 6px; border-radius: 999px; background: var(--inset); overflow: hidden; margin-top: 4px; }
+.gl-root .gam-bar > span { display: block; height: 100%; border-radius: inherit; background: #3db189; }
+
+/* The challenge card takes the pane's geometry too. */
+.gl-root .jr2-cell .gam-challenge { border-radius: 28px; padding: 22px; }
+
+/* The weekly check-in's five bars, in the surface's colours. */
+.gl-root .glweek { gap: 12px; }
+.gl-root .glweek__key { margin: 0; }
+.gl-root .glweek__track { background: var(--inset); }
+.gl-root .glweek__track > i { background: var(--line); }
+.gl-root .glweek__fill { background: #3db189; }
+.gl-root .glweek__was { background: var(--ink); }
+.gl-root .glweek__val em.is-up { color: var(--ok); }
+.gl-root .glweek__val em.is-down { color: var(--ink-2); }
+
+/* ----------------------------------------------------- mood calendar ---
+   The same calendar as the previous interface — the month, a square a day,
+   the five levels in the five greens — on the surface's colours. */
+
+.gl-root .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; width: 100%; }
+.gl-root .cal__pad { aspect-ratio: 1; }
+
+.gl-root .cal__day {
+  aspect-ratio: 1;
+  min-height: 0;
+  border-radius: 10px;
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  color: var(--ink-2);
+  background: var(--inset);
+  border: 1px solid transparent;
+  padding: 0;
+  cursor: default;
+  transition: background-color 1.5s ease, color 1.5s ease;
+}
+
+.gl-root .cal__day--today { border-color: var(--ink); color: var(--ink); }
+.gl-root .cal__day[class*='cal__day--l'] { cursor: pointer; }
+.gl-root .cal__day--l1 { background: #cbd8cf; color: #1f2b2a; }
+.gl-root .cal__day--l2 { background: #b8d3c2; color: #1f2b2a; }
+.gl-root .cal__day--l3 { background: #97c8ac; color: #1f2b2a; }
+.gl-root .cal__day--l4 { background: #6dba92; color: #06140f; }
+.gl-root .cal__day--l5 { background: #3db189; color: #06140f; }
+
+@media (min-width: 900px) {
+  .gl-root .cal { gap: 8px; }
+  .gl-root .cal__day, .gl-root .cal__pad { aspect-ratio: auto; height: 46px; }
+}
+
+/* --------------------------------------------- therapy before a link ---
+   States A, A2 and B of the Therapist tab, the directory, the code and the
+   patient onboarding keep their markup (`TherapistTab.tsx`); here they learn
+   the surface. A `.su-page` was a whole screen with its own padding and its
+   own entrance; inside the column it is one more block. */
+
+.gl-root .su-page {
+  padding: 0;
+  animation: none;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.gl-root .su-page > * { margin: 0; }
+.gl-root .su-page .lead { font-size: 16px; line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
+.gl-root .su-page .su-h1 { font-family: 'Outfit', system-ui, sans-serif; font-weight: 500; font-size: 28px; letter-spacing: -0.01em; }
+.gl-root .su-back { align-self: flex-start; color: var(--ink-2); font: 500 15px 'DM Sans', system-ui, sans-serif; padding: 0 0 4px; }
+.gl-root .su-back:hover { color: var(--ink); }
+.gl-root .su-page .home__sect { margin: 8px 0 0; }
+
+/* The two informative states: one pane, the glow, the words, the door. */
+.gl-root .thr2-info {
+  border-radius: 28px;
+  padding: 28px 24px 26px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  max-width: 560px;
+  width: 100%;
+  align-self: flex-start;
+}
+
+.gl-root .thr2-info .thr-art { width: 132px; margin: -4px 0 2px; }
+.gl-root .thr2-info .thr-art .ob-art__glow { background: radial-gradient(circle at 45% 40%, #95e3d3, rgba(149, 227, 211, 0) 70%); filter: blur(8px); }
+.gl-root .thr2-info .thr-info__h { font-family: 'Outfit', system-ui, sans-serif; font-weight: 500; font-size: 24px; }
+.gl-root .thr2-info .btn { width: 100%; max-width: 360px; height: 52px; border-radius: 999px; font: 600 16px 'DM Sans', system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; }
+.gl-root .thr2-info .ob-or { width: 100%; max-width: 360px; color: var(--ink-2); font-size: 14px; }
+.gl-root .thr2-info .ob-or::before, .gl-root .thr2-info .ob-or::after { background: var(--line); }
+
+/* A pending request, the directory, a profile, the code, the onboarding:
+   a readable column, not a line across 1280px. */
+.gl-root .thr2-form,
+.gl-root .thr-find,
+.gl-root .thr-form,
+.gl-root .thr-book { max-width: 720px; width: 100%; }
+
+.gl-root .thr-list { gap: 14px; }
+.gl-root .thr-card { gap: 12px; }
+.gl-root .thr-card .btn, .gl-root .thr-pending .btn { align-self: flex-start; }
+
+.gl-root .avatar {
+  background: var(--ok);
+  color: var(--act-fg);
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+
+.gl-root .badge {
+  background: var(--inset);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.gl-root .su-page .btn {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 15px 'DM Sans', system-ui, sans-serif;
+  width: auto;
+  align-self: flex-start;
+}
+
+.gl-root .su-page .btn--primary { box-shadow: none; }
+.gl-root .su-page .btn--primary:hover { background: var(--act-bg); color: var(--act-fg); box-shadow: none; }
+
+.gl-root .ob-input {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  padding: 12px 16px;
+  font: 400 16px 'DM Sans', system-ui, sans-serif;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gl-root .ob-input::placeholder { color: var(--ink-2); }
+.gl-root .ob-input:focus { outline: none; border-color: var(--ink); box-shadow: none; }
+.gl-root .ob-input.is-error { border-color: var(--warn); }
+.gl-root .ob-error { color: var(--warn); font-size: 14px; margin: 0; }
+.gl-root .ob-field { display: flex; flex-direction: column; gap: 6px; }
+.gl-root .ob-field__label { font-size: 14px; font-weight: 500; }
+
+/* Slots on a profile: the same 44px pill the booking column draws. */
+.gl-root .slot {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.gl-root .slot[aria-pressed='true'] { background: #3db189; color: #06140f; border-color: transparent; }
+
+.gl-root .thr-book__bar {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.gl-root .thr-book__bar::before { display: none; }
+.gl-root .thr-book__chosen { color: var(--ink-2); font-size: 15px; }
+.gl-root .thr-book__bar.is-ready .thr-book__chosen { color: var(--ink); }
+
+.gl-root .consent-row { padding: 14px 0; border-bottom: 1px solid var(--hair); }
+.gl-root .switch { background: var(--inset); border: 1px solid var(--line); }
+.gl-root .switch.is-on { background: #3db189; border-color: transparent; }
+
+/* The informative panes centre their words; their doors centre too. */
+.gl-root .thr2-info .btn { align-self: center; }
+
+/* A column with nothing in it (no questionnaire asked yet) is not drawn,
+   and the other takes the row: auto-fit skips a hidden item. */
+.gl-root .thr-extra .thr-col:empty { display: none; }
+@media (min-width: 900px) { .gl-root .thr-extra .thr-cols { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); } }

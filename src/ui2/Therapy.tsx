@@ -110,7 +110,7 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
         <Fact label={t('Next session:')} value={at ? d(at, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : t('No session is scheduled yet.')} />
         <Fact label={t('Duration')} value={t('{n} min', { n: appointment?.durationMin ?? 50 })} />
       </div>

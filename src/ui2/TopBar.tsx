@@ -12,12 +12,15 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
+import { BrandLogo } from '../components/Brand'
 import { initialsOf } from './Home'
+import { useBrandVariant } from './Shell'
 
 export function TopBar({ name, role }: { name: string | null; role?: string }) {
   const { t, d } = useI18n()
   const dp = useDataProvider()
   const [loops, setLoops] = useState<number | null>(null)
+  const variant = useBrandVariant()
 
   useEffect(() => {
     let alive = true
@@ -29,8 +32,8 @@ export function TopBar({ name, role }: { name: string | null; role?: string }) {
 
   return (
     <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span className="gl-wordmark">goodloop</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span className="gl-brand"><BrandLogo variant={variant} /></span>
         <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
           {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
         </span>

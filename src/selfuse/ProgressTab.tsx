@@ -25,10 +25,12 @@
    no counts of what was missed, no points (PLAN A6), nothing ranked against
    anyone, and never a clinical value.
 
-   On a desk the summary is a bento grid (docs/desktop-mockups, proposal C):
-   the week beside your care, the mood calendar beside the next milestone and
-   the live challenge. Those three are the desk's extra — below 1100px they
-   are hidden and the phone keeps its two cards.
+   On a desk the summary is the redesign's three-column grid (WJornada):
+   the pathway's ring beside its weeks, then the check-in beside the care
+   block, then the mood calendar beside the next milestone and the live
+   challenge, then how the sessions felt. The care, the milestone and the
+   challenge are the desk's extra — below 900px they are hidden and the phone
+   keeps the person's own cards (Jornada mockup).
    ============================================================================ */
 
 import { useEffect, useState } from 'react'
@@ -47,7 +49,7 @@ import { ChallengesTab } from './ChallengesTab'
 import { ChallengeCard } from './ChallengeCard'
 import { Icon } from './icons'
 import { useDataProvider } from '../data/provider'
-import { Journey } from '../ui2/Journey'
+import { PathwayPanels, VasPanel, usePathwayView } from '../ui2/Journey'
 import { TopBar, PageTitle } from '../ui2/TopBar'
 import { Badge } from '../gamification/ui/Badge'
 import { copyFor } from '../gamification/copy'
@@ -85,10 +87,14 @@ const VIEWS: { id: ProgressView; label: string }[] = [
 export function ProgressTab(props: ProgressProps) {
   const { t } = useI18n()
   const { view, onView } = props
+  const pw = usePathwayView(props.state.pathway)
   return (
     <>
       <TopBar name={props.name} />
-      <PageTitle title={t('My journey')} />
+      <PageTitle
+        title={t('My journey')}
+        note={pw ? `${t(pw.active.name)} · ${t('Week {n} of {total}', { n: pw.week, total: pw.active.weeks })}` : undefined}
+      />
       {/* Four views, each its own kind of information: how the week felt,
           what stays (achievements), where you stand together (rankings),
           and the challenges — the company's, the live ones, the history. */}
@@ -111,6 +117,7 @@ function Summary({ state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSe
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [next, setNext] = useState<AchievementView | null>(null)
   const [challenge, setChallenge] = useState<ChallengeView | null>(null)
+  const pw = usePathwayView(state.pathway)
 
   useEffect(() => {
     let alive = true
@@ -127,93 +134,94 @@ function Summary({ state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSe
 
   const last = state.glChecks[state.glChecks.length - 1] ?? null
   const prev = state.glChecks[state.glChecks.length - 2] ?? null
-  const blank = !state.glChecks.length && !state.moods.length
+  const due = glCheckDue(state)
+  const vas = therapy.link?.vas ?? []
+  const felt = vas.length > 1
+
+  /* The blocks, in the mockup's rhythm: a wide one and a narrow one to a
+     row. The desk's extras (care, milestone, challenge) step out below
+     900px, so a row that would be left with one narrow block on a phone is
+     still one column there. */
+  const care = wallet && (
+    <section className="glass jr2-card jr2-care prog-desk" aria-label={t('Your care')}>
+      <p className="eyebrow">{t('Your care')}</p>
+      <p className="jr2-care__time">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</p>
+      <p className="jr2-care__loops"><Icon name="loop" size={22} /> {t('= {n} Loops', { n: String(wallet.loops) })}</p>
+      <div className="jr2-spring" />
+      <button type="button" className="glass-btn jr2-btn" onClick={onStartSession}>{t('Start a session')}</button>
+    </section>
+  )
+
+  const milestone = next && (
+    <button type="button" className="glass jr2-card gam-milestone prog-desk" onClick={() => onView('achievements')}>
+      <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
+      <span className="gam-milestone__body">
+        <span className="eyebrow">{t('Next milestone of care')}</span>
+        <span className="gam-milestone__name">{t(copyFor(next.slug).name)}</span>
+        <span className="gam-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, ((next.value ?? 0) / next.threshold) * 100)}%` }} /></span>
+      </span>
+    </button>
+  )
+
+  const live = challenge && (
+    <div className="prog-desk jr2-cell"><ChallengeCard c={challenge} onOpen={() => onView('challenges')} /></div>
+  )
 
   return (
     <>
-      {/* The mockup's four panels: the pathway ring, the twelve weeks, how
-          the sessions felt, and the check-in. Each one stands only while the
-          thing behind it exists. The app's own blocks follow below — they
-          have no panel in the mockup and are not inventions to drop. */}
-      <Journey
-        pathway={state.pathway}
-        therapy={therapy}
-        glDue={glCheckDue(state)}
-        onGlCheck={onGlCheck}
-        onStart={onStartLaunch}
-      />
-
-      {/* The phone's empty state. On a desk each block of the grid carries
-          its own instead — one empty card across the screen read as broken. */}
-      {blank && (
-        <div className="empty prog-phone">
-          <p>{t('Nothing here yet.')}</p>
-          <p className="small muted">
-            {t('Your check-in and your mood calendar appear here once you start filling them in.')}
-          </p>
-          <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
-        </div>
+      {pw && state.pathway && (
+        <PathwayPanels pathway={state.pathway} active={pw.active} week={pw.week} onStart={onStartLaunch} />
       )}
 
-      <div className={`prog-bento${blank ? ' prog-desk' : ''}`}>
-        {/* How the week felt, set against the week before it. */}
-        <section className="card prog-b8">
-          <h3 className="home__sect">{t('This week')}</h3>
+      {/* How the week felt, set against the week before it — and the care
+          block beside it. */}
+      <section className="g3">
+        <section className="glass jr2-card s2">
+          <h2 className="call2-pane__h">{t('Weekly check-in')}</h2>
           {last ? (
-            <>
-              <GlCheckWeek last={last} previous={prev} />
-            </>
+            <GlCheckWeek last={last} previous={prev} />
           ) : (
-            <p className="small muted">{t('No check-in yet.')}</p>
+            <p className="call2-note">{t('No check-in yet.')}</p>
           )}
-          {glCheckDue(state) && (
-            <button className="btn btn--primary" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
+          {due && (
+            <button type="button" className="call2-act jr2-act" onClick={onGlCheck}>{t('Complete your weekly check-in')}</button>
           )}
+          {!due && last && <p className="call2-ok">{t('Done for this week.')}</p>}
         </section>
+        {care}
+      </section>
 
-        {wallet && (
-          <section className="gam-care prog-b4 prog-desk" aria-label={t('Your care')}>
-            <p className="eyebrow">{t('Your care')}</p>
-            <p className="gam-care__time">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</p>
-            <p className="gam-care__loops"><Icon name="loop" size={22} /> {t('= {n} Loops', { n: String(wallet.loops) })}</p>
-            <button className="btn btn--ghost gam-care__start" onClick={onStartSession}>{t('Start a session')}</button>
-          </section>
-        )}
-
-        {/* The one thing on this tab a person writes rather than is told. */}
-        <section className="card prog-b6">
-          <h3 className="home__sect">{t('Mood calendar')}</h3>
-          {state.moods.length ? (
-            <MoodCalendar moods={state.moods} />
-          ) : (
-            <p className="small muted">{t('Track your daily mood — it takes 1 second.')}</p>
+      {/* The one thing on this tab a person writes rather than is told. The
+          same calendar as before — the month, a square a day. */}
+      <section className="g3">
+        <section className="glass jr2-card s2">
+          <h2 className="call2-pane__h">{t('Mood calendar')}</h2>
+          <MoodCalendar moods={state.moods} />
+          {!state.moods.length && (
+            <p className="call2-note">{t('Track your daily mood — it takes 1 second.')}</p>
           )}
-          <button className="btn btn--ghost" onClick={onMood}>{t('How was your day?')}</button>
+          <button type="button" className="glass-btn jr2-btn" onClick={onMood}>{t('How was your day?')}</button>
         </section>
-
-        {(next || challenge) && (
-          <div className="prog-b6 prog-col prog-desk">
-            {next && (
-              <button className="card gam-milestone" onClick={() => onView('achievements')}>
-                <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
-                <span className="gam-milestone__body">
-                  <span className="eyebrow">{t('Next milestone of care')}</span>
-                  <span className="gam-milestone__name">{t(copyFor(next.slug).name)}</span>
-                  <span className="gam-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, ((next.value ?? 0) / next.threshold) * 100)}%` }} /></span>
-                </span>
-              </button>
-            )}
-            {challenge && <ChallengeCard c={challenge} onOpen={() => onView('challenges')} />}
+        {(milestone || live) && (
+          <div className="jr2-stack prog-desk">
+            {milestone}
+            {live}
           </div>
         )}
-      </div>
+      </section>
+
+      {felt && (
+        <section className="g3">
+          <VasPanel points={vas} className="s2" />
+        </section>
+      )}
 
       {/* The WHO-5 monthly snapshot is gone from self-guided use: a validated
           instrument scored back to the person is a clinical measurement
           (MN-05; Part VII.2). The weekly check-in above is a plain
           self-report shown as the person's own history and nothing more. */}
       {state.logs.length > 0 && (
-        <button className="btn btn--quiet" onClick={onExportSelfUse}>
+        <button type="button" className="glass-btn jr2-btn jr2-btn--loose" onClick={onExportSelfUse}>
           {t('View your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}
         </button>
       )}
@@ -229,6 +237,7 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
   const first = new Date(now.getFullYear(), now.getMonth(), 1)
   const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const pad = (first.getDay() + 6) % 7
+  const today = dayKey(now.getTime())
 
   return (
     <>
@@ -236,11 +245,14 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
         {Array.from({ length: pad }, (_, i) => <span key={`p${i}`} className="cal__pad" />)}
         {Array.from({ length: days }, (_, i) => {
           const d = new Date(now.getFullYear(), now.getMonth(), i + 1)
-          const m = byDay.get(dayKey(d.getTime()))
+          const key = dayKey(d.getTime())
+          const m = byDay.get(key)
           return (
             <button
               key={i}
-              className={`cal__day${m ? ` cal__day--l${m.level}` : ''}`}
+              type="button"
+              className={`cal__day${m ? ` cal__day--l${m.level}` : ''}${key === today ? ' cal__day--today' : ''}`}
+              aria-current={key === today ? 'date' : undefined}
               onClick={() => m && setOpen(m)}
               aria-label={`${i + 1}`}
             >

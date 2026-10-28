@@ -30,6 +30,8 @@ import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_ICON, THEME_TINT, tilePosition } from './theme'
 import { CheckIn, MoodChip } from './CheckIn'
+import { BrandLogo } from '../components/Brand'
+import { useBrandVariant } from './Shell'
 
 interface HomeProps {
   name: string | null
@@ -57,6 +59,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
   const [checkInOpen, setCheckInOpen] = useState(false)
   const [loops, setLoops] = useState<number | null>(null)
+  const variant = useBrandVariant()
 
   /* The wallet the Loops pill shows. Read-only, the same call the Benefits
      screen makes; a failure leaves the pill out rather than showing a zero
@@ -132,7 +135,7 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
     <>
       {/* ------------------------------------------------------- top bar --- */}
       <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 5 }}>
-        <span className="gl-wordmark">goodloop</span>
+        <span className="gl-brand"><BrandLogo variant={variant} /></span>
 
         <div style={{ flex: '0 1 560px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>
@@ -229,14 +232,12 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
               key={c.id}
               role="tab"
               type="button"
+              className="glass-btn"
               aria-selected={on}
               onClick={() => setTheme(c.id as SelfUseTheme | 'all')}
               style={{
-                height: 42, padding: '0 18px', borderRadius: 999, cursor: 'pointer',
+                height: 42, padding: '0 18px', borderRadius: 999,
                 fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
-                border: '1px solid var(--line)', WebkitBackdropFilter: 'blur(14px)', backdropFilter: 'blur(14px)',
-                background: on ? 'var(--act-bg)' : 'var(--btn)', color: on ? 'var(--act-fg)' : 'var(--ink)',
-                transition: 'background-color 1.5s ease, color 1.5s ease',
               }}
             >
               {t(c.label)}

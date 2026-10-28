@@ -3,14 +3,22 @@
 
    Ported from the <nav> of HomeMood.dc.html — 64px wide, 52px circles, icon
    only, the label carried by `aria-label` rather than printed. The mark at
-   the top is the official goodloop symbol on the brand green.
+   the top is the official goodloop symbol (`components/Brand`), in the
+   colourway the ground asks for: green on a light ground, cream on a dark
+   one. Not redrawn here — the brand files are the only logo there is.
 
    Six destinations. "Percurso" is the new one: the protocols a therapist
    parameterised for this person, which used to be buried inside Terapia.
+
+   `.gl-root` is the scroller (shell.css, "scrolling"): the document stays
+   locked as it always was, and a change of destination puts the column
+   back at its top.
    ============================================================================ */
 
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { BrandIcon } from '../components/Brand'
+import { useMoodSet } from '../mood/MoodProvider'
 
 export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'benefits' | 'profile'
 
@@ -81,25 +89,9 @@ function Glyph({ dest }: { dest: Dest }) {
   )
 }
 
-/** The official mark, from the brand identity. Not the app's generic icon. */
-export function Logomark({ size = 30 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 19.5c-3.2-2-5.2-4.2-5.2-6.6a2.6 2.6 0 0 1 5.2-.6 2.6 2.6 0 0 1 5.2.6c0 2.4-2 4.6-5.2 6.6z" />
-      <circle cx="12" cy="8.2" r="1.7" />
-    </svg>
-  )
+/** The brand colourway for whatever ground the mood has set. */
+export function useBrandVariant(): 'green' | 'cream' {
+  return useMoodSet() === 'dark' ? 'cream' : 'green'
 }
 
 export function Shell({
@@ -118,21 +110,29 @@ export function Shell({
   children: ReactNode
 }) {
   const { t } = useI18n()
+  const variant = useBrandVariant()
+  const root = useRef<HTMLDivElement>(null)
 
   return (
-    <div className={`gl-root${surface === 'deep' ? ' gl-root--deep' : ''}`}>
+    <div ref={root} className={`gl-root${surface === 'deep' ? ' gl-root--deep' : ''}`}>
       <nav className="gl-nav" aria-label={t('Main navigation')}>
-        <span className="gl-nav__logo" aria-hidden="true">
-          <Logomark />
+        <span className="gl-nav__logo glass" aria-hidden="true">
+          <BrandIcon variant={variant} />
         </span>
         {dests.map((d) => (
           <button
             key={d}
             type="button"
-            className={`gl-nav__btn${d === dest ? ' is-on' : ''}`}
+            className={`gl-nav__btn glass-btn${d === dest ? ' is-on' : ''}`}
             aria-label={t(LABELS[d])}
             aria-current={d === dest ? 'page' : undefined}
-            onClick={() => onDest(d)}
+            onClick={() => {
+              /* A new screen, or the same one tapped again, starts at its
+                 top — the column is the scroller, so the window does not
+                 know about it. */
+              root.current?.scrollTo({ top: 0 })
+              onDest(d)
+            }}
           >
             <Glyph dest={d} />
           </button>

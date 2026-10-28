@@ -41,7 +41,7 @@ import {
   type WeeklySlot,
 } from '../data/scheduling'
 import {
-  seedLink,
+  linkFromServer,
   profileFor,
   type TherapistProfile,
   type TherapyState,
@@ -60,6 +60,7 @@ import {
 import { INSTRUMENTS } from '../data/assessments'
 import { useBackLayer } from './backStack'
 import { Therapy } from '../ui2/Therapy'
+import { TopBar, PageTitle } from '../ui2/TopBar'
 
 interface TherapistTabProps {
   /** First name, when the account gives one — the top bar prints it. */
@@ -176,7 +177,13 @@ export function TherapistTab(props: TherapistTabProps) {
         onBack={() => (view.step === 1 ? setView({ kind: 'code' }) : setView({ kind: 'onb', step: (view.step - 1) as 1 | 2, therapist: view.therapist }))}
         onStep={(s) => setView({ kind: 'onb', step: s, therapist: view.therapist })}
         onFinish={(intake) => {
-          update(() => ({ request: null, link: { ...seedLink(view.therapist), intake } }))
+          /* The link as the server knows it: the professional and when it
+             started. `seedLink` used to go here and furnished a brand-new
+             link with three sessions, two goals, clinical scores, VAS points
+             and a session "next Thursday" nobody had booked — demo furniture
+             a real person would have read as their record. The arrays start
+             empty and fill from where the data lives. */
+          update(() => ({ request: null, link: { ...linkFromServer(view.therapist, Date.now()), intake } }))
           /* Nothing is sent on the platform's initiative. A questionnaire the
              app used to send "at T0" the moment a link was made was a
              clinical instrument administered by the software, not by the
@@ -205,17 +212,20 @@ export function TherapistTab(props: TherapistTabProps) {
      here. The link is the fact that matters, so it is checked first. */
   if (!props.hasConvention && !therapy.link) {
     return (
-      <div className="su-page thr-info">
-        <h1 className="display su-h1">{t('Therapy')}</h1>
-        <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
-        <h2 className="thr-info__h">{t('Professional support')}</h2>
-        <p className="lead">
-          {t("Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.")}
-        </p>
-        <p className="lead">{t('In the meantime, your Self Use sessions are always here for you.')}</p>
-        <button className="btn btn--primary" onClick={props.onGoSelfUse}>{t('Go to Self Use')}</button>
-        <p className="small muted">{t('Questions? Contact your HR team or our support.')}</p>
-      </div>
+      <>
+        <TopBar name={props.name} />
+        <PageTitle title={t('Therapy')} />
+        <div className="su-page thr-info thr2-info">
+          <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
+          <h2 className="thr-info__h">{t('Professional support')}</h2>
+          <p className="lead">
+            {t("Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.")}
+          </p>
+          <p className="lead">{t('In the meantime, your Self Use sessions are always here for you.')}</p>
+          <button className="btn btn--primary" onClick={props.onGoSelfUse}>{t('Go to Self Use')}</button>
+          <p className="small muted">{t('Questions? Contact your HR team or our support.')}</p>
+        </div>
+      </>
     )
   }
 
@@ -225,8 +235,10 @@ export function TherapistTab(props: TherapistTabProps) {
        until then this stays a pending request. */
     const r = therapy.request
     return (
-      <div className="su-page thr-form">
-        <h1 className="display su-h1">{t('Therapy')}</h1>
+      <>
+        <TopBar name={props.name} />
+        <PageTitle title={t('Therapy')} />
+        <div className="su-page thr-form thr2-form">
         <article className="card thr-pending">
           <span className="badge">{t('Request pending')}</span>
           <div className="thr-card__id">
@@ -253,23 +265,27 @@ export function TherapistTab(props: TherapistTabProps) {
           </button>
         </article>
         <p className="small muted">{t("You'll receive a notification when your therapist confirms.")}</p>
-      </div>
+        </div>
+      </>
     )
   }
 
   /* --------------------------------------------------------- State A ----- */
   if (!therapy.link) {
     return (
-      <div className="su-page thr-info">
-        <h1 className="display su-h1">{t('Therapy')}</h1>
-        <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
-        <h2 className="thr-info__h">{t('Professional support, when you need it')}</h2>
-        <p className="lead">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>
-        <button className="btn btn--primary" onClick={() => setView({ kind: 'list' })}>{t('Find a therapist')}</button>
-        <div className="ob-or"><span>{t('or')}</span></div>
-        <p className="small muted">{t('Have a connection code?')}</p>
-        <button className="btn btn--ghost" onClick={() => setView({ kind: 'code' })}>{t('Enter code')}</button>
-      </div>
+      <>
+        <TopBar name={props.name} />
+        <PageTitle title={t('Therapy')} note={t('Confidential: your company does not see your sessions or what you talk about.')} />
+        <div className="su-page thr-info thr2-info">
+          <div className="thr-art" aria-hidden="true"><span className="ob-art__glow" /></div>
+          <h2 className="thr-info__h">{t('Professional support, when you need it')}</h2>
+          <p className="lead">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>
+          <button className="btn btn--primary" onClick={() => setView({ kind: 'list' })}>{t('Find a therapist')}</button>
+          <div className="ob-or"><span>{t('or')}</span></div>
+          <p className="small muted">{t('Have a connection code?')}</p>
+          <button className="btn btn--ghost" onClick={() => setView({ kind: 'code' })}>{t('Enter code')}</button>
+        </div>
+      </>
     )
   }
 
