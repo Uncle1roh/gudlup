@@ -252,6 +252,7 @@ const ROWS: Row[] = [
   ['Session #{n}', 'Sessione n. {n}', 'Sessão nº {n}'],
   ["Today's goal", 'Obiettivo di oggi', 'Objetivo de hoje'],
   ['e.g. Continue exposure work', 'es. Proseguire il lavoro di esposizione', 'ex.: Continuar o trabalho de exposição'],
+  ['Sessions today: {n}', 'Sedute oggi: {n}', 'Sessões hoje: {n}'],
   ['Last session', 'Ultima sessione', 'Última sessão'],
   ['Active goals', 'Obiettivi attivi', 'Objetivos ativos'],
   ['None set.', 'Nessuno impostato.', 'Nenhum definido.'],

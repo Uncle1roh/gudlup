@@ -1,0 +1,217 @@
+/* ============================================================================
+   The therapist's console, on the system's surface
+   (TerapeutaAgenda.dc.html, TerapeutaSessao.dc.html)
+
+   `workspace.css` is 921 lines written against a clean set of tokens —
+   `--w-bg`, `--w-surface`, `--w-ink`, `--w-line` and the rest. So this sheet
+   re-points those nine names and the whole console follows: tables, cards,
+   the live-session panel, all of it. That is a token re-point of a design
+   system that already exists, not a layout standing in for a port; the two
+   layouts the brief names are ported in the components themselves.
+
+   One deliberate difference from the mockups: the sidebar keeps its labels.
+   The mockup draws a 64px icon rail, and the person's app has one — but the
+   console's six destinations include "Patient progress" and "Reports", two
+   things no icon distinguishes, and the first line of workspace.css says
+   this screen is read between patients and is not styled to be admired.
+   The rail is narrowed and dressed in the system; it is not made mute.
+   ============================================================================ */
+
+.w-app {
+  --w-bg: transparent;
+  --w-surface: rgba(10, 32, 27, 0.46);
+  --w-side: rgba(6, 20, 15, 0.55);
+  --w-ink: #faf8df;
+  --w-muted: rgba(250, 248, 223, 0.78);
+  --w-line: rgba(250, 248, 223, 0.14);
+  --w-accent: #3db189;
+  --w-warn: #f2c29a;
+  --w-danger: #e89d64;
+  --w-ok: #7ac69b;
+
+  background-color: #06140f;
+  background-image:
+    linear-gradient(rgba(4, 16, 13, 0.35), rgba(4, 16, 13, 0.55)),
+    url('/ui/bg-colinas.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.w-app .w-h1,
+.w-app .w-h2,
+.w-app .w-h3,
+.w-app .w-brand { font-family: 'Outfit', system-ui, sans-serif; }
+
+/* Every panel is glass over the photograph rather than a white card. */
+.w-app .w-card,
+.w-app .w-panel,
+.w-app .w-table,
+.w-app .w-sidebar,
+.w-app .w-topbar {
+  background: var(--w-surface);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--w-line);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  color: var(--w-ink);
+}
+
+.w-app .w-card,
+.w-app .w-panel { border-radius: 28px; }
+.w-app .w-table { border-radius: 22px; overflow: hidden; }
+
+.w-app .w-sidebar {
+  width: 196px;
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  box-shadow: none;
+  background: var(--w-side);
+}
+
+.w-app .w-topbar { border-radius: 0; border-top: 0; border-left: 0; border-right: 0; box-shadow: none; }
+
+/* Controls: round, like everywhere else in the system. */
+.w-app .w-btn,
+.w-app button.w-btn {
+  border-radius: 999px;
+  border: 1px solid var(--w-line);
+  background: rgba(250, 248, 223, 0.08);
+  color: var(--w-ink);
+}
+
+.w-app .w-btn--primary {
+  background: #faf8df;
+  color: #0b2620;
+  border-color: transparent;
+}
+
+.w-app .w-btn--danger { background: #e89d64; color: #2a1608; border-color: transparent; }
+.w-app .w-input, .w-app .w-select, .w-app .w-textarea {
+  border-radius: 14px;
+  background: rgba(250, 248, 223, 0.06);
+  border: 1px solid var(--w-line);
+  color: var(--w-ink);
+}
+
+.w-app .w-input::placeholder, .w-app .w-textarea::placeholder { color: var(--w-muted); }
+.w-app .w-chip, .w-app .w-pill, .w-app .w-badge { border-radius: 999px; }
+
+/* ------------------------------------------------------- the live room ---
+   The call is full-bleed and sits outside `.w-app`, so it takes the ground
+   and the panel on its own. */
+
+.w-call {
+  background-color: #06140f;
+  background-image:
+    linear-gradient(rgba(4, 16, 13, 0.55), rgba(4, 16, 13, 0.7)),
+    url('/ui/bg-colinas.jpg');
+  background-size: cover;
+  background-position: center;
+  color: #faf8df;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.w-call .w-h1, .w-call .w-h2, .w-call .w-h3 { font-family: 'Outfit', system-ui, sans-serif; }
+
+.w-call__top,
+.w-call__panel,
+.w-call__side,
+.w-call__waitmain,
+.w-call__room {
+  background: rgba(10, 32, 27, 0.46);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(250, 248, 223, 0.14);
+  color: #faf8df;
+}
+
+.w-call__panel, .w-call__side, .w-call__waitmain, .w-call__room { border-radius: 28px; }
+.w-call__top { border-radius: 0; border-left: 0; border-right: 0; border-top: 0; }
+
+.w-call .w-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(250, 248, 223, 0.2);
+  background: rgba(250, 248, 223, 0.08);
+  color: #faf8df;
+}
+
+.w-call .w-btn--primary { background: #faf8df; color: #0b2620; border-color: transparent; }
+.w-call .w-input, .w-call .w-textarea, .w-call .w-select {
+  border-radius: 14px;
+  background: rgba(250, 248, 223, 0.06);
+  border: 1px solid rgba(250, 248, 223, 0.18);
+  color: #faf8df;
+}
+
+.w-call .w-input::placeholder, .w-call .w-textarea::placeholder { color: rgba(250, 248, 223, 0.6); }
+
+/* Round, like the person's side of the same call. */
+.w-call .w-callbtn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(250, 248, 223, 0.2);
+  background: rgba(250, 248, 223, 0.08);
+  color: #faf8df;
+}
+
+.w-call .w-callbtn--end { background: #e89d64; color: #2a1608; border-color: transparent; }
+
+/* ------------------------------------------------------------- greeting ---
+   "Bom dia, Marina." is a greeting, not a page title — 48px, weight 400, and
+   the count of today's sessions beside it in the quieter ink. */
+
+.w-hello {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 4px 0 18px;
+}
+
+.w-hello__line {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.w-hello__count { font-size: 48px; font-family: 'Outfit', system-ui, sans-serif; font-weight: 400; color: var(--w-muted); }
+
+@media (max-width: 900px) {
+  .w-hello__line, .w-hello__count { font-size: 32px; }
+}
+
+/* ---------------------------------------------------------- phase tabs ---
+   The three parts of a session, named across the top of the live screen, so
+   both sides know where they are. */
+
+.w-phases {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--w-surface);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--w-line);
+}
+
+.w-phases__t {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--w-muted);
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+  cursor: default;
+}
+
+.w-phases__t[aria-current='step'] { background: #faf8df; color: #0b2620; }

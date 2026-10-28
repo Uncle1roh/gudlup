@@ -400,6 +400,20 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
           <strong>{patient.name}</strong>
           <span className="w-small"> — {t('Session #{n}', { n: sessionNumber })}</span>
         </div>
+        {/* The three parts of a session, named across the top so both sides
+            know where they are (TerapeutaSessao). Which one is current is
+            read off the treatment's own state — it is not a control. */}
+        <div className="w-phases" role="list" aria-label={t('How the session goes')}>
+          <span className="w-phases__t" role="listitem" aria-current={gl.stage === 'idle' || gl.stage === 'wizard' || gl.stage === 'check' ? 'step' : undefined}>
+            1 · {t('Welcome')}
+          </span>
+          <span className="w-phases__t" role="listitem" aria-current={gl.stage === 'running' ? 'step' : undefined}>
+            2 · {t('Treatment')}
+          </span>
+          <span className="w-phases__t" role="listitem" aria-current={gl.stage === 'ended' ? 'step' : undefined}>
+            3 · {t('Final conversation')}
+          </span>
+        </div>
         <span className="w-call__timer">{fmtClock(elapsed)}</span>
         <div className="w-call__topright">
           {/* On every screen, the full-screen call included (CRS-01). */}

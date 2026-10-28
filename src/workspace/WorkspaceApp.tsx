@@ -37,6 +37,13 @@ import { Calendar, AvailabilityModal } from './Calendar'
 import { LiveSession, type SessionResult } from './LiveSession'
 import { SessionReport } from './Report'
 import { Prescriptions, ReportsArchive,  WorkspaceSettings } from './Tools'
+import { greeting } from '../selfuse/greeting'
+
+/** The name a greeting uses: no title, first word only. */
+function firstName(full: string): string {
+  return full.replace(/^(Dra?|Dr|Prof)\.?\s+/i, '').split(/\s+/)[0] ?? full
+}
+
 import {
   useServerIdentity,
   demoWorkspace,
@@ -47,26 +54,46 @@ import {
 
 type Nav = 'patients' | 'calendar' | 'prescriptions' | 'reports' | 'sandbox' | 'settings'
 
-const GROUPS: { title: string; items: { id: Nav; icon: string; label: string }[] }[] = [
+/* The console used emoji for its six destinations. On the system's surface
+   they read as somebody else's artwork, so each is the line glyph the rest
+   of the app draws — same stroke, same weight. */
+const NAV_PATHS: Record<Nav, string> = {
+  patients: 'M9 8a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 21a7 7 0 0 1 14 0M17 8.5a3 3 0 1 0 0-6M18 21a6.5 6.5 0 0 0-3-5.5',
+  calendar: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4',
+  prescriptions: 'M4 19V5M4 19h16M7 16l4-5 3 3 5-7',
+  reports: 'M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 17h6',
+  sandbox: 'M7 4l13 8-13 8z',
+  settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.5H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z',
+}
+
+function NavGlyph({ id }: { id: Nav }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={NAV_PATHS[id]} />
+    </svg>
+  )
+}
+
+const GROUPS: { title: string; items: { id: Nav; label: string }[] }[] = [
   {
     title: 'Daily',
     items: [
-      { id: 'patients', icon: '👥', label: 'Patients' },
-      { id: 'calendar', icon: '📅', label: 'Calendar' },
+      { id: 'patients', label: 'Patients' },
+      { id: 'calendar', label: 'Calendar' },
     ],
   },
   {
     title: 'Weekly',
     items: [
-      { id: 'prescriptions', icon: '📈', label: 'Patient progress' },
-      { id: 'reports', icon: '📄', label: 'Reports' },
+      { id: 'prescriptions', label: 'Patient progress' },
+      { id: 'reports', label: 'Reports' },
     ],
   },
   {
     title: 'Utility',
     items: [
-      { id: 'sandbox', icon: '▶️', label: 'Sandbox' },
-      { id: 'settings', icon: '⚙️', label: 'Settings' },
+      { id: 'sandbox', label: 'Sandbox' },
+      { id: 'settings', label: 'Settings' },
     ],
   },
 ]
@@ -245,6 +272,13 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
     update((s) => applyAppointments(s, appointments))
   }, [appointments, update])
   const bookings = useMemo(() => pendingBookings(state, appointments), [state, appointments])
+  /* How many sessions fall on today, by the therapist's own clock. Counted
+     from the same field the roster's "next session" column prints, so the
+     greeting and the table can never disagree. */
+  const todayCount = useMemo(() => {
+    const today = new Date().toDateString()
+    return state.patients.filter((p) => p.nextSessionAt != null && new Date(p.nextSessionAt).toDateString() === today).length
+  }, [state.patients])
 
   const acceptBooking = useCallback(
     (b: Appointment) => {
@@ -440,6 +474,15 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
         />
 
         <main className="w-main">
+          {/* TerapeutaAgenda opens on a greeting, not on a page title: the
+              name, then how many sessions there are today, in the quieter
+              ink. Both are what the console already knows. */}
+          {view.kind === 'nav' && nav === 'patients' && (
+            <div className="w-hello">
+              <h1 className="w-hello__line">{t(greeting())}, {firstName(state.account.fullName)}.</h1>
+              <span className="w-hello__count">{t('Sessions today: {n}', { n: todayCount })}</span>
+            </div>
+          )}
           {view.kind === 'patient' && patient ? (
             <>
               <button className="w-link w-back" onClick={() => setView({ kind: 'nav' })}>‹ {t('Patients')}</button>
@@ -569,7 +612,7 @@ function Sidebar({
               : null
             return (
               <button key={i.id} className={`w-navitem${nav === i.id ? ' is-on' : ''}`} onClick={() => setNav(i.id)}>
-                <span className="w-navitem__icon" aria-hidden="true">{i.icon}</span>
+                <span className="w-navitem__icon" aria-hidden="true"><NavGlyph id={i.id} /></span>
                 <span className="w-navitem__label">{t(i.label)}</span>
                 {badge && <span className={`w-navitem__badge${badge === '·' ? ' is-dot' : ''}`}>{badge === '·' ? '' : badge}</span>}
               </button>

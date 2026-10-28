@@ -14,6 +14,8 @@ import './ui2/shell.css'
 import './ui2/call.css'
 import './corporate.css'
 import './workspace.css'
+// the therapist's console on the same surface (docs/ui-redesign)
+import './ui2/workspace2.css'
 // legal surfaces: Help now, the legal page, in-context notices (src/legal)
 import './legal/legal.css'
 
