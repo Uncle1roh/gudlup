@@ -102,7 +102,7 @@ export function Journey({ pathway, therapy, glDue, onGlCheck, onStart }: {
           </article>
         )}
 
-        <article className="glass call2-pane">
+        <article className={`glass call2-pane${vas.length > 1 ? '' : ' s2'}`}>
           <h2 className="call2-pane__h">{t('Weekly check-in')}</h2>
           <p className="call2-note">
             {t('Your check-in and your mood calendar appear here once you start filling them in.')}

@@ -40,7 +40,6 @@ import {
   type TherapistListing,
   type WeeklySlot,
 } from '../data/scheduling'
-import { useCatalog } from '../data/liveCatalog'
 import {
   seedLink,
   profileFor,
@@ -87,7 +86,6 @@ type View =
 export function TherapistTab(props: TherapistTabProps) {
   const { t, d } = useI18n()
   const dp = useDataProvider()
-  const catalog = useCatalog()
   const [view, setView] = useState<View>({ kind: 'root' })
   /* The same answers the on-screen ‹ Back gives on each view: a profile goes
      back to the list it was opened from, an onboarding step to the step before
@@ -345,27 +343,6 @@ export function TherapistTab(props: TherapistTabProps) {
               </div>
 
               <div className="thr-col">
-            <h3 className="home__sect">{t('Session history')}</h3>
-            {/* A heading with nothing under it reads as a failure. It is not: there
-                has simply been no session yet. */}
-            {!link.sessions.length && <p className="thr-empty">{t('Your sessions together will be listed here.')}</p>}
-            <ul className="chron">
-              {link.sessions.map((s) => {
-                const name = s.slug ? catalog.sessions.find((x) => x.slug === s.slug)?.name : undefined
-                return (
-                  <li key={s.id} className="chron__row">
-                    <span>{d(s.at)}</span>
-                    <span>{name ? t(name) : t('Video session')}</span>
-                    <span className="small muted">{s.minutes}m</span>
-                    {/* This column was labelled "Done", which read as "you attended".
-                        It is the notes-sharing flag: whether your therapist wrote up
-                        the session for you to see. Two different facts. */}
-                    <span className="small muted">{s.notesShared ? t('Notes shared') : ''}</span>
-                  </li>
-                )
-              })}
-            </ul>
-
             <h3 className="home__sect">{t('Goals')}</h3>
             {!link.goals.length && <p className="thr-empty">{t('Goals you agree on with your therapist appear here.')}</p>}
             <ul className="goals">

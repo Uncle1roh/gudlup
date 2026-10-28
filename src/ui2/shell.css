@@ -55,6 +55,32 @@ html.gl2 body {
   transition: background-color 1.5s ease;
 }
 
+/* ------------------------------------------------------------- scrolling ---
+   The old surface scrolled INSIDE `.app-frame`, so `selfuse-studio.css`
+   locked the document: `body:has(.su-studio) { overflow: hidden }`, and
+   `.su-shell` was pinned to exactly 100dvh. The redesigned screens are long
+   — a library of rails, four panels of a journey — and they are not that
+   frame, so everything past the first viewport was simply cut off.
+
+   Here the page scrolls the way a page does. The tab bar is fixed, so it
+   stays; nothing else needs to. */
+
+html.gl2 body,
+html.gl2 body:has(.su-studio) {
+  overflow-x: hidden;
+  overflow-y: visible;
+  height: auto;
+  min-height: 100%;
+}
+
+html.gl2 .su-shell {
+  height: auto;
+  min-height: 100dvh;
+}
+
+html.gl2 .pvw-shell .su-shell { height: auto; min-height: calc(100dvh - var(--pvw-h, 44px)); }
+html.gl2 .pvw-shell { height: auto; }
+
 /* `.su-shell` is the wrapper that carries the Help now strip above every
    screen (legal.css). It paints itself dark and centres its children, which
    would leave the redesigned surface as a column in a black room. Under the
@@ -102,6 +128,14 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
   --line: var(--mood-line, rgba(31, 43, 42, 0.16));
   --act-bg: var(--mood-act-bg, #1f2b2a);
   --act-fg: var(--mood-act-fg, #faf8df);
+  /* A rule between rows, and the fill of a box inside a card. Both follow
+     the token set rather than being two more colours to keep in step. */
+  --hair: var(--line);
+  --inset: var(--btn);
+  /* Three accents the screens name by hand. They used to be the dark set's
+     own hexes, which vanished the moment the ground went light. */
+  --warn: #9a5a22;
+  --ok: #0f6b47;
 
   background-color: var(--mood-bg, #beb6a9);
   color: var(--ink);
@@ -116,57 +150,44 @@ html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55;
 
 .gl-root a { color: var(--link); }
 
+html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; }
+
 /* ------------------------------------------------------- the deep room ---
-   Only the library takes the colour of the mood. Every other mockup — the
-   therapy screens, the journey, the benefits, the profile — stands on the
-   same photograph under a dark wash, with a fixed cream-on-green token set.
-   That is what the files say, and it reads as a deliberate separation: the
-   library is where you browse, this is a room you go into.
+   There used to be two grounds here: the mood colour on the library and the
+   lake photograph everywhere else, because that is what the mockup files
+   draw. Lucas: it should all be the mood colour. So `--deep` no longer
+   carries a surface of its own — it is kept only as the hook the screens
+   already name, and the colour of the day runs under every one of them.
 
-   Flipping it back to the mood colour is removing this one block. */
+   `--dim` stays, and is now a veil rather than a different photograph: the
+   treatment asks you to close your eyes, and the room goes down with you. */
 
-.gl-root--deep {
-  --ink: #faf8df;
-  --ink-2: rgba(250, 248, 223, 0.85);
-  --link: #b7dbad;
-  --glass: rgba(10, 30, 30, 0.5);
-  --btn: rgba(250, 248, 223, 0.08);
-  --line: rgba(250, 248, 223, 0.2);
-  --act-bg: #faf8df;
-  --act-fg: #0b2620;
-  --hair: rgba(250, 248, 223, 0.08);
-  --inset: rgba(250, 248, 223, 0.06);
-
-  background-color: #0b1c1c;
-  background-image:
-    linear-gradient(180deg, rgba(6, 22, 20, 0.62) 0%, rgba(6, 22, 20, 0.45) 45%, rgba(6, 22, 20, 0.62) 100%),
-    url('/ui/bg-lago.jpg');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  color: var(--ink);
+.gl-root--dim::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 10, 10, 0.72);
+  pointer-events: none;
 }
 
-html.gl2:has(.gl-root--deep),
-html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
+.gl-root--dim > * { position: relative; }
 
-.gl-root--deep .glass { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22); }
-.gl-root--deep .glass-btn:hover { background: rgba(250, 248, 223, 0.16); }
+/* The mockups' own grid helpers.
 
-/* Darker still, for the minutes with the eyes closed. */
-.gl-root--dim {
-  background-image:
-    linear-gradient(180deg, rgba(3, 10, 10, 0.82), rgba(3, 10, 10, 0.9)),
-    url('/ui/bg-lago.jpg');
-}
+   `align-items: start` is the one addition: stretched to the tallest card in
+   the row, a short card became a void with its button pushed to the floor.
+   Each one is now its own height.
 
-/* The mockups' own grid helpers, copied. */
-.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-.g4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+   `.g4` is a wrapping row rather than four fixed tracks, because a pillar
+   with two benefits in a four-column grid left half the row empty. */
+.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.g4 { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
+.g4 > * { flex: 1 1 260px; max-width: 420px; min-width: 0; }
 .s2 { grid-column: span 2; }
 
 @media (max-width: 900px) {
-  .g3, .g4 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .g4 > * { flex: 1 1 100%; max-width: none; }
   .s2 { grid-column: auto; }
 }
 
@@ -338,6 +359,95 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
 /* A search input draws its own clear button in a colour we do not control. */
 .gl-search::-webkit-search-cancel-button { filter: invert(var(--mood-invert, 0)); }
 
+/* ------------------------------------------------- the leftover blocks ---
+   The summary's bento was laid out only under `.su-studio`, which this
+   surface does not carry — so every block fell to full width and its button
+   stretched across 1280px. The same twelve-column arrangement, here. */
+
+.gl-root .prog-bento { display: flex; flex-direction: column; gap: 20px; }
+
+@media (min-width: 1100px) {
+  .gl-root .prog-bento {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
+  .gl-root .prog-b8 { grid-column: span 8; }
+  .gl-root .prog-b4 { grid-column: span 4; }
+  .gl-root .prog-b6 { grid-column: span 6; }
+  .gl-root .prog-b8:not(:has(+ .prog-b4)),
+  .gl-root .prog-b6:not(.prog-col):not(:has(+ .prog-col)) { grid-column: 1 / -1; }
+  .gl-root .prog-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+}
+
+@media (max-width: 1099px) { .gl-root .prog-desk { display: none; } }
+
+/* These blocks were written for a narrow column: their children sat flush
+   against each other because the column itself did the spacing. Here they
+   get their own rhythm. */
+.gl-root .card,
+.gl-root .gam-care,
+.gl-root .empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.gl-root .card > *,
+.gl-root .gam-care > * { margin: 0; }
+
+.gl-root .gam-milestone,
+.gl-root .gam-challenge {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+  text-align: left;
+}
+
+/* The notice and its link belong together, not at opposite ends of 1280px. */
+.gl-root .legal-line,
+.gl-root .legal-note { justify-content: flex-start; flex-wrap: wrap; }
+.gl-root .legal-note { justify-content: space-between; }
+.gl-root .legal-line--foot { justify-content: center; }
+
+/* "Me ajude a escolher" was a circle in the thumb's corner on a phone and a
+   labelled button on a desk. Here it is a button at the foot of the
+   library, where the eye lands after the last shelf. */
+.gl-root .cat-rail__help {
+  position: static;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--btn);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+/* A button in one of these blocks is an action, not a banner. */
+.gl-root .card > .btn,
+.gl-root .gam-care > .btn,
+.gl-root .tabview > .btn--quiet,
+.gl-root .tabview > .btn,
+.gl-root .thr-extra .btn {
+  align-self: flex-start;
+  width: auto;
+  min-width: 200px;
+  padding: 0 22px;
+}
+
+/* An empty list is not a bar of nothing. */
+.gl-root .chron:empty,
+.gl-root .goals:empty { display: none; }
+
 /* ----------------------------------------------- what the mockup omits ---
    Two things stand on this screen that are not in any mockup and are not
    ours to drop: the library notice (MN-25 / CAT-1 / CAT-2) and the company
@@ -502,36 +612,8 @@ html.gl2:has(.gl-root--deep) body { background: #0b1c1c; }
   .gl-main,
   .gl-root .tabview { width: 100%; max-width: 100%; min-width: 0; }
 
-  /* The phone is its own design, not the desk squeezed (brief §3.4). Every
-     screen stands on the hills under the same dark wash — including the
-     library, whose colour of the day lives in the chip and the faces rather
-     than in the ground, because a photograph is what the mobile mockups
-     draw and a phone screen held at arm's length needs the contrast. */
-  .gl-root,
-  .gl-root--deep {
-    --ink: #faf8df;
-    --ink-2: rgba(250, 248, 223, 0.85);
-    --link: #b7dbad;
-    --glass: rgba(10, 32, 27, 0.44);
-    --btn: rgba(250, 248, 223, 0.08);
-    --line: rgba(250, 248, 223, 0.2);
-    --act-bg: #faf8df;
-    --act-fg: #0b2620;
-    --hair: rgba(250, 248, 223, 0.1);
-    --inset: rgba(250, 248, 223, 0.06);
-
-    background-color: #06140f;
-    background-image:
-      linear-gradient(rgba(4, 16, 13, 0.25), rgba(4, 16, 13, 0.55)),
-      url('/ui/bg-colinas.jpg');
-    background-size: cover;
-    background-position: 62% center;
-    background-attachment: scroll;
-    color: var(--ink);
-  }
-
-  html.gl2,
-  html.gl2 body { background: #06140f; }
+  /* The phone is its own design, not the desk squeezed (brief §3.4) — but
+     the ground is the same colour of the day as the desk's. */
 
   /* The chip's disc is the only place the mood colour is drawn here, so it
      grows: it is the whole readout. */

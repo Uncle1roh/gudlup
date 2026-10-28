@@ -372,7 +372,7 @@ export function PatientVideoCall({ therapist, startsAt, roomId, appointmentId, d
           </article>
 
           <article className="glass call2-pane">
-            <span style={{ fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', color: '#F2C29A' }}>
+            <span style={{ fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--warn)' }}>
               {t('Next')}
             </span>
             <p className="call2-note" style={{ color: 'var(--ink)' }}>

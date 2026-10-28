@@ -179,8 +179,8 @@
 .call2-pane__h { margin: 0; font-family: 'Outfit', system-ui, sans-serif; font-weight: 500; font-size: 20px; }
 .call2-pill { height: 38px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
 .call2-note { margin: 0; font-size: 14px; color: var(--ink-2); }
-.call2-ok { margin: 0; font-size: 13px; color: #7ac69b; }
-.call2-warn { margin: 0; font-size: 13px; color: #f2c29a; }
+.call2-ok { margin: 0; font-size: 13px; color: var(--ok); }
+.call2-warn { margin: 0; font-size: 13px; color: var(--warn); }
 
 .call2-ears { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -292,7 +292,7 @@
 .path2-bar { height: 4px; border-radius: 999px; background: rgba(250, 248, 223, 0.18); overflow: hidden; }
 .path2-bar span { display: block; height: 100%; background: #3db189; }
 .path2-count { font-size: 12px; color: var(--ink-2); }
-.path2-off { font-size: 12px; color: #f2c29a; }
+.path2-off { font-size: 12px; color: var(--warn); }
 
 /* -------------------------------------------------------- minha jornada ---
    The ring, the weeks in two columns, and the two lines. */
@@ -370,6 +370,14 @@
    comes back to you — never a shop (SPEC §6.5). */
 
 .bn2-card { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+
+/* The challenge card is the app's own component. Inside the top row it
+   needs the same box as its two neighbours, not its own centring. */
+.gl-root .g3 > .gam-challenge {
+  align-items: flex-start;
+  padding: 22px;
+  border-radius: 28px;
+}
 .bn2-eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
 
 .bn2-balance {
@@ -494,7 +502,7 @@
 
 .pf2-rows li:last-child .pf2-row { border-bottom: 0; }
 
-.pf2-rows--wide { gap: 10px; }
+.pf2-rows--wide { gap: 10px; max-width: 760px; }
 
 .pf2-rows--wide .pf2-row {
   border-radius: 18px;

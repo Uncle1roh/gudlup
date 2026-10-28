@@ -98,7 +98,7 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <span
           aria-hidden="true"
-          style={{ width: 60, height: 60, flex: 'none', borderRadius: '50%', background: '#7AC69B', color: '#06140f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit, sans-serif', fontSize: 20 }}
+          style={{ width: 60, height: 60, flex: 'none', borderRadius: '50%', background: 'var(--ok)', color: 'var(--act-fg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit, sans-serif', fontSize: 20 }}
         >
           {initialsOf(link.therapist.name)}
         </span>
@@ -116,7 +116,7 @@ function NextSession({ link, appointment, joinable, consentGate, onReadConsent, 
       </div>
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)' }}>
-        <span aria-hidden="true" style={{ color: '#F2C29A', display: 'flex' }}>
+        <span aria-hidden="true" style={{ color: 'var(--warn)', display: 'flex' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
             <rect x="3" y="14" width="4" height="6" rx="1.5" />
@@ -305,7 +305,7 @@ function Booking({ link, onBooked }: { link: TherapyLink; onBooked(): void }) {
       {/* One professional, named — not a choice of three. Changing who you
           see is a decision of its own, and it has its own door below. */}
       <div style={{ borderRadius: 18, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--inset)', border: '1px solid var(--act-bg)' }}>
-        <span aria-hidden="true" style={{ width: 40, height: 40, flex: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit, sans-serif', background: '#7AC69B', color: '#06140f' }}>
+        <span aria-hidden="true" style={{ width: 40, height: 40, flex: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Outfit, sans-serif', background: 'var(--ok)', color: 'var(--act-fg)' }}>
           {initialsOf(link.therapist.name)}
         </span>
         <span style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -370,7 +370,7 @@ function Booking({ link, onBooked }: { link: TherapyLink; onBooked(): void }) {
         </>
       )}
 
-      {error && <p style={{ margin: 0, fontSize: 13, color: '#F2C29A' }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: 13, color: 'var(--warn)' }}>{error}</p>}
 
       <div style={{ flex: 1 }} />
 
