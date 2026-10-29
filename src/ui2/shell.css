@@ -93,7 +93,9 @@
    which iOS only pretends to honour — would buy nothing. */
 
 html.gl2 {
-  --gl-ground: url('/media/ground.jpg');
+  /* The ridge. The same photograph the Home prints at its head, so the
+     screen you arrive on and the five you move to are one place. */
+  --gl-ground: url('/media/home-bg-mountains.jpg');
   --gl-ground-pos: 50% 42%;
   /* The colour behind the picture, for the instant before it decodes and for
      any edge it does not reach. Keep it close to the picture's own end. */

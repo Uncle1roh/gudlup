@@ -38,7 +38,7 @@ No topo de `src/ui2/shell.css`, procure `html.gl2 {` — o **claro**:
 
 ```css
 html.gl2 {
-  --gl-ground: url('/media/ground.jpg');
+  --gl-ground: url('/media/home-bg-mountains.jpg');
   --gl-ground-pos: 50% 42%;
   --gl-ground-base: #f5eee4;
   --gl-ground-veil: 0.45;
@@ -65,8 +65,9 @@ véu.
    `public/media/por-do-sol.jpg` vira `url('/media/por-do-sol.jpg')`.
 
 Use JPG para fotografia e PNG só se precisar de transparência. **Reduza antes
-de subir** — o arquivo vai junto em todo carregamento do app. O `ground.jpg`
-atual tem 2000px de largura e 86 KB; o original tinha 3648px e 3,6 MB. Para
+de subir** — o arquivo vai junto em todo carregamento do app. O
+`home-bg-mountains.jpg` atual tem 2400px de largura e 129 KB; o `ground.jpg`,
+que ficou guardado na pasta, tem 2000px e 86 KB. Para
 reduzir um arquivo novo, com o ffmpeg que já está nesta máquina:
 
 ```bash
