@@ -4,7 +4,7 @@ import {
   BRAINWAVE, SOUNDSCAPE_LABEL, LENGTH_MIN,
   type ComposeSettings, type Length, type Soundscape, type Brainwave,
 } from './types'
-import type { ProtocolFamily, Duration } from '../types/domain'
+import { CLINICAL_FAMILIES, type ProtocolFamily, type Duration } from '../types/domain'
 import { buildSeed, renderPreviewBlob } from './engine'
 import { setStudioSeed } from './handoff'
 import { useI18n } from '../i18n'
@@ -18,10 +18,14 @@ export interface ComposeResult {
 const FAMILY_CODE: Record<ProtocolFamily, string> = {
   'GL-ANX': 'GL-ANX 1.1', 'GL-DEP': 'GL-DEP 2.4', 'GL-BURN': 'GL-BURN 3.1',
   'GL-STRESS': 'GL-STRESS 4.1', 'GL-RESIL': 'GL-RESIL 5.1',
-  'GL-LIB': 'GL-LIB respiro',
+  'GL-LIB': 'GL-LIB respiro', 'GL-CALM': 'GL-CALM 1.1', 'GL-FOCUS': 'GL-FOCUS 1.1',
+  'GL-ENER': 'GL-ENER 1.1', 'GL-GROW': 'GL-GROW 1.1', 'GL-VIT': 'GL-VIT 1.1',
+  'GL-INTRO': 'GL-INTRO 1.1',
 }
-// the composer builds CLINICAL beds; library audio is authored in the Studio
-const FAMILIES = (Object.keys(FAMILY_LABEL) as ProtocolFamily[]).filter((f) => f !== 'GL-LIB')
+/* The composer builds CLINICAL beds; self-guided audio is authored in the
+   Studio from its own workbook. The filter used to name GL-LIB by hand, so
+   every self-guided family added after it would have appeared here. */
+const FAMILIES: ProtocolFamily[] = [...CLINICAL_FAMILIES]
 const LENGTHS: Length[] = ['quick', 'standard', 'deep']
 const SOUNDSCAPES: Soundscape[] = ['lake', 'air', 'deep']
 const WAVES: Brainwave[] = ['delta', 'theta', 'alpha', 'smr']

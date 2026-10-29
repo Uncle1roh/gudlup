@@ -542,6 +542,12 @@ export const CLUSTER_LABEL: Record<string, string> = {
   'GL-STRESS': 'Stress',
   'GL-RESIL': 'Resilience',
   'GL-LIB': 'Library',
+  'GL-CALM': 'Calm',
+  'GL-FOCUS': 'Focus',
+  'GL-ENER': 'Energy',
+  'GL-GROW': 'Growth',
+  'GL-VIT': 'Vitality',
+  'GL-INTRO': 'First steps',
 }
 
 /**

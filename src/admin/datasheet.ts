@@ -15,7 +15,7 @@
    ============================================================================ */
 
 import type { WorkBook, WorkSheet } from 'xlsx'
-import type { Duration, ProtocolFamily } from '../types/domain'
+import { PROTOCOL_FAMILIES, type Duration, type ProtocolFamily } from '../types/domain'
 import { echoKeywords, type ProtocolSpec, type SpecAffirmation, type SpecEvent, type SpecVersion, type SpecVoiceLine } from './protocolDoc'
 
 /* SheetJS is ~400 KB minified — loaded on demand the first time a workbook is
@@ -206,7 +206,9 @@ export interface DatasheetParseResult {
 
 /* ------------------------------------------------------------- helpers */
 
-const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
+/* Every family, not only the clinical five: a datasheet naming GL-CALM
+   used to be filed under Anxiety without anybody being told. */
+const FAMILIES: ProtocolFamily[] = PROTOCOL_FAMILIES
 const DURATIONS: Duration[] = [6, 12, 24]
 
 /** Unify unicode so one regex set covers the workbook's typography. */

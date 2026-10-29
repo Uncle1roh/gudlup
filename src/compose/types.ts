@@ -150,7 +150,8 @@ export interface SeedTrack {
   clips: SeedClip[]
 }
 
-/** Labels for the five clinical families, plus the non-clinical library. */
+/** Labels for the five clinical families and the self-guided ones. English
+    keys, run through the translator wherever they are shown. */
 export const FAMILY_LABEL: Record<ProtocolFamily, string> = {
   'GL-ANX': 'Anxiety',
   'GL-DEP': 'Depression',
@@ -158,6 +159,12 @@ export const FAMILY_LABEL: Record<ProtocolFamily, string> = {
   'GL-STRESS': 'Stress',
   'GL-RESIL': 'Resilience',
   'GL-LIB': 'Libreria',
+  'GL-CALM': 'Calm',
+  'GL-FOCUS': 'Focus',
+  'GL-ENER': 'Energy',
+  'GL-GROW': 'Growth',
+  'GL-VIT': 'Vitality',
+  'GL-INTRO': 'First steps',
 }
 
 /** Brainwave target → (carrier, beat) in Hz, with a short rationale label. */
@@ -176,6 +183,12 @@ export const FAMILY_DEFAULT_WAVE: Record<ProtocolFamily, Brainwave> = {
   'GL-STRESS': 'theta',
   'GL-RESIL': 'smr',
   'GL-LIB': 'alpha',
+  'GL-CALM': 'theta',
+  'GL-FOCUS': 'alpha',
+  'GL-ENER': 'smr',
+  'GL-GROW': 'alpha',
+  'GL-VIT': 'smr',
+  'GL-INTRO': 'alpha',
 }
 
 export const SOUNDSCAPE_LABEL: Record<Soundscape, string> = {
@@ -190,4 +203,10 @@ export const FAMILY_AFFIRMATION: Record<ProtocolFamily, string> = {
   'GL-STRESS': 'Este momento é seu. Solte o que pesa.',
   'GL-RESIL': 'Você é mais forte do que imagina.',
   'GL-LIB': 'Questo momento è tuo. Lascia andare quello che pesa.',
+  'GL-CALM': 'Este momento é seu. Respire e solte.',
+  'GL-FOCUS': 'Uma coisa de cada vez. Você está aqui.',
+  'GL-ENER': 'Seu corpo sabe acordar. Dê espaço a ele.',
+  'GL-GROW': 'Cada passo que você dá já é crescimento.',
+  'GL-VIT': 'Cuidar de você também é trabalho seu.',
+  'GL-INTRO': 'Comece devagar. Não há nada para acertar.',
 }

@@ -14,7 +14,7 @@
    can't read becomes a warning, never a crash.
    ============================================================================ */
 
-import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
+import { PROTOCOL_FAMILIES, type Duration, type ProtocolFamily, type SessionPhase } from '../types/domain'
 
 /* ------------------------------------------------------------------ types */
 
@@ -110,7 +110,9 @@ export interface SpecParseResult {
 
 /* ------------------------------------------------------- normalization */
 
-const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
+/* Every family, not only the clinical five: a datasheet naming GL-CALM
+   used to be filed under Anxiety without anybody being told. */
+const FAMILIES: ProtocolFamily[] = PROTOCOL_FAMILIES
 
 /** Unify unicode variants so one set of regexes covers docx, md and PDF text. */
 function normalize(text: string): string {

@@ -11,7 +11,7 @@
    until generated, and tenants 'all' once published.
    ============================================================================ */
 
-import type { Duration, Protocol, ProtocolVersion } from '../types/domain'
+import { LIBRARY_FAMILIES, familyOfCode, isLibraryFamily, type Duration, type Protocol, type ProtocolVersion } from '../types/domain'
 import type { ProtocolSpec } from '../admin/protocolDoc'
 import type { Datasheet } from '../admin/datasheet'
 import type { PlainTimeline, PlainVersion } from '../admin/plainTimeline'
@@ -441,7 +441,7 @@ export function mergeVersions(
 
 /** The audience of an entry, tolerating rows written before the split. */
 export function audienceOf(p: Pick<CatalogProtocol, 'audience' | 'family'>): Audience {
-  return p.audience ?? (p.family === 'GL-LIB' ? 'library' : 'clinical')
+  return p.audience ?? (isLibraryFamily(p.family) ? 'library' : 'clinical')
 }
 
 /**
@@ -453,23 +453,25 @@ export function audienceOf(p: Pick<CatalogProtocol, 'audience' | 'family'>): Aud
  * `GL-FOCUS`, `GL-ENER`, `GL-GROW`, `GL-VIT`, `GL-INTRO` — is the opposite:
  * a person opens it alone, which is the whole point of it.
  *
- * The list is explicit, and unknown prefixes stay CLINICAL on purpose. The
- * two mistakes are not symmetrical: a self-guided protocol filed as clinical
- * is invisible, which is annoying and reversible, while a clinical protocol
- * filed as self-guided is treatment material offered to somebody browsing on
- * their own. The second is the one worth being wrong about in the safe
- * direction — and the publish screen now PRINTS which way it went, so the
- * first one stops being silent, which is how the whole catalogue came to be
- * marked clinical without anyone deciding that.
+ * Unknown prefixes stay CLINICAL on purpose. The two mistakes are not
+ * symmetrical: a self-guided protocol filed as clinical is invisible, which
+ * is annoying and reversible, while a clinical protocol filed as self-guided
+ * is treatment material offered to somebody browsing on their own. The
+ * second is the one worth being wrong about in the safe direction — and the
+ * publish screen now PRINTS which way it went, so the first one stops being
+ * silent, which is how the whole catalogue came to be marked clinical
+ * without anyone deciding that.
+ *
+ * It reads `LIBRARY_FAMILIES` rather than a list of its own, because a list
+ * of its own is a second place to remember: a family added to the type and
+ * forgotten here would publish self-guided material that nobody can find.
  */
-export const LIBRARY_CODE_PREFIXES = [
-  'GL-LIB', 'GL-CALM', 'GL-FOCUS', 'GL-ENER', 'GL-GROW', 'GL-VIT', 'GL-INTRO',
-]
+export const LIBRARY_CODE_PREFIXES: readonly string[] = LIBRARY_FAMILIES
 
 /** The audience a code implies. A guess, shown to the operator, never silent. */
 export function audienceFromCode(code: string | null | undefined): Audience {
-  const prefix = (code ?? '').trim().split(/\s+/)[0].toUpperCase()
-  return LIBRARY_CODE_PREFIXES.includes(prefix) ? 'library' : 'clinical'
+  const fam = familyOfCode(code)
+  return fam && isLibraryFamily(fam) ? 'library' : 'clinical'
 }
 
 /** Entries a person may browse and start on their own. */

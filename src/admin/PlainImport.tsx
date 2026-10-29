@@ -602,8 +602,17 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
        The second is how a demo protocol is made — and how a PO ships a mix
        mastered outside the app against a time signature that has no Excel. */
     if (!version && !mastered) return
-    // an uploaded file is filed under the language it was uploaded for
-    if (mastered && (mastered.lang !== lang || mastered.to !== to)) return
+    /* An uploaded file is filed under the variant it was uploaded FOR, and
+       nothing may quietly publish it as another one. This used to be a bare
+       `return`: the button did nothing, said nothing, and looked broken. */
+    if (mastered && (mastered.lang !== lang || mastered.to !== to)) {
+      setError(
+        `Il file caricato è ${variantLabel(mastered.lang, mastered.to)}, ma stai pubblicando ` +
+        `${variantLabel(lang, to)}. Pubblicalo come ${variantLabel(mastered.lang, mastered.to)}, ` +
+        'oppure togli il file caricato e carica quello giusto.',
+      )
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -628,6 +637,12 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           pools: pools ?? undefined,
           withVoice: true,
           lang,
+          /* The FORM the dialog asked for. It used not to be passed, so
+             "Pubblica · Femminile" rendered the male script and filed it
+             under her key — the one case where no fallback is worse than
+             silence, because she gets a recording that is wrong rather than
+             none. */
+          to,
           onProgress: setStatus,
         })
         setNotes(result.notes)
@@ -685,7 +700,6 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
 
   /** Download = the same full render, saved locally as WAV. */
   async function download(lang: VoiceLang, to: Addressee = 'm') {
-    void to // the WAV is named below
     if (!version) return
     setBusy(true)
     setError(null)
@@ -695,12 +709,13 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         pools: pools ?? undefined,
         withVoice: tts.canRender,
         lang,
+        to,
         onProgress: setStatus,
       })
       setNotes(result.notes)
       if (!tts.canRender) setStatus('Renderizzato SENZA voce (nessuna chiave del motore vocale — vedi Dettagli).')
-      else setStatus(null)
-      downloadBlob(plainWavFileName(t.code, version.sheet, lang), result.blob)
+      else setStatus(`Scaricato ${variantLabel(lang, to)} — il nome del file dice quale delle quattro versioni è.`)
+      downloadBlob(plainWavFileName(t.code, version.sheet, lang, to), result.blob)
     } catch (e) {
       setStatus(null)
       setError(explain(e))

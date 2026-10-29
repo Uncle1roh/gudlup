@@ -257,6 +257,11 @@ export const IT: Record<string, string> = {
   'Burnout': 'Burnout',
   'Stress': 'Stress',
   'Resilience': 'Resilienza',
+  /* Self-guided families (see types/domain.ts). Calm / Focus / Energy are
+     already above, as mood words — the same Italian, one entry. */
+  'Growth': 'Crescita',
+  'Vitality': 'Vitalità',
+  'First steps': 'Primi passi',
 
   /* ---- demo hub ---- */
   'All apps': 'Tutte le app',

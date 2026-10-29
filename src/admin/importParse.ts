@@ -14,12 +14,14 @@
    record; parsing reads the structured file.
    ============================================================================ */
 
-import type { ProtocolFamily, Duration, SessionPhase } from '../types/domain'
+import { PROTOCOL_FAMILIES, type ProtocolFamily, type Duration, type SessionPhase } from '../types/domain'
 import type { CatalogProtocol } from '../data/catalog'
 import { STANDARD_PHASES } from '../data/protocols'
 import { FAMILY_LABEL, type ComposeSettings } from '../compose/types'
 
-const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
+/* Every family, not only the clinical five: a datasheet naming GL-CALM
+   used to be filed under Anxiety without anybody being told. */
+const FAMILIES: ProtocolFamily[] = PROTOCOL_FAMILIES
 const DURATIONS: Duration[] = [6, 12, 24]
 
 export interface ParsedDraft {

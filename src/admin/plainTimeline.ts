@@ -22,7 +22,7 @@
 
 import type { WorkBook, WorkSheet } from 'xlsx'
 import { parseFxCell, type PlainFxSpec } from './plainFx'
-import { SCRIPT_LANGS, ADDRESSEES, LANG_IN, variantKey, textIn, type TextByLang } from '../tts/voiceLang'
+import { SCRIPT_LANGS, ADDRESSEES, LANG_IN, variantKey, textIn, type Addressee, type ScriptLang, type TextByLang } from '../tts/voiceLang'
 
 /* SheetJS is lazy-loaded (same pattern as datasheet.ts) so it never weighs on
    the main bundle. */
@@ -206,7 +206,13 @@ export interface PlainIssue {
    * Portuguese text yet" — so they are recomputed after a merge rather than
    * carried over (`scriptIssues`).
    */
-  code?: 'script'
+  /**
+   * …and on the ones that name a text column the parser could not place
+   * (`unknownColumnIssue`). They are singled out because the import panel
+   * lifts them to the top: a column whose content was never read is the one
+   * fact that makes every other line of the comparison misleading.
+   */
+  code?: 'script' | 'column'
 }
 
 export interface PlainTimeline {
@@ -383,45 +389,148 @@ function parseReadme(ws: WorkSheet | undefined, X: XlsxModule): ReadmeMeta {
 
 /* ------------------------------------------------------------- languages ---
 
-   One text column per language, on the clip sheets AND on Affermazioni:
+   One text column per LANGUAGE and FORM, on the clip sheets and on
+   Affermazioni. The canonical names are
 
-     testo      Italian (the column every workbook already has)
-     testo_it   alias of `testo`, for sheets that name every language
-     testo_pt   Portuguese (Brazil)  — also testo_pt-br / testo_ptbr / testo_br
-     testo_en   English — stored, not voiced yet
+     testo_it_m   testo_it_f      Italian, to a man / to a woman
+     testo_pt_m   testo_pt_f      Portuguese (Brazil)
+     testo_en_m   testo_en_f      English — stored, not voiced yet
 
-   Headers are matched lower-case, so TESTO_PT works too. A workbook without
-   any testo_pt column is simply Italian-only: nothing about it is invalid. */
-const SCRIPT_COLUMNS: Record<string, string[]> = {
-  /* Male keeps the plain names, because those are the columns every workbook
-     written so far already uses — and those scripts are written to a man. */
-  it: ['testo_it_m', 'testo_m', 'testo', 'testo_it', 'testo_ita'],
-  'it:f': ['testo_it_f', 'testo_f', 'testo_ita_f'],
-  'pt-BR': ['testo_pt_m', 'testo_pt', 'testo_pt-br', 'testo_pt_br', 'testo_ptbr', 'testo_br', 'testo_bra'],
-  'pt-BR:f': ['testo_pt_f', 'testo_pt-br_f', 'testo_pt_br_f', 'testo_ptbr_f', 'testo_br_f'],
-  en: ['testo_en_m', 'testo_en', 'testo_eng'],
-  'en:f': ['testo_en_f', 'testo_eng_f'],
-}
+   and a bare `testo` is Italian to a man, because that is the column every
+   workbook written before the two axes existed already uses.
+
+   WHY THIS IS MATCHED AND NOT LISTED. It used to be a hand-written table of
+   aliases, and the table had a hole in exactly one shape: every language had
+   a `_f` spelling for each of its aliases, and only the PRIMARY alias had a
+   `_m` one. So `testo_pt-br_f` was read and `testo_pt-br_m` was not — the
+   female Portuguese landed, the male Portuguese was dropped, and nothing
+   anywhere said so. A workbook whose Portuguese cells had just been
+   corrected came back as "identico: niente da importare", which is how a
+   correction round can be repeated for days without ever arriving.
+
+   So the name is PARSED instead: a prefix, an optional language, an optional
+   form, in any of the spellings a bilingual team actually types — including
+   the Portuguese `texto_`, separators written with spaces, dots or hyphens,
+   and accents. And anything that still looks like a text column and resolves
+   to nothing is REPORTED (`code: 'column'`), because a silently ignored
+   column is the failure this whole block exists to make impossible. */
 
 /** Every variant key a sheet can carry, in a stable order. */
 const SCRIPT_KEYS: string[] = SCRIPT_LANGS.flatMap((l) => ADDRESSEES.map((to) => variantKey(l, to)))
 
-/** Every language's text in one row, in both forms. `read(col)` returns the
-    raw cell of a header, or undefined when the sheet has no such column. */
-function readScript(read: (col: string) => unknown): TextByLang | undefined {
+/** lower-case, accents folded, every run of separators one underscore. */
+function normalizeHeader(h: string): string {
+  return h
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+/** A header that CLAIMS to be a text column, whether or not it resolves. */
+const TEXT_PREFIX = /^(testo|texto|text)(?:_|$)/
+
+const FORM_WORDS: Record<Addressee, string[]> = {
+  m: ['m', 'masc', 'maschile', 'male', 'masculino', 'uomo', 'homem'],
+  f: ['f', 'fem', 'femminile', 'female', 'feminino', 'donna', 'mulher'],
+}
+
+/** Language names as the tokens after the prefix, joined without separators,
+    so `pt_br`, `ptbr` and `pt-br` are all the same answer. */
+const LANG_WORDS: Record<ScriptLang, string[]> = {
+  it: ['it', 'ita', 'italiano', 'italiana', 'italian'],
+  'pt-BR': ['pt', 'ptbr', 'br', 'bra', 'brasil', 'brasile', 'brazil', 'brazilian',
+    'portoghese', 'portugues', 'portuguese', 'ptbrasil', 'brpt'],
+  en: ['en', 'eng', 'ingles', 'inglese', 'english'],
+}
+
+/** Which variant a header names, and how explicitly — a sheet carrying both
+    `testo` and `testo_it_m` must land on that key from the more specific one,
+    deterministically, rather than from whichever column came first. */
+function matchScriptColumn(header: string): { key: string; rank: number } | null {
+  const n = normalizeHeader(header)
+  if (!TEXT_PREFIX.test(n)) return null
+  const rest = n.replace(/^(testo|texto|text)_?/, '')
+  const tokens = rest ? rest.split('_').filter(Boolean) : []
+
+  let to: Addressee = 'm'
+  let hasForm = false
+  const last = tokens[tokens.length - 1]
+  if (last) {
+    for (const a of ADDRESSEES) {
+      if (FORM_WORDS[a].includes(last)) { to = a; hasForm = true; tokens.pop(); break }
+    }
+  }
+
+  let lang: ScriptLang = 'it'
+  let hasLang = false
+  if (tokens.length) {
+    const found = SCRIPT_LANGS.find((l) => LANG_WORDS[l].includes(tokens.join('')))
+    if (!found) return null          // "testo_breve" — looks like one, is not
+    lang = found
+    hasLang = true
+  }
+
+  return { key: variantKey(lang, to), rank: (hasLang ? 2 : 0) + (hasForm ? 1 : 0) }
+}
+
+/**
+ * Which column of THIS sheet holds which variant, plus the ones that look
+ * like a text column and name nothing.
+ */
+export interface ScriptColumns {
+  /** variant key → the header exactly as the sheet spells it. */
+  byVariant: Partial<Record<string, string>>
+  /** Headers starting testo/texto/text that resolve to no variant. */
+  unknown: string[]
+}
+
+export function resolveScriptColumns(headers: readonly string[]): ScriptColumns {
+  const byVariant: Partial<Record<string, string>> = {}
+  const rankOf: Partial<Record<string, number>> = {}
+  const unknown: string[] = []
+  for (const h of headers) {
+    if (!h) continue
+    if (!TEXT_PREFIX.test(normalizeHeader(h))) continue
+    const hit = matchScriptColumn(h)
+    if (!hit) { unknown.push(h); continue }
+    if ((rankOf[hit.key] ?? -1) >= hit.rank) continue
+    rankOf[hit.key] = hit.rank
+    byVariant[hit.key] = h
+  }
+  return { byVariant, unknown }
+}
+
+/** The issue an unrecognised text column deserves: named, and loud. */
+export function unknownColumnIssue(sheet: string, unknown: readonly string[]): PlainIssue | null {
+  if (!unknown.length) return null
+  const many = unknown.length !== 1
+  return {
+    level: 'warning',
+    sheet,
+    code: 'column',
+    message:
+      `Colonn${many ? 'e' : 'a'} di testo non riconosciut${many ? 'e' : 'a'}: ${unknown.join(', ')} — ` +
+      'il contenuto NON è stato letto. Usa testo_it_m / testo_it_f / testo_pt_m / testo_pt_f ' +
+      '(anche testo_pt-br_m, texto_pt_m o "Testo PT (M)" vanno bene: conta che si capiscano lingua e forma).',
+  }
+}
+
+/** Every language's text in one row, in both forms. */
+function readScript(cols: ScriptColumns, read: (col: string) => unknown): TextByLang | undefined {
   const out: TextByLang = {}
   for (const key of SCRIPT_KEYS) {
-    for (const col of SCRIPT_COLUMNS[key] ?? []) {
-      const v = str(read(col))
-      if (v) { out[key] = v; break }
-    }
+    const col = cols.byVariant[key]
+    if (!col) continue
+    const v = str(read(col))
+    if (v) out[key] = v
   }
   return Object.keys(out).length ? out : undefined
 }
 
 /** Whether a header row carries any text column at all. */
-function hasScriptColumn(col: Record<string, number>): boolean {
-  return SCRIPT_KEYS.some((k) => (SCRIPT_COLUMNS[k] ?? []).some((c) => c in col))
+function hasScriptColumn(cols: ScriptColumns): boolean {
+  return Object.keys(cols.byVariant).length > 0
 }
 
 /**
@@ -529,7 +638,7 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
   for (let r = 0; r <= Math.min(range.e.r, 10); r++) {
     const cells: string[] = []
     for (let c = 0; c <= range.e.c; c++) cells.push(str(cellAt(ws, r, c, X)).toLowerCase())
-    if (cells.includes('id') && cells.some((h) => h.startsWith('testo'))) {
+    if (cells.includes('id') && cells.some((h) => /^(testo|texto|text)/.test(normalizeHeader(h)))) {
       hdrRow = r
       cells.forEach((h, c) => { if (h) col[h] = c })
       break
@@ -543,13 +652,18 @@ function parseAffirmations(ws: WorkSheet | undefined, X: XlsxModule, issues: Pla
   if (extraCols.length) {
     issues.push({ level: 'info', sheet: 'Affermazioni', message: `Colonne oltre il documento delle regole mantenute come concordato (segnalate ai PO): ${extraCols.join(', ')}.` })
   }
+  /* The affirmations carry the same four variants as the clips — this sheet
+     is where every loop and every whispered refrain gets its words. */
+  const cols = resolveScriptColumns(Object.keys(col))
+  const colIssue = unknownColumnIssue('Affermazioni', cols.unknown)
+  if (colIssue) issues.push(colIssue)
   for (let r = hdrRow + 1; r <= range.e.r; r++) {
     const id = str(cellAt(ws, r, col['id'], X))
     if (!id || !/^[A-Z]{2,4}-\d+$/i.test(id)) continue // notes / blank rows
     const setRaw = str(cellAt(ws, r, col['set'] ?? -1, X))
     const setLc = setRaw.toLowerCase()
     const lato = str(cellAt(ws, r, col['bilaterale_lato'] ?? -1, X)).toUpperCase()
-    const byLang = readScript((h) => (h in col ? cellAt(ws, r, col[h], X) : undefined))
+    const byLang = readScript(cols, (h) => (h in col ? cellAt(ws, r, col[h], X) : undefined))
     out.push({
       id: id.toUpperCase(),
       testo: byLang?.it ?? '',
@@ -664,6 +778,11 @@ function parseClipSheet(
   }
   const get = (r: number, key: string): unknown => (key in col ? cellAt(ws, r, col[key], X) : undefined)
   const levelMode: 'lufs' | 'offset' = 'volume_lufs' in col ? 'lufs' : 'offset'
+  /* Resolved ONCE per sheet, not once per row: which header holds which of
+     the four variants, and which text-looking headers hold none of them. */
+  const cols = resolveScriptColumns(Object.keys(col))
+  const colIssue = unknownColumnIssue(sheetName, cols.unknown)
+  if (colIssue) issues.push(colIssue)
 
   const clips: PlainClip[] = []
   let declaredTotal: number | null = null
@@ -778,7 +897,7 @@ function parseClipSheet(
       if (modalitaRaw && !clip.modalita) issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `modalita "${modalitaRaw}" sconosciuta: trattata come "normale".` })
       clip.velocitaWpm = num(get(r, 'velocita_wpm')) ?? undefined
       clip.tipoContenuto = contRaw === 'loop' ? 'loop' : contRaw === 'linea' ? 'linea' : undefined
-      clip.testoByLang = readScript((h) => get(r, h))
+      clip.testoByLang = readScript(cols, (h) => get(r, h))
       clip.testo = clip.testoByLang?.it
       clip.setAffermazioni = str(get(r, 'set_affermazioni')) || undefined
       clip.intervalloS = num(get(r, 'intervallo_s')) ?? undefined
@@ -795,7 +914,7 @@ function parseClipSheet(
       if (!clip.tipoContenuto) {
         issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `Voice clip without tipo_contenuto (linea/loop).` })
       } else if (clip.tipoContenuto === 'linea' && !clip.testoByLang) {
-        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea ma "testo" è vuoto${hasScriptColumn(col) ? '' : ' (nessuna colonna testo nel foglio)'}.` })
+        issues.push({ level: 'error', sheet: sheetName, clipId: rawId, message: `tipo_contenuto=linea ma "testo" è vuoto${hasScriptColumn(cols) ? '' : ' (nessuna colonna testo nel foglio)'}.` })
       } else if (clip.tipoContenuto === 'linea' && !clip.testo) {
         issues.push({ level: 'warning', sheet: sheetName, clipId: rawId, message: `Manca il testo italiano (colonna testo): la clip ha solo ${Object.keys(clip.testoByLang ?? {}).join(' / ')} — in italiano resta muta.` })
       } else if (clip.tipoContenuto === 'loop' && !clip.setAffermazioni && !clip.sequenza) {

@@ -47,14 +47,14 @@ import { VoiceEnginePanel } from '../tts/VoiceEnginePanel'
 import { masterizeBuffer, SESSION_CEILING_DBTP, SESSION_TARGET_LUFS } from './mastering'
 import { audioBufferToWav } from '../lib/wav'
 import { ARCHETYPES, defaultPrimary, hasVoicesFor, resolveVoiceId, voiceById, voiceLangOf, voicesByArchetype, type CatalogVoice, type KnownVoice } from '../tts/voiceCatalog'
-import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, ADDRESSEES, ADDRESSEE_LABEL, scriptKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { LANG_LABEL, LANG_SHORT, VOICE_LANGS, ADDRESSEES, ADDRESSEE_LABEL, scriptKey, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { canonicalVoiceClip, compareForms, isTextMissing, otherForm, switchClipLang, textOfVariant, type Variant } from './sessionLang'
 import { defaultEffects, effectsKey, EFFECTS_META, harmonizeBuffer, type TrackEffect } from './effects'
 import { libraryGroups, listAssets, assetPublicUrl, type AudioAsset } from '../admin/assets'
 import { buildAssetPools, drawMusicPlaylist, drawSoundscape, loadAssetMeta, mulberry32, newDrawLedger, type AssetPools, type DrawLedger } from '../admin/assetPools'
 import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { peekStudioSeed, releaseStudioSeed, setStudioProject, type StudioAttachTarget } from '../compose/handoff'
-import { buildStudioBackup, describeStudioBackup, parseStudioBackup, studioBackupFilename, type ParseFailure, type StudioBackup } from './sessionFile'
+import { buildStudioBackup, describeStudioBackup, diffStudioBackup, parseStudioBackup, studioBackupFilename, type BackupDiff, type ParseFailure, type StudioBackup } from './sessionFile'
 import { persistenceNote, saveProtocolVerified } from '../admin/publish'
 import { getProtocol } from '../data/protocols'
 import { entryForStudioSave } from '../admin/publishPlain'
@@ -678,6 +678,17 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     empty: 'That session file has no tracks in it.',
   }
 
+  /**
+   * A parsed backup waiting for a yes, with what it would change.
+   *
+   * It used to be a `window.confirm` saying how many clips the FILE has —
+   * true, and no help at all: the question is not what is in the file, it is
+   * the distance between the file and the desk. A restore replaces work that
+   * may exist nowhere else, so the comparison is computed
+   * (`diffStudioBackup`) and read before anything is touched.
+   */
+  const [restoreAsk, setRestoreAsk] = useState<{ backup: StudioBackup; diff: BackupDiff } | null>(null)
+
   async function onRestoreFile(file?: File) {
     if (!file) return
     setRestoring(true)
@@ -686,17 +697,16 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       const parsed = parseStudioBackup(await file.text())
       if (!parsed.ok) { setAttachMsg(lt(RESTORE_ERROR[parsed.reason])); return }
       const b = parsed.backup
-      const d = describeStudioBackup(b)
-      /* What is on screen is about to be replaced, and it may be the only
-         copy of it. Say what is arriving and what is going. */
-      const gap = String.fromCharCode(10, 10)
-      const ok = window.confirm(
-        lt('Load {name} into the Studio?', { name: b.code ?? b.project.name }) + gap +
-        lt('{clips} clips ({voices} voice), backed up {when}.', { clips: d.clips, voices: d.voices, when: d.when }) + gap +
-        lt('What is open now is replaced. Unsaved work in it is lost.'),
-      )
-      if (!ok) return
-      applyBackup(b)
+      const target = deriveTarget()
+      const diff = diffStudioBackup({
+        project: toStudioProject(),
+        code: target?.code ?? null,
+        duration: target?.duration ?? null,
+        workingLang,
+        workingTo,
+        dirty,
+      }, b)
+      setRestoreAsk({ backup: b, diff })
     } catch (e) {
       setAttachMsg(lt('Could not read that file: {error}', { error: (e as Error).message }))
     } finally {
@@ -1884,6 +1894,27 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
   }, [selected])
 
   /* ---- export ---- */
+
+  /**
+   * The exported WAV says which of the four versions it is.
+   *
+   * It used to be called after the project and nothing else, so the Italian
+   * male take, the Italian female take and both Portuguese ones all arrived
+   * in the Downloads folder as the same name with "(1)", "(2)", "(3)" after
+   * it. That file is then mailed to the analyst who publishes — who reads
+   * neither the Portuguese nor the waveform — and tags it by hand. A name is
+   * the only thing in that chain that carries the answer.
+   */
+  function exportWavName(): string {
+    const target = deriveTarget()
+    const parts = [
+      (target?.code ?? projectName).replace(/[^\w.-]+/g, '_') || 'session',
+      target?.duration != null ? `${target.duration}min` : '',
+      variantShort(workingLang, workingTo).replace('·', '-'),
+    ].filter(Boolean)
+    return `${parts.join('_')}.wav`
+  }
+
   async function exportWav() {
     setExporting(true)
     try {
@@ -1894,7 +1925,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       const blob = audioBufferToWav(buffer)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = `${projectName.replace(/[^\w.-]+/g, '_') || 'session'}.wav`; a.click()
+      a.href = url; a.download = exportWavName(); a.click()
       // revoking in the same tick can cancel the download before the browser
       // has read the blob — the other three download helpers already wait
       setTimeout(() => URL.revokeObjectURL(url), 4000)
@@ -2059,6 +2090,60 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       )}
       {attachMsg && <div className="mt-voicesetup" style={{ fontSize: 12.5 }}>{attachMsg}</div>}
       {langMsg && <div className="mt-editmsg" onClick={() => setLangMsg(null)}>{langMsg} ✕</div>}
+      {/* Loading a backup replaces the desk. What it would change, read
+          BEFORE it happens — see `diffStudioBackup`. */}
+      {restoreAsk && (() => {
+        const { backup: b, diff } = restoreAsk
+        const d = describeStudioBackup(b)
+        return (
+          <div className="mt-langask" role="dialog" aria-modal="true" aria-label={lt('Load this backup?')}>
+            <div className="mt-langask__card mt-restore">
+              <h2>{lt('Load {name} into the Studio?', { name: b.code ?? b.project.name })}</h2>
+              <p>
+                {lt('{clips} clips ({voices} voice), backed up {when}.', { clips: d.clips, voices: d.voices, when: d.when })}
+                {' '}
+                {b.duration != null && lt('Time signature: {n} min.', { n: b.duration })}
+                {' '}
+                {lt('Version: {v}.', { v: `${LANG_LABEL[b.workingLang]} · ${ADDRESSEE_LABEL[b.workingTo]}` })}
+              </p>
+
+              {diff.warnings.length > 0 && (
+                <ul className="mt-restore__list mt-restore__list--warn">
+                  {diff.warnings.map((w, i) => <li key={i}>⚠ {lt(w.key, w.vars)}</li>)}
+                </ul>
+              )}
+
+              {diff.harmless
+                ? (
+                  <p className="mt-restore__ok">
+                    {tracks.every((t) => !t.clips.length)
+                      ? lt('Nothing is open: there is nothing to lose.')
+                      : lt('It matches what is open: loading it changes nothing.')}
+                  </p>
+                )
+                : (
+                  <>
+                    <p className="mt-restore__h">{lt('What changes on your desk:')}</p>
+                    <ul className="mt-restore__list">
+                      {diff.changes.length
+                        ? diff.changes.map((c, i) => <li key={i}>{lt(c.key, c.vars)}</li>)
+                        : <li>{lt('The rack and the words are the same; only the details above differ.')}</li>}
+                    </ul>
+                  </>
+                )}
+
+              <p className="mt-restore__foot">{lt('What is open now is replaced. Unsaved work in it is lost.')}</p>
+              <div className="mt-restore__acts">
+                <button className="mt-restore__go" onClick={() => { applyBackup(b); setRestoreAsk(null) }}>
+                  {lt('Load it')}
+                </button>
+                <button className="mt-restore__no" onClick={() => setRestoreAsk(null)}>{lt('Cancel')}</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {langAsk && (
         <div className="mt-langask" role="dialog" aria-modal="true" aria-label={lt('Which language do you want to work in?')}>
           <div className="mt-langask__card">

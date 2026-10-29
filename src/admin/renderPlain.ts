@@ -37,7 +37,7 @@ import type { SeedTrack } from '../compose/types'
 import type { AssetPools } from './assetPools'
 import { plainToStudioTracks } from './plainStudio'
 import { secToMmss, type PlainTimeline, type PlainVersion } from './plainTimeline'
-import { LANG_IN, type VoiceLang } from '../tts/voiceLang'
+import { ADDRESSEE_LABEL, LANG_IN, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
 
 const CHANNEL_PAN: Record<'L' | 'C' | 'R', number> = { L: -1, C: 0, R: 1 }
 
@@ -95,6 +95,17 @@ export interface RenderPlainOptions {
       TTS request carries. Default Italian, which every render was until the
       Portuguese column existed (it used to be a hard-coded 'it' below). */
   lang?: VoiceLang
+  /**
+   * …and WHO it speaks TO: which of the two written forms is rendered.
+   *
+   * This did not exist. The workscreen asked which of the four variants to
+   * publish and then called this with the language only, so the render took
+   * the bare key — which IS the male form — and the result was uploaded
+   * under `it:f` / `pt-BR:f`. Every female take ever published from the
+   * console was the male recording, and the female scripts the PO had
+   * written were read by nothing. See `PlainSeedOptions.to`.
+   */
+  to?: Addressee
   onProgress?: (msg: string) => void
 }
 
@@ -114,7 +125,8 @@ export async function renderPlainWav(
   const progress = opts.onProgress ?? (() => undefined)
   progress('Preparazione del progetto Studio…')
   const lang: VoiceLang = opts.lang ?? 'it'
-  const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed, lang })
+  const to: Addressee = opts.to ?? 'm'
+  const seed = plainToStudioTracks(timeline, version, { pools: opts.pools, seed: opts.seed, lang, to })
   const notes = [...seed.notes]
   const lengthSec = seed.totalSec
   if (!opts.pools) notes.push('Nessun pool di asset disponibile (Supabase non configurato o libreria vuota): le lane Music/Soundscape restano mute.')
@@ -259,7 +271,7 @@ export async function renderPlainWav(
       `${m.limiterDb < -0.1 ? `, limiter fino a ${m.limiterDb.toFixed(1)} dB` : ', limiter non intervenuto'}). ` +
       `Il tetto di 70 dB SPL dipende dal volume del dispositivo di chi ascolta: con questa normalizzazione un’impostazione normale di telefono/cuffie resta al di sotto.`,
     )
-    notes.unshift(`Render ${LANG_IN[lang]}: ${voiceClips} clip vocali.`)
+    notes.unshift(`Render ${LANG_IN[lang]}, ${ADDRESSEE_LABEL[to].toLowerCase()}: ${voiceClips} clip vocali.`)
     const blob = audioBufferToWav(buffer)
     return { blob, buffer, seconds: lengthSec, voiceClips, notes }
   } finally {
@@ -267,7 +279,19 @@ export async function renderPlainWav(
   }
 }
 
-export function plainWavFileName(code: string | null, sheet: string, lang?: VoiceLang): string {
+/**
+ * What the downloaded WAV is called.
+ *
+ * The VARIANT is in the name, and it has to be. Four different recordings —
+ * Italian and Portuguese, to a man and to a woman — were all called
+ * `CODE_Standard_it.wav`, or just `CODE_Standard.wav`, so the second
+ * download landed beside the first as "(1)" and nothing on disk said which
+ * was which. That file then travels by email between two analysts who do not
+ * read each other's language before somebody tags it on the way back in. A
+ * name that states the variant is the cheapest possible fix for that.
+ */
+export function plainWavFileName(code: string | null, sheet: string, lang?: VoiceLang, to: Addressee = 'm'): string {
   const safe = (code ?? 'PLAIN').replace(/[^A-Za-z0-9_-]+/g, '_')
-  return `${safe}_${sheet}${lang ? `_${lang}` : ''}.wav`
+  const variant = lang ? `_${variantShort(lang, to).replace('·', '-')}` : ''
+  return `${safe}_${sheet}${variant}.wav`
 }

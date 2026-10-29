@@ -271,6 +271,10 @@ export const PT: Record<string, string> = {
   'Burnout': 'Burnout',
   'Stress': 'Estresse',
   'Resilience': 'Resiliência',
+  /* Famílias autoguiadas (ver types/domain.ts). Calm / Focus / Energy e
+     Growth já existem acima — mesma palavra, uma entrada só. */
+  'Vitality': 'Vitalidade',
+  'First steps': 'Primeiros passos',
 
   /* ---- demo hub ---- */
   'All apps': 'Todos os apps',

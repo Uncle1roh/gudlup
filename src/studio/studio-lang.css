@@ -74,3 +74,19 @@
 
 .mt-tts__other--diff { color: #ffd98a; }
 .mt-tts__other i { font-style: normal; opacity: 0.75; }
+
+/* ---- restore: what loading a backup would change --------------------------
+   The same card as the language question, with room for a list. The list is
+   the whole point: a restore replaces work that may exist nowhere else, and
+   the old confirmation described the FILE rather than the distance between
+   the file and the desk. */
+.mt-restore { width: min(620px, 100%); }
+.mt-restore__h { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--mt-sub, #9fb3aa); }
+.mt-restore__list { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
+.mt-restore__list--warn { list-style: none; padding-left: 0; color: #ffd98a; }
+.mt-restore__ok { margin: 12px 0; font-size: 13px; color: #9fe0bd; }
+.mt-restore__foot { margin: 12px 0 16px; font-size: 12.5px; color: var(--mt-sub, #9fb3aa); }
+.mt-restore__acts { display: flex; gap: 10px; justify-content: flex-end; }
+.mt-restore__go, .mt-restore__no { padding: 9px 16px; border-radius: 9px; border: 1px solid var(--mt-line); background: var(--mt-panel2); color: var(--mt-text); font: inherit; cursor: pointer; }
+.mt-restore__go { border-color: var(--mt-accent); }
+.mt-restore__go:hover, .mt-restore__no:hover { border-color: var(--mt-accent); }

@@ -33,6 +33,36 @@ export const IT_STUDIO_EDITOR: Record<string, string> = {
     'Fanne una copia con ⬇ Backup: un file sul tuo disco non dipende dal database.',
   'Press ⬇ Backup now — this session exists only in this tab until it is written somewhere.':
     'Premi ⬇ Backup adesso — questa sessione esiste solo in questa scheda finché non viene scritta da qualche parte.',
+  /* ---- what loading a backup would change (diffStudioBackup) ---- */
+  'Load this backup?': 'Caricare questo backup?',
+  'Time signature: {n} min.': 'Durata: {n} min.',
+  'Version: {v}.': 'Versione: {v}.',
+  'What changes on your desk:': 'Cosa cambia sul tuo tavolo:',
+  'Nothing is open: there is nothing to lose.': 'Non c’è nulla di aperto: non si perde niente.',
+  'It matches what is open: loading it changes nothing.': 'Coincide con quello che è aperto: caricarlo non cambia nulla.',
+  'The rack and the words are the same; only the details above differ.':
+    'Il rack e i testi sono gli stessi; cambiano solo i dettagli qui sopra.',
+  'Load it': 'Carica',
+  'Cancel': 'Annulla',
+  'This backup is {code}. You are working on {open}.': 'Questo backup è di {code}. Stai lavorando su {open}.',
+  'This backup is the {n}-minute version. You are working on {open} minutes.':
+    'Questo backup è la versione da {n} min. Stai lavorando sui {open} min.',
+  'What is open has changes that were never saved. Loading replaces them and they cannot be recovered.':
+    'Quello che è aperto ha modifiche mai salvate. Caricare le sostituisce e non si recuperano.',
+  'This backup is OLDER than the session on screen. Loading it goes back in time.':
+    'Questo backup è PIÙ VECCHIO della sessione sullo schermo. Caricarlo torna indietro nel tempo.',
+  '{a} clips on screen → {b} in the backup.': '{a} clip sullo schermo → {b} nel backup.',
+  '{a} tracks → {b}.': '{a} tracce → {b}.',
+  'Length {a} → {b}.': 'Durata {a} → {b}.',
+  'The master level is different.': 'Il livello master è diverso.',
+  'The phase map is different.': 'La mappa delle fasi è diversa.',
+  '{n} voice lines are worded differently in the backup.': '{n} righe di voce hanno parole diverse nel backup.',
+  '{n} voice lines on screen are not in the backup at all.': '{n} righe di voce sullo schermo non sono nel backup.',
+  '{n} voice lines in the backup are not on screen.': '{n} righe di voce del backup non sono sullo schermo.',
+  '{n} synthesized voice clips lose their render and have to be spoken again.':
+    '{n} clip vocali sintetizzate perdono il render e vanno rigenerate.',
+  'It opens in a different version (language or form) from the one you are in.':
+    'Si apre in una versione (lingua o forma) diversa da quella in cui sei.',
   'Load {name} into the Studio?': 'Caricare {name} nello Studio?',
   '{clips} clips ({voices} voice), backed up {when}.': '{clips} clip ({voices} di voce), backup del {when}.',
   'What is open now is replaced. Unsaved work in it is lost.':
@@ -420,6 +450,36 @@ export const PT_STUDIO_EDITOR: Record<string, string> = {
     'Faça uma cópia com ⬇ Backup: um arquivo no seu disco não depende do banco de dados estar no ar.',
   'Press ⬇ Backup now — this session exists only in this tab until it is written somewhere.':
     'Pressione ⬇ Backup agora — esta sessão existe só nesta aba até ser gravada em algum lugar.',
+  /* ---- o que carregar um backup mudaria (diffStudioBackup) ---- */
+  'Load this backup?': 'Carregar este backup?',
+  'Time signature: {n} min.': 'Duração: {n} min.',
+  'Version: {v}.': 'Versão: {v}.',
+  'What changes on your desk:': 'O que muda na sua mesa:',
+  'Nothing is open: there is nothing to lose.': 'Não há nada aberto: não se perde nada.',
+  'It matches what is open: loading it changes nothing.': 'Confere com o que está aberto: carregar não muda nada.',
+  'The rack and the words are the same; only the details above differ.':
+    'O rack e os textos são os mesmos; mudam só os detalhes acima.',
+  'Load it': 'Carregar',
+  'Cancel': 'Cancelar',
+  'This backup is {code}. You are working on {open}.': 'Este backup é de {code}. Você está trabalhando em {open}.',
+  'This backup is the {n}-minute version. You are working on {open} minutes.':
+    'Este backup é a versão de {n} min. Você está trabalhando nos {open} min.',
+  'What is open has changes that were never saved. Loading replaces them and they cannot be recovered.':
+    'O que está aberto tem alterações nunca salvas. Carregar substitui e elas não voltam.',
+  'This backup is OLDER than the session on screen. Loading it goes back in time.':
+    'Este backup é MAIS ANTIGO que a sessão na tela. Carregar volta no tempo.',
+  '{a} clips on screen → {b} in the backup.': '{a} clipes na tela → {b} no backup.',
+  '{a} tracks → {b}.': '{a} faixas → {b}.',
+  'Length {a} → {b}.': 'Duração {a} → {b}.',
+  'The master level is different.': 'O nível master é diferente.',
+  'The phase map is different.': 'O mapa de fases é diferente.',
+  '{n} voice lines are worded differently in the backup.': '{n} linhas de voz estão escritas de outro jeito no backup.',
+  '{n} voice lines on screen are not in the backup at all.': '{n} linhas de voz da tela não existem no backup.',
+  '{n} voice lines in the backup are not on screen.': '{n} linhas de voz do backup não estão na tela.',
+  '{n} synthesized voice clips lose their render and have to be spoken again.':
+    '{n} clipes de voz sintetizados perdem o render e precisam ser gerados de novo.',
+  'It opens in a different version (language or form) from the one you are in.':
+    'Abre em uma versão (idioma ou forma) diferente daquela em que você está.',
   'Load {name} into the Studio?': 'Carregar {name} no Studio?',
   '{clips} clips ({voices} voice), backed up {when}.': '{clips} clipes ({voices} de voz), backup de {when}.',
   'What is open now is replaced. Unsaved work in it is lost.':

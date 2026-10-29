@@ -24,7 +24,7 @@ import {
   type Audience,
   type CatalogProtocol,
 } from '../data/catalog'
-import type { Duration, ProtocolFamily, SessionPhase } from '../types/domain'
+import { familyOfCode, type Duration, type ProtocolFamily, type SessionPhase } from '../types/domain'
 import { scriptIssues, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
 import { SCRIPT_LANGS, ADDRESSEES, langsWithText, textIn, variantKey, parseVariantKey, type ScriptLang, type TextByLang } from '../tts/voiceLang'
 
@@ -35,11 +35,19 @@ const SCRIPT_VARIANTS: string[] = SCRIPT_LANGS.flatMap((l) => ADDRESSEES.map((to
 function keyLang(key: string): ScriptLang { return parseVariantKey(key)?.lang ?? 'it' }
 function keyTo(key: string): 'm' | 'f' { return parseVariantKey(key)?.to ?? 'm' }
 
-const FAMILIES: ProtocolFamily[] = ['GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL']
-
+/**
+ * The family a code names.
+ *
+ * It used to know only the five clinical prefixes and answer `GL-ANX` for
+ * everything else, which is why every GL-CALM, GL-FOCUS, GL-ENER, GL-GROW
+ * and GL-VIT in the catalogue is stored as Anxiety. Now it asks
+ * `familyOfCode`, which knows all of them; the `GL-ANX` default survives
+ * only for a code that is genuinely not one of ours, and it is the one case
+ * where a wrong answer is cosmetic (`audience`, not family, decides who sees
+ * a protocol).
+ */
 export function familyFromCode(code: string | null): ProtocolFamily {
-  const fam = (code ?? '').split(/\s+/)[0] as ProtocolFamily
-  return FAMILIES.includes(fam) ? fam : 'GL-ANX'
+  return familyOfCode(code) ?? 'GL-ANX'
 }
 
 export function phasesForCatalog(v: PlainVersion | undefined): SessionPhase[] {
@@ -506,6 +514,16 @@ export interface ImportPlan {
    * holding a file whose CONTENT did not land, which is never ordinary.
    */
   ignored: string[]
+  /**
+   * Columns in the file that look like a text column and were not read.
+   *
+   * Lifted out of the timeline's issues and onto the plan because this is
+   * the one fact that makes the rest of the comparison a lie: a workbook
+   * whose Portuguese lives in a column the parser could not place compares
+   * as "identical" and is not. It has nothing to do with the merge rules,
+   * so it rides beside them rather than inside them.
+   */
+  columnIssues: string[]
   /** Nothing would change: every written duration is identical to what is stored. */
   nothing: boolean
 }
@@ -551,7 +569,14 @@ export function defaultImportMode(
 
 export function planPlainImport({ timeline: t, existing, selected, mode = 'import' }: Pick<PublishInput, 'timeline' | 'existing' | 'selected' | 'mode'>): ImportPlan {
   const stored = timelinesByDuration(existing)
-  const plan: ImportPlan = { written: {}, diffs: [], skipped: [], missingSelected: false, ignored: [], nothing: false }
+  const plan: ImportPlan = {
+    written: {}, diffs: [], skipped: [], missingSelected: false, ignored: [],
+    /* From the INCOMING file, always — the merged timelines below inherit the
+       stored row's issues, so by the time they exist the file's own column
+       warnings are no longer in them. */
+    columnIssues: t.issues.filter((i) => i.code === 'column').map((i) => i.message),
+    nothing: false,
+  }
   const seen = new Set<Duration>()
   for (const v of t.versions) {
     const d = catalogDuration(v.durationMin)
@@ -612,7 +637,14 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
      diffs at all nothing was written — the duration was skipped, and the
      reason is in `skipped` — and calling that identical sent an operator
      looking for a problem in their file instead of at the mode toggle. */
-  plan.nothing = plan.diffs.length > 0 && plan.diffs.every((x) => x.identical) && !plan.ignored.length
+  /* …and a file with an unread text column is never "identical" either. The
+     operator changed cells; we could not see them. Saying "niente da
+     importare" there is the sentence that sends somebody back to the
+     spreadsheet looking for a mistake they did not make. */
+  plan.nothing = plan.diffs.length > 0
+    && plan.diffs.every((x) => x.identical)
+    && !plan.ignored.length
+    && !plan.columnIssues.length
   return plan
 }
 
@@ -621,6 +653,10 @@ export function describeImportPlan(plan: ImportPlan, selected?: Duration | null)
   const lines: string[] = []
   const LBL: Record<ScriptLang, string> = { it: 'italiano', 'pt-BR': 'portoghese', en: 'inglese' }
   const list = (ids: string[], max = 6) => ids.slice(0, max).join(', ') + (ids.length > max ? ` e altre ${ids.length - max}` : '')
+  /* First, before any count of what changed: the columns whose content was
+     never read. Everything below them is computed from the file MINUS those
+     columns, so reading it without this line first is reading a half file. */
+  for (const m of plan.columnIssues) lines.push(`⚠ ${m}`)
   if (plan.missingSelected && selected != null) {
     lines.push(`Il file non contiene la versione da ${selected} min.`)
   }

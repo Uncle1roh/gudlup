@@ -64,6 +64,20 @@ export interface PlainSeedOptions {
    * seeded in one language can be worked in the other. Default Italian.
    */
   lang?: VoiceLang
+  /**
+   * …and WHO it is spoken TO. The scripts address the listener directly and
+   * both languages make that audible ("sei pronto" / "sei pronta"), so a
+   * render is one language AND one form.
+   *
+   * This did not exist, and the hole was not visible from here: the
+   * workscreen asked which of the four variants to publish, rendered
+   * `byLang[lang]` — the bare key, which IS the male one — and filed the
+   * result under `it:f`. Every female take ever published from the console
+   * was the male recording, and the female texts the PO had written were
+   * never read by anything. Default 'm', so every caller written before the
+   * second axis keeps rendering exactly what it rendered.
+   */
+  to?: Addressee
 }
 
 /* ------------------------------------------------ texts per language ----
@@ -136,12 +150,17 @@ export function buildScriptIndex(timeline: PlainTimeline): ScriptIndex {
   for (const a of timeline.affirmations) {
     const byLang = spoken(affScript(a))
     put(`aff:${a.id}`, byLang)
-    const frags = Object.fromEntries(VOICE_LANGS.map((l) => [l, fragmentsOf(byLang[l])])) as Record<VoiceLang, string[]>
-    const n = Math.max(...VOICE_LANGS.map((l) => frags[l].length))
+    /* Per VARIANT. Keyed by language alone, a whispered refrain written
+       differently for a woman had no fragments in the index at all, so the
+       Studio could never fill her form from the workbook. */
+    const keys = VOICE_VARIANTS.map((v) => variantKey(v.lang, v.to))
+    const frags: Record<string, string[]> = {}
+    for (const k of keys) frags[k] = fragmentsOf(byLang[k])
+    const n = Math.max(...keys.map((k) => frags[k].length))
     if (n > 1) {
       for (let i = 0; i < n; i++) {
-        const one: Partial<Record<VoiceLang, string>> = {}
-        for (const l of VOICE_LANGS) if (frags[l][i]) one[l] = frags[l][i]
+        const one: Partial<Record<string, string>> = {}
+        for (const k of keys) if (frags[k][i]) one[k] = frags[k][i]
         put(`aff:${a.id}#${i}`, one)
       }
     }
@@ -406,6 +425,8 @@ export function plainToStudioTracks(
      for the language being seeded — the other language's choice rides on the
      clip in `voiceByLang` and is announced by the Studio when it is used). */
   const lang: VoiceLang = opts.lang ?? 'it'
+  const to: Addressee = opts.to ?? 'm'
+  const workKey = variantKey(lang, to)
   const voiceNoteEmitted = new Set<string>()
   const voicesFor = (c: PlainClip): Record<VoiceLang, CatalogVoice> => {
     const out = {} as Record<VoiceLang, CatalogVoice>
@@ -424,13 +445,20 @@ export function plainToStudioTracks(
   /** The per-language half of a voice clip: which text and voice it speaks
       now, and every language's text and voice for when the session switches. */
   let missingText = 0
-  const spokenAs = (byLang: Partial<Record<VoiceLang, string>>, vs: Record<VoiceLang, CatalogVoice>, sourceId: string) => {
-    const text = byLang[lang]
+  const spokenAs = (byLang: Partial<Record<string, string>>, vs: Record<VoiceLang, CatalogVoice>, sourceId: string) => {
+    const text = byLang[workKey]
     if (!text && Object.keys(byLang).length) missingText++
     return {
       text,
       textByLang: byLang,
-      voiceByLang: Object.fromEntries(VOICE_LANGS.map((l) => [l, choice(vs[l])])) as Record<VoiceLang, VoiceChoice>,
+      /* Under all four keys. The voice follows the ARCHETYPE and the spoken
+         language — who is talking — not the form, which is who is being
+         talked to; but the Studio looks the choice up by variant key, and a
+         map with only the two bare keys made it fall back for every female
+         clip. */
+      voiceByLang: Object.fromEntries(
+        VOICE_VARIANTS.map((v) => [variantKey(v.lang, v.to), choice(vs[v.lang])]),
+      ) as Record<string, VoiceChoice>,
       sourceId,
     }
   }
@@ -670,15 +698,21 @@ export function plainToStudioTracks(
            without text in that language (shown as missing, never silently
            Italian), and one with more has its surplus joined onto the last. */
         const affText = spoken(affScript(aff))
-        const fragsByLang = Object.fromEntries(VOICE_LANGS.map((l) => [l, fragmentsOf(affText[l])])) as Record<VoiceLang, string[]>
-        const fragments = fragsByLang.it.length ? fragsByLang.it : fragsByLang['pt-BR']
-        for (const l of VOICE_LANGS) {
-          const f = fragsByLang[l]
+        /* Per VARIANT, not per language: a refrain written differently for a
+           woman splits into her own fragments, and keying this by language
+           alone silently gave her the male ones. */
+        const fragsByLang: Record<string, string[]> = {}
+        for (const v of VOICE_VARIANTS) fragsByLang[variantKey(v.lang, v.to)] = fragmentsOf(affText[variantKey(v.lang, v.to)])
+        const cadence = fragsByLang[variantKey(lang, to)]
+        const fragments = cadence.length ? cadence : (fragsByLang.it.length ? fragsByLang.it : fragsByLang['pt-BR'])
+        for (const v of VOICE_VARIANTS) {
+          const k = variantKey(v.lang, v.to)
+          const f = fragsByLang[k]
           if (f.length > fragments.length && fragments.length) {
-            fragsByLang[l] = [...f.slice(0, fragments.length - 1), f.slice(fragments.length - 1).join('... ')]
+            fragsByLang[k] = [...f.slice(0, fragments.length - 1), f.slice(fragments.length - 1).join('... ')]
           }
           if (f.length && f.length !== fragments.length && aff) {
-            notes.push(`Ostinato ${c.clipId} (${aff.id}): ${f.length} frammenti ${LANG_IN[l]} contro ${fragments.length} della cadenza — ${f.length > fragments.length ? 'gli ultimi sono uniti nell’ultimo frammento' : 'i frammenti mancanti restano senza testo'}.`)
+            notes.push(`Ostinato ${c.clipId} (${aff.id}): ${f.length} frammenti ${LANG_IN[v.lang]} (${v.to === 'f' ? 'femminile' : 'maschile'}) contro ${fragments.length} della cadenza — ${f.length > fragments.length ? 'gli ultimi sono uniti nell’ultimo frammento' : 'i frammenti mancanti restano senza testo'}.`)
           }
         }
         if (aff && fragments.length) {
@@ -716,7 +750,10 @@ export function plainToStudioTracks(
                   ...voiceParams(vs),
                 } as VoiceParams,
                 ...spokenAs(
-                  Object.fromEntries(VOICE_LANGS.filter((lg) => fragsByLang[lg][i]).map((lg) => [lg, fragsByLang[lg][i]])),
+                  Object.fromEntries(VOICE_VARIANTS
+                    .map((v) => variantKey(v.lang, v.to))
+                    .filter((k) => fragsByLang[k][i])
+                    .map((k) => [k, fragsByLang[k][i]])),
                   vs,
                   `aff:${aff.id}#${i}`,
                 ),

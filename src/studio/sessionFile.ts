@@ -204,3 +204,169 @@ export function describeStudioBackup(b: StudioBackup): { clips: number; voices: 
   }
   return { clips, voices, when: new Date(b.exportedAt).toLocaleString() }
 }
+
+/* ======================================================= what it changes ==
+
+   Loading a backup REPLACES what is on screen, and what is on screen may be
+   the only copy of an afternoon's work. "3 clips (1 voice), backed up on the
+   14th — what is open now is replaced" is true and tells you nothing you can
+   decide on: it describes the file, never the distance between the file and
+   your desk.
+
+   So this compares them, and it compares the things somebody would actually
+   regret: the protocol and time signature it belongs to, how much of the
+   rack moves, which voice lines change their words, and how many synthesized
+   renders stop being valid. Pure, and asserted in
+   tools/test-studio-restore.ts.
+   ============================================================================ */
+
+/** The session on screen, in the shape this comparison needs. */
+export interface OpenSession {
+  project: StudioProject
+  code?: string | null
+  duration?: Duration | null
+  workingLang: VoiceLang
+  workingTo: Addressee
+  /** False when nothing has been changed since it was opened or saved. */
+  dirty?: boolean
+}
+
+/**
+ * One line of the comparison, as a translation KEY and its numbers.
+ *
+ * Not a finished sentence: the Studio speaks three languages, and a line
+ * built here with the numbers already in it can never be looked up. The
+ * screen calls `lt(line.key, line.vars)`, exactly as it does everywhere else.
+ */
+export interface DiffLine {
+  key: string
+  vars?: Record<string, string | number>
+}
+
+export interface BackupDiff {
+  /** Facts that should stop the load until they are read: another protocol,
+      another time signature, or unsaved work that is about to go. */
+  warnings: DiffLine[]
+  /** What changes, one line each. Empty = the file matches what is open. */
+  changes: DiffLine[]
+  /** Nothing on screen can be lost: it is empty, or identical to the file. */
+  harmless: boolean
+}
+
+interface ClipFacts {
+  count: number
+  /** sourceId (or index) → the Italian text, which is the canonical one. */
+  textBySource: Map<string, string>
+  rendered: number
+}
+
+function voiceFacts(p: StudioProject): ClipFacts {
+  const textBySource = new Map<string, string>()
+  let count = 0
+  let rendered = 0
+  for (const t of p.tracks) {
+    if (t.type !== 'voice') continue
+    for (const [i, c] of (t.clips ?? []).entries()) {
+      count++
+      if (c.ttsPath) rendered++
+      const key = c.sourceId ?? `${t.name}#${i}`
+      const text = (c.textByLang?.it ?? c.text ?? '').trim()
+      if (text) textBySource.set(key, text)
+    }
+  }
+  return { count, textBySource, rendered }
+}
+
+function clipTotal(p: StudioProject): number {
+  return p.tracks.reduce((n, t) => n + (t.clips?.length ?? 0), 0)
+}
+
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`
+
+/**
+ * What loading `b` over `open` would do.
+ *
+ * Phrased in English keys, like everything else in the Studio, so the screen
+ * can say it in the language the person is reading.
+ */
+export function diffStudioBackup(open: OpenSession, b: StudioBackup): BackupDiff {
+  const warnings: DiffLine[] = []
+  const changes: DiffLine[] = []
+
+  /* ---- is this even the same piece of work? ------------------------- */
+  const openCode = (open.code ?? '').trim().toUpperCase()
+  const fileCode = (b.code ?? '').trim().toUpperCase()
+  if (openCode && fileCode && openCode !== fileCode) {
+    warnings.push({ key: 'This backup is {code}. You are working on {open}.', vars: { code: fileCode, open: openCode } })
+  }
+  if (open.duration != null && b.duration != null && open.duration !== b.duration) {
+    warnings.push({
+      key: 'This backup is the {n}-minute version. You are working on {open} minutes.',
+      vars: { n: b.duration, open: open.duration },
+    })
+  }
+
+  const openClips = clipTotal(open.project)
+  const empty = openClips === 0
+  if (!empty && open.dirty) {
+    warnings.push({ key: 'What is open has changes that were never saved. Loading replaces them and they cannot be recovered.' })
+  }
+
+  /* ---- the rack ------------------------------------------------------ */
+  const fileClips = clipTotal(b.project)
+  if (openClips !== fileClips) {
+    changes.push({ key: '{a} clips on screen → {b} in the backup.', vars: { a: openClips, b: fileClips } })
+  }
+  const openTracks = open.project.tracks.length
+  const fileTracks = b.project.tracks.length
+  if (openTracks !== fileTracks) changes.push({ key: '{a} tracks → {b}.', vars: { a: openTracks, b: fileTracks } })
+
+  if (Math.abs((open.project.lengthSec || 0) - (b.project.lengthSec || 0)) > 1) {
+    changes.push({
+      key: 'Length {a} → {b}.',
+      vars: { a: mmss(open.project.lengthSec || 0), b: mmss(b.project.lengthSec || 0) },
+    })
+  }
+  if (Math.abs((open.project.masterGain ?? 0) - (b.project.masterGain ?? 0)) > 0.005) {
+    changes.push({ key: 'The master level is different.' })
+  }
+  if (JSON.stringify(open.project.phases ?? []) !== JSON.stringify(b.project.phases ?? [])) {
+    changes.push({ key: 'The phase map is different.' })
+  }
+
+  /* ---- the words, which are the expensive part ----------------------- */
+  const a = voiceFacts(open.project)
+  const f = voiceFacts(b.project)
+  let reworded = 0
+  let onlyOpen = 0
+  for (const [k, text] of a.textBySource) {
+    const other = f.textBySource.get(k)
+    if (other === undefined) onlyOpen++
+    else if (other !== text) reworded++
+  }
+  let onlyFile = 0
+  for (const k of f.textBySource.keys()) if (!a.textBySource.has(k)) onlyFile++
+
+  if (reworded) changes.push({ key: '{n} voice lines are worded differently in the backup.', vars: { n: reworded } })
+  if (onlyOpen) changes.push({ key: '{n} voice lines on screen are not in the backup at all.', vars: { n: onlyOpen } })
+  if (onlyFile) changes.push({ key: '{n} voice lines in the backup are not on screen.', vars: { n: onlyFile } })
+  if (a.rendered > f.rendered) {
+    changes.push({
+      key: '{n} synthesized voice clips lose their render and have to be spoken again.',
+      vars: { n: a.rendered - f.rendered },
+    })
+  }
+
+  /* ---- which version it opens in ------------------------------------- */
+  if (b.workingLang !== open.workingLang || b.workingTo !== open.workingTo) {
+    changes.push({ key: 'It opens in a different version (language or form) from the one you are in.' })
+  }
+
+  /* ---- newer or older ------------------------------------------------ */
+  const openSaved = typeof open.project.savedAt === 'number' ? open.project.savedAt : 0
+  if (openSaved && b.exportedAt < openSaved) {
+    warnings.push({ key: 'This backup is OLDER than the session on screen. Loading it goes back in time.' })
+  }
+
+  return { warnings, changes, harmless: empty || (!warnings.length && !changes.length) }
+}

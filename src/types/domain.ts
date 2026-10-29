@@ -34,7 +34,56 @@ export type ProtocolI18n = Partial<Record<TextLocale, ProtocolText>>
     themselves, named after a moment rather than a condition. GL-LIB entries
     never appear in a therapist's clinical pathway and carry no sub-protocol
     numbering — see src/data/library.ts. */
-export type ProtocolFamily = 'GL-ANX' | 'GL-DEP' | 'GL-BURN' | 'GL-STRESS' | 'GL-RESIL' | 'GL-LIB'
+/**
+ * The code prefix a protocol belongs to — and, with it, who may open it.
+ *
+ * TWO GROUPS, and the split is the whole point of the type.
+ *
+ * · CLINICAL. Treatment material. A professional puts it in a pathway; it is
+ *   never browsed to, never searched, never on a shelf.
+ * · LIBRARY. Self-guided. A person opens it alone, which is the whole point
+ *   of it.
+ *
+ * The clinical five were the only ones that existed when this type was
+ * written, so everything else the catalogue has been filled with since —
+ * GL-CALM, GL-FOCUS, GL-ENER, GL-GROW, GL-VIT, GL-INTRO — was stored as
+ * `GL-ANX`, because `familyFromCode` defaults to the first clinical family
+ * when it does not recognise a prefix. Forty-odd self-guided protocols are
+ * filed under Anxiety in the console today for exactly that reason, and the
+ * catalogue cannot be grouped the way it is actually produced: one category,
+ * about five protocols, three durations, two languages, two forms.
+ */
+export type ProtocolFamily =
+  | 'GL-ANX' | 'GL-DEP' | 'GL-BURN' | 'GL-STRESS' | 'GL-RESIL'
+  | 'GL-LIB' | 'GL-CALM' | 'GL-FOCUS' | 'GL-ENER' | 'GL-GROW' | 'GL-VIT' | 'GL-INTRO'
+
+/** Treatment material: only ever reached through a professional. */
+export const CLINICAL_FAMILIES = [
+  'GL-ANX', 'GL-DEP', 'GL-BURN', 'GL-STRESS', 'GL-RESIL',
+] as const satisfies readonly ProtocolFamily[]
+
+/** Self-guided material: the library, the shelves, the search. */
+export const LIBRARY_FAMILIES = [
+  'GL-LIB', 'GL-CALM', 'GL-FOCUS', 'GL-ENER', 'GL-GROW', 'GL-VIT', 'GL-INTRO',
+] as const satisfies readonly ProtocolFamily[]
+
+/** Every family, clinical first — the order the console lists them in. */
+export const PROTOCOL_FAMILIES: ProtocolFamily[] = [...CLINICAL_FAMILIES, ...LIBRARY_FAMILIES]
+
+/** Whether a family is self-guided. The single place that decides, so the
+    audience guessed from a code and the console's shelves cannot disagree. */
+export function isLibraryFamily(f: ProtocolFamily): boolean {
+  return (LIBRARY_FAMILIES as readonly ProtocolFamily[]).includes(f)
+}
+
+/** The family a GL code names, or null when its prefix is not one of ours.
+    NULL, deliberately: a caller that needs a family has to decide what an
+    unknown prefix means, and silently answering `GL-ANX` is what filed the
+    whole self-guided catalogue under Anxiety. */
+export function familyOfCode(code: string | null | undefined): ProtocolFamily | null {
+  const prefix = (code ?? '').trim().split(/\s+/)[0].toUpperCase()
+  return PROTOCOL_FAMILIES.find((f) => f === prefix) ?? null
+}
 
 /** Quick / Standard / Deep — the three version configs. */
 export type Duration = 6 | 12 | 24
