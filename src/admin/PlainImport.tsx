@@ -965,31 +965,37 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           </span>
           <div className="adm-plain__askrow">
             {importReview.nothing ? (
-              /* Nothing to write in THIS mode. Whether that means the file is
-                 identical is a different question, and `dropped` answers it:
-                 where the file does carry changes, the way out is the other
-                 mode, one tap away, not a button saying "identico". */
-              importReview.dropped ? (
-                <>
-                  {/* The words are already saved: the default action is to
-                      close. Looking at the rest of the file is the OTHER
-                      button, and it switches the comparison rather than
-                      importing anything — labelled "Importa tutto il file"
-                      and sitting where the primary action goes, it read as
-                      the console demanding a full import of a workbook whose
-                      operator had only come to update a column. */}
-                  <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onCancel}>
-                    I testi sono già salvati · Chiudi
-                  </button>
+              /* The comparison found nothing new to write. That is a finding,
+                 not a verdict: an analyst re-importing a column of corrected
+                 translations wants it written, and until now had no way to
+                 say so — the only buttons were Chiudi and the other mode, so
+                 the panel's own opinion was the end of it. The import is
+                 offered here too. It writes exactly what the summary above
+                 describes, and where the words really are the stored ones it
+                 is a no-op: in "solo i testi" nothing but `testo_*` on
+                 matched clips can move, whatever this button is pressed for. */
+              <>
+                <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onConfirm}>
+                  {importReview.busy
+                    ? 'Importazione…'
+                    : importReview.mode === 'text' ? 'Importa comunque i testi' : 'Importa comunque tutto il file'}
+                </button>
+                {/* It SWITCHES the comparison; it does not import. Labelled
+                    "Importa tutto il file", and sitting where the primary
+                    action goes, it read as the console demanding a full
+                    import of a workbook whose operator had only come to
+                    update a column. */}
+                {importReview.dropped && (
                   <button className="b2b-btn" disabled={importReview.busy} onClick={() => importReview.onMode('import')}>
                     Vedi cosa cambia con «Tutto il file»
                   </button>
-                </>
-              ) : importReview.annotated ? (
-                <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Cambiano solo le note · Chiudi</button>
-              ) : (
-                <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Identico: niente da importare · Chiudi</button>
-              )
+                )}
+                <button className="b2b-btn" disabled={importReview.busy} onClick={importReview.onCancel}>
+                  {importReview.dropped
+                    ? 'I testi sono già salvati · Chiudi'
+                    : importReview.annotated ? 'Cambiano solo le note · Chiudi' : 'Identico · Chiudi'}
+                </button>
+              </>
             ) : (
               <>
                 <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onConfirm}>
