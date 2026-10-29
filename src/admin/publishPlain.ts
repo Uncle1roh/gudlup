@@ -20,12 +20,15 @@ import {
   catalogDuration,
   mergeVersions,
   narrowTimeline,
+  studioFor,
   timelinesByDuration,
   type Audience,
   type CatalogProtocol,
 } from '../data/catalog'
 import { familyOfCode, type Duration, type ProtocolFamily, type SessionPhase } from '../types/domain'
 import { scriptIssues, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
+import { buildScriptIndex } from './plainStudio'
+import type { StudioProject } from '../compose/types'
 import { SCRIPT_LANGS, ADDRESSEES, langsWithText, textIn, variantKey, variantShort, parseVariantKey, type ScriptLang, type TextByLang } from '../tts/voiceLang'
 
 /* Text is counted and compared per VARIANT — a language and the form it
@@ -58,6 +61,57 @@ export function phasesForCatalog(v: PlainVersion | undefined): SessionPhase[] {
     fraction: Math.max(0.01, (p.endS - p.startS) / Math.max(1, v.durationS)),
     showOrb: p.fase === 2,
   }))
+}
+
+/* ------------------------------------------------- the Studio's own copy ---
+
+   A saved Studio session holds its own text for every clip, in every
+   language, beside the timeline's. It has to: the session is what the rack,
+   the draws and the renders hang off, and it is read INSTEAD of the sheet —
+   `studioFor` prefers it, and `loadLang` fills a clip's words from the
+   workbook only where the session has none of its own.
+
+   So "solo i testi" wrote the corrected translation into the catalogue and
+   the Studio went on showing the old one, which is the one place in this
+   pipeline where being almost right is worse than failing: the operator sees
+   the import succeed, opens the room where the words are actually spoken,
+   and finds yesterday's sentence. The next render speaks it.
+
+   The words move into the session too, then, and nothing else does. Matching
+   is by `sourceId` — `clip:VC-012`, `aff:CSI-04`, `aff:REF-01#2` for a
+   whispered fragment — which is the index the workbook already builds. The
+   renders are deliberately left where they are: `ttsText` keeps saying what
+   was spoken, so a line whose words just changed shows as needing a new take
+   rather than passing the old one off as current.
+   ---------------------------------------------------------------------- */
+
+/** The session, with every text it can find in `timeline` brought up to date. */
+export function refreshStudioScripts(project: StudioProject, timeline: PlainTimeline): StudioProject {
+  const scripts = buildScriptIndex(timeline)
+  let moved = 0
+  const tracks = project.tracks.map((t) => ({
+    ...t,
+    clips: t.clips.map((c) => {
+      const found = c.sourceId ? scripts.bySource[c.sourceId] : undefined
+      if (!found) return c
+      /* Keyed by VARIANT (`it`, `it:f`, `pt-BR`, `pt-BR:f`), which the stored
+         type still spells as a language map. */
+      const byLang: Partial<Record<string, string>> = { ...(c.textByLang ?? {}) }
+      let changed = false
+      for (const k of Object.keys(found)) {
+        const v = found[k]
+        if (!v || byLang[k] === v) continue
+        byLang[k] = v
+        changed = true
+      }
+      if (!changed) return c
+      moved += 1
+      /* A stored session is canonical: its live `text` IS the Italian one
+         (`canonicalVoiceClip`), so it follows the Italian and nothing else. */
+      return { ...c, textByLang: byLang as typeof c.textByLang, text: byLang.it ?? c.text }
+    }),
+  }))
+  return moved ? { ...project, tracks } : project
 }
 
 export interface PublishInput {
@@ -186,6 +240,25 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
     }
   }
 
+  /* The words just changed, and the Studio keeps its own copy of them. Only
+     in "solo i testi": a full import stamps `plainImportedAt` above, which
+     makes the Studio read the sheet rather than the session it no longer
+     describes. */
+  const studioByDuration = { ...(existing?.studioByDuration ?? {}) }
+  let studio = existing?.studio
+  if (mode === 'text') {
+    for (const d of durations) {
+      const t = incoming[d]
+      if (!t) continue
+      const own = studioByDuration[d]
+      if (own) { studioByDuration[d] = refreshStudioScripts(own, t); continue }
+      /* A session saved before the split carries no duration of its own and
+         is offered to the one that matches its length — the same session the
+         Studio will open here, so the same words have to reach it. */
+      if (studio && studioFor(existing, d) === studio) studio = refreshStudioScripts(studio, t)
+    }
+  }
+
   const catalogPhases = phasesForCatalog(phased)
 
   return {
@@ -220,6 +293,8 @@ export function entryForPublish({ timeline: t, existing, selected, keepDraft, in
     plain: durations.length ? (incoming[selected ?? durations[0]] ?? incoming[durations[0]]) : existing?.plain,
     plainByDuration,
     plainImportedAt,
+    studio,
+    studioByDuration,
     assetMap: existing?.assetMap,
     updatedAt: now,
   }

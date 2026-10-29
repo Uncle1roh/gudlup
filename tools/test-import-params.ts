@@ -31,7 +31,7 @@
          && node <tmp>/ip.cjs
    ============================================================================ */
 
-import { planPlainImport, describeImportPlan } from '../src/admin/publishPlain'
+import { planPlainImport, describeImportPlan, entryForPublish } from '../src/admin/publishPlain'
 import type { CatalogProtocol } from '../src/data/catalog'
 import type { PlainClip, PlainTimeline, PlainVersion } from '../src/admin/plainTimeline'
 
@@ -99,15 +99,50 @@ function sheet(k: Knobs = {}): PlainTimeline {
 
 const stored = sheet()
 
-function saved(t: PlainTimeline): CatalogProtocol {
+function saved(t: PlainTimeline, session?: unknown): CatalogProtocol {
   return {
     code: 'GL-ANX 1.1', family: 'GL-ANX', title: 'Standard', blurb: '', phases: [],
     versions: [{ duration: 12 }],
     enabled: true, source: 'imported', tenants: 'all', audioReady: false,
     plainByDuration: { 12: t } as never,
+    studioByDuration: session ? { 12: session } : undefined,
     updatedAt: 1_700_000_000_000,
   } as unknown as CatalogProtocol
 }
+
+/** A Studio session with its own copy of the words, as one is actually saved:
+    `text` is the Italian, and every render is named by what it says. */
+const IT_ONE = 'Benvenuto. Questo \u00e8 il tuo momento di pace.'
+function session(): { tracks: { clips: SeedLike[] }[] } {
+  const clip = (sourceId: string | undefined, it: string, pt: string): SeedLike => ({
+    startSec: 20, durationSec: 8, params: { kind: 'voice', voiceId: 'v1' },
+    sourceId, text: it, textByLang: { it, 'pt-BR': pt },
+    ttsPath: 'tts/old.mp3', ttsText: it,
+  })
+  return {
+    name: 'GL-ANX 1.1 \u2014 Standard', lengthSec: 720, masterGain: 1, savedAt: 1_700_000_000_000,
+    tracks: [{
+      type: 'voice', name: 'Voce Guida', volume: 1,
+      clips: [
+        clip('clip:VC-001', IT_ONE, 'Bem-vindo. Este \u00e9 o seu momento.'),
+        clip('clip:ZZ-999', 'Una clip che il foglio non ha.', 'Um clipe que a planilha n\u00e3o tem.'),
+        clip(undefined, 'Una clip senza sourceId.', 'Um clipe sem sourceId.'),
+      ],
+    }],
+  } as unknown as { tracks: { clips: SeedLike[] }[] }
+}
+interface SeedLike {
+  startSec?: number
+  durationSec?: number
+  params?: unknown
+  sourceId?: string
+  text?: string
+  textByLang?: Record<string, string>
+  ttsPath?: string
+  ttsText?: string
+}
+const clipsOf = (p: CatalogProtocol, d = 12): SeedLike[] =>
+  (p as unknown as { studioByDuration: Record<number, { tracks: { clips: SeedLike[] }[] }> }).studioByDuration[d].tracks[0].clips
 
 /** "solo i testi", which is what the panel picks for a duration already saved. */
 function textPlan(file: PlainTimeline) {
@@ -266,6 +301,64 @@ console.log('\n--- a workbook whose ids match nothing saved ---')
   assert(p.ignored.length > 0, 'the rows are reported as ignored')
   assert(says(lines, 'nessuna delle sue righe corrisponde'),
     '…and the text line says no text was compared at all')
+}
+
+/* ---- the room where the words are actually spoken -----------------------
+
+   "Now I can import only the text, but when I enter the Studio - the most
+   important part - the texts are still the old ones."
+
+   They were. A saved Studio session holds its own copy of every clip's text
+   in every language, and it has to: it is what the rack, the draws and the
+   renders hang off, and `studioFor` reads it INSTEAD of the sheet.
+   `loadLang` fills a clip's words from the workbook only where the session
+   has none of its own, so a corrected translation landed in the catalogue
+   and stopped at the door of the one screen that speaks it.
+
+   The import carries the words in. Nothing else of the session moves, and
+   the renders stay put with their old `ttsText`, which is what makes an
+   updated line show as needing a new take instead of passing the old one
+   off as current.
+   ------------------------------------------------------------------------ */
+console.log('\n--- the Studio session gets the new words ---')
+{
+  const entry = entryForPublish({
+    timeline: sheet({ testo: 'Benvenuta. Sei nel tuo momento.' }),
+    existing: saved(stored, session()), selected: 12, keepDraft: true, intoExisting: true, mode: 'text',
+  })
+  const [matched, absent, loose] = clipsOf(entry)
+  assert(matched.textByLang?.it === 'Benvenuta. Sei nel tuo momento.',
+    'the matched clip speaks the imported words')
+  assert(matched.text === 'Benvenuta. Sei nel tuo momento.',
+    'the live field follows, because a stored session is canonically Italian')
+  assert(matched.ttsPath === 'tts/old.mp3' && matched.ttsText === IT_ONE,
+    'the render is left alone, still naming what it actually says')
+  assert(matched.textByLang?.['pt-BR'] === 'Bem-vindo. Este \u00e9 o seu momento.',
+    'a language the file does not carry keeps what the session had')
+  assert(absent.text === 'Una clip che il foglio non ha.', 'a clip the sheet has no row for is untouched')
+  assert(loose.text === 'Una clip senza sourceId.', 'and so is one with nothing to match on')
+}
+
+console.log('\n--- a full import leaves the session to the stamp ---')
+{
+  const entry = entryForPublish({
+    timeline: sheet({ testo: 'Benvenuta. Sei nel tuo momento.' }),
+    existing: saved(stored, session()), selected: 12, keepDraft: true, intoExisting: true, mode: 'import', now: 1_800_000_000_000,
+  })
+  assert(clipsOf(entry)[0].text === IT_ONE,
+    'the words are not pushed in: the session no longer describes these clips')
+  assert(entry.plainImportedAt?.[12] === 1_800_000_000_000,
+    'it is stamped instead, and the Studio reads the sheet')
+}
+
+console.log('\n--- nothing to carry, nothing rewritten ---')
+{
+  const before = session()
+  const entry = entryForPublish({
+    timeline: sheet(), existing: saved(stored, before), selected: 12, keepDraft: true, intoExisting: true, mode: 'text',
+  })
+  assert(JSON.stringify(clipsOf(entry)) === JSON.stringify(before.tracks[0].clips),
+    'an identical file leaves the session byte for byte')
 }
 
 console.log('\n--- the word itself ---')
