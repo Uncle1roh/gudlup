@@ -524,7 +524,20 @@ export interface ImportPlan {
    * so it rides beside them rather than inside them.
    */
   columnIssues: string[]
-  /** Nothing would change: every written duration is identical to what is stored. */
+  /**
+   * In "solo i testi": what the file changes OUTSIDE the words, per duration.
+   *
+   * The mode is right to leave it alone — that is what it is for. What it
+   * must not do is call the file identical afterwards. Empty in the other
+   * modes, where everything in the file is imported.
+   */
+  dropped: TimelineDiff[]
+  /**
+   * This import would write nothing new.
+   *
+   * It is a statement about what the CHOSEN MODE does, not about the file:
+   * read it together with `dropped`, which is the file's own answer.
+   */
   nothing: boolean
 }
 
@@ -575,6 +588,7 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
        stored row's issues, so by the time they exist the file's own column
        warnings are no longer in them. */
     columnIssues: t.issues.filter((i) => i.code === 'column').map((i) => i.message),
+    dropped: [],
     nothing: false,
   }
   const seen = new Set<Duration>()
@@ -600,6 +614,21 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
       plan.written[d] = merged
       const diff = diffTimelines(d, old, merged, {})
       plan.diffs.push(diff)
+
+      /* What this mode is THROWING AWAY.
+         The diff above compares the stored timeline with the overlay result,
+         and the overlay result is the stored timeline with new words in it —
+         so a workbook whose volumes, fades, phases or fx were edited produces
+         a diff with nothing in it, and the panel said "identico a quello
+         salvato". It was not identical. The operator had just changed those
+         cells, and the sentence sent them back to the spreadsheet looking for
+         a mistake they had not made.
+         So the file is compared a SECOND time, the way a full import would
+         read it, and everything outside the words is named. Nothing here is
+         written: this is the mode saying out loud what it does not do. */
+      const wide = diffTimelines(d, old, mergeScripts(old, incoming).merged, {})
+      if (wide.added.length || wide.removed.length || wide.affAdded.length
+        || wide.affRemoved.length || wide.paramChanged.length) plan.dropped.push(wide)
       if (unmatched.length) {
         plan.ignored.push(...unmatched)
         plan.skipped.push({
@@ -657,9 +686,23 @@ export function describeImportPlan(plan: ImportPlan, selected?: Duration | null)
      never read. Everything below them is computed from the file MINUS those
      columns, so reading it without this line first is reading a half file. */
   for (const m of plan.columnIssues) lines.push(`⚠ ${m}`)
+  /* …and then what "solo i testi" leaves in the file. Same reason, same
+     place: everything below is a comparison of the words only, and reading
+     it without knowing that is reading half a file. */
+  for (const w of plan.dropped) {
+    const head = `${w.duration} min:`
+    const bits: string[] = []
+    if (w.paramChanged.length) bits.push(`tempi o parametri in ${w.paramChanged.length} ${w.paramChanged.length === 1 ? 'voce' : 'voci'} (${list(w.paramChanged)})`)
+    if (w.added.length) bits.push(`${w.added.length} clip che non sono salvate (${list(w.added)})`)
+    if (w.removed.length) bits.push(`${w.removed.length} clip salvate che il file non ha più (${list(w.removed)})`)
+    if (w.affAdded.length) bits.push(`affermazioni nuove (${list(w.affAdded)})`)
+    if (w.affRemoved.length) bits.push(`affermazioni tolte (${list(w.affRemoved)})`)
+    lines.push(`⚠ ${head} il file cambia anche ${bits.join('; ')} — «solo i testi» non le importa. Scegli «Tutto il file» per applicarle.`)
+  }
   if (plan.missingSelected && selected != null) {
     lines.push(`Il file non contiene la versione da ${selected} min.`)
   }
+  const droppedAt = new Set(plan.dropped.map((w) => w.duration))
   for (const d of plan.diffs) {
     const head = `${d.duration} min:`
     if (d.isNew) {
@@ -667,7 +710,16 @@ export function describeImportPlan(plan: ImportPlan, selected?: Duration | null)
       if (d.newLangs.length) lines.push(`${head} testi in ${d.newLangs.map((l) => LBL[l]).join(' e ')}.`)
       continue
     }
-    if (d.identical) { lines.push(`${head} identico a quello salvato — niente da importare.`); continue }
+    if (d.identical) {
+      /* "Identical" is only ever said about a file nothing was dropped from.
+         Where something was, the words are what matched — and saying so is
+         the difference between an operator closing the panel satisfied and
+         an operator going back to a spreadsheet that was already right. */
+      lines.push(droppedAt.has(d.duration)
+        ? `${head} i testi sono già quelli salvati — il resto del file, qui sopra, non entra con «solo i testi».`
+        : `${head} identico a quello salvato — niente da importare.`)
+      continue
+    }
     if (d.newLangs.length) lines.push(`${head} nuova lingua: ${d.newLangs.map((l) => LBL[l]).join(', ')}.`)
     for (const l of SCRIPT_LANGS) {
       const added = d.textAdded[l]

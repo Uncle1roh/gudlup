@@ -118,6 +118,9 @@ interface ImportReview {
   lines: string[]
   /** Identical to what is stored — confirming would write nothing new. */
   nothing: boolean
+  /** "Solo i testi" is leaving changes in the file. The panel offers the
+      other mode instead of the word "identico". */
+  dropped: boolean
   /** The workbook, stamped with the protocol's code — merged at confirm time
       onto the row as it is THEN. */
   timeline: PlainTimeline
@@ -255,6 +258,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           selected,
           lines: describeImportPlan(plan, selected),
           nothing: plan.nothing,
+          dropped: plan.dropped.length > 0,
           timeline,
           mode,
         })
@@ -298,7 +302,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     try {
       const fresh = await freshRow(opened)
       const plan = planPlainImport({ timeline: review.timeline, existing: fresh, selected: review.selected, mode })
-      setReview({ ...review, mode, lines: describeImportPlan(plan, review.selected), nothing: plan.nothing })
+      setReview({ ...review, mode, lines: describeImportPlan(plan, review.selected), nothing: plan.nothing, dropped: plan.dropped.length > 0 })
     } catch (e) {
       setImportError((e as Error).message)
     } finally {
@@ -440,6 +444,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           fileName: review.fileName,
           lines: review.lines,
           nothing: review.nothing,
+          dropped: review.dropped,
           busy: reviewBusy,
           mode: review.mode,
           onMode: (m) => void setImportMode(m),

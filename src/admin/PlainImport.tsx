@@ -80,6 +80,10 @@ interface Props {
     fileName: string
     lines: string[]
     nothing: boolean
+    /** The chosen mode writes nothing, but the file is NOT identical: it
+        carries changes outside the words. The two together are what the
+        buttons below read. */
+    dropped: boolean
     busy: boolean
     /** Which import the summary above describes. */
     mode: 'import' | 'text'
@@ -919,7 +923,7 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         </div>
       )}
       {importReview && (
-        <div className={`adm-plain__status adm-plain__review${importReview.nothing ? '' : ' adm-plain__review--changes'}`} role="dialog" aria-label="Confronto dell’Excel importato">
+        <div className={`adm-plain__status adm-plain__review${importReview.nothing && !importReview.dropped ? '' : ' adm-plain__review--changes'}`} role="dialog" aria-label="Confronto dell’Excel importato">
           <b>Confronto con quanto salvato — «{importReview.fileName}»</b>
 
           {/* WHAT this import is allowed to touch. Asked before the summary
@@ -959,7 +963,20 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           </span>
           <div className="adm-plain__askrow">
             {importReview.nothing ? (
-              <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Identico: niente da importare · Chiudi</button>
+              /* Nothing to write in THIS mode. Whether that means the file is
+                 identical is a different question, and `dropped` answers it:
+                 where the file does carry changes, the way out is the other
+                 mode, one tap away, not a button saying "identico". */
+              importReview.dropped ? (
+                <>
+                  <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={() => importReview.onMode('import')}>
+                    Importa tutto il file
+                  </button>
+                  <button className="b2b-btn" disabled={importReview.busy} onClick={importReview.onCancel}>Chiudi</button>
+                </>
+              ) : (
+                <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Identico: niente da importare · Chiudi</button>
+              )
             ) : (
               <>
                 <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onConfirm}>
