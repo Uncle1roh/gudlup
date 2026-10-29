@@ -53,6 +53,10 @@ interface Knobs {
   /** The comment column, and the raw `fase` cell: both read by nobody. */
   note?: string
   faseRaw?: string
+  /** A workbook whose text columns are empty, or absent altogether. */
+  noText?: boolean
+  /** Renumbered clip ids: a file that matches nothing saved. */
+  idSuffix?: string
 }
 
 function voice(id: string, startS: number, testo: string, volumeDb = -6): PlainClip {
@@ -61,6 +65,11 @@ function voice(id: string, startS: number, testo: string, volumeDb = -6): PlainC
     startS, endS: startS + 8, fadeInS: 0, fadeOutS: 0,
     testo, testoByLang: { it: testo }, volumeDb,
   } as PlainClip
+}
+/** The same row with its text columns empty. */
+function mute(c: PlainClip): PlainClip {
+  const { testo: _t, testoByLang: _b, ...rest } = c as PlainClip & Record<string, unknown>
+  return rest as PlainClip
 }
 
 function sheet(k: Knobs = {}): PlainTimeline {
@@ -75,7 +84,8 @@ function sheet(k: Knobs = {}): PlainTimeline {
     voice('VC-001', 20, k.testo ?? 'Benvenuto. Questo è il tuo momento di pace.'),
     voice('VC-002', 300, 'Lascia andare il respiro.'),
     ...(k.extra ?? []),
-  ]
+  ].map((c) => (k.noText ? mute(c) : c))
+    .map((c) => (k.idSuffix ? { ...c, clipId: `${c.clipId}${k.idSuffix}` } : c))
   const version: PlainVersion = {
     sheet: 'Standard', durationMin: 12, durationS: 720,
     levelMode: 'absolute', clips,
@@ -223,6 +233,41 @@ console.log('\n--- "tutto il file" still writes the note ---')
 }
 
 /* ---- the sentence, wherever it appears ---------------------------------- */
+/* ---- why there is nothing to write -------------------------------------
+
+   The third round of the same report: "it still tells him to look at the
+   whole file". The panel was right that the words were already saved and
+   right that the rest of the file was not — what it never said is HOW it
+   knew, and an operator who had just corrected a column read "nessun testo
+   nuovo nel file" as a broken import rather than as a statement about the
+   file in his hands. Three situations, three sentences.
+   ------------------------------------------------------------------------ */
+console.log('\n--- the file really does carry the saved words ---')
+{
+  const lines = describeImportPlan(textPlan(sheet()), 12)
+  assert(says(lines, 'identici, parola per parola'),
+    'the panel says the columns were read and matched')
+  assert(says(lines, 'righe confrontate'), '…and how many rows it compared')
+}
+
+console.log('\n--- a workbook with no readable text column ---')
+{
+  const lines = describeImportPlan(textPlan(sheet({ noText: true })), 12)
+  assert(says(lines, 'nessuna colonna di testo leggibile'),
+    'an empty column is not the same news as an identical one')
+  assert(says(lines, 'testo_pt_m'), '…and the spellings it does read are listed')
+  assert(!says(lines, 'identici, parola per parola'), 'nothing is claimed to match')
+}
+
+console.log('\n--- a workbook whose ids match nothing saved ---')
+{
+  const p = textPlan(sheet({ idSuffix: '-bis' }))
+  const lines = describeImportPlan(p, 12)
+  assert(p.ignored.length > 0, 'the rows are reported as ignored')
+  assert(says(lines, 'nessuna delle sue righe corrisponde'),
+    '…and the text line says no text was compared at all')
+}
+
 console.log('\n--- the word itself ---')
 {
   for (const [what, file] of [

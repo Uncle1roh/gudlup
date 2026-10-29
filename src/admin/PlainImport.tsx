@@ -971,14 +971,19 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                  mode, one tap away, not a button saying "identico". */
               importReview.dropped ? (
                 <>
-                  {/* It SWITCHES the comparison; it does not import. Labelled
-                      "Importa tutto il file", it was read as the import
-                      itself, and the panel coming back with a summary and a
-                      Conferma looked like a button that had not worked. */}
-                  <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={() => importReview.onMode('import')}>
+                  {/* The words are already saved: the default action is to
+                      close. Looking at the rest of the file is the OTHER
+                      button, and it switches the comparison rather than
+                      importing anything — labelled "Importa tutto il file"
+                      and sitting where the primary action goes, it read as
+                      the console demanding a full import of a workbook whose
+                      operator had only come to update a column. */}
+                  <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={importReview.onCancel}>
+                    I testi sono già salvati · Chiudi
+                  </button>
+                  <button className="b2b-btn" disabled={importReview.busy} onClick={() => importReview.onMode('import')}>
                     Vedi cosa cambia con «Tutto il file»
                   </button>
-                  <button className="b2b-btn" disabled={importReview.busy} onClick={importReview.onCancel}>Chiudi</button>
                 </>
               ) : importReview.annotated ? (
                 <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Cambiano solo le note · Chiudi</button>

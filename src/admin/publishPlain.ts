@@ -26,7 +26,7 @@ import {
 } from '../data/catalog'
 import { familyOfCode, type Duration, type ProtocolFamily, type SessionPhase } from '../types/domain'
 import { scriptIssues, type PlainAffirmation, type PlainClip, type PlainTimeline, type PlainVersion } from './plainTimeline'
-import { SCRIPT_LANGS, ADDRESSEES, langsWithText, textIn, variantKey, parseVariantKey, type ScriptLang, type TextByLang } from '../tts/voiceLang'
+import { SCRIPT_LANGS, ADDRESSEES, langsWithText, textIn, variantKey, variantShort, parseVariantKey, type ScriptLang, type TextByLang } from '../tts/voiceLang'
 
 /* Text is counted and compared per VARIANT — a language and the form it
    addresses the listener in — because "the Italian changed" stopped being one
@@ -332,11 +332,25 @@ export interface ScriptOverlay {
   updated: string[]
   /** Ids in the incoming file that match nothing stored — nothing was added. */
   unmatched: string[]
+  /** Saved rows the file had a row for. */
+  matched: number
+  /**
+   * Per variant: texts the file carries that are, character for character,
+   * the ones already saved.
+   *
+   * The whole point of the number. "Nessun testo nuovo nel file" is two very
+   * different pieces of news — we read your column and it says what is
+   * already stored, or we never read your column at all — and an operator
+   * who has just corrected cells needs to be told WHICH, in the panel,
+   * without opening a console.
+   */
+  same: Partial<Record<string, number>>
 }
 
 export function overlayScripts(stored: PlainTimeline, incoming: PlainTimeline): ScriptOverlay {
   const updated: string[] = []
   const matched = new Set<string>()
+  const same: Partial<Record<string, number>> = {}
 
   const incClips = new Map<string, PlainClip>()
   for (const v of incoming.versions) for (const c of v.clips) incClips.set(c.clipId, c)
@@ -349,7 +363,8 @@ export function overlayScripts(stored: PlainTimeline, incoming: PlainTimeline): 
     let changed = false
     for (const k of SCRIPT_VARIANTS) {
       const v = textIn(inc, keyLang(k), keyTo(k))
-      if (!v || v === textIn(old, keyLang(k), keyTo(k))) continue
+      if (!v) continue
+      if (v === textIn(old, keyLang(k), keyTo(k))) { same[k] = (same[k] ?? 0) + 1; continue }
       next[k] = v
       changed = true
     }
@@ -389,7 +404,7 @@ export function overlayScripts(stored: PlainTimeline, incoming: PlainTimeline): 
     ...scriptIssues({ versions, affirmations }).filter((i) => !i.sheet || versions.some((v) => v.sheet === i.sheet)),
   ]
 
-  return { merged: { ...stored, versions, affirmations, issues }, updated, unmatched }
+  return { merged: { ...stored, versions, affirmations, issues }, updated, unmatched, matched: matched.size, same }
 }
 
 /* --------------------------------------------------------------- compare */
@@ -518,6 +533,45 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     && !diff.affAdded.length && !diff.affRemoved.length
     && !diff.paramChanged.length && !diff.annotated.length
   return diff
+}
+
+/** Per variant, how many clips and affirmations of a timeline carry text. */
+function textCounts(t: PlainTimeline): Partial<Record<string, number>> {
+  const out: Partial<Record<string, number>> = {}
+  const add = (s: TextByLang | undefined): void => {
+    if (!s) return
+    for (const k of SCRIPT_VARIANTS) if (textIn(s, keyLang(k), keyTo(k))) out[k] = (out[k] ?? 0) + 1
+  }
+  for (const v of t.versions) for (const c of v.clips) if (c.tipo === 'voice') add(clipScript(c))
+  for (const a of t.affirmations) add(affScript(a))
+  return out
+}
+
+/**
+ * Why "solo i testi" found nothing to write.
+ *
+ * It used to be one sentence — "nessun testo nuovo nel file" — for three
+ * situations that need three different answers, and the operator who had
+ * just corrected a column read it as the fourth: that the import was broken.
+ * The three are: the file has no text column this parser could read; it has
+ * one and none of its rows matched a saved clip; and it has one, the rows
+ * matched, and every cell says exactly what is already stored. Only the last
+ * one means "you are looking at the wrong file", and it is the only one the
+ * panel can say for them.
+ */
+function whyNoNewText(d: Duration, file: PlainTimeline, matched: number, same: Partial<Record<string, number>>): string {
+  const inFile = textCounts(file)
+  const columns = SCRIPT_VARIANTS.filter((k) => (inFile[k] ?? 0) > 0)
+  if (!columns.length) {
+    return `${d} min: il file non porta nessuna colonna di testo leggibile, quindi non c’è niente da sovrascrivere. Le intestazioni lette sono testo, testo_it_m / testo_it_f, testo_pt_m / testo_pt_f e le loro varianti (testo_pt, texto_pt, «Testo PT (F)»).`
+  }
+  const bits = columns.map((k) => `${inFile[k]} in ${variantShort(keyLang(k), keyTo(k))}`)
+  if (!matched) {
+    return `${d} min: il file porta ${bits.join(', ')}, ma nessuna delle sue righe corrisponde a una clip salvata: nessun testo è stato confrontato. Controlla la durata selezionata e i clip_id.`
+  }
+  return SCRIPT_VARIANTS.some((k) => (same[k] ?? 0) > 0)
+    ? `${d} min: nessun testo nuovo. Il file porta ${bits.join(', ')} e sono identici, parola per parola, a quelli già salvati (${matched} righe confrontate) — se hai appena corretto delle celle, il file aperto qui non è quello che hai corretto.`
+    : `${d} min: il file porta ${bits.join(', ')}, ma nessuno di essi è finito su una riga salvata (${matched} righe confrontate).`
 }
 
 /* ------------------------------------------------------------------ plan */
@@ -649,7 +703,7 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
         })
         continue
       }
-      const { merged, updated, unmatched } = overlayScripts(old, incoming)
+      const { merged, updated, unmatched, matched, same } = overlayScripts(old, incoming)
       plan.written[d] = merged
       const diff = diffTimelines(d, old, merged, {})
       plan.diffs.push(diff)
@@ -677,9 +731,7 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
           why: `${unmatched.length} righe del file non corrispondono a nessuna clip salvata e sono state ignorate: ${unmatched.slice(0, 5).join(', ')}${unmatched.length > 5 ? '…' : ''}. Controlla di aver scelto il protocollo e la durata giusti.`,
         })
       }
-      if (!updated.length && !unmatched.length) {
-        plan.skipped.push({ duration: d, why: `${d} min: nessun testo nuovo nel file.` })
-      }
+      if (!updated.length) plan.skipped.push({ duration: d, why: whyNoNewText(d, incoming, matched, same) })
       continue
     }
 
