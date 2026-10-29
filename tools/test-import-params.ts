@@ -50,6 +50,9 @@ interface Knobs {
   testo?: string
   phaseEnd?: number
   extra?: PlainClip[]
+  /** The comment column, and the raw `fase` cell: both read by nobody. */
+  note?: string
+  faseRaw?: string
 }
 
 function voice(id: string, startS: number, testo: string, volumeDb = -6): PlainClip {
@@ -66,6 +69,8 @@ function sheet(k: Knobs = {}): PlainTimeline {
       clipId: 'SS-001', traccia: 'Soundscape', tipo: 'soundscape',
       startS: 0, endS: 720, fadeInS: k.fadeInS ?? 4, fadeOutS: 3,
       ambiente: 'bosco', volumeDb: k.volumeDb ?? -24,
+      faseRaw: k.faseRaw ?? '1', faseFrom: 1, faseTo: 1,
+      note: k.note ?? 'Soundscape primario (acqua).',
     } as PlainClip,
     voice('VC-001', 20, k.testo ?? 'Benvenuto. Questo è il tuo momento di pace.'),
     voice('VC-002', 300, 'Lascia andare il respiro.'),
@@ -163,8 +168,58 @@ console.log('\n--- "tutto il file", where everything is imported ---')
   const p = planPlainImport({ timeline: sheet({ volumeDb: -27 }), existing: saved(stored), selected: 12, mode: 'import' })
   assert(!p.dropped.length, 'nothing is dropped — the mode takes the whole file')
   assert(!p.nothing, 'and the change is written')
-  assert(says(describeImportPlan(p, 12), 'tempi o parametri cambiati in 1 voce'),
+  assert(says(describeImportPlan(p, 12), 'tempi o parametri cambiati in 1 riga'),
     'reported as the parameter change it is')
+}
+
+/* ---- the cells nobody plays ---------------------------------------------
+
+   The fix above held, and then the panel found a second way to say the same
+   wrong thing. A workbook arriving with nothing but a filled `testo_pt`
+   column was announced as changing "timings or parameters in 5 rows" and the
+   operator was pointed at «Tutto il file» — because the PO had also rewritten
+   the `note` cells beside the text, and a comment was being compared as a
+   parameter. Same for `fase` written `1-1` where the sheet had said `1`: the
+   span is already parsed into faseFrom/faseTo, and only the raw echo moved.
+
+   Both are still reported — a changed note is not nothing — but quietly, and
+   never as a reason to rebuild somebody's Studio session.
+   ------------------------------------------------------------------------ */
+console.log('\n--- a note rewritten beside the words ---')
+{
+  const p = textPlan(sheet({ note: 'Rivisto con Giampiero il 28/10.' }))
+  const lines = describeImportPlan(p, 12)
+  assert(!p.dropped.length, 'a comment is not a parameter')
+  assert(p.annotated.length === 1 && p.annotated[0].annotated.includes('SS-001'),
+    '…it is an annotation, and the row is named')
+  assert(!says(lines, '⚠'), 'no warning')
+  assert(!says(lines, 'Tutto il file'), '…and nobody is sent to the full import')
+  assert(!says(lines, 'identico a quello salvato'), 'but the file is not called identical either')
+  assert(says(lines, 'solo note o commenti'), 'it says what moved')
+}
+
+console.log('\n--- the same, for a respaced fase cell ---')
+{
+  const p = textPlan(sheet({ faseRaw: '1-1' }))
+  assert(!p.dropped.length && p.annotated.length === 1, 'the raw cell is not the phase')
+  assert(!says(describeImportPlan(p, 12), '⚠'), '…and raises nothing')
+}
+
+console.log('\n--- a note, with new words beside it ---')
+{
+  const p = textPlan(sheet({ note: 'Da rivedere.', testo: 'Benvenuta. Questo è il tuo momento.' }))
+  const lines = describeImportPlan(p, 12)
+  assert(!p.nothing && !p.dropped.length, 'the words are imported and nothing is blocked')
+  assert(says(lines, 'testo italiano cambiato in 1 riga'), 'the text change is still reported')
+}
+
+console.log('\n--- "tutto il file" still writes the note ---')
+{
+  const p = planPlainImport({ timeline: sheet({ note: 'Rivisto.' }), existing: saved(stored), selected: 12, mode: 'import' })
+  const lines = describeImportPlan(p, 12)
+  assert(!p.nothing, 'a file with a new comment is not nothing to import')
+  assert(says(lines, 'note o commenti cambiati in 1 riga'), '…and the summary says which')
+  assert(!says(lines, 'tempi o parametri'), 'without claiming a parameter moved')
 }
 
 /* ---- the sentence, wherever it appears ---------------------------------- */
@@ -175,6 +230,7 @@ console.log('\n--- the word itself ---')
     ['a fade', sheet({ fadeInS: 9 })],
     ['a phase', sheet({ phaseEnd: 300 })],
     ['a new row', sheet({ extra: [voice('VC-003', 500, 'Ancora.')] })],
+    ['a note', sheet({ note: 'Rivisto.' })],
   ] as [string, PlainTimeline][]) {
     const lines = describeImportPlan(textPlan(file), 12)
     assert(!lines.some((l) => l.includes('identico')),

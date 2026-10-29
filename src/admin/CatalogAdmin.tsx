@@ -121,6 +121,9 @@ interface ImportReview {
   /** "Solo i testi" is leaving changes in the file. The panel offers the
       other mode instead of the word "identico". */
   dropped: boolean
+  /** …and the quiet version: the file differs only in a comment. Not a
+      reason to offer another mode, and not a file to call identical. */
+  annotated: boolean
   /** The workbook, stamped with the protocol's code — merged at confirm time
       onto the row as it is THEN. */
   timeline: PlainTimeline
@@ -259,6 +262,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           lines: describeImportPlan(plan, selected),
           nothing: plan.nothing,
           dropped: plan.dropped.length > 0,
+          annotated: plan.annotated.length > 0,
           timeline,
           mode,
         })
@@ -302,7 +306,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
     try {
       const fresh = await freshRow(opened)
       const plan = planPlainImport({ timeline: review.timeline, existing: fresh, selected: review.selected, mode })
-      setReview({ ...review, mode, lines: describeImportPlan(plan, review.selected), nothing: plan.nothing, dropped: plan.dropped.length > 0 })
+      setReview({ ...review, mode, lines: describeImportPlan(plan, review.selected), nothing: plan.nothing, dropped: plan.dropped.length > 0, annotated: plan.annotated.length > 0 })
     } catch (e) {
       setImportError((e as Error).message)
     } finally {
@@ -445,6 +449,7 @@ export function CatalogAdmin({ actor }: { actor: string }) {
           lines: review.lines,
           nothing: review.nothing,
           dropped: review.dropped,
+          annotated: review.annotated,
           busy: reviewBusy,
           mode: review.mode,
           onMode: (m) => void setImportMode(m),

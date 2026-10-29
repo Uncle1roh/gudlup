@@ -414,6 +414,9 @@ export interface TimelineDiff {
   /** Clips (and affirmations, prefixed "Aff. ") whose timing or parameters
       changed, plus "fasi" / "durata" for the version itself. */
   paramChanged: string[]
+  /** Rows where ONLY a comment moved (`EDITORIAL`): the sheet reads
+      differently, the session sounds the same. */
+  annotated: string[]
   identical: boolean
 }
 
@@ -421,9 +424,30 @@ export interface TimelineDiff {
    the loop set… `row` is left out because moving a row in the sheet changes
    nothing, and the resolved set/sequence because they follow the sheet. */
 const NOT_PARAMS = new Set(['row', 'testo', 'testoByLang', 'setRange', 'sequenzaSteps'])
-function paramKey(o: object): string {
-  return JSON.stringify(Object.entries(o).filter(([k, v]) => !NOT_PARAMS.has(k) && v !== undefined).sort(([a], [b]) => a.localeCompare(b)))
+/**
+ * …and neither are THESE parameters, although they are cells.
+ *
+ * `note` is a comment column: a PO writes "rivisto con Giampiero il 28/10"
+ * in it and nothing downstream ever reads it. `faseRaw` and `fxRaw` are the
+ * raw cells kept beside the values already parsed out of them, so writing
+ * `1-1` where the sheet said `1`, or respacing an fx cell, moves them while
+ * `faseFrom` / `faseTo` / `fx` stay exactly as they were.
+ *
+ * Counting them as parameters is what made a workbook carrying nothing but a
+ * new column of Portuguese announce that it "also changes timings or
+ * parameters in 5 rows" and point the operator at «Tutto il file» — the one
+ * mode that would rebuild the Studio session they were protecting. They are
+ * still compared, as `annotated`: a rewritten note is not nothing, it is
+ * just not a sound.
+ */
+const EDITORIAL = new Set(['note', 'faseRaw', 'fxRaw'])
+function keyOf(o: object, take: (k: string) => boolean): string {
+  return JSON.stringify(Object.entries(o).filter(([k, v]) => take(k) && v !== undefined).sort(([a], [b]) => a.localeCompare(b)))
 }
+/** What is played. */
+function paramKey(o: object): string { return keyOf(o, (k) => !NOT_PARAMS.has(k) && !EDITORIAL.has(k)) }
+/** What was written beside it. */
+function noteKey(o: object): string { return keyOf(o, (k) => EDITORIAL.has(k)) }
 
 function allLangs(t: PlainTimeline | undefined): Set<ScriptLang> {
   const out = new Set<ScriptLang>()
@@ -444,7 +468,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     textChanged: {},
     textAdded: {},
     textKept: kept,
-    added: [], removed: [], affAdded: [], affRemoved: [], paramChanged: [],
+    added: [], removed: [], affAdded: [], affRemoved: [], paramChanged: [], annotated: [],
     identical: false,
   }
   const note = (l: string, id: string, before: string | undefined) => {
@@ -460,6 +484,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     const old = oldClips.get(id)
     if (!old) { if (stored) diff.added.push(id); continue }
     if (paramKey(old) !== paramKey(c)) diff.paramChanged.push(id)
+    else if (noteKey(old) !== noteKey(c)) diff.annotated.push(id)
     if (c.tipo !== 'voice') continue
     const a = clipScript(old)
     const b = clipScript(c)
@@ -473,6 +498,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     const old = oldAffs.get(id)
     if (!old) { if (stored) diff.affAdded.push(id); continue }
     if (paramKey(old) !== paramKey(a)) diff.paramChanged.push(`Aff. ${id}`)
+    else if (noteKey(old) !== noteKey(a)) diff.annotated.push(`Aff. ${id}`)
     for (const k of SCRIPT_VARIANTS) if ((textIn(affScript(old), keyLang(k), keyTo(k)) ?? '') !== (textIn(affScript(a), keyLang(k), keyTo(k)) ?? '')) note(k, id, textIn(affScript(old), keyLang(k), keyTo(k)))
   }
   for (const id of oldAffs.keys()) if (!newAffs.has(id)) diff.affRemoved.push(id)
@@ -490,7 +516,7 @@ export function diffTimelines(duration: Duration, stored: PlainTimeline | undefi
     && !Object.keys(diff.textAdded).length
     && !diff.added.length && !diff.removed.length
     && !diff.affAdded.length && !diff.affRemoved.length
-    && !diff.paramChanged.length
+    && !diff.paramChanged.length && !diff.annotated.length
   return diff
 }
 
@@ -532,6 +558,18 @@ export interface ImportPlan {
    * modes, where everything in the file is imported.
    */
   dropped: TimelineDiff[]
+  /**
+   * In "solo i testi": durations where the file differs ONLY in a comment —
+   * a `note` cell, a respaced `fase` or `fx`.
+   *
+   * Apart from `dropped` because the two deserve different volumes. One says
+   * the file carries work this mode will not do; this one says the file is
+   * the same session with a different sentence written in the margin, and
+   * announcing that as "the file also changes timings or parameters" is what
+   * sent an analyst to «Tutto il file» for a workbook that only had new
+   * Portuguese in it.
+   */
+  annotated: TimelineDiff[]
   /**
    * This import would write nothing new.
    *
@@ -589,6 +627,7 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
        warnings are no longer in them. */
     columnIssues: t.issues.filter((i) => i.code === 'column').map((i) => i.message),
     dropped: [],
+    annotated: [],
     nothing: false,
   }
   const seen = new Set<Duration>()
@@ -627,8 +666,10 @@ export function planPlainImport({ timeline: t, existing, selected, mode = 'impor
          read it, and everything outside the words is named. Nothing here is
          written: this is the mode saying out loud what it does not do. */
       const wide = diffTimelines(d, old, mergeScripts(old, incoming).merged, {})
-      if (wide.added.length || wide.removed.length || wide.affAdded.length
-        || wide.affRemoved.length || wide.paramChanged.length) plan.dropped.push(wide)
+      const material = wide.added.length || wide.removed.length || wide.affAdded.length
+        || wide.affRemoved.length || wide.paramChanged.length
+      if (material) plan.dropped.push(wide)
+      else if (wide.annotated.length) plan.annotated.push(wide)
       if (unmatched.length) {
         plan.ignored.push(...unmatched)
         plan.skipped.push({
@@ -692,17 +733,25 @@ export function describeImportPlan(plan: ImportPlan, selected?: Duration | null)
   for (const w of plan.dropped) {
     const head = `${w.duration} min:`
     const bits: string[] = []
-    if (w.paramChanged.length) bits.push(`tempi o parametri in ${w.paramChanged.length} ${w.paramChanged.length === 1 ? 'voce' : 'voci'} (${list(w.paramChanged)})`)
+    if (w.paramChanged.length) bits.push(`tempi o parametri in ${w.paramChanged.length} ${w.paramChanged.length === 1 ? 'riga' : 'righe'} (${list(w.paramChanged)})`)
     if (w.added.length) bits.push(`${w.added.length} clip che non sono salvate (${list(w.added)})`)
     if (w.removed.length) bits.push(`${w.removed.length} clip salvate che il file non ha più (${list(w.removed)})`)
     if (w.affAdded.length) bits.push(`affermazioni nuove (${list(w.affAdded)})`)
     if (w.affRemoved.length) bits.push(`affermazioni tolte (${list(w.affRemoved)})`)
-    lines.push(`⚠ ${head} il file cambia anche ${bits.join('; ')} — «solo i testi» non le importa. Scegli «Tutto il file» per applicarle.`)
+    /* A statement, not an order. The operator chose "solo i testi" on
+       purpose most of the time, and the mode doing exactly what it promises
+       is not a problem to be fixed — it only has to be said. */
+    lines.push(`⚠ ${head} il file cambia anche ${bits.join('; ')}. Con «solo i testi» restano come sono salvate; entrano solo con «Tutto il file», che rifà la timeline di questa durata dal foglio.`)
+  }
+  /* Quieter, and on purpose: the sheet reads differently, the session sounds
+     the same. */
+  for (const w of plan.annotated) {
+    lines.push(`${w.duration} min: il file cambia solo note o commenti (${list(w.annotated)}) — nessun effetto sull’audio, e «solo i testi» non li importa.`)
   }
   if (plan.missingSelected && selected != null) {
     lines.push(`Il file non contiene la versione da ${selected} min.`)
   }
-  const droppedAt = new Set(plan.dropped.map((w) => w.duration))
+  const droppedAt = new Set([...plan.dropped, ...plan.annotated].map((w) => w.duration))
   for (const d of plan.diffs) {
     const head = `${d.duration} min:`
     if (d.isNew) {
@@ -735,7 +784,8 @@ export function describeImportPlan(plan: ImportPlan, selected?: Duration | null)
     if (d.removed.length) lines.push(`${head} ${d.removed.length} clip rimoss${d.removed.length === 1 ? 'a' : 'e'} (${list(d.removed)}).`)
     if (d.affAdded.length) lines.push(`${head} affermazioni aggiunte: ${list(d.affAdded)}.`)
     if (d.affRemoved.length) lines.push(`${head} affermazioni rimosse: ${list(d.affRemoved)}.`)
-    if (d.paramChanged.length) lines.push(`${head} tempi o parametri cambiati in ${d.paramChanged.length} ${d.paramChanged.length === 1 ? 'voce' : 'voci'} (${list(d.paramChanged)}).`)
+    if (d.paramChanged.length) lines.push(`${head} tempi o parametri cambiati in ${d.paramChanged.length} ${d.paramChanged.length === 1 ? 'riga' : 'righe'} (${list(d.paramChanged)}).`)
+    if (d.annotated.length) lines.push(`${head} note o commenti cambiati in ${d.annotated.length} ${d.annotated.length === 1 ? 'riga' : 'righe'} (${list(d.annotated)}) — nessun effetto sull’audio.`)
   }
   for (const s of plan.skipped) lines.push(s.why)
   if (!plan.diffs.length) lines.push('Niente da importare per questa durata.')

@@ -84,6 +84,8 @@ interface Props {
         carries changes outside the words. The two together are what the
         buttons below read. */
     dropped: boolean
+    /** The file differs only in a comment column. */
+    annotated: boolean
     busy: boolean
     /** Which import the summary above describes. */
     mode: 'import' | 'text'
@@ -969,11 +971,17 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                  mode, one tap away, not a button saying "identico". */
               importReview.dropped ? (
                 <>
+                  {/* It SWITCHES the comparison; it does not import. Labelled
+                      "Importa tutto il file", it was read as the import
+                      itself, and the panel coming back with a summary and a
+                      Conferma looked like a button that had not worked. */}
                   <button className="b2b-btn b2b-btn--primary" disabled={importReview.busy} onClick={() => importReview.onMode('import')}>
-                    Importa tutto il file
+                    Vedi cosa cambia con «Tutto il file»
                   </button>
                   <button className="b2b-btn" disabled={importReview.busy} onClick={importReview.onCancel}>Chiudi</button>
                 </>
+              ) : importReview.annotated ? (
+                <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Cambiano solo le note · Chiudi</button>
               ) : (
                 <button className="b2b-btn b2b-btn--primary" onClick={importReview.onCancel}>Identico: niente da importare · Chiudi</button>
               )
