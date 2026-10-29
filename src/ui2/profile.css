@@ -119,7 +119,10 @@
 
 .gl-root .switch { flex: none; }
 .gl-root .switch.is-on { background: #3db189; border-color: transparent; }
-.gl-root .switch__knob { background: #faf8df; }
+/* The ink of the ground, not the cream literal: on sand a cream knob on a
+   pale track is a switch with nothing in it. Dark resolves to the same
+   #FAF8DF it always was. */
+.gl-root .switch__knob { background: var(--ink); }
 
 /* Privacidade wraps each consent in a bare <div> so it can hang the city
    picker under the geo one. Without this the wrapper collapses the column's

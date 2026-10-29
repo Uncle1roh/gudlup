@@ -35,6 +35,7 @@ import { Icon } from './icons'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { TopBar, PageTitle } from '../ui2/TopBar'
 import { initialsOf } from '../ui2/Home'
+import { GROUND_OPTIONS, setGround, useGround, type Ground } from '../ui2/groundChoice'
 import { useLegal } from '../legal/LegalContext'
 import { useAuth, WRONG_PASSWORD } from '../auth/auth'
 import { LegalSheet } from '../legal/LegalPage'
@@ -202,6 +203,7 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
   const { t, locale, setLocale } = useI18n()
   const dp = useDataProvider()
   const legal = useLegal()
+  const ground = useGround()
   const [draftName, setDraftName] = useState(name)
   const [personalEmail, setPersonalEmail] = useState('')
   const [country, setCountry] = useState('')
@@ -310,10 +312,19 @@ function AccountSettings({ name, email, convention }: ProfileProps) {
         <span className="legal-consent__hint">{t('Changes straight away here. Save to keep it on your account, on every device.')}</span>
       </label>
 
-      {/* Appearance — Dia / Noite / Sistema — is gone. The surface has one
-          ground now, a darkened photograph (`ui2/shell.css`), so the three
-          choices had nothing left to choose between. `selfuse/theme.ts` is
-          untouched: the Studio and the other old surfaces still read it. */}
+      {/* The ground. Two choices, not the old three: "Sistema" asked the
+          device a question the person had just answered themselves. It
+          takes effect on the spot and it is NOT part of Save — it never
+          leaves this device, which is what the line under it says.
+          `selfuse/theme.ts` is untouched: the Studio and the other old
+          surfaces still read their own setting. */}
+      <label className="ob-field">
+        <span className="ob-field__label">{t('Background')}</span>
+        <select className="ob-input" value={ground} onChange={(e) => setGround(e.target.value as Ground)}>
+          {GROUND_OPTIONS.map((g) => <option key={g.id} value={g.id}>{t(g.label)}</option>)}
+        </select>
+        <span className="legal-consent__hint">{t('Stays on this device. It is not saved to your account.')}</span>
+      </label>
 
       {/* End of the screen: the same button, because the last field is where
           somebody finishes and the top of the page is not where they are. */}

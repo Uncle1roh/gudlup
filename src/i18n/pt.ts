@@ -601,6 +601,10 @@ export const PT: Record<string, string> = {
 
   /* ---- noite ou dia ---- */
   'Appearance': 'Aparência',
+  'Background': 'Fundo',
+  'Light': 'Claro',
+  'Dark': 'Escuro',
+  'Stays on this device. It is not saved to your account.': 'Fica neste aparelho. Não é salvo na sua conta.',
   'Night': 'Noite',
   'Day': 'Dia',
   'Automatic': 'Automático',

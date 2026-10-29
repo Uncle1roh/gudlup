@@ -18,6 +18,7 @@
 import { useRef, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { BrandIcon } from '../components/Brand'
+import { useGround } from './groundChoice'
 
 export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'benefits' | 'profile'
 
@@ -88,12 +89,11 @@ function Glyph({ dest }: { dest: Dest }) {
   )
 }
 
-/** The brand colourway this surface asks for. The ground is one darkened
-    photograph (ui2/shell.css), so it is always the cream mark. Kept as a
-    hook because every caller reads it as one, and the day a light surface
-    appears this is the one place that has to learn about it. */
+/** The brand colourway this surface asks for. The mark is a PNG in two
+    colourways, so no token can fix a cream one on sand — the markup has to
+    know which file to ask for. This is the one place that does. */
 export function useBrandVariant(): 'green' | 'cream' {
-  return 'cream'
+  return useGround() === 'light' ? 'green' : 'cream'
 }
 
 export function Shell({

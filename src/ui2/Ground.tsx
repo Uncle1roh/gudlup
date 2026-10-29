@@ -27,33 +27,58 @@
    ============================================================================ */
 
 import { useEffect, type ReactNode } from 'react'
+import { applyGround, useGround, type Ground } from './groundChoice'
 
-/** Cream on dark: the one way of writing on this surface. */
-const TOKENS: Record<string, string> = {
-  '--mood-ink': '#FAF8DF',
-  '--mood-ink-2': 'rgba(250,248,223,.85)',
-  '--mood-link': '#D5F0E2',
-  '--mood-glass': 'rgba(10,20,25,.28)',
-  '--mood-btn': 'rgba(250,248,223,.12)',
-  '--mood-line': 'rgba(250,248,223,.24)',
-  '--mood-act-bg': '#FAF8DF',
-  '--mood-act-fg': '#0B2620',
+/** Cream on dark, and slate on sand. Two sets of the same eight names, which
+    is the whole of what a screen has to know about which ground it is on —
+    `--warn`, `--ok` and the shadow follow `data-mood-set` in shell.css, and
+    they already have both values there. */
+const TOKENS: Record<Ground, Record<string, string>> = {
+  dark: {
+    '--mood-ink': '#FAF8DF',
+    '--mood-ink-2': 'rgba(250,248,223,.85)',
+    '--mood-link': '#D5F0E2',
+    '--mood-glass': 'rgba(10,20,25,.28)',
+    '--mood-btn': 'rgba(250,248,223,.12)',
+    '--mood-line': 'rgba(250,248,223,.24)',
+    '--mood-act-bg': '#FAF8DF',
+    '--mood-act-fg': '#0B2620',
+  },
+  light: {
+    '--mood-ink': '#142A33',
+    '--mood-ink-2': 'rgba(20,42,51,.78)',
+    '--mood-link': '#0B5E48',
+    /* White panes rather than dark ones: over sand, a dark frost is a
+       smudge. The blur and the saturation stay where they are (`.glass`). */
+    '--mood-glass': 'rgba(255,255,255,.38)',
+    '--mood-btn': 'rgba(255,255,255,.32)',
+    '--mood-line': 'rgba(20,42,51,.16)',
+    '--mood-act-bg': '#142A33',
+    '--mood-act-fg': '#F5EEE4',
+  },
 }
 
 export function GroundProvider({ children }: { children: ReactNode }) {
+  const ground = useGround()
+
   useEffect(() => {
     const root = document.documentElement
-    for (const [k, v] of Object.entries(TOKENS)) root.style.setProperty(k, v)
+    const set = TOKENS[ground]
+    for (const [k, v] of Object.entries(set)) root.style.setProperty(k, v)
     root.classList.add('gl2')
-    /* One ground, so one set. `shell.css` still reads this attribute for the
-       grain's opacity and a couple of shadow values. */
-    root.dataset.moodSet = 'dark'
+    /* `shell.css` reads this for the grain, for `--warn` / `--ok` and for a
+       couple of shadows. It follows the ground rather than being pinned. */
+    root.dataset.moodSet = ground
+    /* `selfuse/theme.ts` writes the same <meta name="theme-color"> at ITS
+       import, and import order is not ours to pick. Saying it again here,
+       after every module has loaded, is what settles the status bar. */
+    applyGround(ground)
     return () => {
-      for (const k of Object.keys(TOKENS)) root.style.removeProperty(k)
+      for (const k of Object.keys(set)) root.style.removeProperty(k)
       root.classList.remove('gl2')
       delete root.dataset.moodSet
     }
-  }, [])
+  }, [ground])
 
   return <>{children}</>
 }

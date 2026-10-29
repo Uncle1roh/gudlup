@@ -28,7 +28,7 @@ import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails
 import { SELF_USE_THEMES, durationLabel, type SelfUseTheme } from '../data/selfuse'
 import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
-import { THEME_ICON, THEME_TINT, tilePosition } from './theme'
+import { THEME_TINT, tilePosition } from './theme'
 import { LoopsChip } from './LoopsChip'
 import { BrandIcon } from '../components/Brand'
 import { useBrandVariant } from './Shell'
@@ -132,6 +132,17 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
 
   return (
     <>
+      {/* ---------------------------------------------------- the ridge --- */}
+      {/* The photograph that opens this screen, and only this screen. It is
+          a layer of the Home rather than a second ground: the surface's own
+          ground (shell.css, "the ground") keeps running underneath it and
+          under every other destination, and the two fades over it are drawn
+          in `--gl-ground-base`, so the day the ground changes colour the
+          picture dissolves into the new one without being touched. */}
+      <div className="gl-homebg" aria-hidden="true">
+        <img src="/media/home-bg-mountains.jpg" alt="" />
+      </div>
+
       {/* ------------------------------------------------------- top bar --- */}
       <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 5 }}>
         {/* The rail's square is the logo; this corner is the date. See
@@ -323,64 +334,69 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
   onToggleSave?(): void
 }) {
   const { t } = useI18n()
-  /* A cover a PO uploaded wins; otherwise the shared photograph, moved. */
-  const cover = session.coverUrl
-    ? { backgroundImage: `url(${JSON.stringify(session.coverUrl)})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : { backgroundPosition: tilePosition(index) }
+  const title = t(session.name)
+  const mins = shortestOf(session)
 
-  /* The tile is a wrapper rather than one big button: the save toggle is a
-     control of its own, and a button inside a button is not markup a browser
-     will keep. The tile's own button fills the wrapper underneath it. */
+  /* A cover a PO uploaded wins; otherwise the shared photograph, moved under
+     each square — which is how a shelf of covers comes out of one image. */
+  const fallback = session.coverUrl ? undefined : { backgroundPosition: tilePosition(index) }
+
+  /* A square, and the words UNDER it rather than inside a box.
+     The card is a wrapper, not one big button: the save toggle is a control
+     of its own and a button inside a button is not markup a browser keeps.
+     The tap target is the transparent button at the end, over the whole
+     card, so the lines below the cover open the session too. */
   return (
-    <div style={{ flex: '0 0 300px', height: 170, position: 'relative', scrollSnapAlign: 'start' }}>
-      <button
-        type="button"
-        className={session.coverUrl ? 'gl-tile' : 'gl-tile tile'}
-        onClick={onOpen}
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%',
-          borderRadius: 22, overflow: 'hidden', textAlign: 'left', padding: 0, cursor: 'pointer',
-          color: '#FAF8DF', border: '1px solid rgba(250,248,223,.14)', ...cover,
-        }}
-      >
-        <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: THEME_TINT[session.theme] }} />
-        <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(4,14,11,0) 30%, rgba(4,14,11,.85) 100%)' }} />
-
-        <span aria-hidden="true" style={{ position: 'absolute', left: 16, top: 14, width: 40, height: 40, borderRadius: 12, background: 'rgba(250,248,223,.16)', border: '1px solid rgba(250,248,223,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d={THEME_ICON[session.theme]} />
-          </svg>
-        </span>
-
-        <span style={{ position: 'absolute', right: 14, top: 14, padding: '4px 10px', borderRadius: 999, background: 'rgba(6,20,15,.55)', fontSize: 12 }}>
-          {t(durationLabel(shortestOf(session)))}
-        </span>
-
-        <span style={{ position: 'absolute', left: 16, right: 16, bottom: 14, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Where the mockup prints the protocol code, the theme goes. */}
-          <span style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(250,248,223,.82)' }}>{label}</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 19, fontWeight: 500, lineHeight: 1.15 }}>{t(session.name)}</span>
-        </span>
-      </button>
-
-      {onToggleSave && (
-        <button
-          type="button"
-          className="gl-save"
-          onClick={onToggleSave}
-          aria-pressed={!!saved}
-          aria-label={saved ? t('Remove from My List') : t('Add to My List')}
-          style={{
-            position: 'absolute', right: 14, bottom: 14, width: 34, height: 34, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            background: 'rgba(6,20,15,.55)', border: '1px solid rgba(250,248,223,.25)', color: '#FAF8DF',
-          }}
+    <div className="gl-card gl-tile" style={{ scrollSnapAlign: 'start' }}>
+      <span className="gl-card__cover">
+        {/* The picture and everything printed on it is one image to a screen
+            reader — the save toggle is deliberately outside it, or `role=img`
+            would hide a control inside its own subtree. */}
+        <span
+          className={session.coverUrl ? 'gl-card__art' : 'gl-card__art tile'}
+          style={fallback}
+          role="img"
+          aria-label={title}
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M6 4h12v16l-6-4-6 4z" />
-          </svg>
-        </button>
-      )}
+          {session.coverUrl
+            ? <img className="gl-card__img" src={session.coverUrl} alt="" />
+            : <span aria-hidden="true" className="gl-card__tint" style={{ background: THEME_TINT[session.theme] }} />}
+          <span aria-hidden="true" className="gl-card__shade" />
+
+          <span aria-hidden="true" className="gl-card__seal">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3">
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+            GOOD LOOP
+          </span>
+
+          {/* The same words as the line below the cover, printed large on the
+              picture. Hidden from a screen reader rather than said twice. */}
+          <span aria-hidden="true" className={onToggleSave ? 'gl-card__over is-narrow' : 'gl-card__over'}>
+            {title}
+          </span>
+        </span>
+
+        {onToggleSave && (
+          <button
+            type="button"
+            className="gl-save"
+            onClick={onToggleSave}
+            aria-pressed={!!saved}
+            aria-label={saved ? t('Remove from My List') : t('Add to My List')}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 4h12v16l-6-4-6 4z" />
+            </svg>
+          </button>
+        )}
+      </span>
+
+      <span className="gl-card__name">{title}</span>
+      {/* Where the mockup prints the protocol code, the theme goes. */}
+      <span className="gl-card__meta">{label} · {mins} min</span>
+
+      <button type="button" className="gl-card__hit" onClick={onOpen} aria-label={title} />
     </div>
   )
 }

@@ -510,6 +510,10 @@ export const IT_SELF_USE: Record<string, string> = {
 
   /* ---- night or day ---- */
   'Appearance': 'Aspetto',
+  'Background': 'Sfondo',
+  'Light': 'Chiaro',
+  'Dark': 'Scuro',
+  'Stays on this device. It is not saved to your account.': 'Resta su questo dispositivo. Non viene salvato sul tuo account.',
   'Night': 'Notte',
   'Day': 'Giorno',
   'Automatic': 'Automatico',

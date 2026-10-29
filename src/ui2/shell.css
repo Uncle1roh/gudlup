@@ -45,7 +45,13 @@
 }
 
 /* -------------------------------------------------------------- the ground ---
-   One photograph, darkened, behind everything.
+   One photograph behind everything, veiled — in sand or in night.
+
+   TWO grounds now, and the person picks (Perfil > Conta > Fundo). The choice
+   lives on their device and arrives here as `data-ground` on <html>
+   (`ui2/groundChoice.ts`); the ink that goes over it is the matching token
+   set in `ui2/Ground.tsx`. LIGHT is the default — the block below — and dark
+   is the block after it, unchanged from the day it was the only one.
 
    The ground used to BE the mood: `--mood-bg` painted the page, and a cheerful
    answer to "how was your day" turned the whole product a different colour.
@@ -55,7 +61,8 @@
    Loops chip keeps it, but the page does not move.
 
    ╔══════════════════════════════════════════════════════════════════════╗
-   ║  TO CHANGE THE BACKGROUND OR THE FILTER, EDIT THE FOUR LINES BELOW.  ║
+   ║  TO CHANGE A BACKGROUND OR A VEIL, EDIT THE TWO BLOCKS BELOW — the   ║
+   ║  light one, then the dark one. They are independent on purpose.      ║
    ║  Nothing else in the codebase needs to know. See docs/BACKGROUNDS.md ║
    ╚══════════════════════════════════════════════════════════════════════╝
 
@@ -63,10 +70,13 @@
    it: `url('/media/whatever.jpg')`. The path is from `public/`, so a file at
    `public/media/sunset.jpg` is `/media/sunset.jpg`.
 
-   `--gl-ground-dim` is how dark the filter over it is, 0 to 1. 0 is the bare
-   photograph; 1 is nearly black. The three stops of the scrim are derived
-   from this one number, so the top stays a little lighter than the bottom
-   whatever you set — the controls live at the bottom of the screen.
+   `--gl-ground-veil` (light) and `--gl-ground-dim` (dark) are how much of
+   the veil goes over it, 0 to 1. 0 is the bare photograph; 1 is nearly
+   opaque. The three stops of each scrim are derived from its own number, so
+   the top stays a little lighter than the bottom whatever you set — the
+   controls live at the bottom of the screen. Two dials rather than one
+   because sand at 0.78 is not a photograph any more, and night at 0.45 is
+   not a room.
 
    `--gl-ground-pos` is which part of the picture you see once it is cropped
    to the window: `50% 42%` is centred horizontally, slightly above centre
@@ -84,24 +94,43 @@
 
 html.gl2 {
   --gl-ground: url('/media/ground.jpg');
-  --gl-ground-dim: 0.78;
   --gl-ground-pos: 50% 42%;
   /* The colour behind the picture, for the instant before it decodes and for
-     any edge it does not reach. Keep it close to the picture's dark end. */
+     any edge it does not reach. Keep it close to the picture's own end. */
+  --gl-ground-base: #f5eee4;
+  /* THE LIGHT DIAL, 0 to 1: how much sand is laid over the photograph.
+     0 is the bare picture — and unreadable; 0.45 is the picture clearly
+     visible with the glass panes still reading as glass. The three stops
+     below are derived from it. The dark ground has a dial of its own,
+     `--gl-ground-dim`, because the two are set at different strengths. */
+  --gl-ground-veil: 0.45;
+  --gl-ground-scrim:
+    linear-gradient(
+      176deg,
+      rgba(245, 238, 228, var(--gl-ground-veil)) 0%,
+      rgba(247, 242, 233, calc(var(--gl-ground-veil) - 0.08)) 46%,
+      rgba(242, 234, 222, calc(var(--gl-ground-veil) + 0.10)) 100%);
+}
+
+/* The dark room, unchanged: the same photograph, the same filter, the same
+   base colour it has always had. Nothing here is derived from the block
+   above — the two grounds are two sets of values, not one with a twist. */
+html.gl2[data-ground='dark'] {
+  --gl-ground-dim: 0.78;
   --gl-ground-base: #07181e;
+  --gl-ground-scrim:
+    linear-gradient(
+      176deg,
+      rgba(5, 22, 28, var(--gl-ground-dim)) 0%,
+      rgba(6, 26, 31, calc(var(--gl-ground-dim) - 0.08)) 46%,
+      rgba(3, 14, 19, calc(var(--gl-ground-dim) + 0.10)) 100%);
 }
 
 html.gl2,
 html.gl2 body { background-color: var(--gl-ground-base); }
 
 html.gl2 body {
-  background-image:
-    linear-gradient(
-      176deg,
-      rgba(5, 22, 28, var(--gl-ground-dim)) 0%,
-      rgba(6, 26, 31, calc(var(--gl-ground-dim) - 0.08)) 46%,
-      rgba(3, 14, 19, calc(var(--gl-ground-dim) + 0.10)) 100%),
-    var(--gl-ground);
+  background-image: var(--gl-ground-scrim), var(--gl-ground);
   background-size: cover, cover;
   background-position: center, var(--gl-ground-pos);
   background-repeat: no-repeat, no-repeat;
@@ -114,8 +143,12 @@ html.gl2 body {
    fixed behind the column, so every frosted surface smooths it and reads as
    frosted. Fainter now than it was: the photograph already gives a blur
    something to work on, and the grain is only there to carry the flat parts
-   of the sky. */
-html.gl2 body::before {
+   of the sky.
+
+   Dark only. Over sand, `overlay` noise is not texture, it is dirt — and the
+   light ground does not need it: a white pane over a bright photograph is
+   already visibly a pane. */
+html.gl2[data-ground='dark'] body::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -388,6 +421,10 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  /* Above the Home's photograph, which is absolutely positioned against
+     this same box and runs the full width behind everything (`.gl-homebg`). */
+  position: relative;
+  z-index: 2;
 }
 
 /* The head of the rail: the mockup's 56px rounded square, carrying the
@@ -976,13 +1013,16 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   border-radius: 22px;
   cursor: pointer;
   font: 600 17px 'DM Sans', system-ui, sans-serif;
-  color: #faf8df;
-  background: rgba(250, 248, 223, 0.10);
-  border: 2px solid rgba(250, 248, 223, 0.28);
+  /* The ink of the ground, thinned. Written as a mix rather than as the
+     cream literal it used to be: on sand, cream-on-cream was nothing at
+     all. Over the dark ground these resolve to exactly what was here. */
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  border: 2px solid color-mix(in srgb, var(--ink) 28%, transparent);
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
-.stereo2-btn:hover { background: rgba(250, 248, 223, 0.16); }
+.stereo2-btn:hover { background: color-mix(in srgb, var(--ink) 16%, transparent); }
 .stereo2-btn__mark { font-size: 24px; line-height: 1; }
 
 .stereo2-btn.is-ok {
@@ -997,18 +1037,23 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   color: #f6d9d9;
 }
 
+/* The two answers are pale green and pale red — legible over the dark room,
+   and gone over sand. The tint and the border stay; only the words change. */
+html.gl2[data-ground='light'] .stereo2-btn.is-ok { color: #0f6b47; }
+html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
+
 .stereo2-silent {
   background: none;
   border: 0;
   padding: 2px 4px;
   cursor: pointer;
   font: 400 12px 'DM Sans', system-ui, sans-serif;
-  color: rgba(250, 248, 223, 0.66);
+  color: color-mix(in srgb, var(--ink) 66%, transparent);
   text-decoration: underline;
 }
-.stereo2-silent:hover { color: #faf8df; }
+.stereo2-silent:hover { color: var(--ink); }
 
-.stereo2-again { font-size: 12px; color: rgba(250, 248, 223, 0.66); }
+.stereo2-again { font-size: 12px; color: color-mix(in srgb, var(--ink) 66%, transparent); }
 
 /* Appears only when both sides are green — it is the whole point of the
    screen, so it arrives rather than sitting there greyed out. */
@@ -1428,3 +1473,212 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
    and the other takes the row: auto-fit skips a hidden item. */
 .gl-root .thr-extra .thr-col:empty { display: none; }
 @media (min-width: 900px) { .gl-root .thr-extra .thr-cols { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); } }
+
+/* ------------------------------------------------------ the Home ridge ---
+   One photograph at the head of the library, and nowhere else.
+
+   It is a LAYER of that screen, not a second ground: the surface's own
+   ground (see "the ground" at the top of this file) keeps running under it
+   and under the five other destinations. The two fades are drawn in
+   `--gl-ground-base`, the colour the ground already declares, so the
+   picture dissolves into whatever that colour becomes — a light ground the
+   day there is one — without this block being edited.
+
+   It is laid out against `.gl-root`, the scroller, so it spans the whole
+   width of the window and scrolls away with the first screenful. `.gl-nav`
+   is lifted above it; everything the Home prints after it is lifted by the
+   sibling rule below. */
+
+.gl-homebg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 760px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gl-homebg img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+/* The side fade, then the bottom fade over it. `color-mix` with 0% of the
+   ground gives a TRANSPARENT ground rather than transparent black, which is
+   what keeps the middle of the picture from greying out. */
+.gl-homebg::before,
+.gl-homebg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.gl-homebg::before {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--gl-ground-base) 82%, transparent) 0%,
+    color-mix(in srgb, var(--gl-ground-base) 40%, transparent) 45%,
+    color-mix(in srgb, var(--gl-ground-base) 0%, transparent) 70%);
+}
+
+.gl-homebg::after {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--gl-ground-base) 0%, transparent) 45%,
+    var(--gl-ground-base) 96%);
+}
+
+/* Everything the Home draws after the picture stands on it, unmoved. */
+.gl-homebg ~ * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------- the audio card ---
+   A square cover with the words under it, rather than a landscape tile with
+   the words inside it.
+
+   The title is printed twice on purpose: large on the picture, and again as
+   the first line below it. The one on the picture is `aria-hidden` — it is
+   the same words, and a screen reader should hear them once.
+
+   The card is a wrapper holding four things: the square, the save toggle
+   over it, the two lines, and a transparent button over all of it carrying
+   the tap. That last one is why the lines below the cover open the session
+   as readily as the picture does. */
+
+.gl-card {
+  position: relative;
+  flex: 0 0 210px;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gl-card__cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #3a4f57;
+  box-shadow: 0 10px 24px rgba(20, 40, 60, 0.25);
+}
+
+.gl-card__art {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.gl-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gl-card__tint,
+.gl-card__shade {
+  position: absolute;
+  inset: 0;
+}
+
+.gl-card__shade {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.5) 100%);
+}
+
+.gl-card__seal {
+  position: absolute;
+  right: 12px;
+  top: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+.gl-card__over {
+  position: absolute;
+  left: 14px;
+  right: 10px;
+  bottom: 12px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* The save toggle stands in the corner the title would otherwise reach. */
+.gl-card__over.is-narrow { right: 52px; }
+
+.gl-card .gl-save {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(6, 20, 15, 0.55);
+  border: 1px solid rgba(250, 248, 223, 0.25);
+  color: #faf8df;
+}
+
+.gl-card__name {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* The ink of the surface, not a fixed slate: this line sits on the ground,
+   and the ground is dark today. */
+.gl-card__meta {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.gl-card__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+@media (max-width: 899px) {
+  .gl-card { flex-basis: 176px; width: 176px; }
+  .gl-card__cover {
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(20, 40, 60, 0.25);
+  }
+  .gl-card__hit { border-radius: 8px; }
+  .gl-card__over { font-size: 23px; }
+}
