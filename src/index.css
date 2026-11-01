@@ -1145,6 +1145,68 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 /* ============================ Auth ============================ */
 .auth { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--mist); }
 .auth--b2c { background: radial-gradient(120% 120% at 50% 0%, #eaf5f3 0%, var(--mist) 60%); }
+
+/* ---- the person's door, in daylight --------------------------------------
+
+   The door carries `su-studio` so that every rule written for the Self Use
+   surface applies to it unchanged — and that surface was designed at night,
+   so the door was near-black. The app it opens is cream (`gl.ground`
+   defaults to light), which made the first two seconds of Good Loop a black
+   screen handing over to a bright one.
+
+   Nothing in the dark sheet is edited for this. The door simply declares the
+   daylight VALUES of the same token names on itself, so `su-studio`'s rules
+   resolve to paper. They are the values of the daylight block at the end of
+   `selfuse-studio.css`, with the ground moved to the cream the redesigned
+   surface actually opens on. A person who has chosen the night palette still
+   gets it everywhere else — this is the door, and the door is one colour. */
+.auth--b2c.su-studio {
+  --su-void:     #ece4d8;
+  --su-ground:   #f5eee4;   /* the cream the app opens on */
+  --su-raised:   #fffdf9;
+  --su-well:     #f1eadf;
+  --su-hair:     rgba(16, 38, 32, 0.10);
+  --su-hair-2:   rgba(16, 38, 32, 0.18);
+
+  --su-fg:       #11241e;
+  --su-fg-2:     #2a413a;
+  --su-muted:    #4a6158;
+  --su-faint:    #5a6f67;
+  --su-meta:     #3f564e;
+
+  --su-accent:   #007a5e;
+  --su-accent-2: #0f6b52;
+  --su-cream:    #0f6b52;
+  --su-cream-2:  #0b5742;
+
+  --su-on-accent: #ffffff;
+  --su-hover:     rgba(16, 38, 32, 0.05);
+  --su-fill:      rgba(16, 38, 32, 0.10);
+  --su-fill-2:    rgba(16, 38, 32, 0.20);
+  --su-on:        rgba(0, 122, 94, 0.10);
+  --su-bloom:     rgba(0, 155, 119, 0.13);
+  --su-glow:      rgba(15, 107, 82, 0.28);
+  --su-cast:      rgba(20, 45, 38, 0.18);
+  --su-warm:      #fdf1e3;
+  --su-warm-fg:   #4a2c12;
+
+  --mist:        var(--su-ground);
+  --mist-2:      var(--su-well);
+  --ink:         var(--su-fg);
+  --slate:       var(--su-muted);
+  --line:        var(--su-hair);
+  --aura:        var(--su-accent);
+  --aura-deep:   #0b5742;
+  --core:        var(--su-accent-2);
+  --halo:        #6fc7a8;
+  --shadow-soft: 0 1px 2px rgba(20, 45, 38, 0.10);
+  --shadow-lift: 0 18px 40px -22px var(--su-cast);
+
+  color: var(--su-fg-2);
+}
+/* The card lifted off a black ground with a 90px shadow; on paper that is a
+   bruise. An edge and a soft lift instead. */
+.auth--b2c.su-studio .auth__card { box-shadow: 0 18px 44px -26px var(--su-cast); }
 .auth--b2b { background: #eef2e6; }
 .auth__card { width: 100%; max-width: 360px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 30px 26px; box-shadow: var(--shadow-soft); }
 .auth__brand { display: flex; }
@@ -2102,15 +2164,7 @@ img, svg, video, canvas { max-width: 100%; }
     /* The poster, so the panel is never a blank rectangle: before the first
        frame decodes, if the file never arrives, and on a machine that has
        asked not to be animated, where the video is not rendered at all. */
-    background: var(--mist-2) url('/media/login-loop.jpg') center / cover no-repeat;
-  }
-  .auth__stage__video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+    background: var(--gl-ground-base, #f5eee4) url('/media/home-bg-mountains.jpg') center 40% / cover no-repeat;
   }
   /* The panel is a bright lake and the door it stands next to is near-black.
      Without this the two halves read as two different products, and the
@@ -2129,6 +2183,16 @@ img, svg, video, canvas { max-width: 100%; }
     /* the clinician, employer and admin doors are light: a gentle wash, not
        a dark one, or the picture would be the heaviest thing on the screen */
     background: linear-gradient(to right, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.34) 100%);
+  }
+  /* The person's door is cream now, so the ridge dissolves INTO the form the
+     way it does at the head of the Home — the same photograph, the same
+     move, and no visible join down the middle of the screen. */
+  .auth--b2c .auth__stage__scrim {
+    background: linear-gradient(
+      to right,
+      rgba(245, 238, 228, 0) 0%,
+      rgba(245, 238, 228, 0.22) 46%,
+      rgba(245, 238, 228, 1) 100%);
   }
 
   /* The form keeps its own width inside the right column and centres in it,

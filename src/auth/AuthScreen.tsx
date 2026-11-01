@@ -8,7 +8,6 @@ import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCod
 import { useI18n } from '../i18n'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
-import { useSuTheme } from '../selfuse/theme'
 import { useDataProvider } from '../data/provider'
 import { isValidPromoCode, normalizePromoCode } from '../data/promo'
 import { useLegal } from '../legal/LegalContext'
@@ -32,8 +31,6 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   const dp = useDataProvider()
   const { t, locale } = useI18n()
   const { m } = useLegal()
-  // the b2c door carries the Self Use ground, so its logo follows that theme
-  const theme = useSuTheme()
   const isB2b = mode === 'b2b'
   const isAdmin = mode === 'admin'
   const isHr = mode === 'hr'
@@ -47,14 +44,6 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      hand, like the admin one. */
   const noSignup = isAdmin || isSales
   const demo = auth.mode === 'demo'
-  /* Somebody who has asked their system not to animate things is not asking
-     for seventeen seconds of drifting water behind a password field. CSS
-     cannot stop a video from playing, so the element is simply not rendered
-     and the stage keeps its poster. Read once: the door does not outlive a
-     change to the setting. */
-  const calmMotion = typeof window !== 'undefined'
-    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
   const [signup, setSignup] = useState(false)
   /* WHO is registering. The public door serves both the people who use the app
      and the clinicians who work in it — asking here is what lets a therapist
@@ -284,11 +273,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     (!needsConsent || addressedAs !== null)
 
   return (
-    /* The b2c door belongs to the Self Use surface, so it carries that
-       surface's theme. Without this it stayed cream while everything behind
-       it was dark, and opening the app meant a white screen handing over to a
-       black one. The clinician, employer and admin doors are unchanged — their
-       surfaces are still light. */
+    /* `su-studio` is still here, and it still makes the door part of the
+       Self Use surface — but that surface now opens in daylight, so the
+       door does too: the cream palette is set on `.auth--b2c` itself
+       (index.css, "the person's door"). It used to be near-black to match
+       a dark app; a cream app behind a black door is the same mismatch the
+       other way round. The clinician, employer and admin doors are
+       unchanged. */
     <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr || isSales ? '' : ' su-studio'}`}>
       {/* ---- the desktop half ------------------------------------------------
 
@@ -303,28 +294,17 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           keep in step with the legal copy, and nothing to get wrong. Below
           900px it is not rendered at all: the phone layout is untouched.
 
-          It carries a muted loop of still water, encoded for the web from
-          `videos/loop_login.mp4`: that master is 78 MB of 4K at 36 Mbit with
-          an audio track nobody will hear, which is not a thing to put in
-          front of somebody trying to sign in. `public/media/login-loop.mp4`
-          is the same seventeen seconds at 1440px, no audio, 1.1 MB. */}
+          It carries the ridge the app itself opens on
+          (`media/home-bg-mountains.jpg`, the Home's own photograph), so the
+          door and the first room are one place. It used to carry a muted
+          seventeen-second loop of still water: a different picture from
+          anything else in the product, and 1.1 MB of video in front of
+          somebody trying to sign in. The file stays in `public/media/` —
+          nothing was thrown away — and the picture is now a still, drawn by
+          CSS on the stage itself, so there is nothing to decode, nothing to
+          autoplay and nothing to switch off for a person who has asked not
+          to be animated. */}
       <div className="auth__stage" aria-hidden="true">
-        {/* The poster is a CSS background on the stage itself, so something
-            is on screen before the first frame decodes, if the file never
-            arrives, and when the video is not rendered at all. */}
-        {!calmMotion && (
-          <video
-            className="auth__stage__video"
-            src={`${import.meta.env.BASE_URL}media/login-loop.mp4`}
-            poster={`${import.meta.env.BASE_URL}media/login-loop.jpg`}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            tabIndex={-1}
-          />
-        )}
         <div className="auth__stage__scrim" />
       </div>
       <div className="auth__card">
@@ -332,7 +312,9 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
             and admin doors are light. Same logo, the colourway its ground asks
             for. */}
         <div className="auth__brand">
-          <BrandLogo variant={isB2b || isAdmin || isHr || isSales || theme === 'light' ? 'green' : 'cream'} />
+          {/* Every door is light now, the person's included, so the mark is
+              the green one on all of them. */}
+          <BrandLogo variant="green" />
           {/* The language is the person's to choose, from the first screen.
               Not on the admin door: the console is pinned to Italian. */}
           {!isAdmin && !isSales && <LanguagePicker className="auth__lang" label={false} />}
@@ -557,8 +539,12 @@ export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales'
 export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
   const { ready, user, role, signOut } = useAuth()
   const { t } = useI18n()
-  const theme = useSuTheme()
-  const dark = mode === 'b2c'
+  /* The waiting and the dead ends wear the door's own ground, or the pause
+     before the door is a flash of a different colour. `auth--b2c` travels
+     with `su-studio` because that pair is what carries the daylight palette
+     (index.css, "the person's door"). */
+  const isB2c = mode === 'b2c'
+  const ground = isB2c ? ' auth--b2c su-studio' : ''
 
   /* The account has a surface and it is not this one: go there. A person who
      followed an old link, or a bookmark from another role, should end up in
@@ -592,7 +578,7 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
   if (!ready) {
     return (
       /* same ground as the door it precedes, or the wait is a white flash */
-      <div className={`auth auth--loading${dark ? ' su-studio' : ''}`}>
+      <div className={`auth auth--loading${ground}`}>
         <div className="auth__spin" aria-label={t('Loading')} />
       </div>
     )
@@ -603,9 +589,9 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
     // the redirect above is already on its way; this is what is on screen for
     // the frame it takes, and what stays if the hash change is blocked
     return (
-      <div className={`auth${dark ? ' su-studio' : ''}`}>
+      <div className={`auth${ground}`}>
         <div className="auth__card">
-          <div className="auth__brand"><BrandLogo variant={dark && theme === 'dark' ? 'cream' : 'green'} /></div>
+          <div className="auth__brand"><BrandLogo variant="green" /></div>
           <h1 className="auth__title">{t('Taking you to your app')}</h1>
           <p className="auth__sub">
             {t('This account belongs to {surface}.', { surface: SURFACE_NAME[role] })}
@@ -624,9 +610,9 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
      failed — and it needs saying out loud rather than looping on a redirect. */
   if (!role) {
     return (
-      <div className={`auth${dark ? ' su-studio' : ''}`}>
+      <div className={`auth${ground}`}>
         <div className="auth__card">
-          <div className="auth__brand"><BrandLogo variant={dark && theme === 'dark' ? 'cream' : 'green'} /></div>
+          <div className="auth__brand"><BrandLogo variant="green" /></div>
           <h1 className="auth__title">{t('This account is not set up yet')}</h1>
           <p className="auth__sub">
             {t('It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.')}
