@@ -103,6 +103,17 @@ export function hasProfessionalSupport(c: Convention | null): boolean {
   return c?.type === 'self-use-plus'
 }
 
+/** The demo tenant's own code. A live build still resolves it — that is the
+    point of it — but an app with no fixtures must not go on trusting a copy
+    of it left in a browser by a build that handed it to everybody who signed
+    in (`selfuse/SelfUseApp.tsx`, the sweep). */
+export const DEMO_TENANT_CODE = 'DEMO-2026-GL'
+
+/** Is this code the demo tenant's, however it was cased or spaced? */
+export function isDemoTenantCode(code: string | null | undefined): boolean {
+  return !!code && normalizeCode(code) === DEMO_TENANT_CODE
+}
+
 /** Grace period: access continues to the END OF THE QUARTER after expiry. */
 export function graceEndsAt(endsAt: number): number {
   const d = new Date(endsAt)

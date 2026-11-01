@@ -41,9 +41,10 @@ import { buildDataExport } from '../legal/dataExport'
 import { PatientVideoCall } from './VideoCall'
 import { useSelfUseStore, takeSignupIntake, type Launch } from '../data/selfUseStore'
 import { accountName, displayName } from './greeting'
-import { useTherapyStore, linkFromServer, profileFor } from './therapyStore'
+import { useTherapyStore, linkFromServer, profileFor, withoutFixtures } from './therapyStore'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
-import { resolveCompanyCode, hasProfessionalSupport } from '../data/convention'
+import { demoFixturesOn } from '../app/environment'
+import { resolveCompanyCode, hasProfessionalSupport, isDemoTenantCode } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { ReportSheet } from './ReportSheet'
@@ -300,6 +301,32 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       .catch(() => { /* offline: no convention, which is the safe default */ })
     return () => { alive = false }
   }, [dp, state.companyCode, update])
+
+  /* ---- the sweep: fixtures a previous build left in this browser -------
+
+     The demo's company code and the demo's therapist are off unless a
+     deployment asks for them (`demoFixturesOn`, data/mock.ts). That switch
+     governs what the data layer HANDS OUT — and it arrived after people had
+     already signed in to builds where the fixtures were on. Those builds
+     wrote both into this browser, and local state outlives the deployment
+     that wrote it: `gl.therapy.<account>` kept Dr. Ana Silva, with her
+     sessions and her plan, on an account with no company at all.
+
+     The link survived because the rule below deliberately protects a link
+     IN USE — somebody mid-treatment whose company lapses must not lose
+     their therapist. A seeded link is full of sessions, prescriptions and
+     goals, so it looked exactly like one. The test is not how full it is:
+     it is whether the person on the card exists.
+
+     Clearing the cached company code is safe for the same reason caching it
+     was: the effect above asks the account again on the next load, so a
+     code that is really on the profile comes straight back. One that was
+     never anything but furniture does not. */
+  useEffect(() => {
+    if (demoFixturesOn()) return
+    update((s) => (isDemoTenantCode(s.companyCode) ? { ...s, companyCode: null } : s))
+    updateTherapy(withoutFixtures)
+  }, [update, updateTherapy])
 
   /* A therapist is what `self-use-plus` opens and nothing else opens
      (data/convention.ts). This read used to run for everybody and write

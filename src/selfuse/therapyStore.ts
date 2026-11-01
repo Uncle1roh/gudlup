@@ -265,6 +265,34 @@ export const DEMO_THERAPISTS: TherapistProfile[] = [
 ]
 
 /**
+ * Is this one of the people the demo invents?
+ *
+ * Asked of a link ALREADY on the device. The data layer stops handing these
+ * three out on a build with no fixtures, but a build that did hand them out
+ * wrote them into this browser, and a stored link outlives the deployment
+ * that wrote it. Matched on the id and on the name, because a link written
+ * by an older build may carry either shape.
+ */
+export function isFixtureTherapist(t: { id?: string; name?: string } | null | undefined): boolean {
+  if (!t) return false
+  const ids = new Set([...DEMO_THERAPISTS.map((d) => d.id), 'th-demo', 'th-demo-2'])
+  const names = new Set([...DEMO_THERAPISTS.map((d) => d.name), 'Dra. Ana Fontes', 'Dr. Rafael Lima'])
+  return (!!t.id && ids.has(t.id)) || (!!t.name && names.has(t.name))
+}
+
+/**
+ * The stored therapy state with the demo's people taken out of it.
+ *
+ * Pure, and returns the SAME object when there was nothing to take, so a
+ * caller can use it as a store updater without writing on every load.
+ */
+export function withoutFixtures(s: TherapyState): TherapyState {
+  const link = s.link && isFixtureTherapist(s.link.therapist) ? null : s.link
+  const request = s.request && isFixtureTherapist({ name: s.request.therapistName }) ? null : s.request
+  return link === s.link && request === s.request ? s : { ...s, link, request }
+}
+
+/**
  * The presentation metadata for a therapist the DATA LAYER returned.
  *
  * A listing from `listAvailableTherapists()` carries an id, a name and an

@@ -44,6 +44,23 @@ import { hasSupabaseEnv } from '../auth/supabaseClient'
 
 export type AppEnv = 'production' | 'staging' | 'demo' | 'local' | 'unknown'
 
+/**
+ * Whether this deployment may show the fixtures that claim a RELATIONSHIP the
+ * signed-in person does not have: a company, a therapist, that therapist's
+ * plan and the bookable directory.
+ *
+ * It lives here rather than in `data/mock.ts` because it is not only the data
+ * layer's business. The mock layer stops HANDING THEM OUT; the app has to
+ * stop TRUSTING the ones already on the device, written there by a build
+ * where the flag was on — a person who met that build keeps a therapist in
+ * their browser for ever otherwise (`selfuse/SelfUseApp.tsx`, the sweep).
+ */
+export function demoFixturesOn(): boolean {
+  const env = import.meta.env as ImportMetaEnv | undefined
+  const v = env?.VITE_DEMO_FIXTURES
+  return v === '1' || v === 'true'
+}
+
 /** The environments that are not production, in the order of how freely
     their data can be thrown away. */
 export const NON_PRODUCTION: AppEnv[] = ['staging', 'demo', 'local', 'unknown']

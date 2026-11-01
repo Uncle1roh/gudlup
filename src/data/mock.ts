@@ -14,6 +14,7 @@ import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from
 import type { AssessmentRecord } from './assessments'
 import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
 import { MIN_COHORT } from '../legal/market'
+import { demoFixturesOn } from '../app/environment'
 import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
 import { MockBenefits } from '../gamification/mockBenefits'
@@ -71,11 +72,7 @@ const DEMO_PERSIST = (() => {
    makes a preview worth looking at, and they do not assert anything about
    who the person is. The company-scoped parts of them are filtered in the
    app by company code, which without this flag is now null. */
-const DEMO_FIXTURES = (() => {
-  const env = import.meta.env as ImportMetaEnv | undefined
-  const v = env?.VITE_DEMO_FIXTURES
-  return v === '1' || v === 'true'
-})()
+const DEMO_FIXTURES = demoFixturesOn()
 
 const PERSIST_PREFIX = 'gl.mock.admin.'
 function restored<T>(name: string, fallback: T): T {
@@ -407,10 +404,17 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
   return {
     // --- B2C ---
     /* ---- scheduling (localStorage-backed demo) ---- */
-    listAvailableTherapists: async () => [
-      { id: 'th-demo', name: 'Dra. Ana Fontes', avatarUrl: null },
-      { id: 'th-demo-2', name: 'Dr. Rafael Lima', avatarUrl: null },
-    ],
+    /* Two people who do not exist, bookable for a video session. That is a
+       fixture claiming a relationship as much as the therapist link is, and
+       it was the one that was never switched off: with a company code left
+       in the browser by an older build, the Therapy tab offered them to
+       somebody with no plan. */
+    listAvailableTherapists: async () => (DEMO_FIXTURES
+      ? [
+          { id: 'th-demo', name: 'Dra. Ana Fontes', avatarUrl: null },
+          { id: 'th-demo-2', name: 'Dr. Rafael Lima', avatarUrl: null },
+        ]
+      : []),
     getTherapistAvailability: async (therapistId: string) => {
       try {
         const raw = localStorage.getItem(`gl.mock.avail.${therapistId}`)
