@@ -2788,10 +2788,14 @@ html[data-su-theme='light'] .su-studio .gam-badge--locked { opacity: 1; }
     align-items: stretch;
     justify-items: stretch;
   }
-  .su-studio.auth .auth__stage {
-    background-color: var(--su-ground);
-    border-right: 1px solid var(--su-hair);
-  }
+  /* No rule down the middle. The hairline here was a divider between two
+     grounds — a dark picture beside a dark form, where `--su-hair` is a
+     barely-there white and the eye needed the edge. The door is cream now
+     and the picture DISSOLVES into the form (index.css, "the person's
+     door"): the scrim's last stop is exactly the colour the form stands
+     on, so there is no edge to mark, and `--su-hair` over there is a dark
+     green — which is the line somebody rightly asked about. */
+  .su-studio.auth .auth__stage { background-color: var(--su-ground); }
   .su-studio.auth .auth__card { margin: auto; }
 }
 

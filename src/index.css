@@ -1204,9 +1204,11 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 
   color: var(--su-fg-2);
 }
-/* The card lifted off a black ground with a 90px shadow; on paper that is a
-   bruise. An edge and a soft lift instead. */
-.auth--b2c.su-studio .auth__card { box-shadow: 0 18px 44px -26px var(--su-cast); }
+/* No shadow and no panel: the form stands ON the ground here, like every
+   other door (see "the card is dropped" further down, and the dark sheet
+   after it). The lift this rule used to add never applied — the later
+   sheet drops the panel again — and a cream card on a cream ground has
+   nothing to lift off anyway. */
 .auth--b2b { background: #eef2e6; }
 .auth__card { width: 100%; max-width: 360px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 30px 26px; box-shadow: var(--shadow-soft); }
 .auth__brand { display: flex; }
