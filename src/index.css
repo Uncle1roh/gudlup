@@ -1237,7 +1237,37 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .auth__error { margin-top: 14px; background: #fdecea; border: 1px solid #f5c6c0; color: #9b2c20; font-size: 13px; padding: 9px 12px; border-radius: var(--r-sm); line-height: 1.45; }
 .auth__btn { width: 100%; margin-top: 18px; background: var(--aura-deep); color: #fff; border: none; border-radius: var(--r-pill); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .auth__btn:disabled { opacity: 0.45; cursor: default; }
+/* Waiting for a field, not broken. It still takes the press — the press is
+   what names the field — so `cursor: not-allowed` would be a lie about what
+   happens next. (Same pair as the first run's footer button.) */
+.auth__btn.is-waiting:not(:disabled) { opacity: 0.6; }
 .auth--b2c .auth__btn:not(:disabled) { background: var(--aura-deep); }
+
+/* ---- what a field is still waiting for ----------------------------------
+
+   The one message this form used to print — the 18+ refusal — came out in
+   the same 12.5px grey as the hint under the promo code, which is the voice
+   the form uses for asides. A refusal is not an aside. These sit directly
+   under the field they belong to and carry the warm colour. */
+.auth__bad {
+  margin: -4px 2px 0;
+  font-size: 12.5px; line-height: 1.45; font-weight: 600;
+  color: #9b2c20;
+}
+/* Which fields may not be left alone, said once per field rather than in a
+   sentence at the top that nobody maps back onto the inputs. */
+.auth__req {
+  margin-left: 4px;
+  font-style: normal; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--aura-deep);
+}
+/* The reason a question is asked, under the answer rather than inside the
+   question. */
+.auth__why { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.45; color: var(--slate); }
+/* It belongs to the field above it, not to the gap between fields. */
+.auth__gate > .auth__why { margin: -9px 2px 0; }
+.auth__need { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; text-align: center; color: var(--slate); }
 .auth__toggle { width: 100%; margin-top: 12px; background: none; border: none; color: var(--slate); font-size: 13px; cursor: pointer; }
 .auth__toggle:hover { color: var(--ink); }
 .auth__fine { margin-top: 16px; color: var(--slate); font-size: 12px; line-height: 1.5; text-align: center; }
@@ -3061,6 +3091,9 @@ td, th { overflow-wrap: anywhere; }
 .auth__addressed { gap: 10px; }
 .auth__addressed__q { font-size: 14.5px; }
 .auth__code { font-size: 13px; }
+  .auth__bad { font-size: 13px; }
+  .auth__why { font-size: 12px; }
+  .auth__need { font-size: 13px; }
 
 @media (min-width: 900px) {
   /* Wider here because there is room, not because the form needs it: the

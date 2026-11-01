@@ -71,10 +71,20 @@ export const LEGAL_MESSAGES = {
     en: 'Good Loop is for adults. What\'s your date of birth?',
     'pt-BR': 'O Good Loop é para adultos. Qual é a sua data de nascimento?',
     it: 'Good Loop è per adulti. Qual è la tua data di nascita?' },
+  /* The question, and — separately — why it is asked. It used to be one
+     sentence in which the reason was three times the length of the question,
+     so the field read as a paragraph with a dropdown under it. The reason is
+     still on the screen (D-11: the country decides the market, the crisis
+     numbers and the governing annex); it is simply no longer the label. */
   'ONB-1.2': { tier: 'A',
-    en: 'Where do you live? This sets your emergency numbers, language and legal terms.',
-    'pt-BR': 'Onde você mora? Isso define os seus números de emergência, o idioma e os termos legais.',
-    it: 'Dove vivi? Questo imposta i tuoi numeri di emergenza, la lingua e i termini legali.' },
+    en: 'Where do you live?',
+    'pt-BR': 'Onde você mora?',
+    it: 'Dove vivi?' },
+  /* draft — not in register */
+  'ONB-1.2b': { tier: 'A',
+    en: 'This sets your emergency numbers, language and legal terms.',
+    'pt-BR': 'Isso define os seus números de emergência, o idioma e os termos legais.',
+    it: 'Questo imposta i tuoi numeri di emergenza, la lingua e i termini legali.' },
   'ONB-1.3': { tier: 'A',
     en: 'Sorry — Good Loop is only for people aged 18 and over.',
     'pt-BR': 'O Good Loop é apenas para maiores de 18 anos.',
@@ -83,22 +93,26 @@ export const LEGAL_MESSAGES = {
     en: 'Good Loop isn\'t available in your country yet.',
     'pt-BR': 'O Good Loop ainda não está disponível no seu país.',
     it: 'Good Loop non è ancora disponibile nel tuo Paese.' },
+  /* The same two ways, in the order a person meets them, and without the
+     masculine agreement — «sozinho», «da solo» — put on somebody nobody has
+     asked yet. "Psychologist" is a protected title in every market we open
+     in, so naming it says "licensed" without the word. */
   'ONB-2.1': { tier: 'A',
-    en: 'There are two ways to use Good Loop. On your own, it\'s for relaxation — not treatment or therapy. With a licensed professional, they provide your care and Good Loop is where it happens.',
-    'pt-BR': 'Há duas formas de usar o Good Loop. Sozinho, ele serve para relaxar — não é tratamento nem terapia. Com um profissional habilitado, é ele quem cuida de você, e o Good Loop é o lugar onde isso acontece.',
-    it: 'Ci sono due modi di usare Good Loop. Da solo, serve per rilassarti — non è un trattamento né una terapia. Con un professionista abilitato, è lui che si occupa di te e Good Loop è il luogo in cui questo avviene.' },
+    en: 'You can use Good Loop in two ways. On your own, to relax: used that way it is not treatment and not therapy. With a psychologist: then it is the professional who cares for you, and Good Loop is the space where that care happens.',
+    'pt-BR': 'Você pode usar o Good Loop de duas formas. Por conta própria, para relaxar: nesse caso, ele não é tratamento nem terapia. Com um psicólogo ou psicóloga: aí quem cuida de você é o profissional, e o Good Loop é o espaço onde esse acompanhamento acontece.',
+    it: 'Puoi usare Good Loop in due modi. Per conto tuo, per rilassarti: usato così non è né un trattamento né una terapia. Con uno psicologo o una psicologa: lì chi si prende cura di te è il professionista, e Good Loop è lo spazio in cui questo avviene.' },
   'ONB-2.2': { tier: 'A',
-    en: 'I understand Good Loop isn\'t for emergencies. If I\'m at risk, I\'ll use Emotional support or call emergency services.',
-    'pt-BR': 'Entendo que o Good Loop não é para emergências. Se eu estiver em risco, vou usar o Apoio emocional ou ligar para os serviços de emergência.',
-    it: 'Capisco che Good Loop non è per le emergenze. Se sono a rischio, userò Supporto emotivo o chiamerò i servizi di emergenza.' },
+    en: 'I understand Good Loop does not answer emergencies. If I am at risk, I will use the Emotional support button or call emergency services.',
+    'pt-BR': 'Entendo que o Good Loop não atende emergências. Se eu estiver em risco, vou usar o botão Apoio emocional ou ligar para os serviços de emergência.',
+    it: 'Capisco che Good Loop non risponde alle emergenze. Se sono a rischio, userò il pulsante Supporto emotivo o chiamerò i servizi di emergenza.' },
   'ONB-2.3': { tier: 'A',
-    en: 'Emotional support is always in the menu. One tap shows emergency numbers.',
-    'pt-BR': 'O Apoio emocional fica sempre no menu. Um toque mostra os números de emergência.',
-    it: 'Supporto emotivo è sempre nel menu. Un tocco mostra i numeri di emergenza.' },
+    en: 'The Emotional support button is always at the top of the screen. It opens the support and emergency contacts.',
+    'pt-BR': 'O botão Apoio emocional fica sempre no topo da tela. Ao abrir, você encontra os contatos de apoio e de emergência.',
+    it: 'Il pulsante Supporto emotivo è sempre in alto nello schermo. Aprendolo trovi i contatti di supporto e di emergenza.' },
   'ONB-3.1': { tier: 'A',
-    en: 'I accept the Terms and the notices that form part of them.',
-    'pt-BR': 'Aceito os Termos e os avisos que fazem parte deles.',
-    it: 'Accetto i Termini e le informative che ne fanno parte.' },
+    en: 'I have read and accept the Terms of Use and the notices that form part of them.',
+    'pt-BR': 'Li e aceito os Termos de Uso e os avisos que fazem parte deles.',
+    it: 'Ho letto e accetto i Termini d\'uso e le informative che ne fanno parte.' },
   'ONB-3.2': { tier: 'A',
     en: 'See how we handle your data in our Privacy Notice.',
     'pt-BR': 'Veja como tratamos os seus dados no nosso Aviso de Privacidade.',
@@ -107,6 +121,24 @@ export const LEGAL_MESSAGES = {
     en: 'Optional. Saying no doesn\'t change anything about the service. You can change this anytime in Settings.',
     'pt-BR': 'Opcional. Recusar não muda nada no serviço. Você pode alterar quando quiser em Configurações.',
     it: 'Facoltativo. Rifiutare non cambia nulla nel servizio. Puoi modificarlo quando vuoi nelle Impostazioni.' },
+  /* ---- what the acceptance screen says BEFORE the box --------------------
+     draft — not in register. Three lines, each one a thing already stated at
+     length inside a notice this screen links to: what the service is, what
+     it is not, and who sees it. Somebody who ticks the box having read three
+     lines has read more than somebody who scrolled past a wall. */
+  'ONB-3.4': { tier: 'A',
+    en: 'Good Loop is for relaxation and does not replace therapy. When you use it with a psychologist, the professional is the one who cares for you.',
+    'pt-BR': 'O Good Loop é para relaxar e não substitui terapia. Quando você usa com um psicólogo ou psicóloga, quem cuida de você é o profissional.',
+    it: 'Good Loop serve per rilassarsi e non sostituisce la terapia. Quando lo usi con uno psicologo o una psicologa, chi si prende cura di te è il professionista.' },
+  'ONB-3.5': { tier: 'A',
+    en: 'Good Loop does not answer emergencies. If you need help, use the Emotional support button at the top of the screen.',
+    'pt-BR': 'O Good Loop não atende emergências. Se precisar, use o botão Apoio emocional, no topo da tela.',
+    it: 'Good Loop non risponde alle emergenze. Se ti serve aiuto, usa il pulsante Supporto emotivo, in alto nello schermo.' },
+  'ONB-3.6': { tier: 'A',
+    en: 'What you listen to is yours alone: your company does not see it.',
+    'pt-BR': 'O que você ouve é só seu: sua empresa não vê.',
+    it: 'Quello che ascolti è solo tuo: la tua azienda non lo vede.' },
+
   'ONB-4.1': { tier: 'A',
     en: '{sponsor} pays for your access. They never see whether you use Good Loop, when, or what you do — only programme totals for groups of 25 or more.',
     'pt-BR': 'A {sponsor} paga o seu acesso. Ela nunca vê se você usa o Good Loop, quando ou o que você faz — apenas totais do programa, para grupos de 25 pessoas ou mais.',

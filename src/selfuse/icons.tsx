@@ -57,6 +57,8 @@ export type IconName =
   | 'heart' | 'run' | 'leaf' | 'coffee' | 'copy'
   /* leaving: the door open on one side, and the way out of it */
   | 'exit'
+  /* what the employer never sees */
+  | 'lock'
 
 const PATHS: Record<IconName, JSX.Element> = {
   /* graphic_eq — the app's own subject: sound. */
@@ -383,6 +385,11 @@ const PATHS: Record<IconName, JSX.Element> = {
   building: (<>
       <path d="M4.5 20.5V6.5l7-3v17" /><path d="M11.5 9.5h8v11" /><path d="M3 20.5h18" />
       <path d="M8 9v.01" /><path d="M8 12.5v.01" /><path d="M8 16v.01" /><path d="M15.5 13v.01" /><path d="M15.5 16.5v.01" />
+    </>),
+  /* lock — the shackle closed: what you listen to stays yours. */
+  lock: (<>
+      <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2" />
+      <path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7" />
     </>),
   /* favorite — Corpo */
   heart: (<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z" />),

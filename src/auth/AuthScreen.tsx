@@ -1,7 +1,7 @@
 /* The sign-in / sign-up screen and the gate that decides whether to show it.
    In demo mode any credentials work (prefilled); in Supabase mode it's real. */
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
@@ -14,6 +14,11 @@ import { useLegal } from '../legal/LegalContext'
 import { HelpNowButton } from '../legal/HelpNow'
 import { LanguagePicker } from '../components/LanguagePicker'
 import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES, marketForCountry } from '../legal/market'
+
+/** Every field that can be missing, in the order the eye meets them — which
+    is the order the button walks when it refuses. */
+type FieldKey = 'email' | 'password' | 'birth' | 'country' | 'name' | 'crp' | 'companyCode' | 'addressedAs'
+const FIELD_ORDER: FieldKey[] = ['email', 'password', 'birth', 'country', 'name', 'crp', 'companyCode', 'addressedAs']
 
 /** Whole years between a date of birth and today. */
 export function ageAt(birthDate: string, now = new Date()): number | null {
@@ -67,12 +72,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      processed on the contract and are not a consent at all. */
   const [resetSent, setResetSent] = useState(false)
   const [birthDate, setBirthDate] = useState('')
+  /* A date field with a year in it and no day is EMPTY: `value` is '' and
+     nothing downstream can tell it apart from a field nobody touched. The
+     browser can — `validity.badInput` — and it is the difference between
+     "fill this in" and "finish this". */
+  const [partialDate, setPartialDate] = useState(false)
   /* Which recording of a protocol this person hears: the scripts address the
      listener, and Italian and Portuguese make that audible. Required for a
      listener account, because the very first session needs it. */
   const [addressedAs, setAddressedAs] = useState<'m' | 'f' | null>(null)
   const [country, setCountry] = useState('')
-  const [team, setTeam] = useState('')
   const [promo, setPromo] = useState('')
   /* What the typed promo code is worth, asked while the person types:
      `checking` → a number (valid) or null (unknown). */
@@ -122,7 +131,6 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           // uppercase: the company row IS the code, and "acme-2026-9c" is not
           // the same primary key as the one the admin console minted
           companyId: normalizeCode(companyCode) || undefined,
-          team: team.trim() || undefined,
           promoCode: offersPromo ? normalizePromoCode(promo) || undefined : undefined,
           birthDate,
           country,
@@ -252,25 +260,82 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     return { ok: false, text: t('We do not know this code yet. You can create your account without it and add it later.') }
   }, [companyCode, email, rosterOk, t])
 
-  /* The two gates of screen 1. An age below eighteen or a territory where
-     Good Loop is not offered blocks the button — the message says which. */
+  /* ---- what is missing, and where ----------------------------------------
+
+     The form used to answer every one of these the same way: by greying the
+     button out. A person who had typed a year and not a day, or who had left
+     the country on "Choose your country", saw a dead button and no reason —
+     and the one message that did exist, the 18+ refusal, was printed in the
+     same 12px grey as the hint under the promo field.
+
+     So every required field answers for itself, in place, and the button
+     stays live: pressed while something is missing it does the only useful
+     thing, which is to take the person to the first field that is and say
+     what it wants. The two REFUSALS — under 18, country not served — are
+     shown the moment they are true, because they are facts about what was
+     entered, not things left undone. */
   const age = birthDate ? ageAt(birthDate) : null
   const underAge = signup && age != null && age < 18
   const unsupported = signup && !!country && marketForCountry(country) == null
-  const gateOk = !signup || (age != null && age >= 18 && !!country && marketForCountry(country) != null)
+  /* Typed digit by digit, a year passes through 0002 and 0201 on the way to
+     2015 — both of which are "over 18". A date nobody could have been born
+     on is its own answer, not a pass. */
+  const impossibleAge = signup && age != null && (age > 120 || age < 0)
 
-  const canSubmit =
-    !!email && !!password && gateOk &&
-    (!signup || !asTherapist || (!!name.trim() && !!crp.trim())) &&
-    // an HR account with no company has no company panel to open
-    (!signup || !isHr || looksLikeCompanyCode(companyCode)) &&
-    // a code that was checked and is unknown blocks the button; one still
-    // being checked does not — submit asks again
-    (!offersPromo || !promo.trim() || promoPct !== null) &&
-    // an address the company has not approved cannot carry its code
-    rosterOk !== false &&
-    // a listener account must say which recording it hears
-    (!needsConsent || addressedAs !== null)
+  const [tried, setTried] = useState(false)
+  const fields = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({})
+  const hold = (k: FieldKey) => (el: HTMLElement | null) => { fields.current[k] = el }
+
+  const problems: Partial<Record<FieldKey, string>> = {}
+  if (!email.trim()) problems.email = t('Enter your email address.')
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) problems.email = t('That does not look like an email address.')
+  if (!password) problems.password = t('Enter your password.')
+  if (signup) {
+    if (partialDate) problems.birth = t('Finish your date of birth — day, month and year.')
+    else if (!birthDate) problems.birth = t('Enter your date of birth.')
+    else if (impossibleAge) problems.birth = t('Check the year — that date of birth is not possible.')
+    else if (underAge) problems.birth = m('ONB-1.3')
+    if (!country) problems.country = t('Choose where you live.')
+    else if (unsupported) problems.country = m('ONB-1.4')
+    if (asTherapist) {
+      if (!name.trim()) problems.name = t('Enter your full name.')
+      if (!crp.trim()) problems.crp = t('Enter your registration number.')
+    } else if (isHr) {
+      // an HR account with no company has no company panel to open
+      if (!companyCode.trim()) problems.companyCode = t('Enter the company code.')
+      else if (!looksLikeCompanyCode(companyCode)) problems.companyCode = t('A company code looks like ACME-2026-K7. Check it with whoever gave it to you.')
+    } else {
+      if (!name.trim()) problems.name = t('Enter your name.')
+      // a listener account must say which recording it hears
+      if (!addressedAs) problems.addressedAs = t('Choose how the audio should address you.')
+    }
+  }
+  /* These two already print their own sentence next to the field they belong
+     to, so they block the button without adding a second one. */
+  const codeBlocked =
+    rosterOk === false ||
+    (signup && offersPromo && !!promo.trim() && promoPct === null)
+  const firstBad = FIELD_ORDER.find((k) => problems[k])
+  const blocked = !!firstBad || codeBlocked
+
+  /** Shown now, or only after the button has been pressed once. */
+  function bad(k: FieldKey): string | null {
+    if (!problems[k]) return null
+    const immediate =
+      (k === 'birth' && (underAge || impossibleAge)) ||
+      (k === 'country' && unsupported)
+    return tried || immediate ? problems[k]! : null
+  }
+
+  /** The press that cannot submit: say what is wanted, and go there. */
+  function nudge() {
+    setTried(true)
+    const el = firstBad ? fields.current[firstBad] : null
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) el.focus({ preventScroll: true })
+  }
+
+  const go = () => (blocked ? nudge() : void submit())
 
   return (
     /* `su-studio` is still here, and it still makes the door part of the
@@ -331,11 +396,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         <div className="auth__fields">
           <input className="auth__input" type="email" placeholder={t('Email')} autoComplete="email"
             value={email} onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit && !busy) void submit() }} />
+            ref={hold('email')}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          {bad('email') && <p className="auth__bad" role="alert">{bad('email')}</p>}
           <input className="auth__input" type="password" placeholder={t('Password')}
             autoComplete={signup ? 'new-password' : 'current-password'}
             value={password} onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit && !busy) void submit() }} />
+            ref={hold('password')}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          {bad('password') && <p className="auth__bad" role="alert">{bad('password')}</p>}
 
           {/* Which kind of account this will be. Two buttons rather than a
               second URL: a clinician who lands on the app's own door can
@@ -345,20 +414,27 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           {signup && (
             <div className="auth__gate">
               <label className="auth__gatefield">
-                <span>{m('ONB-1.1')}</span>
+                <span>{m('ONB-1.1')} <i className="auth__req">{t('required')}</i></span>
                 <input className="auth__input" type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)}
-                  autoComplete="bday" onChange={(e) => setBirthDate(e.target.value)} />
+                  autoComplete="bday" ref={hold('birth')}
+                  onChange={(e) => { setBirthDate(e.target.value); setPartialDate(e.target.validity.badInput) }} />
               </label>
-              {underAge && <p className="auth__code auth__code--block" role="alert">{m('ONB-1.3')}</p>}
+              {bad('birth') && <p className="auth__bad" role="alert">{bad('birth')}</p>}
               <label className="auth__gatefield">
-                <span>{m('ONB-1.2')}</span>
-                <select className="auth__input" value={country} autoComplete="country" onChange={(e) => setCountry(e.target.value)}>
+                <span>{m('ONB-1.2')} <i className="auth__req">{t('required')}</i></span>
+                <select className="auth__input" value={country} autoComplete="country" ref={hold('country')}
+                  onChange={(e) => setCountry(e.target.value)}>
                   <option value="">{t('Choose your country')}</option>
                   {SUPPORTED_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
                   {OTHER_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
                 </select>
               </label>
-              {unsupported && <p className="auth__code auth__code--block" role="alert">{m('ONB-1.4')}</p>}
+              {bad('country') && <p className="auth__bad" role="alert">{bad('country')}</p>}
+              {/* The reason the country is asked. It used to BE the question;
+                  it is a footnote to it — and it comes after whatever the
+                  field is still waiting for, because that is the more
+                  urgent of the two. */}
+              <small className="auth__why">{m('ONB-1.2b')}</small>
             </div>
           )}
 
@@ -379,18 +455,25 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
 
           {signup && asTherapist && <>
             <input className="auth__input" type="text" placeholder={t('Full name')}
-              value={name} onChange={(e) => setName(e.target.value)} />
+              value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            {bad('name') && <p className="auth__bad" role="alert">{bad('name')}</p>}
             <input className="auth__input" type="text" placeholder={t('CRP / CFP registration')}
-              value={crp} onChange={(e) => setCrp(e.target.value)} />
+              value={crp} ref={hold('crp')} onChange={(e) => setCrp(e.target.value)} />
+            {bad('crp') && <p className="auth__bad" role="alert">{bad('crp')}</p>}
           </>}
-          {signup && isHr && (
+          {signup && isHr && <>
             <input className="auth__input" type="text" placeholder={t('Company code (required)')}
-              autoCapitalize="characters" spellCheck={false}
+              autoCapitalize="characters" spellCheck={false} ref={hold('companyCode')}
               value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
-          )}
+            {bad('companyCode') && <p className="auth__bad" role="alert">{bad('companyCode')}</p>}
+          </>}
           {signup && !asTherapist && !isHr && <>
-            <input className="auth__input" type="text" placeholder={t('Your name (optional)')}
-              value={name} onChange={(e) => setName(e.target.value)} />
+            {/* Not optional any more: it is the name the app greets this
+                person by every morning, and "Bom dia," with nothing after
+                the comma is not a greeting. */}
+            <input className="auth__input" type="text" placeholder={t('Your name')}
+              value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            {bad('name') && <p className="auth__bad" role="alert">{bad('name')}</p>}
             {/* The code field is on the demo door too. It is the only way to
                 hand a demo account a convention — and a demo of Professional
                 Support that cannot be switched on is not a demo of it. */}
@@ -406,7 +489,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 or "sei pronta". One recording cannot do both, so the app has
                 to know before the first session. Asked as what it is: how the
                 audio addresses you, not who you are. */}
-            <div className="auth__addressed" role="group" aria-label={t('How the audio addresses you')}>
+            <div className="auth__addressed" role="group" aria-label={t('How the audio addresses you')} ref={hold('addressedAs')}>
               <span className="auth__addressed__q">{t('How should the audio address you?')}</span>
               <div className="auth__kind">
                 <button type="button" className={`auth__kindbtn${addressedAs === 'f' ? ' is-on' : ''}`}
@@ -421,11 +504,8 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 </button>
               </div>
               <small className="auth__fine">{t('You can change this any time in Profile.')}</small>
+              {bad('addressedAs') && <p className="auth__bad" role="alert">{bad('addressedAs')}</p>}
             </div>
-            {!demo && (
-              <input className="auth__input" type="text" placeholder={t('Team (optional)')}
-                value={team} onChange={(e) => setTeam(e.target.value)} />
-            )}
             {offersPromo && <>
               <input className="auth__input" type="text" placeholder={t('Promo code (optional)')}
                 autoCapitalize="characters" spellCheck={false}
@@ -444,9 +524,20 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           </div>
         )}
 
-        <button className="auth__btn" disabled={busy || !canSubmit} onClick={() => void submit()}>
+        {/* Live whether or not the form is complete. A button that refuses
+            has to say what it is waiting for — greyed out, it only says
+            "no". */}
+        <button
+          className={`auth__btn${blocked ? ' is-waiting' : ''}`}
+          disabled={busy}
+          aria-disabled={blocked}
+          onClick={go}
+        >
           {busy ? t('Please wait…') : signup ? t('Create account') : t('Sign in')}
         </button>
+        {tried && blocked && !error && (
+          <p className="auth__need" aria-live="polite">{t('Fill in the fields marked above to continue.')}</p>
+        )}
         {/* The two ways out of this form, on one line under the button.
             They used to be stacked, each on its own full-width row, and the
             way to an ACCOUNT — the thing a first-time person is here for —
@@ -462,7 +553,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               </button>
             )}
             {!noSignup && (
-              <button type="button" className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setResetSent(false) }}>
+              <button type="button" className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setTried(false); setResetSent(false) }}>
                 {signup ? t('Sign in') : t('Create an account')}
               </button>
             )}

@@ -598,7 +598,27 @@ export const IT_SELF_USE: Record<string, string> = {
   'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.':
     'Disponibile con il piano esteso della tua azienda: sessioni con uno psicologo abilitato, prenotate e svolte dentro l’app.',
 
-  'Made for the working day': 'Fatto per la giornata di lavoro',
+  'Made for your working day': 'Pensato per la tua giornata di lavoro',
+  'Put your headphones on, choose how long you have, and just listen: the voice and the sound guide you. Nothing to read, nothing to answer, and your company is never told what you chose.':
+    'Metti le cuffie, scegli quanto tempo hai e ascolta: la voce e la musica ti guidano. Niente da leggere, niente a cui rispondere, e la tua azienda non sa che cosa hai scelto.',
+  'Before something difficult': 'Prima di un momento difficile',
+  'A meeting that worries you, a call you have been putting off.': 'Una riunione che ti preoccupa, una telefonata che stai rimandando.',
+  'After something unexpected': 'Dopo un imprevisto',
+  'Something that went wrong and is still sitting on your shoulders.': 'Qualcosa è andato storto e ti pesa ancora sulle spalle.',
+  'At the end of the day': 'A fine giornata',
+  'To close the working day and not take it home with you.': 'Per chiudere il lavoro e non portartelo a casa.',
+  'Made of sound': 'Fatto di suono',
+  'Each session combines six audio elements, built with psychologists to help you relax in the time you have.':
+    'Ogni sessione combina sei elementi audio, creati con psicologi per aiutarti a rilassarti nel tempo che hai.',
+  'A voice that takes you from beginning to end.': 'Una voce che ti accompagna dall\'inizio alla fine.',
+  'Background sound that makes the room the session happens in.': 'Suoni di sottofondo che creano l\'ambiente della sessione.',
+  'A rhythm to breathe along with.': 'Un ritmo con cui respirare.',
+  'Guided visualisation': 'Visualizzazione guidata',
+  'A scene to picture in detail.': 'Una scena da immaginare nei dettagli.',
+  'A sound that moves from one ear to the other, at a steady rhythm.': 'Un suono che passa da un orecchio all\'altro, con un ritmo regolare.',
+  'Different frequencies in each ear. That is why you need headphones.': 'Frequenze diverse in ogni orecchio. Per questo servono le cuffie.',
+  'On your own, Good Loop supports your wellbeing, but it is not medical or psychological care and does not replace that care.':
+    'Per conto tuo, Good Loop sostiene il tuo benessere, ma non è assistenza medica o psicologica e non la sostituisce.',
   'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
     'Metti le cuffie, scegli una durata e ascolta: la voce e il suono intorno fanno il lavoro. Niente da leggere, niente a cui rispondere, e nessuno sa cosa hai scelto.',
   'Before': 'Prima',

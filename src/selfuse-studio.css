@@ -765,6 +765,19 @@ body:has(.su-studio) { background: var(--su-void); }
 
 .su-studio .profile .card,
 .su-studio .consent-row { background: var(--su-raised); border-color: var(--su-hair); }
+.su-studio .consent-row__note { color: var(--su-muted); }
+.su-studio .consent-row__foot { border-top-color: var(--su-hair); }
+.su-studio .consent-row__state { color: var(--su-muted); }
+.su-studio .fr__ess { background: var(--su-raised); border-color: var(--su-hair); }
+.su-studio .fr__ess__h { color: var(--su-muted); }
+.su-studio .fr__esslist li > span { color: var(--su-fg); }
+.su-studio .fr__esslist li > svg { color: var(--su-accent-2); }
+.su-studio .fr__esslinks { border-top-color: var(--su-hair); }
+.su-studio .fr__essmore .legal-link { color: var(--su-muted); }
+.su-studio .fr__opth { color: var(--su-fg); }
+.su-studio .fr__step { color: var(--su-muted); }
+.su-studio .fr__bar span { background: var(--su-fill); }
+.su-studio .fr__bar span.is-on { background: var(--su-accent); }
 .su-studio .switch { background: var(--su-well); border: 1px solid var(--su-hair); }
 .su-studio .switch.is-on { background: var(--su-accent); border-color: var(--su-accent); }
 
@@ -946,6 +959,9 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio.auth .auth__code { color: var(--su-muted); }
 .su-studio.auth .auth__code.is-ok { color: var(--su-accent-2); }
+.su-studio.auth .auth__why { color: var(--su-muted); }
+.su-studio.auth .auth__need { color: var(--su-muted); }
+.su-studio.auth .auth__req { color: var(--su-accent-2); }
 .su-studio.auth .auth__alt,
 .su-studio.auth .auth__legal,
 .su-studio.auth .auth__switch { color: var(--su-faint); }

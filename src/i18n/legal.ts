@@ -30,6 +30,24 @@ export const IT_LEGAL: Record<string, string> = {
   'Your terms and your choices': 'I tuoi termini e le tue scelte',
   'What this means': 'Che cosa significa',
   'Optional — all off unless you turn them on': 'Facoltativo — tutto disattivato finché non lo attivi tu',
+  /* ---- prima di cominciare: l'essenziale, la casella, le scelte ---- */
+  'Before you start': 'Prima di cominciare',
+  'Read the essentials and choose what you want to switch on. You can change your choices whenever you like.':
+    'Leggi l\'essenziale e scegli che cosa vuoi attivare. Puoi cambiare le tue scelte quando vuoi.',
+  'The essentials': 'L\'essenziale',
+  'Read the full Terms of Use': 'Leggi i Termini d\'uso completi',
+  'Optional choices': 'Scelte facoltative',
+  'Everything starts switched off. You can switch each one on or off whenever you like.':
+    'Parte tutto disattivato. Puoi attivare o disattivare quando vuoi.',
+  'Switched on': 'Attivo',
+  'Switched off': 'Disattivo',
+  'Take part in the company figures': 'Partecipa alle statistiche aziendali',
+  'Answer now and then how you are doing, to follow how you change over time. Only you see your answers.':
+    'Rispondi ogni tanto a come stai, per seguire come cambi nel tempo. Solo tu vedi le tue risposte.',
+  'Your use is counted anonymously, added to other people’s, in the reports that help your company look after the team. Nobody sees your individual data.':
+    'Il tuo utilizzo entra, in forma anonima e sommato a quello di altre persone, nei report che aiutano la tua azienda a prendersi cura del team. Nessuno vede i tuoi dati individuali.',
+  'Get a nudge on this device to remind you to take a pause.':
+    'Ricevi un avviso su questo dispositivo che ti ricorda di fare una pausa.',
   'Terms': 'Termini',
   'Notices': 'Informative',
   'Nature of the service': 'Natura del servizio',
@@ -367,6 +385,24 @@ export const PT_LEGAL: Record<string, string> = {
   'Your terms and your choices': 'Os seus termos e as suas escolhas',
   'What this means': 'O que isso significa',
   'Optional — all off unless you turn them on': 'Opcional — tudo desligado até você ligar',
+  /* ---- antes de começar: o essencial, a caixa, as escolhas ---- */
+  'Before you start': 'Antes de começar',
+  'Read the essentials and choose what you want to switch on. You can change your choices whenever you like.':
+    'Leia o essencial e escolha o que quer ativar. Você pode mudar suas escolhas quando quiser.',
+  'The essentials': 'O essencial',
+  'Read the full Terms of Use': 'Ler os Termos de Uso completos',
+  'Optional choices': 'Escolhas opcionais',
+  'Everything starts switched off. You can switch each one on or off whenever you like.':
+    'Tudo começa desligado. Você pode ligar ou desligar quando quiser.',
+  'Switched on': 'Ligado',
+  'Switched off': 'Desligado',
+  'Take part in the company figures': 'Participar das estatísticas da empresa',
+  'Answer now and then how you are doing, to follow how you change over time. Only you see your answers.':
+    'Responda de vez em quando como você está, para acompanhar como você evolui. Só você vê suas respostas.',
+  'Your use is counted anonymously, added to other people’s, in the reports that help your company look after the team. Nobody sees your individual data.':
+    'Seu uso entra, de forma anônima e somado ao de outras pessoas, nos relatórios que ajudam sua empresa a cuidar da equipe. Ninguém vê seus dados individuais.',
+  'Get a nudge on this device to remind you to take a pause.':
+    'Receba avisos neste aparelho para lembrar de fazer uma pausa.',
   'Terms': 'Termos',
   'Notices': 'Avisos',
   'Nature of the service': 'Natureza do serviço',

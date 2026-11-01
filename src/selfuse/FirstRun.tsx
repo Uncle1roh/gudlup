@@ -34,6 +34,7 @@
 import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
+import { Icon, type IconName } from './icons'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { useSuTheme } from './theme'
 import { useDataProvider } from '../data/provider'
@@ -92,58 +93,83 @@ function modesStep(professional: boolean): ExplainerStep {
   }
 }
 
-/** What the sessions are FOR. */
+/** What the sessions are FOR. Each moment is named as the moment, not as a
+    preposition: "Before" and "After" were the shortest possible labels and
+    said nothing until you read the line under them. */
 const WORK_STEP: ExplainerStep = {
   kind: 'explainer',
-  title: 'Made for the working day',
+  title: 'Made for your working day',
   body:
-    'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.',
+    'Put your headphones on, choose how long you have, and just listen: the voice and the sound guide you. Nothing to read, nothing to answer, and your company is never told what you chose.',
   art: 'work',
   points: [
-    { label: 'Before', note: 'A meeting you are dreading, a call you have been putting off.' },
-    { label: 'After', note: 'Something that went badly, and is still in your shoulders.' },
-    { label: 'At the end', note: 'Closing the day so it does not follow you home.' },
+    { label: 'Before something difficult', note: 'A meeting that worries you, a call you have been putting off.' },
+    { label: 'After something unexpected', note: 'Something that went wrong and is still sitting on your shoulders.' },
+    { label: 'At the end of the day', note: 'To close the working day and not take it home with you.' },
   ],
 }
 
-/** Where it comes from: what the audio technically does, developed by our
-    clinical team. A description of the sound, not a claim about you. */
+/** Where it comes from: what the audio technically does, built with
+    psychologists. A description of the sound, not a claim about you — and in
+    the order you MEET it, voice first, rather than the order the engine
+    mixes it. */
 const METHOD_STEP: ExplainerStep = {
   kind: 'explainer',
-  title: 'Built as sound',
+  title: 'Made of sound',
   body:
-    'Each session is six segments of pre-recorded audio, developed by our clinical team and designed for relaxation that works in the time you have.',
+    'Each session combines six audio elements, built with psychologists to help you relax in the time you have.',
   art: 'method',
   tight: true,
   points: [
-    { label: 'Alternating audio', note: 'sound that moves between the left and right ear at a set interval' },
-    { label: 'Binaural audio', note: 'calibrated frequencies, one per ear' },
-    { label: 'Structured breathing cues', note: 'a rhythm to breathe with' },
-    { label: 'Guided imagery', note: 'a scene to picture in detail' },
-    { label: 'Ambient soundscape', note: 'the ground the voice sits on' },
-    { label: 'Voice-guided sequence', note: 'one voice, one thread' },
+    { label: 'Guiding voice', note: 'A voice that takes you from beginning to end.' },
+    { label: 'Soundscape', note: 'Background sound that makes the room the session happens in.' },
+    { label: 'Guided breathing', note: 'A rhythm to breathe along with.' },
+    { label: 'Guided visualisation', note: 'A scene to picture in detail.' },
+    { label: 'Alternating audio', note: 'A sound that moves from one ear to the other, at a steady rhythm.' },
+    { label: 'Binaural audio', note: 'Different frequencies in each ear. That is why you need headphones.' },
   ],
 }
 
 /** The optional purposes asked on screen 3, with the wording the person sees
-    — which is what the consent row records (LEG-04). */
+    — which is what the consent row records (LEG-04).
+
+    THREE, where there were five. News from Good Loop and research on the
+    methodology are neither about this app nor about today: asked at the door
+    they are two more switches between somebody and the thing they came for,
+    and both are still offered — with the other five — in Profile ›
+    Privacy and data, where a person who wants to read about them can.
+
+    Each line says what HAPPENS, not what is collected. "Counted in totals
+    for groups of 25 or more" is accurate and answers a question nobody
+    asked; "your company sees the report, never you in it" is the same fact
+    from where the person is standing. */
 const PURPOSES: { purpose: ConsentPurpose; label: string; note: string }[] = [
-  { purpose: 'measurement', label: 'Wellbeing check-ins', note: 'A short weekly self-report you can see back as your own history. Never scored, never compared to anything.' },
-  { purpose: 'aggregate', label: 'Aggregate programme figures', note: 'Counted in totals for groups of 25 or more. Never shared individually.' },
-  { purpose: 'notifications', label: 'Reminders on this device', note: 'Reminders never contain health information.' },
-  { purpose: 'marketing', label: 'News from Good Loop', note: 'Occasional product news by e-mail.' },
-  { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.' },
+  { purpose: 'measurement', label: 'Wellbeing check-ins',
+    note: 'Answer now and then how you are doing, to follow how you change over time. Only you see your answers.' },
+  { purpose: 'aggregate', label: 'Take part in the company figures',
+    note: 'Your use is counted anonymously, added to other people’s, in the reports that help your company look after the team. Nobody sees your individual data.' },
+  { purpose: 'notifications', label: 'Reminders',
+    note: 'Get a nudge on this device to remind you to take a pause.' },
 ]
 
-/** The notices incorporated into the Terms (D-01), each one tap from the
-    acceptance screen. */
+/** The notices incorporated into the Terms (D-01). Every one of them is
+    still one tap from the acceptance screen, which is what D-01's drafting
+    note requires — but the two a person actually opens lead, and the four
+    that exist so that the Terms can point at them follow in small type. */
 const LINKED_NOTICES: { id: LegalDocId; label: string }[] = [
-  { id: 'terms', label: 'Terms' },
   { id: 'D-02', label: 'Nature of the service' },
   { id: 'D-04', label: 'Self-guided use' },
   { id: 'D-05', label: 'Professionally guided use' },
   { id: 'D-06', label: 'Automated features' },
   { id: 'D-10', label: 'Confidentiality and data' },
+]
+
+/** The three lines above the box: what it is, what it is not, who sees it.
+    The last one only means anything to somebody whose employer is paying. */
+const ESSENTIALS: { icon: IconName; id: 'ONB-3.4' | 'ONB-3.5' | 'ONB-3.6'; sponsored?: true }[] = [
+  { icon: 'headphones', id: 'ONB-3.4' },
+  { icon: 'heart', id: 'ONB-3.5' },
+  { icon: 'lock', id: 'ONB-3.6', sponsored: true },
 ]
 
 export function FirstRun({
@@ -273,16 +299,19 @@ export function FirstRun({
     else setI(i + 1)
   }
 
-  const dots = (
+  /* Where you are, at the top, where a person looks for it — and how many
+     there are, in words. Five dots above a button told somebody standing on
+     the second legal screen nothing about how much of this there is. */
+  const bar = (
     <div
-      className="progress-dots"
+      className="fr__bar"
       role="progressbar"
       aria-valuemin={1}
       aria-valuemax={steps.length}
       aria-valuenow={i + 1}
       aria-label={t('Step {n} of {total}', { n: i + 1, total: steps.length })}
     >
-      {steps.map((_, n) => <span key={n} className={n === i ? 'is-on' : ''} />)}
+      {steps.map((_, n) => <span key={n} className={n <= i ? 'is-on' : ''} />)}
     </div>
   )
 
@@ -314,9 +343,11 @@ export function FirstRun({
         <div className="fr__col">
         <div className="fr__top">
           <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
+          <span className="fr__step">{t('Step {n} of {total}', { n: i + 1, total: steps.length })}</span>
           {/* The explainer can be skipped; a legal screen cannot. */}
           {!onLegal && <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>}
         </div>
+        {bar}
 
         {step.kind === 'explainer' && (
           <figure
@@ -341,22 +372,55 @@ export function FirstRun({
             </>
           )}
 
-          {/* ---- screen 3: terms, privacy, optional consents -------------- */}
+          {/* ---- screen 3: the essentials, the box, the optional choices ---
+
+              It used to open on the tick box. A person met an acceptance
+              before they had been told what they were accepting, and
+              everything that WOULD have told them was behind six links in a
+              row under it — so the honest reading of that screen was "tick
+              this to get in".
+
+              Now the three things the notices are about are on the screen,
+              in three lines, above the box: what the service is, what it is
+              not, and who sees it. The notices are all still one tap away,
+              which is what D-01 asks for; they are no longer the only way to
+              find out. */}
           {step.kind === 'terms' && (
             <>
-              <h1 className="display fr__title">{t('Your terms and your choices')}</h1>
+              <h1 className="display fr__title">{t('Before you start')}</h1>
+              <p className="lead fr__body">{t('Read the essentials and choose what you want to switch on. You can change your choices whenever you like.')}</p>
+
+              <section className="fr__ess">
+                <h2 className="fr__ess__h">{t('The essentials')}</h2>
+                <ul className="fr__esslist">
+                  {ESSENTIALS.filter((e) => !e.sponsored || hasCompanyCode).map((e) => (
+                    <li key={e.id}>
+                      <Icon name={e.icon} size={20} />
+                      <span>{legal.m(e.id)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="fr__esslinks">
+                  <button type="button" className="legal-link" onClick={() => setSheet('terms')}>{t('Read the full Terms of Use')}</button>
+                  {/* ONB-3.2 lives here now. It used to be a second,
+                      centred line under the tick box saying the same thing
+                      as this link — the privacy notice announced twice on
+                      one screen, which reads as neither being the real
+                      one. */}
+                  <button type="button" className="legal-link" onClick={() => setSheet('privacy')}>{legal.m('ONB-3.2')}</button>
+                </div>
+                {/* The rest of what the Terms incorporate (D-01). */}
+                <div className="legal-ack__links fr__essmore">
+                  {LINKED_NOTICES.map((n) => (
+                    <button key={n.id} type="button" className="legal-link" onClick={() => setSheet(n.id)}>{t(n.label)}</button>
+                  ))}
+                </div>
+              </section>
+
               <label ref={ackRef} className={`legal-ack fr__accept${nudge ? ' is-nudge' : ''}`}>
                 <input type="checkbox" checked={termsAck} onChange={(e) => setTermsAck(e.target.checked)} />
                 <span>{legal.m('ONB-3.1')}</span>
               </label>
-              <div className="legal-ack__links">
-                {LINKED_NOTICES.map((n) => (
-                  <button key={n.id} type="button" className="legal-link" onClick={() => setSheet(n.id)}>{t(n.label)}</button>
-                ))}
-              </div>
-              <p className="small fr__privacy">
-                <button type="button" className="legal-link" onClick={() => setSheet('privacy')}>{legal.m('ONB-3.2')}</button>
-              </p>
               {/* ---- the optional choices ---------------------------------
 
                   Five rows, each of which used to print its title, its
@@ -371,18 +435,15 @@ export function FirstRun({
                   wording inside the disclosure, and it is on this screen,
                   which is what ONB-3.3 asks for. It is simply not all
                   shouted at once. */}
-              <p className="fr__optional">{t('Optional — all off unless you turn them on')}</p>
+              <h2 className="fr__opth">{t('Optional choices')}</h2>
+              <p className="fr__optional">{t('Everything starts switched off. You can switch each one on or off whenever you like.')}</p>
               <ul className="fr__consents">
                 {PURPOSES.map((p) => (
                   <li key={p.purpose} className="consent-row">
                     <div className="consent-row__main">
                       <div className="consent-row__text">
                         <div className="consent-row__title">{t(p.label)}</div>
-                        <details className="consent-row__more">
-                          <summary>{t('What this means')}</summary>
-                          <span className="legal-consent__hint">{t(p.note)}</span>
-                          <span className="legal-consent__hint">{legal.m('ONB-3.3')}</span>
-                        </details>
+                        <p className="consent-row__note">{t(p.note)}</p>
                       </div>
                       <button
                         type="button"
@@ -394,6 +455,16 @@ export function FirstRun({
                       >
                         <span className="switch__knob" />
                       </button>
+                    </div>
+                    {/* The state in words under the row, and the sentence
+                        that says saying no costs nothing — one tap away
+                        rather than printed five times down the screen. */}
+                    <div className="consent-row__foot">
+                      <span className="consent-row__state">{consents[p.purpose] ? t('Switched on') : t('Switched off')}</span>
+                      <details className="consent-row__more">
+                        <summary>{t('Learn more')}</summary>
+                        <span className="legal-consent__hint">{legal.m('ONB-3.3')}</span>
+                      </details>
                     </div>
                   </li>
                 ))}
@@ -433,7 +504,7 @@ export function FirstRun({
               </ul>
               {last && (
                 <p className="fr__fine">
-                  {t('Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.')}
+                  {t('On your own, Good Loop supports your wellbeing, but it is not medical or psychological care and does not replace that care.')}
                 </p>
               )}
             </>
@@ -449,7 +520,6 @@ export function FirstRun({
                 : t('Tick the box above to continue.')}
             </p>
           )}
-          {dots}
           <button
             className={`btn btn--primary${blocked ? ' is-waiting' : ''}`}
             onClick={() => (blocked ? nudgeAck() : void next())}

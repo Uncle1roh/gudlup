@@ -286,7 +286,8 @@ html[data-su-theme='light'] .su-shell { background: #eceee6; }
 .auth__gate { display: flex; flex-direction: column; gap: 10px; }
 .auth__gatefield { display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.4; text-align: left; }
 .auth__gatefield > span { color: var(--su-fg-2, inherit); }
-.auth__code--block { font-weight: 600; }
+/* `.auth__code--block` was the 18+ / unsupported-country refusal dressed as
+   a hint. Both are `.auth__bad` now, with every other missing field. */
 
 /* ---- admin: conformità -------------------------------------------------- */
 

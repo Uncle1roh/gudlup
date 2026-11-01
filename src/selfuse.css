@@ -258,6 +258,17 @@
 }
 .consent-row__legal { margin-top: 10px; font-size: 16px; font-weight: 600; color: var(--slate); }
 .consent-row__legaltext { margin-top: 8px; }
+/* What happens if you turn it on, on the card rather than behind a tap: it
+   is the one thing a person needs in order to answer. */
+.consent-row__note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--slate); }
+/* The state in words beside the switch's own position — a switch alone is
+   two grey shapes, and which one is "on" is a convention, not a fact. */
+.consent-row__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line);
+}
+.consent-row__state { font-size: 12.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--slate); }
+.consent-row__foot .consent-row__more > summary { min-height: 24px; font-size: 12.5px; }
 
 .switch {
   position: relative; flex-shrink: 0;
@@ -1289,7 +1300,26 @@
   gap: 12px;
 }
 .fr__brand { height: 24px; }
+/* Where you are, in words, beside the mark. Five dots above a button are a
+   decoration; "Step 2 of 4" is an answer. */
+.fr__step {
+  margin-left: auto;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--slate);
+}
+/* The same count drawn: one segment per screen, filled up to here. Full
+   segments rather than a single sliding fill, because the screens are
+   discrete and the person is going to press Next that many times. */
+.fr__bar { width: 100%; display: flex; gap: 6px; }
+.fr__bar span {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: var(--line);
+  transition: background 220ms var(--ease);
+}
+.fr__bar span.is-on { background: var(--aura); }
+@media (prefers-reduced-motion: reduce) { .fr__bar span { transition: none; } }
 .fr__skip {
+  margin-left: 2px;
   padding: 6px 2px;
   border: 0;
   background: none;
@@ -1481,8 +1511,8 @@
    consent record stores (LEG-04). It is on the screen, which is what ONB-3.3
    asks; it is not all shouted at once, which is what makes it readable. */
 .fr__optional {
-  margin: 16px 0 0;
-  font-size: 15px; font-weight: 600; letter-spacing: 0.01em;
+  margin: 4px 0 0;
+  font-size: 14px; font-weight: 400; line-height: 1.45;
   color: var(--slate); text-align: left;
 }
 .consent-row__more > summary {
@@ -1506,10 +1536,50 @@
   .consent-row__more > summary::after { transition: none; }
 }
 
+/* ---- the essentials, above the box --------------------------------------
+
+   Three lines in a panel of their own, each with the icon of the thing it is
+   about. The panel is what makes them read as "this is what you are
+   accepting" rather than as three more sentences on a screen that already
+   has several. */
+.fr__ess {
+  margin-top: 4px; padding: 16px 16px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--mist-2); text-align: left;
+}
+.fr__ess__h {
+  margin: 0 0 12px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--slate);
+}
+.fr__esslist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.fr__esslist li { display: flex; align-items: flex-start; gap: 11px; }
+.fr__esslist li > svg { flex: none; margin-top: 1px; color: var(--aura); }
+.fr__esslist li > span { font-size: 15px; line-height: 1.45; color: var(--ink); }
+/* The two notices a person opens, then the four the Terms point at. Both
+   rows are links, so the second is simply quieter — it is not hidden. */
+.fr__esslinks {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line);
+}
+.fr__esslinks .legal-link { font-size: 15px; text-align: left; }
+/* A button centres its own label, so a link that wraps to two lines
+   came out centred under a one-line link beside it. */
+.fr__essmore .legal-link { text-align: left; }
+.fr__essmore { margin: 8px 0 0; gap: 6px 14px; }
+.fr__essmore .legal-link { font-size: 12.5px; color: var(--slate); }
+
+/* The heading over the switches, so "Optional choices" is a part of the
+   screen rather than a note on the row under it. */
+.fr__opth {
+  margin: 22px 0 0;
+  font-family: var(--display); font-size: 21px; line-height: 1.2; color: var(--ink);
+  text-align: left;
+}
+
 /* The acceptance, the notices, the optional rows: three different kinds of
    thing that were all 10px apart. */
 .fr__words .legal-ack__links { margin-top: 10px; }
-.fr__words .fr__privacy { margin-top: 4px; }
 .fr__consents { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .fr__consents .consent-row + .consent-row { margin-top: 0; }
 
