@@ -149,25 +149,32 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
 
       {/* ------------------------------------------------------- top bar --- */}
       <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 5 }}>
-        {/* The rail's square is the logo; this corner is the date. See
-            `ui2/TopBar.tsx` — the mark returns beside it on a phone, where
-            the rail has become the bar at the foot of the screen. */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* The rail's square is the logo; this corner is the day and the
+            greeting, one under the other — the small line says which day it
+            is, the line under it says good morning to whoever is reading.
+            The greeting used to stand on its own in the middle of the bar,
+            which put the one personal line on the screen between two pieces
+            of furniture. See `ui2/TopBar.tsx` — the mark returns beside it
+            on a phone, where the rail has become the bar at the foot of the
+            screen. */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
           <span className="gl-phonemark glass" aria-hidden="true"><BrandIcon variant={variant} /></span>
-          <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-            {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+            {/* `anywhere`, because a name is whatever a person typed: one
+                unbroken word longer than a phone is still their name, and it
+                folds rather than running off the side of the screen. */}
+            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, lineHeight: 1.1, overflowWrap: 'anywhere' }}>
+              {name ? `${t(greeting())}, ${name}` : t(greeting())}
+            </span>
           </span>
         </span>
 
-        <div style={{ flex: '0 1 560px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, whiteSpace: 'nowrap' }}>
-            {name ? `${t(greeting())}, ${name}` : t(greeting())}
-          </span>
-        </div>
-
         {/* The initials disc that stood here is gone: it was decoration.
-            It named the person who is already named in the greeting two
-            columns to the left, and it opened nothing. */}
+            It named the person who is already named in the greeting at the
+            other end of the bar, and it opened nothing. */}
         <LoopsChip loops={loops} />
       </header>
 
