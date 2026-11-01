@@ -283,12 +283,18 @@
 /* ------------------------------------------------------------- the sheet ---
    Every popup on this surface — a legal notice, the achievement detail, the
    unlock sheet — is one `.sheet`. It was painted `--mist`, the old page's
-   cream, which is the same colour as this surface's ink. */
+   cream, which is the same colour as this surface's ink.
+
+   Then it was painted a fixed near-black, which was right while the surface
+   was only ever dark. It is not any more: the ground opens LIGHT by default
+   (`ui2/groundChoice`), and a dark panel still carrying `color: var(--ink)`
+   printed near-black type on near-black glass — a legal notice nobody could
+   read. It follows the ground now, like everything else here. */
 
 .gl-root .sheet-scrim { background: rgba(3, 14, 19, 0.62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 
 .gl-root .sheet {
-  background: rgba(10, 28, 34, 0.86);
+  background: color-mix(in srgb, var(--gl-ground-base) 88%, transparent);
   -webkit-backdrop-filter: blur(26px) saturate(150%);
   backdrop-filter: blur(26px) saturate(150%);
   border: 1px solid var(--line);
@@ -338,3 +344,52 @@
   .gl-root .acct__end .btn { min-width: 0; }
   .gl-root .acct__bar { flex-wrap: wrap; }
 }
+
+/* ------------------------------------------------ leaving, and writing in ---
+   The way out, with a door beside the word: on a card of figures and rows,
+   "Log out" on its own read as one more row. And the address to write to,
+   printed large enough to be read off the screen and copied by hand — the
+   point of the screen it stands on. */
+
+.gl-root .pf2-out { display: inline-flex; align-items: center; gap: 8px; }
+
+.gl-root .profile__mail {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 22px;
+  word-break: break-all;
+}
+.gl-root .profile__mail a { text-decoration: none; }
+.gl-root .profile__mail a:hover { text-decoration: underline; }
+
+/* ----------------------------------------------------- the month's report ---
+   The document itself, on screen, with a Download beside it. Taller than a
+   normal sheet because what is in it is a page of A4: anything less and the
+   reader is scrolling a letterbox. */
+
+.gl-root .rep-sheet { max-width: 720px; max-height: 92dvh; }
+.gl-root .rep-sheet__h { margin: 0; font-family: 'Outfit', system-ui, sans-serif; font-size: 22px; font-weight: 500; }
+.gl-root .rep-sheet__view {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: min(62dvh, 640px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.gl-root .rep-sheet__acts { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Side by side while they fit: two full-width bars stacked read as a
+   wizard, and one of them only closes a window. */
+.gl-root .rep-sheet__acts .btn { flex: 1 1 150px; min-width: 0; width: auto; }
+.gl-root .rep-sheet__acts a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+@media (min-width: 900px) {
+  .gl-root .rep-scrim { align-items: center; padding: 32px; }
+  .gl-root .rep-sheet { border-radius: 24px; }
+}
+
+/* Two doors side by side: copy the address, or hand it to a mail program.
+   Never one without the other, and never the mail program on its own. */
+.gl-root .profile__acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.gl-root .profile__acts .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.gl-root .profile__acts a.btn { text-decoration: none; }

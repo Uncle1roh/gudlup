@@ -30,12 +30,9 @@
 }
 .helpnow:hover { filter: brightness(1.04); }
 .helpnow:focus-visible { outline: 3px solid var(--su-accent, #1fbf94); outline-offset: 2px; }
-.helpnow__ring {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: #e28b4f;
-  box-shadow: 0 0 0 3px var(--hn-ring);
-  flex: none;
-}
+/* The heart that replaced the pulsing dot. Same slot, same gap: the button
+   keeps its shape, only the mark in front of the words changed. */
+.helpnow__heart { width: 16px; height: 16px; flex: none; display: block; }
 .helpnow--floating {
   position: fixed;
   left: max(16px, env(safe-area-inset-left));
@@ -101,7 +98,7 @@ html[data-su-theme='light'] .su-shell { background: #eceee6; }
   font-weight: 700;
   white-space: nowrap;
 }
-.helpnow--bar .helpnow__ring { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--hn-ring); }
+.helpnow--bar .helpnow__heart { width: 14px; height: 14px; }
 
 /* The session, the stereo check and a call are night whatever the theme,
    so the strip above them is too. */

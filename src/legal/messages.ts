@@ -88,13 +88,13 @@ export const LEGAL_MESSAGES = {
     'pt-BR': 'Há duas formas de usar o Good Loop. Sozinho, ele serve para relaxar — não é tratamento nem terapia. Com um profissional habilitado, é ele quem cuida de você, e o Good Loop é o lugar onde isso acontece.',
     it: 'Ci sono due modi di usare Good Loop. Da solo, serve per rilassarti — non è un trattamento né una terapia. Con un professionista abilitato, è lui che si occupa di te e Good Loop è il luogo in cui questo avviene.' },
   'ONB-2.2': { tier: 'A',
-    en: 'I understand Good Loop isn\'t for emergencies. If I\'m at risk, I\'ll use Help now or call emergency services.',
-    'pt-BR': 'Entendo que o Good Loop não é para emergências. Se eu estiver em risco, vou usar o Ajuda agora ou ligar para os serviços de emergência.',
-    it: 'Capisco che Good Loop non è per le emergenze. Se sono a rischio, userò Aiuto subito o chiamerò i servizi di emergenza.' },
+    en: 'I understand Good Loop isn\'t for emergencies. If I\'m at risk, I\'ll use Emotional support or call emergency services.',
+    'pt-BR': 'Entendo que o Good Loop não é para emergências. Se eu estiver em risco, vou usar o Apoio emocional ou ligar para os serviços de emergência.',
+    it: 'Capisco che Good Loop non è per le emergenze. Se sono a rischio, userò Supporto emotivo o chiamerò i servizi di emergenza.' },
   'ONB-2.3': { tier: 'A',
-    en: 'Help now is always in the menu. One tap shows emergency numbers.',
-    'pt-BR': 'O Ajuda agora fica sempre no menu. Um toque mostra os números de emergência.',
-    it: 'Aiuto subito è sempre nel menu. Un tocco mostra i numeri di emergenza.' },
+    en: 'Emotional support is always in the menu. One tap shows emergency numbers.',
+    'pt-BR': 'O Apoio emocional fica sempre no menu. Um toque mostra os números de emergência.',
+    it: 'Supporto emotivo è sempre nel menu. Un tocco mostra i numeri di emergenza.' },
   'ONB-3.1': { tier: 'A',
     en: 'I accept the Terms and the notices that form part of them.',
     'pt-BR': 'Aceito os Termos e os avisos que fazem parte deles.',
@@ -122,9 +122,13 @@ export const LEGAL_MESSAGES = {
 
   /* ---- global navigation ------------------------------------------------ */
   'NAV-1': { tier: 'B',
-    en: 'Help now',
-    'pt-BR': 'Ajuda agora',
-    it: 'Aiuto subito' },
+    /* "Help now" named the emergency; "Emotional support" names the door,
+       which is what a person in difficulty is likelier to open. The numbers
+       behind it are unchanged, and so is the rule that it is one tap from
+       every screen (CRS-01). */
+    en: 'Emotional support',
+    'pt-BR': 'Apoio emocional',
+    it: 'Supporto emotivo' },
   'NAV-2': { tier: 'on-demand', market: 'BR',
     en: 'CVV 188 (24h, free) · SAMU 192 · Police 190 — or go to the nearest emergency department. Good Loop can\'t respond to emergencies.',
     'pt-BR': 'CVV 188 (24h, gratuito) · SAMU 192 · Polícia 190 — ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.',
@@ -134,11 +138,24 @@ export const LEGAL_MESSAGES = {
     'pt-BR': 'Emergência 112 · {supportLine} — ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.', // draft — not in register
     it: 'Emergenze 112 · {supportLine} — oppure vai al pronto soccorso più vicino. Good Loop non risponde alle emergenze.' },
 
+  /* The sentence under the numbers in the Help sheet. It was a plain t()
+     string in `HelpNow.tsx`, which is the one place safety copy may not live
+     (MN-26); it is here now, and it opens by saying that asking was the
+     right thing to do before it says what this product cannot do. */
+  'CRS-02': { tier: 'on-demand',
+    en: 'Asking for help is an important step. If you need care right now, call the emergency number or go to the nearest emergency department. Good Loop does not respond to emergencies.',
+    'pt-BR': 'Pedir ajuda é um passo importante. Se precisar de atendimento imediatamente, ligue para o número de emergência ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.',
+    it: 'Chiedere aiuto è un passo importante. Se hai bisogno di assistenza adesso, chiama il numero di emergenza o vai al pronto soccorso più vicino. Good Loop non risponde alle emergenze.' }, // draft — not in register
+
   /* ---- library (self-guided) ------------------------------------------- */
   'LIB-1': { tier: 'B',
-    en: 'Sessions for relaxation, grouped by moment — not treatment.',
-    'pt-BR': 'Sessões de relaxamento, organizadas por momento — não é tratamento.',
-    it: 'Sessioni di rilassamento, organizzate per momento — non è un trattamento.' },
+    /* The line under the library's own heading ("Guided pauses for every
+       moment of your day", editorial, in the dictionary). It used to say
+       what the sessions ARE; it says now what they are not a substitute
+       for, which is the part that has to be read. */
+    en: 'Wellbeing content. Not a substitute for psychological or medical care.',
+    'pt-BR': 'Conteúdo de bem-estar. Não substitui acompanhamento psicológico ou médico.',
+    it: 'Contenuti di benessere. Non sostituisce un percorso psicologico o medico.' },
   'LIB-2': { tier: 'D',
     en: 'Want to talk to someone? Find a professional →',
     'pt-BR': 'Quer conversar com alguém? Encontre um profissional →',
@@ -256,9 +273,9 @@ export const LEGAL_MESSAGES = {
     'pt-BR': 'Reconectando… Você pode continuar no chat enquanto o vídeo volta.',
     it: 'Riconnessione… Puoi continuare in chat mentre torna il video.' },
   'SES-5': { tier: 'D',
-    en: 'Next session: {date}. Need help before then? Use Help now.',
-    'pt-BR': 'Próxima sessão: {date}. Precisa de ajuda antes disso? Use o Ajuda agora.',
-    it: 'Prossima sessione: {date}. Ti serve aiuto prima? Usa Aiuto subito.' },
+    en: 'Next session: {date}. Need help before then? Use Emotional support.',
+    'pt-BR': 'Próxima sessão: {date}. Precisa de ajuda antes disso? Use o Apoio emocional.',
+    it: 'Prossima sessione: {date}. Ti serve aiuto prima? Usa Supporto emotivo.' },
   'SES-6': { tier: 'D',
     en: 'Selected by {name}',
     'pt-BR': 'Escolhido por {name}',

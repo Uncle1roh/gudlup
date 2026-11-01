@@ -522,7 +522,7 @@
   .c-user { padding: 4px; }
   .c-user__name, .c-user__caret { display: none; }
   .c-topbar .helpnow--inline { font-size: 12.5px; padding: 6px 10px; gap: 6px; }
-  .c-topbar .helpnow__ring { width: 8px; height: 8px; }
+  .c-topbar .helpnow__heart { width: 13px; height: 13px; }
 }
 
 /* ===================================================== GAMIFICATION ADD-ON ==

@@ -55,6 +55,8 @@ export type IconName =
   | 'pin' | 'map' | 'globe' | 'building' | 'loop'
   /* the benefit pillars, and copying a code */
   | 'heart' | 'run' | 'leaf' | 'coffee' | 'copy'
+  /* leaving: the door open on one side, and the way out of it */
+  | 'exit'
 
 const PATHS: Record<IconName, JSX.Element> = {
   /* graphic_eq — the app's own subject: sound. */
@@ -403,6 +405,13 @@ const PATHS: Record<IconName, JSX.Element> = {
   copy: (<>
       <rect x="8.5" y="8.5" width="11" height="11" rx="2.2" />
       <path d="M15.5 8.5V6.7a2.2 2.2 0 0 0-2.2-2.2H6.7a2.2 2.2 0 0 0-2.2 2.2v6.6a2.2 2.2 0 0 0 2.2 2.2h1.8" />
+    </>),
+  /* logout — the bracket of a door left open on the side you walk out of,
+     and the arrow through it. Open, because nothing here is being shut. */
+  exit: (<>
+      <path d="M15 4.5h2.8A2.2 2.2 0 0 1 20 6.7v10.6a2.2 2.2 0 0 1-2.2 2.2H15" />
+      <path d="M11 8.5 14.5 12 11 15.5" />
+      <path d="M14.5 12H4" />
     </>),
   /* the Loop — the logo's two crossing orbits; the app's currency */
   loop: (<>

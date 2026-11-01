@@ -173,7 +173,7 @@ export const IT_LEGAL: Record<string, string> = {
     'Il check-in settimanale è nella scheda Progressi. Meno di un minuto, e del tutto facoltativo.',
   'Where your plan includes it, a licensed professional can work with you in a video session and may select sessions for you to listen to on your own. They decide what is used and when; Good Loop provides the content and the tools.':
     'Dove il tuo piano lo prevede, un professionista abilitato può lavorare con te in una sessione video e può scegliere sessioni da ascoltare da solo. Decide lui che cosa usare e quando; Good Loop fornisce i contenuti e gli strumenti.',
-  'In an emergency, Help now is always in the menu:': 'In un’emergenza, Aiuto subito è sempre nel menu:',
+  'In an emergency, Emotional support is always in the menu:': 'In un’emergenza, Supporto emotivo è sempre nel menu:',
   'Legal texts': 'Testi legali',
   'Good Loop combines guided voice, stereo sound design and structured audio segments into short relaxation sessions you can fit into a working day.':
     'Good Loop unisce voce guidata, sound design stereo e segmenti audio strutturati in brevi sessioni di rilassamento che stanno in una giornata di lavoro.',
@@ -510,7 +510,7 @@ export const PT_LEGAL: Record<string, string> = {
     'O check-in semanal fica na aba Progresso. Menos de um minuto, e totalmente opcional.',
   'Where your plan includes it, a licensed professional can work with you in a video session and may select sessions for you to listen to on your own. They decide what is used and when; Good Loop provides the content and the tools.':
     'Onde o seu plano incluir, um profissional habilitado pode trabalhar com você em uma sessão por vídeo e pode escolher sessões para você ouvir por conta própria. É ele quem decide o que é usado e quando; o Good Loop fornece o conteúdo e as ferramentas.',
-  'In an emergency, Help now is always in the menu:': 'Em uma emergência, o Ajuda agora está sempre no menu:',
+  'In an emergency, Emotional support is always in the menu:': 'Em uma emergência, o Apoio emocional está sempre no menu:',
   'Legal texts': 'Textos legais',
   'Good Loop combines guided voice, stereo sound design and structured audio segments into short relaxation sessions you can fit into a working day.':
     'O Good Loop combina voz guiada, design de som estéreo e segmentos de áudio estruturados em sessões curtas de relaxamento que cabem em um dia de trabalho.',

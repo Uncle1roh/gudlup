@@ -63,7 +63,7 @@ const ICONS: Record<Dest, ReactNode> = {
 const LABELS: Record<Dest, string> = {
   home: 'Home',
   therapy: 'Therapy',
-  path: 'My path',
+  path: 'Guided care',
   journey: 'My journey',
   benefits: 'Benefits',
   profile: 'Profile',
@@ -118,9 +118,19 @@ export function Shell({
   return (
     <div ref={root} className={`gl-root${surface === 'deep' ? ' gl-root--deep' : ''}`}>
       <nav className="gl-nav" aria-label={t('Main navigation')}>
-        <span className="gl-nav__logo glass" aria-hidden="true">
+        {/* The mark is the way home. It looked like a link and was not one:
+            a brand square at the head of a navigation rail is the one place
+            everybody taps to get back, and this one did nothing. It goes to
+            the Home and, if that is already where you are, back to the top
+            of it — the same thing the rail's own buttons do. */}
+        <button
+          type="button"
+          className="gl-nav__logo glass"
+          aria-label={t('Home')}
+          onClick={() => { root.current?.scrollTo({ top: 0 }); onDest('home') }}
+        >
           <BrandIcon variant={variant} />
-        </span>
+        </button>
         {dests.map((d) => (
           <button
             key={d}

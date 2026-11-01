@@ -178,7 +178,15 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         <LoopsChip loops={loops} />
       </header>
 
-      {noticeSlot}
+      {/* What this place is, and what it is not. Two lines, deliberately
+          unequal: the first is editorial and says what a person gets; the
+          second is LIB-1 from the legal catalogue, smaller, and says what
+          it is not a substitute for. They are one block — the column's own
+          30px rhythm between them read as two unrelated sentences. */}
+      <div className="gl-libhead">
+        <p className="gl-libline">{t('Guided pauses for every moment of your day')}</p>
+        {noticeSlot}
+      </div>
 
       {/* ----------------------------------------------------- billboard --- */}
       <section style={{ minHeight: 420, display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, padding: '36px 8px 0' }}>

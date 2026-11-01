@@ -59,7 +59,7 @@ export function RankingsTab() {
       )}
       {joined && <Rankings />}
       <p className="small muted gam-foot">
-        {t('We use the city in your profile, never your location. You can leave the rankings in Profile.')}
+        {t('We use the city in your profile, never your location. You can leave the rankings in Profile › Privacy & Data.')}
       </p>
     </div>
   )

@@ -68,7 +68,6 @@ export const LEGAL_EN: Record<string, LegalDocText> = {
       { kind: "p", text: "If you are thinking about ending your life, thinking about harming yourself or another person, or if you believe that you or anyone else is in danger, stop using Good Loop and get help immediately:" },
       { kind: "p", text: "Emergency services — call 112, the single European emergency number, free from any telephone." },
       { kind: "p", text: "Or go to the nearest hospital emergency department." },
-      { kind: "p", text: "[Insert here the verified national crisis and emotional-support helpline for each country in which the service is offered, with its name, number, hours and website.]" },
       { kind: "p", text: "If you are with someone who is at risk, do not leave them alone and call for help." },
       { kind: "p", text: "Nothing on Good Loop — including any message you send within the platform, to a professional, or to any automated feature — will be treated as a request for emergency assistance, and no such message will produce an emergency response." },
     ],
@@ -230,7 +229,7 @@ export const LEGAL_EN: Record<string, LegalDocText> = {
     id: "D-17",
     title: "In-product notices — core requirement",
     blocks: [
-      { kind: "p", text: "Every screen of Good Loop gives one-tap access to emergency help through the Help now button, which shows emergency numbers before anything else." },
+      { kind: "p", text: "Every screen of Good Loop gives one-tap access to emergency help through the Emotional support button, which shows emergency numbers before anything else." },
       { kind: "p", text: "The self-guided library states in one line that its sessions are for relaxation and are grouped by moment rather than by any condition. The first time a user opens each category, a short note restates this and, where relevant, points to professional help. Every self-guided session ends with a link to find a professional." },
       { kind: "p", text: "The full text of every notice is available one tap away and on the legal information page." },
       { kind: "p", text: "No notice is ever triggered by, varied by, or timed according to anything the user has entered, selected, rated, or been assessed on, or by any pattern in their use of the service. Notices appear at fixed moments — onboarding, checkout, booking, the first visit to a place, or a calendar date — on the same terms for every user." },

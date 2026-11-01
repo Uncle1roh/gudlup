@@ -520,7 +520,12 @@
 .cal__day {
   aspect-ratio: 1; border-radius: 8px; font-size: 16px; color: var(--slate);
   background: var(--mist-2);
+  /* the chosen face over the day number */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; line-height: 1;
 }
+.cal__face { font-size: 17px; line-height: 1; }
+.cal__day--face .cal__n { font-size: 10px; opacity: 0.72; }
 .cal__day--l1 { background: #cbd8cf; color: var(--ink); }
 .cal__day--l2 { background: #b8d3c2; color: var(--ink); }
 .cal__day--l3 { background: #97c8ac; color: var(--ink); }

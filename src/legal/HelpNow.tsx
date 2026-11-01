@@ -43,7 +43,14 @@ export function HelpNowButton({ variant = 'floating', className = '' }: { varian
         aria-haspopup="dialog"
         aria-label={m('NAV-1')}
       >
-        <span className="helpnow__ring" aria-hidden="true" />
+        {/* A heart, where a pulsing dot used to be. The dot read as an
+            alarm light; this is a door to support, and it should look like
+            one. Drawn here rather than imported: `selfuse/icons` belongs to
+            the person's app, and this button also stands in the corporate,
+            workspace and admin bars. */}
+        <svg className="helpnow__heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 20.5s-7.5-4.7-7.5-10.3a4.3 4.3 0 0 1 7.5-2.8 4.3 4.3 0 0 1 7.5 2.8c0 5.6-7.5 10.3-7.5 10.3z" fill="currentColor" />
+        </svg>
         <span className="helpnow__label">{m('NAV-1')}</span>
       </button>
       {open && <CrisisSheet onClose={() => setOpen(false)} />}
@@ -78,10 +85,9 @@ export function CrisisSheet({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
-        {/* the tail of NAV-2 / NAV-3: the numbers above are the head */}
-        <p className="helpnow-sheet__line">
-          {t('Or go to the nearest emergency department. Good Loop can’t respond to emergencies.')}
-        </p>
+        {/* CRS-02 — the sentence under the numbers. It begins by telling
+            whoever is reading it that asking was the right thing to do. */}
+        <p className="helpnow-sheet__line">{m('CRS-02')}</p>
         {!full ? (
           <button type="button" className="btn btn--quiet helpnow-sheet__more" onClick={() => setFull(true)}>
             {t('Read the full notice')}

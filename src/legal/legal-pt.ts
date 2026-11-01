@@ -66,7 +66,6 @@ export const LEGAL_PT: Record<string, LegalDocText> = {
       { kind: 'p', text: 'Se você está pensando em tirar a própria vida, em machucar a si mesmo ou a outra pessoa, ou se acredita que você ou qualquer outra pessoa está em perigo, pare de usar o Good Loop e busque ajuda imediatamente:' },
       { kind: 'p', text: 'Serviços de emergência — ligue 112, o número único europeu de emergência, gratuito de qualquer telefone.' },
       { kind: 'p', text: 'Ou vá ao pronto-socorro do hospital mais próximo.' },
-      { kind: 'p', text: '[Inserir aqui a linha nacional verificada de apoio emocional e prevenção para cada país em que o serviço é oferecido, com nome, número, horários e site.]' },
       { kind: 'p', text: 'Se você está com alguém em risco, não deixe a pessoa sozinha e peça ajuda.' },
       { kind: 'p', text: 'Nada no Good Loop — inclusive qualquer mensagem que você envie dentro da plataforma, a um profissional ou a qualquer recurso automatizado — será tratado como pedido de socorro, e nenhuma mensagem desse tipo produzirá uma resposta de emergência.' },
     ],
@@ -228,7 +227,7 @@ export const LEGAL_PT: Record<string, LegalDocText> = {
     id: 'D-17',
     title: 'Avisos no produto — requisito essencial',
     blocks: [
-      { kind: 'p', text: 'Toda tela do Good Loop dá acesso com um toque à ajuda de emergência pelo botão Ajuda agora, que mostra os números de emergência antes de qualquer outra coisa.' },
+      { kind: 'p', text: 'Toda tela do Good Loop dá acesso com um toque à ajuda de emergência pelo botão Apoio emocional, que mostra os números de emergência antes de qualquer outra coisa.' },
       { kind: 'p', text: 'A biblioteca de uso por conta própria declara em uma linha que as suas sessões são para relaxamento e são agrupadas por momento, e não por condição. Na primeira vez que a pessoa abre cada categoria, uma nota curta reafirma isso e, quando pertinente, indica a ajuda profissional. Toda sessão de uso por conta própria termina com um link para encontrar um profissional.' },
       { kind: 'p', text: 'O texto integral de cada aviso está disponível a um toque de distância e na página de informações legais.' },
       { kind: 'p', text: 'Nenhum aviso é jamais acionado, alterado ou programado com base em algo que a pessoa digitou, escolheu, avaliou ou pelo qual foi avaliada, nem com base em qualquer padrão do seu uso do serviço. Os avisos aparecem em momentos fixos — no ingresso, no pagamento, no agendamento, na primeira visita a uma seção ou em uma data do calendário — nos mesmos termos para todas as pessoas.' },

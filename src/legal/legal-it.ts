@@ -68,7 +68,6 @@ export const LEGAL_IT: Record<string, LegalDocText> = {
       { kind: 'p', text: 'Se stai pensando di toglierti la vita, di fare del male a te stesso o a un’altra persona, o se credi che tu o chiunque altro sia in pericolo, smetti di usare Good Loop e chiedi aiuto subito:' },
       { kind: 'p', text: 'Servizi di emergenza — chiama il 112, il numero unico europeo di emergenza, gratuito da qualsiasi telefono.' },
       { kind: 'p', text: 'Oppure vai al pronto soccorso dell’ospedale più vicino.' },
-      { kind: 'p', text: '[Inserire qui la linea nazionale verificata di ascolto e sostegno emotivo per ciascun Paese in cui il servizio è offerto, con nome, numero, orari e sito web.]' },
       { kind: 'p', text: 'Se sei con una persona a rischio, non lasciarla sola e chiama aiuto.' },
       { kind: 'p', text: 'Nulla su Good Loop — compreso qualsiasi messaggio che invii all’interno della piattaforma, a un professionista o a qualsiasi funzione automatizzata — sarà trattato come una richiesta di soccorso, e nessun messaggio di questo tipo produrrà una risposta di emergenza.' },
     ],
@@ -230,7 +229,7 @@ export const LEGAL_IT: Record<string, LegalDocText> = {
     id: 'D-17',
     title: 'Avvisi nel prodotto — requisito essenziale',
     blocks: [
-      { kind: 'p', text: 'Ogni schermata di Good Loop dà accesso con un tocco all’aiuto di emergenza tramite il pulsante Aiuto subito, che mostra i numeri di emergenza prima di qualsiasi altra cosa.' },
+      { kind: 'p', text: 'Ogni schermata di Good Loop dà accesso con un tocco all’aiuto di emergenza tramite il pulsante Supporto emotivo, che mostra i numeri di emergenza prima di qualsiasi altra cosa.' },
       { kind: 'p', text: 'La libreria a uso autonomo dichiara in una riga che le sue sessioni sono per il rilassamento e sono raggruppate per momento anziché per condizione. La prima volta che una persona apre una categoria, una breve nota lo ribadisce e, dove è pertinente, rimanda all’aiuto di un professionista. Ogni sessione a uso autonomo termina con un collegamento per trovare un professionista.' },
       { kind: 'p', text: 'Il testo integrale di ogni informativa è disponibile a un tocco di distanza e nella pagina di informazioni legali.' },
       { kind: 'p', text: 'Nessun avviso viene mai attivato, modificato o programmato in base a qualcosa che la persona ha inserito, scelto, valutato o su cui è stata valutata, né in base a un qualsiasi schema del suo uso del servizio. Gli avvisi compaiono in momenti fissi — all’ingresso, al pagamento, alla prenotazione, alla prima visita di una sezione o a una data di calendario — alle stesse condizioni per ogni persona.' },

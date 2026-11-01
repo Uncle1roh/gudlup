@@ -54,7 +54,7 @@ export function Path({ name, therapistName, prescriptions, onStart }: {
     <>
       <TopBar name={name} />
       <PageTitle
-        title={t('My path')}
+        title={t('Guided care')}
         /* SES-6 — the professional selected this; the platform never
            suggests, orders or pre-fills a selection (M2P-10). */
         note={therapistName ? m('SES-6', { name: therapistName }) : undefined}

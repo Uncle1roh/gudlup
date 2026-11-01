@@ -58,12 +58,13 @@ interface ProfileProps {
   onFindProfessional: () => void
 }
 
-type Page = 'menu' | 'account' | 'notifications' | 'prefs' | 'privacy' | 'tutorial' | 'help' | 'about' | 'delete' | 'report'
+type Page = 'menu' | 'account' | 'notifications' | 'prefs' | 'privacy' | 'tutorial' | 'help' | 'about' | 'delete' | 'report' | 'contact' | 'suggest'
 
 export function ProfileTab(props: ProfileProps) {
   const { t } = useI18n()
   const [page, setPage] = useState<Page>('menu')
-  useBackLayer(page !== 'menu', () => setPage(page === 'delete' ? 'privacy' : page === 'report' ? 'help' : 'menu'))
+  const UNDER_HELP: Page[] = ['report', 'contact', 'suggest']
+  useBackLayer(page !== 'menu', () => setPage(page === 'delete' ? 'privacy' : UNDER_HELP.includes(page) ? 'help' : 'menu'))
 
   if (page !== 'menu') {
     const back = () => setPage('menu')
@@ -78,8 +79,16 @@ export function ProfileTab(props: ProfileProps) {
         {page === 'prefs' && <SessionPrefs {...props} />}
         {page === 'privacy' && <PrivacyData {...props} onDelete={() => setPage('delete')} />}
         {page === 'tutorial' && <Tutorial hasTherapistConvention={props.convention?.type === 'self-use-plus'} onDone={back} />}
-        {page === 'help' && <Help onReport={() => setPage('report')} />}
+        {page === 'help' && (
+          <Help
+            onReport={() => setPage('report')}
+            onContact={() => setPage('contact')}
+            onSuggest={() => setPage('suggest')}
+          />
+        )}
         {page === 'report' && <ReportForm onDone={() => setPage('help')} />}
+        {page === 'contact' && <WriteToUs kind="support" />}
+        {page === 'suggest' && <WriteToUs kind="suggestion" />}
         {page === 'about' && <About />}
         {page === 'delete' && <DeleteAccount onCancel={() => setPage('privacy')} onConfirm={props.onDeleteAccount} onExport={props.onExport} />}
       </div>
@@ -131,7 +140,12 @@ export function ProfileTab(props: ProfileProps) {
           </div>
 
           <div style={{ flex: 1 }} />
-          <button type="button" className="glass-btn call2-pill" onClick={props.onLogout}>{t('Log Out')}</button>
+          {/* The word had nothing beside it, which on a card of figures and
+              rows read as one more row. The door says what it does. */}
+          <button type="button" className="glass-btn call2-pill pf2-out" onClick={props.onLogout}>
+            <Icon name="exit" size={18} />
+            {t('Log Out')}
+          </button>
         </article>
 
         <article className="glass pf2-card">
@@ -402,9 +416,13 @@ function SessionPrefs({ state, update }: ProfileProps) {
           </button>
         ))}
       </div>
-      <p className="small muted">
-        {t('Some sessions are only recorded in one form for now. When yours is missing you still hear the session, and the screen before it says so.')}
-      </p>
+      {/* The line that used to stand here said a session with no recording
+          in your form is played anyway. It is not: the catalogue offers a
+          person only what is recorded in their language AND their form
+          (`playableDurations`, owner's rule of 2026-10-21), so the case the
+          sentence warned about cannot happen, and reading it here left
+          people wondering which of their sessions were someone else's
+          voice. */}
 
       <div className="ob-field__label">{t('Default duration')}</div>
       <div className="chip-row">
@@ -423,13 +441,12 @@ function SessionPrefs({ state, update }: ProfileProps) {
         </select>
       </label>
 
-      <label className="ob-field">
-        <span className="ob-field__label">{t('Audio quality')}</span>
-        <select className="ob-input" value={p.audioQuality} onChange={(e) => set({ audioQuality: e.target.value as 'standard' | 'high' })}>
-          <option value="standard">{t('Standard')}</option>
-          <option value="high">{t('High')}</option>
-        </select>
-      </label>
+      {/* "Audio quality" is gone from the screen. Every session is one
+          rendered file at one bitrate — there has never been a second
+          encode to choose between — so the control offered a choice the
+          product cannot keep. The stored field is left alone: it is in
+          people's saved preferences, and the day there are two encodes the
+          screen comes back. */}
     </>
   )
 }
@@ -767,17 +784,67 @@ export function Tutorial({
 
 /* ------------------------------------------------------------------------- */
 
-function Help({ onReport }: { onReport: () => void }) {
+/** Where to write to us. One address, said out loud rather than handed to
+    whatever the device thinks an e-mail program is. */
+export const SUPPORT_EMAIL = 'support@goodloop.health'
+
+function Help({ onReport, onContact, onSuggest }: { onReport: () => void; onContact: () => void; onSuggest: () => void }) {
   const { t } = useI18n()
   return (
     <>
       <h2 className="display su-h1">{t('Help & Support')}</h2>
       <ul className="menu">
-        <li><a className="menu__row" href="mailto:support@goodloop.health"><span>{t('Contact support')}</span><span aria-hidden="true">›</span></a></li>
+        {/* These three were a `mailto:` and a form. The mailto opened
+            whatever mail program the device has decided is the default —
+            on a work laptop that is often a program the person never
+            uses, and on a phone it can be nothing at all, so the tap
+            appeared to do nothing. It shows the address now, and opening
+            a mail program is a second, separate tap. */}
+        <li><button className="menu__row" onClick={onContact}><span>{t('Contact support')}</span><span aria-hidden="true">›</span></button></li>
+        <li><button className="menu__row" onClick={onSuggest}><span>{t('Send a suggestion')}</span><span aria-hidden="true">›</span></button></li>
         <li><button className="menu__row" onClick={onReport}><span>{t('Report a problem')}</span><span aria-hidden="true">›</span></button></li>
       </ul>
-      <p className="small muted">{t('In an emergency, Help now is always in the menu:')}</p>
+      <p className="small muted">{t('In an emergency, Emotional support is always in the menu:')}</p>
       <HelpNowButton variant="inline" />
+    </>
+  )
+}
+
+/** The address, in full, selectable, with a button that copies it — and
+    one that opens a mail program for whoever wants that. Never both at
+    once, and never the mail program on its own. */
+function WriteToUs({ kind }: { kind: 'support' | 'suggestion' }) {
+  const { t } = useI18n()
+  const [copied, setCopied] = useState(false)
+  const subject = kind === 'support' ? t('Support') : t('A suggestion')
+
+  function copy() {
+    navigator.clipboard?.writeText(SUPPORT_EMAIL).then(
+      () => { setCopied(true); window.setTimeout(() => setCopied(false), 2000) },
+      () => { /* clipboard blocked — the address is selectable on screen */ },
+    )
+  }
+
+  return (
+    <>
+      <h2 className="display su-h1">{kind === 'support' ? t('Contact support') : t('Send a suggestion')}</h2>
+      <p className="lead">
+        {kind === 'support'
+          ? t('Write to us and tell us what is happening. We answer within two working days.')
+          : t('Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.')}
+      </p>
+      <p className="profile__mail"><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
+      <div className="profile__acts">
+        <button type="button" className="btn btn--primary" onClick={copy}>
+          <Icon name="copy" size={18} /> {copied ? t('Copied') : t('Copy the address')}
+        </button>
+        <a className="btn btn--quiet" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`}>
+          {t('Open my e-mail program')}
+        </a>
+      </div>
+      {kind === 'suggestion' && (
+        <p className="small muted">{t('If something is not working, use “Report a problem” instead — that one reaches us with a case number.')}</p>
+      )}
     </>
   )
 }

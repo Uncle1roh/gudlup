@@ -248,16 +248,22 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
           const d = new Date(now.getFullYear(), now.getMonth(), i + 1)
           const key = dayKey(d.getTime())
           const m = byDay.get(key)
+          const level = m ? MOOD_LEVELS.find((l) => l.value === m.level) : undefined
           return (
             <button
               key={i}
               type="button"
-              className={`cal__day${m ? ` cal__day--l${m.level}` : ''}${key === today ? ' cal__day--today' : ''}`}
+              className={`cal__day${m ? ` cal__day--l${m.level} cal__day--face` : ''}${key === today ? ' cal__day--today' : ''}`}
               aria-current={key === today ? 'date' : undefined}
               onClick={() => m && setOpen(m)}
-              aria-label={`${i + 1}`}
+              /* The square used to carry the day and a shade of green, and
+                 the shade is a scale nobody can read off a wall. The face
+                 the person actually chose is drawn in it now — and said
+                 out loud too, because an emoji is not a label. */
+              aria-label={level ? `${i + 1} · ${t(level.label)}` : `${i + 1}`}
             >
-              {i + 1}
+              {level && <span className="cal__face" aria-hidden="true">{level.icon}</span>}
+              <span className="cal__n">{i + 1}</span>
             </button>
           )
         })}

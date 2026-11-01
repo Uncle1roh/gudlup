@@ -145,7 +145,8 @@ export const PT_GAMIFICATION: Record<string, string> = {
   'Your listening counts toward the city you choose. We only use the city you tell us — never your location.': 'Sua escuta conta para a cidade que você escolher. Usamos só a cidade que você informar, nunca sua localização.',
   'Would you like your care to count toward your city?': 'Quer que seu cuidado some para a sua cidade?',
   'We only use the city you tell us — never your location.': 'Usamos só a cidade que você informar, nunca sua localização.',
-  'We use the city in your profile, never your location. You can leave the rankings in Profile.': 'Usamos a cidade do seu perfil, nunca sua localização. Você pode sair do ranking no Perfil.',
+  'We use the city in your profile, never your location. You can leave the rankings in Profile › Privacy & Data.':
+    'Usamos a cidade do seu perfil, nunca sua localização. Você pode sair do ranking em Perfil › Privacidade e dados.',
   'Your city': 'Sua cidade',
   'Type the name of your city': 'Digite o nome da sua cidade',
   'Cities': 'Cidades',
@@ -500,7 +501,8 @@ export const IT_GAMIFICATION: Record<string, string> = {
   'Your listening counts toward the city you choose. We only use the city you tell us — never your location.': 'Il tuo ascolto conta per la città che scegli. Usiamo solo la città che ci indichi, mai la tua posizione.',
   'Would you like your care to count toward your city?': 'Vuoi che la tua cura conti per la tua città?',
   'We only use the city you tell us — never your location.': 'Usiamo solo la città che ci indichi, mai la tua posizione.',
-  'We use the city in your profile, never your location. You can leave the rankings in Profile.': 'Usiamo la città del tuo profilo, mai la tua posizione. Puoi uscire dalle classifiche dal Profilo.',
+  'We use the city in your profile, never your location. You can leave the rankings in Profile › Privacy & Data.':
+    'Usiamo la città del tuo profilo, mai la tua posizione. Puoi uscire dalle classifiche da Profilo › Privacy e dati.',
   'Your city': 'La tua città',
   'Type the name of your city': 'Scrivi il nome della tua città',
   'Cities': 'Città',

@@ -5,9 +5,35 @@
    missing from one dictionary prints English to the person reading it. */
 
 export const IT_UI2: Record<string, string> = {
+  /* the library's own line, over the legal one under it */
+  'Guided pauses for every moment of your day': 'Pause guidate per ogni momento della tua giornata',
+
+  /* writing to us: the address, said out loud */
+  'Send a suggestion': 'Manda un suggerimento',
+  'Write to us and tell us what is happening. We answer within two working days.':
+    'Scrivici e raccontaci che cosa succede. Rispondiamo entro due giorni lavorativi.',
+  'Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
+    'Raccontaci che cosa renderebbe Good Loop migliore per te. Leggiamo tutto, e non è una richiesta di assistenza — non c’è niente di rotto da parte tua.',
+  'Copy the address': 'Copia l’indirizzo',
+  'Open my e-mail program': 'Apri il mio programma di posta',
+  'If something is not working, use “Report a problem” instead — that one reaches us with a case number.':
+    'Se qualcosa non funziona, usa «Segnala un problema»: quello ci arriva con un numero di pratica.',
+  'Support': 'Assistenza',
+  'A suggestion': 'Un suggerimento',
+
+  /* the month's report, on screen before it is kept */
+  'Your {month} report': 'Il tuo resoconto di {month}',
+  'Nothing has been saved to your device. Download it if you want to keep it.':
+    'Non è stato salvato niente sul tuo dispositivo. Scaricalo se vuoi conservarlo.',
+  'The report could not be prepared just now. Try again in a moment.':
+    'Non è stato possibile preparare il resoconto adesso. Riprova tra un momento.',
+
   /* the shell */
   'Main navigation': 'Navigazione principale',
-  'My path': 'Il mio percorso',
+  /* "Percurso" / "Percorso" read as a second journey beside "Minha jornada",
+     and neither said who is behind it. This tab is the material a
+     professional chose for this person. */
+  'Guided care': 'Percorso seguito',
   'My journey': 'Il mio viaggio',
 
   /* the library */
@@ -91,9 +117,32 @@ export const IT_UI2: Record<string, string> = {
 }
 
 export const PT_UI2: Record<string, string> = {
+  /* the library's own line, over the legal one under it */
+  'Guided pauses for every moment of your day': 'Pausas guiadas para cada momento do seu dia',
+
+  /* writing to us: the address, said out loud */
+  'Send a suggestion': 'Uma sugestão',
+  'Write to us and tell us what is happening. We answer within two working days.':
+    'Escreva para nós e conte o que está acontecendo. Respondemos em até dois dias úteis.',
+  'Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
+    'Conte o que deixaria o Good Loop melhor para você. A gente lê tudo — e não é um chamado de suporte, nada está quebrado do seu lado.',
+  'Copy the address': 'Copiar o endereço',
+  'Open my e-mail program': 'Abrir meu programa de e-mail',
+  'If something is not working, use “Report a problem” instead — that one reaches us with a case number.':
+    'Se alguma coisa não estiver funcionando, use «Relatar um problema»: esse chega até nós com um número de protocolo.',
+  'Support': 'Suporte',
+  'A suggestion': 'Uma sugestão',
+
+  /* the month's report, on screen before it is kept */
+  'Your {month} report': 'Seu relatório de {month}',
+  'Nothing has been saved to your device. Download it if you want to keep it.':
+    'Nada foi salvo no seu aparelho. Baixe se quiser guardar.',
+  'The report could not be prepared just now. Try again in a moment.':
+    'Não foi possível preparar o relatório agora. Tente de novo em um instante.',
+
   /* the shell */
   'Main navigation': 'Navegação principal',
-  'My path': 'Percurso',
+  'Guided care': 'Acompanhamento',
   'My journey': 'Minha jornada',
 
   /* the library */
@@ -160,7 +209,7 @@ export const PT_UI2: Record<string, string> = {
   /* percurso */
   '{n}× this week': '{n}× esta semana',
   'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
-    'Percurso são trilhas desenhadas para acompanhar sua terapia. Fale com o RH da sua empresa e experimente o Good Loop para empresas, com o apoio profissional.',
+    'O acompanhamento são trilhas desenhadas para andar junto com a sua terapia. Fale com o RH da sua empresa e experimente o Good Loop para empresas, com o apoio profissional.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sessões',

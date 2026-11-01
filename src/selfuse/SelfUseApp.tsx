@@ -24,7 +24,7 @@ import { useAuth } from '../auth/auth'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useDataProvider } from '../data/provider'
-import { useI18n } from '../i18n'
+import { useI18n, fmtDate } from '../i18n'
 import { Explore } from './Explore'
 import { FirstRun } from './FirstRun'
 import { AddressedAsGate } from './AddressedAsGate'
@@ -46,6 +46,7 @@ import { previewing, PREVIEW_USER_ID } from '../admin/preview'
 import { resolveCompanyCode, hasProfessionalSupport } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
 import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
+import { ReportSheet } from './ReportSheet'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
 import { dayKey } from '../data/measures'
@@ -157,6 +158,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
+  /* The month's report, open on screen. Not an overlay: the tab stays where
+     it is behind it, the way every other sheet in this app behaves. */
+  const [report, setReport] = useState(false)
   /* Percurso's list, read once for the whole surface. */
   const prescriptions = usePrescriptions(therapy)
   const videoOn = useFeature('video')
@@ -649,15 +653,19 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
   /* The monthly summary is a real document a person can keep or show someone.
      "Export my data" in Privacy & Data stays JSON on purpose — that one exists
-     to be portable and machine-readable, which is a different job. */
-  function exportSelfUse() {
-    buildMonthlyReportPdf({
+     to be portable and machine-readable, which is a different job.
+
+     The button that leads here says "view", so it opens the document rather
+     than putting it in the Downloads folder unread (`ReportSheet`). The
+     build itself is unchanged, and still happens entirely in this tab. */
+  function buildSelfUseReport() {
+    return buildMonthlyReportPdf({
       state,
       sessions: catalog.sessions,
       pathway: findPathway(catalog.pathways, state.pathway?.id),
       personName: accountName(user?.email, legal.profile?.name),
       t,
-    }).save(`good-loop-${dayKey(Date.now())}.pdf`)
+    })
   }
 
   function exportTherapy() {
@@ -784,7 +792,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
             onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}
-            onExportSelfUse={exportSelfUse}
+            onExportSelfUse={() => setReport(true)}
             onExportTherapy={exportTherapy}
           />
         )}
@@ -823,6 +831,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         />
       )}
 
+
+      {report && (
+        <ReportSheet
+          title={t('Your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}
+          filename={`good-loop-${dayKey(Date.now())}.pdf`}
+          build={buildSelfUseReport}
+          onClose={() => setReport(false)}
+        />
+      )}
 
       {onDemoToggle && (
         <button className="dev-toggle su-dev" onClick={onDemoToggle}>

@@ -237,7 +237,7 @@ html.gl2 .helpnow--bar {
   transition: background-color 1.5s ease, color 1.5s ease;
 }
 
-html.gl2 .helpnow--bar .helpnow__ring { background: currentColor; opacity: 0.55; }
+html.gl2 .helpnow--bar .helpnow__heart { opacity: 0.75; }
 
 /* ------------------------------------------------------------------ root ---
    The token names the mockups use, pointed at the namespaced ones the
@@ -451,6 +451,11 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   justify-content: center;
   margin-bottom: 18px;
   flex: none;
+  /* It is a button now (it goes home), so it has a button's defaults to
+     undo. `glass` paints it; nothing else about it changed. */
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .gl-nav__logo .gl-icon { width: 38px; height: 38px; }
@@ -646,6 +651,27 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 }
 
 .gl-root .legal-line--foot { justify-content: center; padding-top: 8px; }
+
+/* ------------------------------------------- what the library is, and is not ---
+   The heading and the legal line under it are one block, not two stops in
+   the column's 30px rhythm: read 30px apart they were two unrelated
+   sentences. Anything else the slot carries — the company challenge — gets
+   the rhythm back. */
+.gl-root .gl-libhead { display: flex; flex-direction: column; gap: 6px; }
+.gl-root .gl-libhead > :nth-child(n + 3) { margin-top: 24px; }
+
+.gl-root .gl-libline {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* …and the legal line, one step smaller again: it is the footnote of the
+   sentence above it, not a second heading. */
+.gl-root .gl-libline + .legal-line { font-size: 12px; }
 
 .gl-root .legal-note {
   border-radius: 999px;
@@ -1304,6 +1330,20 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
   transition: background-color 1.5s ease, color 1.5s ease;
 }
 
+/* The face the person chose, with the day under it. A square that carries
+   both needs to be a column; one that carries only a number is unchanged,
+   because the number is then the only child and still centres. */
+.gl-root .cal__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+}
+.gl-root .cal__face { font-size: 17px; line-height: 1; }
+.gl-root .cal__day--face .cal__n { font-size: 10px; opacity: 0.72; }
+
 .gl-root .cal__day--today { border-color: var(--ink); color: var(--ink); }
 .gl-root .cal__day[class*='cal__day--l'] { cursor: pointer; }
 .gl-root .cal__day--l1 { background: #cbd8cf; color: #1f2b2a; }
@@ -1607,10 +1647,19 @@ html.gl2[data-ground='dark'] .gl-homefill::after {
     var(--gl-ground-base) 96%);
 }
 
-/* Everything the Home draws after the picture stands on it, unmoved. */
+/* Everything the Home draws after the picture stands on it, unmoved.
+
+   `z-index: auto`, not 1, and the difference is the whole of a bug: a layer
+   with a NUMBER is a stacking context, and everything inside it is sealed
+   into that number. The library's "Learn more" sheet is `position: fixed,
+   z-index: 60` — and it was printed inside this rule's subtree, so it could
+   never rise above the top bar (5) or the rail (2): a dialog that opened
+   behind the page that opened it. Positioned and unnumbered, these blocks
+   still paint after the picture (both are at level 0 and the picture comes
+   first in the markup), and anything fixed inside them reaches the window. */
 .gl-homebg ~ * {
   position: relative;
-  z-index: 1;
+  z-index: auto;
 }
 
 /* ------------------------------------------------------- the audio card ---

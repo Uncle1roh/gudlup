@@ -105,10 +105,10 @@
 .w-call__top .helpnow,
 .w-call__helpbar .helpnow,
 .w-sandboxbar .helpnow { font-size: 13px; padding: 7px 12px; gap: 7px; white-space: nowrap; flex-shrink: 0; }
-.w-topbar .helpnow__ring,
-.w-call__top .helpnow__ring,
-.w-call__helpbar .helpnow__ring,
-.w-sandboxbar .helpnow__ring { width: 8px; height: 8px; }
+.w-topbar .helpnow__heart,
+.w-call__top .helpnow__heart,
+.w-call__helpbar .helpnow__heart,
+.w-sandboxbar .helpnow__heart { width: 13px; height: 13px; }
 .w-user { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; font-size: 13px; }
 .w-user:hover { background: var(--w-bg); }
 .w-usermenu {
@@ -817,7 +817,7 @@ textarea.w-input, .w-notearea { max-width: none; }
 .w-authwrap { position: relative; }
 .w-auth__help { position: absolute; top: 14px; right: 16px; z-index: 30; }
 .w-auth__help .helpnow { font-size: 13px; padding: 7px 12px; gap: 7px; }
-.w-auth__help .helpnow__ring { width: 8px; height: 8px; }
+.w-auth__help .helpnow__heart { width: 13px; height: 13px; }
 
 /* "Retry" inside the camera warning: the waiting room's pale-on-dark link
    colour disappeared on the light warning box. */
