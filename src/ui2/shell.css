@@ -97,6 +97,10 @@ html.gl2 {
      screen you arrive on and the five you move to are one place. */
   --gl-ground: url('/media/home-bg-mountains.jpg');
   --gl-ground-pos: 50% 42%;
+  /* The height of the Help now strip above the column (`.su-shell__bar`
+     below). It is a layout number, not a colour, and it lives here because
+     two blocks read it. */
+  --gl-bar-h: calc(42px + max(8px, env(safe-area-inset-top, 0px)));
   /* The colour behind the picture, for the instant before it decodes and for
      any edge it does not reach. Keep it close to the picture's own end. */
   --gl-ground-base: #f5eee4;
@@ -213,6 +217,12 @@ html.gl2 .su-shell__bar {
   margin-inline: auto;
   padding-inline: 28px;
   box-sizing: border-box;
+  /* Named, and no longer left to the pill's own height: the Home borrows
+     this number to pull its column up under the strip (see "the Home
+     ridge"), and a height measured in two places drifts. The arithmetic is
+     the strip's own: 8px above the 36px pill and 6px under it, and the
+     notch when there is one takes the place of the 8. */
+  height: var(--gl-bar-h);
 }
 
 /* …and the button itself becomes glass, like every other control here. It
@@ -1479,17 +1489,79 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
 /* ------------------------------------------------------ the Home ridge ---
    One photograph at the head of the library, and nowhere else.
 
-   It is a LAYER of that screen, not a second ground: the surface's own
-   ground (see "the ground" at the top of this file) keeps running under it
-   and under the five other destinations. The two fades are drawn in
-   `--gl-ground-base`, the colour the ground already declares, so the
-   picture dissolves into whatever that colour becomes — a light ground the
-   day there is one — without this block being edited.
+   TWO layers, and the difference between them is the whole of it:
 
-   It is laid out against `.gl-root`, the scroller, so it spans the whole
-   width of the window and scrolls away with the first screenful. `.gl-nav`
-   is lifted above it; everything the Home prints after it is lifted by the
-   sibling rule below. */
+     · `.gl-homefill` is this screen's ground — one flat
+       `--gl-ground-base`, FIXED to the window, under everything the Home
+       draws. Fixed because `.gl-root` IS the scroller: an absolutely
+       placed box inside a scroller is only ever as tall as one screenful,
+       so `bottom: 0` would have painted the first screen and left the rest
+       of the page to the surface's photograph;
+
+     · `.gl-homebg` is the picture, 760px at the head of the column,
+       absolute against `.gl-root`, so it spans the window and scrolls away
+       with the first screenful.
+
+   The fill is what closes the seam. The ridge's bottom fade ends in
+   `--gl-ground-base` and the fill IS `--gl-ground-base`, so the picture
+   dissolves into the colour that then runs to the foot of the page. Before
+   it, the fade ended at 760px and the surface's own ground reappeared
+   underneath — the same mountains, veiled and cropped to the window: a
+   straight line across the screen at the height of the cards, and a blue
+   cast over the shelves where the page should have been cream.
+
+   So this is the one destination that covers the surface's ground rather
+   than standing on it. The other five are untouched, and the fades are
+   still drawn in the ground's own colour, so the day that colour changes
+   neither layer needs editing.
+
+   `.gl-nav` is lifted above both; everything the Home prints after the
+   picture is lifted by the sibling rule below. */
+
+.gl-homefill {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--gl-ground-base);
+  pointer-events: none;
+}
+
+/* The dark room keeps its grain. `body::before` lays one tile of noise over
+   the ground (see "the grain" at the top of this file) at `z-index: -1`,
+   which the fill now covers, so the fill carries its own copy — without it
+   the glass panes on this screen would have a flat colour to blur, which is
+   to say nothing. Same tile, same opacity, same blend. */
+html.gl2[data-ground='dark'] .gl-homefill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.11;
+  mix-blend-mode: overlay;
+  background-size: 170px 170px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* …and the picture reaches the top of the WINDOW, not the top of the
+   column. The Help now strip above it (`.su-shell__bar`) is transparent on
+   this surface, but it is still a row of the shell's flex column, so
+   `.gl-root` began 50px down and the picture began with it: a band of the
+   surface's ground over the greeting, behind the pill.
+
+   The fix is geometric rather than structural, which is why it is this one
+   and not the alternatives — the strip keeps its place in the flow, and the
+   column is pulled up under it by exactly its height and gives that height
+   back as padding. Nothing on the screen moves; the picture simply starts
+   at the top of the window, and the pill, a flex item with a z-index of its
+   own, goes on standing over it.
+
+   `:has` keyed on the ridge rather than on a destination name, so the rule
+   is true by construction: the column rises under the strip exactly when
+   there is a picture up there to fill it. The five other destinations stand
+   on the surface's ground, which already runs behind the strip. */
+.gl-root:has(.gl-homebg) {
+  margin-top: calc(-1 * var(--gl-bar-h));
+  padding-top: calc(28px + var(--gl-bar-h));
+}
 
 .gl-homebg {
   position: absolute;

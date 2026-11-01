@@ -133,12 +133,16 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
   return (
     <>
       {/* ---------------------------------------------------- the ridge --- */}
-      {/* The photograph that opens this screen, and only this screen. It is
-          a layer of the Home rather than a second ground: the surface's own
-          ground (shell.css, "the ground") keeps running underneath it and
-          under every other destination, and the two fades over it are drawn
-          in `--gl-ground-base`, so the day the ground changes colour the
-          picture dissolves into the new one without being touched. */}
+      {/* Two layers, and shell.css ("the Home ridge") is where they are
+          explained. The fill is this screen's ground: one flat colour over
+          the whole window, so nothing of the surface's own photograph shows
+          through under the picture — it used to reappear below 760px and
+          draw a straight line across the page. The picture sits on it, at
+          the head of the column, and scrolls away with the first screenful.
+          Both fades are drawn in `--gl-ground-base`, the same variable the
+          fill paints, so the one dissolves into the other and the day that
+          colour changes neither is touched. */}
+      <div className="gl-homefill" aria-hidden="true" />
       <div className="gl-homebg" aria-hidden="true">
         <img src="/media/home-bg-mountains.jpg" alt="" />
       </div>
