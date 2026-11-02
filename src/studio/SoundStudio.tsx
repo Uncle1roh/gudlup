@@ -10,6 +10,7 @@ import {
   ANCHOR_LUFS,
   defaultClipEq,
   eqIsTransparent,
+  clipFadeOutSec,
   eqMagnitudeDb,
   type ClipEq,
   type EqBand,
@@ -150,7 +151,12 @@ const MIN_CLIP = 1
 
 /* ---- model ---- */
 /** The per-clip level/tone shaping baked into a rendered buffer. */
-type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number }
+type ClipShape = { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number; trackType?: TrackType }
+
+/* The three-second tail every bed ends with lives in `studio/multitrack.ts`
+   (`clipFadeOutSec`), because the offline renderer bakes clips through the
+   same `shapeClipBuffer` and the WAV must be what the Studio auditions. All
+   this file has to do is say which kind of track each clip is on. */
 
 interface Clip {
   id: string
@@ -853,10 +859,13 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     if (cl.frozen) return // cut/glued audio is authoritative — never re-render over it
     // a voice render is on its way: don't lay the placeholder tone over it
     if (ttsInFlight.current.has(clipId)) return
-    const hasEq = cl.eq && !eqIsTransparent(cl.eq)
-    const shape: ClipShape | undefined = hasEq || cl.calibrateDb !== undefined || cl.gainDb !== undefined || cl.fadeInSec !== undefined || cl.fadeOutSec !== undefined
-      ? { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec }
-      : undefined
+    /* Always a shape, and always with the track type: the three-second tail
+       applies to every bed whether or not the sheet said anything about one
+       (`clipFadeOutSec`). */
+    const shape: ClipShape = {
+      eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb,
+      fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec, trackType: tr.type,
+    }
     if (tr.type === 'voice' && cl.ttsSource) {
       const vp = cl.params as VoiceParams
       void rebakeVoice(trackId, clipId, cl.ttsSource, vp.pan, cl.startSec, vp.speed ?? 1, shape)
@@ -1141,7 +1150,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       const decoded = await player.decode(bytes)
       const maxDur = Math.max(MIN_CLIP, lengthSecRef.current - cl.startSec)
       let buf = await bakeVoiceBuffer(decoded, vp.pan, maxDur, vp.speed ?? 1)
-      buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec })
+      buf = shapeClipBuffer(buf, { eq: cl.eq, calibrateDb: cl.calibrateDb, gainDb: cl.gainDb, fadeInSec: cl.fadeInSec, fadeOutSec: cl.fadeOutSec, trackType: 'voice' })
       if (renderTokens.current.get(clipId) !== token) return
       rememberRender(vp, key.lang as VoiceLang, text, decoded, storedPath ?? undefined)
       setClipBuffer(trackId, clipId, buf, { ttsSource: decoded, ttsText: text, ttsPath: storedPath ?? undefined, durationSec: buf.duration })
@@ -1172,7 +1181,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       for (const c of t.clips) {
         const text = (c.text ?? '').trim()
         const vp = c.params as VoiceParams
-        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, ...voiceContext(tracksRef.current, c.id), shape: (c.eq && !eqIsTransparent(c.eq)) || c.calibrateDb !== undefined || c.gainDb !== undefined || c.fadeInSec !== undefined || c.fadeOutSec !== undefined ? { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec } : undefined })
+        if (text && !c.ttsSource && !c.frozen) jobs.push({ trackId: t.id, clipId: c.id, text, pan: vp.pan, speed: vp.speed ?? 1, voiceId: effectiveVoice(vp).id, startSec: c.startSec, ...voiceContext(tracksRef.current, c.id), shape: { eq: c.eq, calibrateDb: c.calibrateDb, gainDb: c.gainDb, fadeInSec: c.fadeInSec, fadeOutSec: c.fadeOutSec, trackType: 'voice' } })
       }
     }
     if (!jobs.length) { setTtsError(lt('No voice clip with text to synthesize.')); return }
@@ -1683,7 +1692,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     const clip = makeClip(tr.type, start, dur)
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: [...t.clips, clip] })))
     setSelected({ trackId, clipId: clip.id })
-    doRender(trackId, clip.id, tr.type, clip.params, dur)
+    doRender(trackId, clip.id, tr.type, clip.params, dur, { trackType: tr.type })
   }
   function addTrack(type: TrackType) {
     setAddOpen(false)
@@ -2782,11 +2791,19 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
             {lt('✂ Cut piece — its audio is frozen: move it freely, cut it again, or join it with its neighbour. Parameter and length edits don’t apply to frozen pieces.')}
           </div>
         )}
-        {(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
+{(clip.calibrateDb !== undefined || clip.gainDb !== undefined || (clip.fadeInSec ?? 0) > 0 || (clip.fadeOutSec ?? 0) > 0) && (
           <div className="mt-note" style={{ marginTop: 6 }}>
             {lt('📄 From the protocol Excel:')}{' '}
             {clip.calibrateDb !== undefined ? lt('normalized to {lufs} LUFS', { lufs: (ANCHOR_LUFS + clip.calibrateDb).toFixed(1) }) + ' · ' : ''}
             {lt('fades {in}s / {out}s — baked into the clip audio.', { in: clip.fadeInSec ?? 0, out: clip.fadeOutSec ?? 0 })}
+          </div>
+        )}
+        {/* The tail is a rule of the Studio, not a number from the sheet, so
+            it is said separately — and only where it actually changes the
+            clip, which is a bed asking for less than three seconds. */}
+        {track.type !== 'voice' && clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec) > (clip.fadeOutSec ?? 0) && (
+          <div className="mt-note" style={{ marginTop: 6 }}>
+            {lt('Fades out over its last {n}s — every bed in the Studio does.', { n: clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec).toFixed(clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec) < 1 ? 1 : 0) })}
           </div>
         )}
         {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}

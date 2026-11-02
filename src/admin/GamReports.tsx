@@ -5,6 +5,12 @@
    emessi per origine e per chi li paga, Loops riscattati, riscatti per
    beneficio, Loops emessi dal moltiplicatore per azienda e per mese (il CSV
    è la base della fattura all’azienda) e com’è andata ogni sfida.
+
+   In fondo c’è anche il ricalcolo delle classifiche geografiche e delle
+   conquiste collettive. Stava nel pannello “Economia”, che non c’è più
+   (src/admin/AdminApp.tsx): è l’unica cosa operativa che quel pannello
+   faceva, e il suo posto è accanto ai numeri che muove. Dove il database ha
+   pg_cron succede da sé ogni quarto d’ora; qui succede subito.
    ============================================================================ */
 
 import { useEffect, useState } from 'react'
@@ -24,6 +30,22 @@ export function GamReports() {
   const [to, setTo] = useState(day(now))
   const [r, setR] = useState<GamificationReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function refreshGeo() {
+    setBusy(true); setNote(null); setError(null)
+    try {
+      const n = await dp.adminRefreshGeo()
+      setNote(n === 0
+        ? 'Classifiche aggiornate. Nessuna nuova conquista collettiva.'
+        : `Classifiche aggiornate. ${n} conquiste collettive assegnate.`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ricalcolo non riuscito.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     setR(null)
@@ -57,6 +79,7 @@ export function GamReports() {
         </div>
       </header>
       {error && <p className="adm-note adm-note--err">{error}</p>}
+      {note && <p className="adm-note adm-note--ok">{note}</p>}
       {!r && !error && <p className="adm-muted">Caricamento…</p>}
       {r && (
         <>
@@ -106,6 +129,13 @@ export function GamReports() {
               <div className="adm-tr" key={c.id}><div>{c.title}{c.companyId && <span className="adm-muted"> · {c.companyId}</span>}</div><div>{c.status}</div><div>{c.participants}</div><div>{c.completed}</div><div>{c.rewarded}</div><div className="adm-tr__right">{loops(c.bonusCenti)}</div></div>
             ))}
           </div>
+
+          <h2 className="adm-h2">Classifiche geografiche e conquiste collettive</h2>
+          <p className="b2b-sub">
+            Aggiorna le classifiche per città, stato e regione e assegna le conquiste collettive raggiunte. Dove il
+            database ha pg_cron succede da solo ogni 15 minuti.
+          </p>
+          <button className="b2b-btn b2b-btn--primary" disabled={busy} onClick={() => void refreshGeo()}>{busy ? '…' : 'Ricalcola ora'}</button>
         </>
       )}
     </div>

@@ -90,17 +90,79 @@ export function who5Percent(e: Who5Entry | null | undefined): number | null {
   return Math.round(raw * 4)
 }
 
-/* ------------------------------------------------------------- Daily Mood -- */
+/* ------------------------------------------------------------------- Mood --
+
+   TWO SLIDERS, asked at the two ends of a session (POs, 2026-11-02).
+
+   What they replace: five emoji faces before the protocol and five after it,
+   and a separate "How was your day?" button on the mood calendar. Three
+   askings of one question, two instruments, and the calendar only ever had
+   anything in it if the person remembered to go and press the button.
+
+   One instrument now, two axes, in the one place a person is already
+   stopping: ENERGY (how switched on) and MOOD (how pleasant). Both run
+   −1…+1 — the two axes of the circumplex, which is what the five faces were
+   a one-dimensional slice of. The reading taken AFTER the session is the
+   day's mood-calendar entry, so the calendar fills itself from what the
+   person already answered and has no button of its own.
+
+   `level` (1–5) stays, derived from the mood axis, because three things
+   downstream are built on it and none of them should have to know about
+   radians: the calendar's shade, the monthly PDF, and the three buckets the
+   corporate dashboard is ever allowed to see. */
 
 export type MoodLevel = 1 | 2 | 3 | 4 | 5
 
-export const MOOD_LEVELS: { value: MoodLevel; label: string; icon: string }[] = [
-  { value: 1, label: 'Tough', icon: '😔' },
-  { value: 2, label: 'So-so', icon: '😕' },
-  { value: 3, label: 'Normal', icon: '😐' },
-  { value: 4, label: 'Good', icon: '🙂' },
-  { value: 5, label: 'Great', icon: '😄' },
+/** A reading: both axes, −1…+1. Nothing here is a score and nothing is
+    compared to a threshold (M1-08). */
+export interface MoodPoint {
+  /** Unpleasant (−1) … pleasant (+1). */
+  valence: number
+  /** Calm (−1) … lit up (+1). */
+  arousal: number
+}
+
+/** Two decimals, which is as fine as a finger on a phone can be. */
+export function roundAxis(v: number): number {
+  return Math.round(Math.max(-1, Math.min(1, v)) * 100) / 100
+}
+
+/** The five steps of the mood axis, in the person's own words. No emoji: the
+    faces are what the sliders replaced. */
+export const MOOD_LEVELS: { value: MoodLevel; label: string }[] = [
+  { value: 1, label: 'Tough' },
+  { value: 2, label: 'So-so' },
+  { value: 3, label: 'Normal' },
+  { value: 4, label: 'Good' },
+  { value: 5, label: 'Great' },
 ]
+
+/** The five steps of the energy axis. Never "good" or "bad": energy is not
+    a thing a person can be failing at, so the words are quantities. They are
+    also the words the weekly check-in already uses for its energy question,
+    which is what keeps them agreeing with the feminine "energia" in both
+    Portuguese and Italian. */
+export const ENERGY_LEVELS: { value: MoodLevel; label: string }[] = [
+  { value: 1, label: 'Very low' },
+  { value: 2, label: 'Low' },
+  { value: 3, label: 'Medium' },
+  { value: 4, label: 'High' },
+  { value: 5, label: 'Very high' },
+]
+
+/** −1…+1 → 1…5. The midpoint is 3, and the ends are 1 and 5. */
+export function levelFromAxis(v: number): MoodLevel {
+  const n = Math.round(((Math.max(-1, Math.min(1, v)) + 1) / 2) * 4) + 1
+  return Math.min(5, Math.max(1, n)) as MoodLevel
+}
+
+export function moodLabel(level: MoodLevel): string {
+  return MOOD_LEVELS.find((l) => l.value === level)?.label ?? ''
+}
+
+export function energyLabel(level: MoodLevel): string {
+  return ENERGY_LEVELS.find((l) => l.value === level)?.label ?? ''
+}
 
 export const MOOD_NOTE_MAX = 200
 
@@ -108,8 +170,37 @@ export interface MoodEntry {
   at: number
   /** YYYY-MM-DD, so one entry per calendar day. */
   day: string
+  /** 1–5, derived from `valence` when the entry came from the sliders. */
   level: MoodLevel
+  /** The reading itself, when there is one. Optional because entries written
+      by the old five-face check-in carry only a level. */
+  valence?: number
+  arousal?: number
   note?: string
+}
+
+/** Today's entry from a reading taken at the end of a session. */
+export function moodEntryFrom(point: MoodPoint, at = Date.now()): MoodEntry {
+  return {
+    at,
+    day: dayKey(at),
+    level: levelFromAxis(point.valence),
+    valence: roundAxis(point.valence),
+    arousal: roundAxis(point.arousal),
+  }
+}
+
+/** The 1–5 VAS the assessment series has always carried, from the mood axis.
+    The series does not change shape: the instrument in front of the person
+    did, and the number it produces is the same number. */
+export function vasFromMood(point: MoodPoint): number {
+  return levelFromAxis(point.valence)
+}
+
+/** One per day, newest answer wins: the end of today's second session
+    replaces the end of today's first. */
+export function upsertMood(moods: MoodEntry[], entry: MoodEntry): MoodEntry[] {
+  return [...moods.filter((m) => m.day !== entry.day), entry]
 }
 
 export function dayKey(ms: number): string {

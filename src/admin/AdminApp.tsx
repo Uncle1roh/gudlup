@@ -29,10 +29,9 @@ import { GamReports } from './GamReports'
 import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
-import { Economy } from './Economy'
 import { Compliance } from './Compliance'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'economy' | 'achievements' | 'gamreports'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'achievements' | 'gamreports'
 
 const NAV: ConsoleNavItem<Section>[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -40,9 +39,15 @@ const NAV: ConsoleNavItem<Section>[] = [
   { id: 'rails', label: 'Scaffali della libreria', icon: '▤' },
   { id: 'assets', label: 'Libreria audio', icon: '♫' },
   { id: 'credentials', label: 'Credenziali', icon: '✓' },
-  /* The economy's RULES stay here — what a Loop is worth, and what a
-     traguardo takes — while the campaigns that spend them are commercial. */
-  { id: 'economy', label: 'Economia', icon: '∞' },
+  /* No "Economia" section any more (POs, 2026-11-02). What a Loop is worth
+     is no longer a setting: a minute listened is a Point is a Loop, and the
+     session has to be finished. A screen of eleven editable numbers invited
+     somebody to change a rule that the contracts, the invoice CSV and the
+     database's own parity proof all depend on. The rules live in
+     src/gamification/economy.ts and in credit_session(); the contract
+     multiplier is three choices in "Piani e aziende"; and the one button on
+     that screen that DID something operational — recomputing the geographic
+     rankings — is on Report, next to the figures it moves. */
   { id: 'achievements', label: 'Traguardi', icon: '◎' },
   { id: 'tags', label: 'Tag', icon: '#' },
   { id: 'gamreports', label: 'Report', icon: '▥' },
@@ -95,7 +100,6 @@ export function AdminApp() {
       {section === 'compliance' && <Compliance actor={actor} />}
       {section === 'switches' && <FeatureSwitches actor={actor} />}
       {section === 'audit' && <AuditLog />}
-      {section === 'economy' && <Economy actor={actor} />}
       {section === 'achievements' && <Achievements actor={actor} />}
       {section === 'gamreports' && <GamReports />}
     </ConsoleShell>

@@ -84,9 +84,9 @@ for (const c of cases) {
   }
   assert(usage!.eligibleMinutes === 120, `seven Deep sessions in a day: 120 eligible minutes (${usage!.eligibleMinutes})`)
   assert(usage!.completionBonuses === 4, `… and 4 completion bonuses (${usage!.completionBonuses})`)
-  assert(points === 160, `… so 160 points (${points})`)
+  assert(points === 120, `… so 120 points, one a minute (${points})`)
   const next = computeSessionCredit({ ...s, endedAt: at + 86_400_000 }, DEFAULT_ECONOMY, usage, null)
-  assert(next.points === 34, `the next day starts fresh (${next.points})`)
+  assert(next.points === 24, `the next day starts fresh (${next.points})`)
 }
 
 // Nothing is ever negative.
@@ -128,11 +128,11 @@ assert(displayLoops(330) === 3 && displayLoops(99) === 0 && displayLoops(0) === 
   const w = l.wallet(now)
   const earned = l.loopsEntries().filter((e) => e.sourceType === 'session')
   const listening = earned.reduce((a, e) => a + e.amountCenti, 0)
-  assert(listening === 330, `mock: Ana's session once, at 1.5×: 330 centi from listening (${listening})`)
+  assert(listening === 1800, `mock: Ana's session once, at 1.5×: 1800 centi from listening (${listening})`)
   assert(earned.length === 2, `mock: two session entries, base + company, and SOS added none (${earned.length})`)
-  assert(w.balanceCenti === 330 + 2000 && w.loops === 23, `mock: + the first_loop bonus, 20 Loops, never multiplied (${w.balanceCenti})`)
+  assert(w.balanceCenti === 1800 + 2000 && w.loops === 38, `mock: + the first_loop bonus, 20 Loops, never multiplied (${w.balanceCenti})`)
   assert(l.loopsEntries().every((e) => e.entryType !== 'earn_company_multiplier' || (e.fundingSource === 'company' && e.companyId === 'aurora')), 'mock: the multiplier entry is company-funded and names the company')
-  assert(w.minutesMonth === 12 && w.sessionsMonth === 1 && w.pointsMonth === 22, `mock: 12 min, 1 session, 22 points this month (${w.minutesMonth}/${w.sessionsMonth}/${w.pointsMonth})`)
+  assert(w.minutesMonth === 12 && w.sessionsMonth === 1 && w.pointsMonth === 12, `mock: 12 min, 1 session, 12 points this month (${w.minutesMonth}/${w.sessionsMonth}/${w.pointsMonth})`)
   assert(w.multiplier === 1.5, 'mock: the wallet names the multiplier in force')
   l.creditSession({ ...rec, id: 's-old', startedAt: now - 30 * 86_400_000, completedAt: now - 30 * 86_400_000 + 720_000 }, now)
   assert(l.pointsEntries().find((p) => p.sourceId === 's-old')?.periodMonth === '2026-10-01', 'mock: a session dated a month back is credited as of now')

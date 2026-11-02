@@ -23,7 +23,6 @@ const DAY = 86_400_000
 export class MockCompany {
   plans: AddonPlan[] = [
     { id: 'essencial', name: 'Essencial', multiplier: 1, companyChallenges: true, companyBenefits: true, tagFilter: true, active: true },
-    { id: 'plus', name: 'Plus', multiplier: 1.25, companyChallenges: true, companyBenefits: true, tagFilter: true, active: true },
     { id: 'premium', name: 'Premium', multiplier: 1.5, companyChallenges: true, companyBenefits: true, tagFilter: true, active: true },
     { id: 'max', name: 'Max', multiplier: 2, companyChallenges: true, companyBenefits: true, tagFilter: true, active: true },
   ]

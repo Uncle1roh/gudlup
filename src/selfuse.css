@@ -497,18 +497,6 @@
 .who5-opt[aria-pressed='true'] { border-color: var(--aura); background: #f4faf7; font-weight: 600; }
 .who5-opt__n { font-variant-numeric: tabular-nums; color: var(--slate); font-weight: 700; }
 
-.mood-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.mood-opt {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 12px 2px; border-radius: var(--r-sm);
-  background: #fff; border: 1px solid var(--line);
-  font-size: 16px; font-weight: 600;
-}
-.mood-opt[aria-pressed='true'] { border-color: var(--aura); background: #f4faf7; }
-.mood-opt__icon { font-size: 24px; }
-.mood-note { margin-top: 12px; resize: vertical; min-height: 72px; }
-.mood-note__count { text-align: right; }
-.mood-inline { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 
 .msr-bars { display: flex; flex-direction: column; gap: 9px; width: 100%; margin: 6px 0; }
 .msr-bar { display: grid; grid-template-columns: 86px 1fr 44px; align-items: center; gap: 10px; }
@@ -535,8 +523,6 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; line-height: 1;
 }
-.cal__face { font-size: 17px; line-height: 1; }
-.cal__day--face .cal__n { font-size: 10px; opacity: 0.72; }
 .cal__day--l1 { background: #cbd8cf; color: var(--ink); }
 .cal__day--l2 { background: #b8d3c2; color: var(--ink); }
 .cal__day--l3 { background: #97c8ac; color: var(--ink); }
@@ -847,7 +833,6 @@
   .post__row { grid-template-columns: 1fr 1fr; }
 }
 
-.mood-opt__label { font-size: 16px; line-height: 1.15; overflow-wrap: anywhere; }
 .scale5__btn { min-width: 0; }
 
 /* A pasted URL must not widen the message thread. */
@@ -1248,23 +1233,84 @@
 .asmt-card .rx-card__top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .asmt-card p { overflow-wrap: anywhere; }
 
-/* --- the session VAS ------------------------------------------------------ */
-/* Five faces, one tap, the same row before and after. Big enough to hit with a
-   thumb on the smallest phone the app supports, and it wraps rather than
-   overflowing if the viewport is narrower still. */
+/* --- the two sliders -----------------------------------------------------
+
+   The mood, asked at the two ends of a session (`selfuse/MoodSliders.tsx`).
+   Two vertical tracks, each one drawn in the colour its axis means, with a
+   thumb that is HOLLOW until the person has answered: the question is
+   optional and a filled thumb resting in the middle would be an answer
+   nobody gave.
+
+   The tracks are 150px and the whole block is capped, because this appears on
+   the pre- and post-session screens, which are a single column on a phone and
+   the same single column on a monitor. */
+
 .vas-block { margin-top: 18px; text-align: center; }
 .vas-block > p { margin-bottom: 8px; }
-.vas-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
-.vas-opt {
-  width: 48px; height: 48px; flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; line-height: 1;
-  border: 1px solid var(--line); border-radius: 50%;
-  background: #fff; cursor: pointer;
-  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+
+.ms2 { display: flex; flex-direction: column; align-items: center; }
+
+.ms2__axes {
+  display: flex;
+  justify-content: center;
+  gap: 42px;
+  padding: 4px 0 2px;
 }
-.vas-opt:hover { transform: translateY(-1px); }
-.vas-opt[aria-pressed='true'] { border-color: var(--aura); background: #f4faf7; transform: scale(1.08); }
+
+.ms2-axis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 78px;
+}
+
+.ms2-axis__name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.ms2-axis__end { font-size: 12px; opacity: 0.66; }
+
+.ms2-track {
+  position: relative;
+  width: 26px;
+  height: 150px;
+  flex: none;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  cursor: ns-resize;
+  touch-action: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.ms2-track:focus-visible { outline: 2px solid var(--su-cream, #f2eec4); outline-offset: 3px; }
+
+.ms2-thumb {
+  position: absolute;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: transparent;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.15s ease;
+}
+
+.ms2-thumb.is-set { background: #fff; }
+
+@media (max-width: 380px) {
+  .ms2__axes { gap: 26px; }
+  .ms2-track { height: 128px; }
+}
+
 
 /* --- the thread ----------------------------------------------------------- */
 /* A conversation that grows without bound used to push the compose box off the
@@ -1665,9 +1711,6 @@
    enormous; capping the GRID caps the buttons, which stay square. */
 .scale5 { max-width: 360px; margin-inline: auto; width: 100%; }
 .scale5__ends { max-width: 360px; margin-inline: auto; width: 100%; }
-.mood-row { max-width: 440px; margin-inline: auto; width: 100%; }
-.mood-note { max-width: 440px; margin-inline: auto; width: 100%; }
-.mood-note__count { max-width: 440px; margin-inline: auto; width: 100%; }
 
 /* ---- the week, on a 1 to 5 track ----------------------------------------
 

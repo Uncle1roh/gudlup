@@ -109,10 +109,14 @@ export function ProfileTab(props: ProfileProps) {
     { id: 'privacy', label: 'Privacy & Data' },
   ]
 
+  /* These three used to be loose full-width rows below the cards, under no
+     heading: "Como funciona o Good Loop" sat outside every box on the
+     screen, which is both the odd one out and the first thing a new person
+     looks for. It is a box like the others now, and it says what it is. */
   const about: { id: Page; label: string }[] = [
     { id: 'tutorial', label: 'How Good Loop Works' },
     { id: 'help', label: 'Help & Support' },
-    { id: 'about', label: 'About Good Loop' },
+    { id: 'about', label: 'Legal information' },
   ]
 
   return (
@@ -120,10 +124,14 @@ export function ProfileTab(props: ProfileProps) {
       <TopBar name={props.name} />
       <PageTitle title={t('Profile')} />
 
-      {/* The mockup's three cards. Each one is a door the app already had —
-          the rows under "Preferências" are the same pages, in the same
-          order, and nothing here sets a preference it does not own. */}
-      <section className="g3">
+      {/* FOUR boxes, all the same box: who you are, your settings, the
+          professional offer, and Good Loop itself. Two by two on a desk, one
+          column on a phone, and every cell the height of its row — the
+          screen used to be three cards of three different heights with two
+          loose rows hanging off the bottom of them. Each one is a door the
+          app already had: the rows are the same pages, in the same order,
+          and nothing here sets a preference it does not own. */}
+      <section className="g2x2">
         <article className="glass pf2-card">
           <div className="pf2-id">
             <span className="pf2-avatar" aria-hidden="true">{initialsOf(props.name)}</span>
@@ -174,19 +182,20 @@ export function ProfileTab(props: ProfileProps) {
             {props.hasTherapist ? t('Therapy') : t('Find a therapist')}
           </button>
         </article>
-      </section>
 
-      <section className="bn2-sect">
-        <ul className="pf2-rows pf2-rows--wide">
-          {about.map((r) => (
-            <li key={r.id}>
-              <button type="button" className="pf2-row glass" onClick={() => setPage(r.id)}>
-                <span>{t(r.label)}</span>
-                <span aria-hidden="true">›</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <article className="glass pf2-card">
+          <h2 className="call2-pane__h">{t('Good Loop')}</h2>
+          <ul className="pf2-rows">
+            {about.map((r) => (
+              <li key={r.id}>
+                <button type="button" className="pf2-row" onClick={() => setPage(r.id)}>
+                  <span>{t(r.label)}</span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
       </section>
 
       <SafetyLevel1 />

@@ -243,13 +243,13 @@
 /* ------------------------------------------------------------- percurso ---
    The mockup's row, laid out three to a desk. */
 
-.path2-card { border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.path2-card { border-radius: var(--gl-box-r); padding: var(--gl-box-pad); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
 /* No prescription yet — which is the state almost everyone is in, because a
    path is something a professional builds. One pane saying what the screen
    is for and how it comes to have anything in it. */
 .path2-empty {
-  border-radius: 28px;
+  border-radius: var(--gl-box-r);
   padding: 36px 32px;
   max-width: 620px;
   width: 100%;
@@ -384,14 +384,14 @@
    Three cards across the top, two tabs, and a grid of benefits. Care that
    comes back to you — never a shop (SPEC §6.5). */
 
-.bn2-card { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.bn2-card { border-radius: var(--gl-box-r); padding: var(--gl-box-pad); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 
 /* The challenge card is the app's own component. Inside the top row it
    needs the same box as its two neighbours, not its own centring. */
 .gl-root .g3 > .gam-challenge {
   align-items: flex-start;
-  padding: 22px;
-  border-radius: 28px;
+  padding: var(--gl-box-pad);
+  border-radius: var(--gl-box-r);
 }
 .bn2-eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
 
@@ -455,9 +455,16 @@
 .gl-root .gam-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------------------------------------------------------------- perfil ---
-   Three cards, each one a door the app already had. */
+   FOUR cards, each one a door the app already had, all the same box. */
 
-.pf2-card { border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.pf2-card {
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
 .pf2-id { display: flex; align-items: center; gap: 14px; }
 
 .pf2-avatar {
@@ -483,7 +490,7 @@
 .pf2-stat {
   flex: 1 1 0;
   min-width: 90px;
-  border-radius: 16px;
+  border-radius: var(--gl-inset-r);
   padding: 10px 12px;
   background: var(--inset);
   border: 1px solid var(--line);
@@ -516,15 +523,6 @@
 }
 
 .pf2-rows li:last-child .pf2-row { border-bottom: 0; }
-
-.pf2-rows--wide { gap: 10px; max-width: 760px; }
-
-.pf2-rows--wide .pf2-row {
-  border-radius: 18px;
-  border-bottom: 0;
-  padding: 0 20px;
-  min-height: 56px;
-}
 
 .pf2-tile {
   width: 48px;

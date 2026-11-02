@@ -50,18 +50,27 @@ Good Loop is a **health tech company**, not a store. **Loops** are, literally, t
 ## 2. Economy: Points → Loops
 
 ### 2.1 Definitions
-- **Points (Pontos):** a measure of care. Generated **only by listening to protocols**. Cumulative, never spent, never decrease. Used for achievement progress, challenge progress and **geographic ranks**.
-- **Loops:** the app currency. Generated **from Points** at a configurable rate, plus **bonus Loops** (achievements, challenges). Spent on benefits. Shown as whole numbers.
-- **Multiplier:** a company add-on plan can multiply the Loops its employees earn from listening (e.g. Aurora bought the add-on with **1.5×** → its employees receive 1.5× Loops per minute listened).
+> **Amended 2026-11-02 by the POs.** One minute listened is one Point is one
+> Loop, and **a session that was not finished earns nothing at all**. The
+> company multiplier comes from the contract and is **1, 1.5 or 2** — three
+> steps, not a dial. The Admin “Economia” panel that made these numbers
+> editable is gone: the rules are in `src/gamification/economy.ts` and in
+> `credit_session()`, and the settings row survives only so both sides keep
+> computing the same expression from the same place.
 
-### 2.2 Earning rules (defaults in `economy_settings`, editable in Admin)
-| Setting | Default |
+- **Points (Pontos):** a measure of care. Generated **only by listening to protocols**, and only when the protocol is **finished**. Cumulative, never spent, never decrease. Used for achievement progress, challenge progress and **geographic ranks**.
+- **Loops:** the app currency. Generated **from Points** at `loops_per_point = 1`, so a Loop and a Point are the same number, plus **bonus Loops** (achievements, challenges). Spent on benefits. Shown as whole numbers.
+- **Multiplier:** a company add-on plan can multiply the Loops its employees earn from listening (e.g. Aurora bought the add-on with **1.5×** → its employees receive 1.5× Loops per minute listened). Only 1, 1.5 and 2 exist (`CONTRACT_MULTIPLIERS`, and a check constraint on `addon_plans`).
+
+### 2.2 Earning rules (in `economy_settings`, no longer editable in Admin)
+| Setting | Value |
 |---|---|
 | `points_per_minute` | 1 point per full minute actually listened |
-| `points_per_completed_session` | +10 when the session is completed |
+| **finishing the session** | **required** — an unfinished session credits zero |
+| `points_per_completed_session` | 0 (deprecated: finishing is the condition, not a bonus) |
 | `daily_minutes_cap` | 120 eligible minutes per day (America/Sao_Paulo) |
-| `daily_completion_bonus_cap` | 4 completion bonuses per day |
-| `loops_per_point` | 0.1 (10 points = 1 Loop) |
+| `daily_completion_bonus_cap` | 4 (vestigial, since the bonus is worth 0) |
+| `loops_per_point` | 1 (1 point = 1 Loop) |
 | `min_contribution_points` (collectives) | 30 points in the period |
 
 - Listened time = seconds the audio actually played (pauses excluded), **server-capped at the protocol's nominal duration**. If the session record does not carry listened seconds yet, add the field and have the player report it.
@@ -70,8 +79,8 @@ Good Loop is a **health tech company**, not a store. **Loops** are, literally, t
 
 ### 2.3 Loops calculation per session
 ```
+if (!completed) -> nothing: no points, no Loops, no usage spent
 points            = floor(listened_minutes_capped) * points_per_minute
-                  + (completed && under_daily_bonus_cap ? points_per_completed_session : 0)
 base_centiloops   = round(points * loops_per_point * 100)
 company_centiloops= round(base_centiloops * (multiplier - 1))     -- only if the user has an active
                                                                    -- affiliation to a company whose add-on
@@ -81,7 +90,9 @@ Store Loops in **integer centiloops** (1 Loop = 100) to avoid floating point. Di
 
 ### 2.4 Worked example
 Ana (employee of Aurora, add-on 1.5×) completes a Standard 12-min session:
-points = 12 + 10 = **22** → base = 2.20 Loops (220) → company bonus = 1.10 Loops (110) → **3.30 Loops** total, as two ledger entries. Her Points (22) are identical to a B2C user's: rankings stay fair.
+points = 12 → base = 12 Loops (1200) → company bonus = 6 Loops (600) → **18 Loops** total, as two ledger entries. Her Points (12) are identical to a B2C user's: rankings stay fair.
+
+Ana stops the same session at minute 11: **nothing**. The row is written — the minutes are real and a professional's history reads them — and the ledgers stay empty.
 
 ### 2.5 Ledgers (append-only)
 - `points_ledger(id, user_id, source_type, source_id, points, period_month, city_ibge_code, created_at)` — `city_ibge_code` snapshotted at credit time so ranks don't shift retroactively when someone moves.
@@ -95,7 +106,7 @@ points = 12 + 10 = **22** → base = 2.20 Loops (220) → company bonus = 1.10 L
 ### 2.6 Implementation
 - Supabase: crediting runs in a `SECURITY DEFINER` function called by a trigger on session insert/complete (`credit_session(session_id)`), then calls `evaluate_achievements(user_id)` and `update_challenge_progress(user_id, session_id)`.
 - Mock provider: the same rules in a pure module `src/gamification/economy.ts` (no React, no I/O).
-- **Parity fixtures:** `src/gamification/__fixtures__/economy.json` with ≥ 12 cases (partial listen, cap hit, SOS, completion bonus cap, multiplier 1.0/1.25/1.5/2.0, user without company, expired subscription, rounding). Both the node proof and a SQL test script must produce identical outputs for every case.
+- **Parity fixtures:** `src/gamification/__fixtures__/economy.json` with ≥ 12 cases (unfinished session, seeking, cap hit, SOS, multiplier 1.0/1.5/2.0, user without company, expired subscription, rounding). Both the node proof and a SQL test script must produce identical outputs for every case.
 
 ---
 
@@ -363,9 +374,10 @@ The mockups are still the visual reference, with these logic changes from the fo
 ## 12. Defaults to implement as configuration (confirm with founders later)
 | Topic | Default |
 |---|---|
-| Points / minute, completion bonus | 1 / +10 |
-| Points → Loops | 10 → 1 |
-| Daily caps | 120 min, 4 completion bonuses |
+| Points / minute | 1, and only for a FINISHED session |
+| Points → Loops | 1 → 1 |
+| Contract multiplier | 1, 1.5 or 2 |
+| Daily caps | 120 min |
 | Achievement bonus by tier | 20 / 50 / 100 / 250 Loops |
 | Loops expiry | none |
 | Employee leaves the company | keeps all Loops already earned; multiplier stops at affiliation end |

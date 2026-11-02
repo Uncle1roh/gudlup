@@ -399,9 +399,13 @@ export interface DataProvider {
   getWallet(): Promise<Wallet>
   /** The person's Loops entries, newest first. */
   listLoopsLedger(): Promise<LoopsEntry[]>
-  /** The economy settings (Admin › Economia reads and writes them). */
+  /** The economy settings row. READ by the client — Benefícios estimates how
+      many sessions a reward is away with it — and no longer edited anywhere:
+      the admin "Economia" panel is gone and the rules are fixed (a minute is
+      a Point is a Loop, and the session has to be finished). */
   getEconomySettings(): Promise<EconomySettings>
-  /** Admin only. */
+  /** Admin only, and no screen calls it: kept because the row exists and a
+      controlled correction may have to be made from a console one day. */
   saveEconomySettings(next: EconomySettings): Promise<void>
 
   // --- Gamification: achievements (SPEC §3) ---

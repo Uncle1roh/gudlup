@@ -278,8 +278,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Volume up': 'Alza il volume',
   'Position in the session': 'Punto della sessione',
   'German': 'Tedesco',
-  'End session early? The minutes you listened still count.':
-    'Terminare la sessione prima? I minuti che hai ascoltato contano comunque.',
+  'End session early? Loops are for the sessions you finish.':
+    'Terminare la sessione prima? I Loops sono per le sessioni che porti a termine.',
   'Keep listening': 'Continua ad ascoltare',
   'End session': 'Termina la sessione',
   'Well done': 'Ben fatto',

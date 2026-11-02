@@ -27,9 +27,9 @@ begin
     i := i + 1;
 
     update economy_settings set
-      points_per_minute = 1, points_per_completed_session = 10,
+      points_per_minute = 1, points_per_completed_session = 0,
       daily_minutes_cap = 120, daily_completion_bonus_cap = 4,
-      loops_per_point = coalesce((c->'settings'->>'loopsPerPoint')::numeric, 0.1),
+      loops_per_point = coalesce((c->'settings'->>'loopsPerPoint')::numeric, 1),
       count_clinical_sessions = coalesce((c->'settings'->>'countClinicalSessions')::boolean, false),
       max_backdate_hours = null          -- the fixtures are dated in the past on purpose
     where id;

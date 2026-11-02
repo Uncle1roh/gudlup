@@ -1,13 +1,18 @@
 /* ============================================================================
-   Self Use — measurement flows (MSR-1 · MSR-2 · MSR-3)
+   Self Use — measurement flows (MSR-1 · MSR-2)
 
      MSR-1  GL-Check     weekly, 5 dimensions, one per screen, 1–5, ~60–90s
      MSR-2  WHO-5        every 4 weeks, 5 standard items, 0–5, reported as %
-     MSR-3  Daily Mood   one tap, 5 levels, optional note
 
-   All three are reached from a push notification or from the Progress tab —
-   NEVER from Home. Every one of them can be closed at any point, and closing
-   is not a failure state.
+   MSR-3, the Daily Mood — five emoji faces and an optional note, opened from
+   a button on the mood calendar — is gone (POs, 2026-11-02). The mood is
+   asked with two sliders at the two ends of a session instead
+   (`selfuse/MoodSliders.tsx`), and the answer after the session IS the day's
+   calendar entry, so there is nothing left to open.
+
+   Both are reached from a push notification or from the Progress tab —
+   NEVER from Home. Either can be closed at any point, and closing is not a
+   failure state.
 
    The completion screens show the number and a comparison arrow and stop
    there. No interpretation, no label, no "your score means…" — that boundary
@@ -21,17 +26,12 @@ import {
   WHO5_ITEMS,
   WHO5_OPTIONS,
   WHO5_STEM,
-  MOOD_LEVELS,
-  MOOD_NOTE_MAX,
   who5Percent,
   trend,
   trendArrow,
-  dayKey,
   type GlCheckEntry,
   type GlDimension,
   type Who5Entry,
-  type MoodEntry,
-  type MoodLevel,
 } from '../data/measures'
 import { Icon } from './icons'
 
@@ -230,71 +230,6 @@ export function Who5Flow({ previous, onDone, onClose }: Who5Props) {
           <button className="btn btn--primary" disabled={value < 0} onClick={next}>
             {step < WHO5_ITEMS.length - 1 ? t('Next') : t('Finish')}
           </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------- MSR-3 ----- */
-
-interface MoodProps {
-  /** Today's entry when one exists, so re-opening edits rather than duplicates. */
-  today: MoodEntry | null
-  onDone: (e: MoodEntry) => void
-  onClose: () => void
-  /** Inline in the Progress mood calendar (no full-screen chrome). */
-  inline?: boolean
-}
-
-export function DailyMoodFlow({ today, onDone, onClose, inline }: MoodProps) {
-  const { t } = useI18n()
-  const [level, setLevel] = useState<MoodLevel | null>(today?.level ?? null)
-  const [note, setNote] = useState(today?.note ?? '')
-
-  function save(l: MoodLevel) {
-    setLevel(l)
-    // One tap IS the save; the note is a refinement people can add after.
-    onDone({ at: Date.now(), day: dayKey(Date.now()), level: l, note: note.trim() || undefined })
-  }
-
-  const body = (
-    <>
-      <div className="mood-row">
-        {MOOD_LEVELS.map((m) => (
-          <button key={m.value} className="mood-opt" aria-pressed={level === m.value} onClick={() => save(m.value)}>
-            <span className="mood-opt__icon" aria-hidden="true">{m.icon}</span>
-            <span className="mood-opt__label">{t(m.label)}</span>
-          </button>
-        ))}
-      </div>
-      <textarea
-        className="ob-input mood-note"
-        placeholder={t('Add a note (optional)')}
-        maxLength={MOOD_NOTE_MAX}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        onBlur={() => level && onDone({ at: Date.now(), day: dayKey(Date.now()), level, note: note.trim() || undefined })}
-      />
-      <div className="small muted mood-note__count">{note.length}/{MOOD_NOTE_MAX}</div>
-    </>
-  )
-
-  if (inline) return <div className="mood-inline">{body}</div>
-
-  return (
-    <div className="app-frame su-studio">
-      <div className="screen msr">
-        <div className="msr__top">
-          <button className="msr__x" onClick={onClose} aria-label={t('Close')}><Icon name="close" size={17} /></button>
-        </div>
-        <div className="screen__body msr__body">
-          <span className="eyebrow">{t('Mood calendar')}</span>
-          <h2 className="display msr__q">{t('How was your day?')}</h2>
-          {body}
-        </div>
-        <div className="screen__footer">
-          <button className="btn btn--primary" disabled={!level} onClick={onClose}>{t('Save')}</button>
         </div>
       </div>
     </div>

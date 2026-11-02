@@ -35,8 +35,9 @@ import { durationLabel } from '../data/selfuse'
 import { audioPick, type ResolvedSession } from '../data/liveCatalog'
 import type { Addressee } from '../tts/voiceLang'
 import type { Duration } from '../types/domain'
-import { VAS_OPTIONS } from '../data/assessments'
 import { Icon } from './icons'
+import { MoodSliders } from './MoodSliders'
+import { vasFromMood, type MoodPoint } from '../data/measures'
 import { coverFor, sessionGround } from './artwork'
 import { useBackLayer } from './backStack'
 
@@ -66,44 +67,19 @@ export interface SessionOutcome {
   stereoChecked: boolean
   feedback?: PostFeedback
   /**
-   * The VAS pair, 1–5, tapped before and after.
+   * The two-slider reading, before and after.
    *
-   * One measure, two moments, the same scale — the delta only means something
-   * because the second reading is the same question as the first. Both are
-   * required to open the screen's primary button, which is what "mandatory,
-   * one tap" comes to in practice.
+   * One instrument, two moments — the delta only means something because the
+   * second reading is the same question as the first. Both axes run −1…+1
+   * (`data/measures.ts`). Absent when the person did not answer: the question
+   * is optional and skipping it must not be recorded as a middling mood.
    */
+  moodPre?: MoodPoint
+  moodPost?: MoodPoint
+  /** The same reading as the 1–5 the assessment series has always carried,
+      derived from the mood axis so that series keeps its shape. */
   vasPre?: number
   vasPost?: number
-}
-
-/**
- * The face scale, shared by the two ends of a session.
- *
- * Icons rather than numbers on purpose: a 100 mm line needs motor precision a
- * phone does not give, and a number invites the person to score themselves.
- * The system stores 1–5; the person sees a face. The label is read by screen
- * readers and never printed beside the icon.
- */
-function VasRow({ value, onPick }: { value: number | null; onPick: (v: number) => void }) {
-  const { t } = useI18n()
-  return (
-    <div className="vas-row" role="group" aria-label={t('How do you feel right now?')}>
-      {VAS_OPTIONS.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          className="vas-opt"
-          aria-pressed={value === o.value}
-          aria-label={t(o.label)}
-          title={t(o.label)}
-          onClick={() => onPick(o.value)}
-        >
-          <span aria-hidden="true"><Icon name={o.icon} size={26} /></span>
-        </button>
-      ))}
-    </div>
-  )
 }
 
 interface SessionFlowProps {
@@ -191,7 +167,7 @@ export function SessionFlow(props: SessionFlowProps) {
   const endedAt = useRef(0)
   const listenedSec = useRef(0)
   const stereoChecked = useRef(false)
-  const vasPre = useRef<number | null>(null)
+  const moodPre = useRef<MoodPoint | null>(null)
   /* No "other language / other form" notice any more: a person is offered
      only versions recorded in their language and their form (owner's rule,
      2026-10-21; playableDurations + audioPick in data/liveCatalog). */
@@ -200,8 +176,8 @@ export function SessionFlow(props: SessionFlowProps) {
      count between renders and take the whole screen down with it. */
   if (!playerOn) return <FeatureOff area="player" onBack={onCancel} />
 
-  function begin(pre: number | null) {
-    vasPre.current = pre
+  function begin(pre: MoodPoint | null) {
+    moodPre.current = pre
     startedAt.current = Date.now()
     setStage(needsStereoCheck ? 'stereo' : 'play')
   }
@@ -258,8 +234,10 @@ export function SessionFlow(props: SessionFlowProps) {
           listenedSec: Math.round(listenedSec.current),
           stereoChecked: stereoChecked.current,
           feedback: f ?? undefined,
-          vasPre: vasPre.current ?? undefined,
-          vasPost: post ?? undefined,
+          moodPre: moodPre.current ?? undefined,
+          moodPost: post ?? undefined,
+          vasPre: moodPre.current ? vasFromMood(moodPre.current) : undefined,
+          vasPost: post ? vasFromMood(post) : undefined,
         })
       }}
       onFindProfessional={props.onFindProfessional}
@@ -277,12 +255,12 @@ function PreSession({
 }: {
   session: ResolvedSession
   duration: Duration
-  onBegin: (vasPre: number | null) => void
+  onBegin: (pre: MoodPoint | null) => void
   onCancel: () => void
 }) {
   const { t } = useI18n()
   const { m } = useLegal()
-  const [vas, setVas] = useState<number | null>(null)
+  const [mood, setMood] = useState<MoodPoint | null>(null)
   const [safeNote, setSafeNote] = useState(() => !safeUseSeen())
   const ground = useSessionGround(session)
   return (
@@ -311,14 +289,16 @@ function PreSession({
 
           {/* PLY-3 — optional, skippable, shown back only as the person's own
               history; never compared to a threshold, never labelled (M1-08).
-              The wording follows PLY-3 on the register's five-face scale. */}
+              Two sliders rather than five faces (POs, 2026-11-02), and the
+              question is asked in words that do not agree with a gender:
+              nothing has been asked about that yet. */}
           <div className="vas-block">
-            <p className="small">{t('How settled do you feel? — optional.')}</p>
-            <VasRow value={vas} onPick={setVas} />
+            <p className="small">{t('How are you right now? — optional.')}</p>
+            <MoodSliders value={mood} onChange={setMood} />
           </div>
         </div>
         <div className="screen__footer btn-stack">
-          <button className="btn btn--primary" onClick={() => onBegin(vas)}>
+          <button className="btn btn--primary" onClick={() => onBegin(mood)}>
             {t('Begin Session')}
           </button>
           <button className="btn btn--quiet" onClick={onCancel}>{t('Cancel')}</button>
@@ -870,7 +850,7 @@ function ImmersiveSession({
         {confirmExit && (
           <div className="player__confirm" onClick={(e) => e.stopPropagation()}>
             <div className="player__confirmbox fade-in">
-              <p>{t('End session early? The minutes you listened still count.')}</p>
+              <p>{t('End session early? Loops are for the sessions you finish.')}</p>
               <div className="chip-row">
                 <button className="btn btn--light" onClick={() => setConfirmExit(false)}>{t('Keep listening')}</button>
                 <button className="btn btn--light" onClick={exitNow}>{t('End session')}</button>
@@ -895,13 +875,13 @@ function PostSession({
   session: ResolvedSession
   duration: Duration
   contextLine?: string
-  onFeedback: (f: PostFeedback | null, vasPost: number | null) => void
+  onFeedback: (f: PostFeedback | null, post: MoodPoint | null) => void
   onFindProfessional: () => void
 }) {
   const { t } = useI18n()
   const { m } = useLegal()
   const [picked, setPicked] = useState<PostFeedback | null>(null)
-  const [vas, setVas] = useState<number | null>(null)
+  const [mood, setMood] = useState<MoodPoint | null>(null)
   const ground = useSessionGround(session)
   const isDeep = duration === 24
 
@@ -909,7 +889,7 @@ function PostSession({
     setPicked(f)
     // Support hands over immediately rather than waiting for the person to
     // press on to the next screen first.
-    if (f === 'support') onFeedback('support', vas)
+    if (f === 'support') onFeedback('support', mood)
   }
 
   return (
@@ -920,20 +900,16 @@ function PostSession({
           <p className="muted post__what">{t(session.name)} · {t('{n} min', { n: duration })}</p>
           {isDeep && <p className="lead post__reorient">{t('Take a moment before moving on.')}</p>}
 
-          {/* ONE question, asked once.
+          {/* ONE question, asked once, with the same instrument as before the
+              session — the delta between the two is the only thing here that
+              means anything, and it exists because it is the same question.
 
-              This screen used to ask the same thing twice: the VAS faces, and
-              then a row of mood chips underneath — "How do you feel right
-              now?" followed by "How are you feeling?". Two askings of one
-              question read as not having listened to the first answer, and
-              the second reading was never used for anything the first was not.
-
-              The VAS is the half that stays, because it is the same scale as
-              the one before the session and the delta between them is the
-              only number here that means anything. */}
+              This is also the only place the mood calendar is filled from:
+              this answer IS today's entry (`selfuse/SelfUseApp.tsx`), which
+              is why that screen no longer has a button of its own. */}
           <div className="vas-block">
-            <p className="small">{t('How settled do you feel? — optional.')}</p>
-            <VasRow value={vas} onPick={setVas} />
+            <p className="small">{t('How are you right now? — optional.')}</p>
+            <MoodSliders value={mood} onChange={setMood} />
           </div>
 
           {/* PLY-4 — the one link every self-guided session ends with: a
@@ -949,7 +925,7 @@ function PostSession({
         </div>
 
         <div className="screen__footer">
-          <button className="btn btn--primary" onClick={() => onFeedback(picked, vas)}>
+          <button className="btn btn--primary" onClick={() => onFeedback(picked, mood)}>
             {t('Back to Home')}
           </button>
         </div>

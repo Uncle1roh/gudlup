@@ -99,8 +99,9 @@ assert(TAG_SEED.filter((t) => t.group === 'partner_segment').length === 10 && TA
 
 /* ---- the tab's arithmetic ----------------------------------------------- */
 assert(missingLoops(5000, 3800) === 12 && missingLoops(5000, 6000) === 0, '"Faltam 12 Loops"')
-assert(standardSessionsFor(1200, DEFAULT_ECONOMY, null) === 6, 'a Standard session earns 2.2 Loops: 12 Loops ≈ 6 sessions')
-assert(standardSessionsFor(1200, DEFAULT_ECONOMY, 1.5) === 4, 'at 1.5× it earns 3.3: ≈ 4 sessions')
+assert(standardSessionsFor(1200, DEFAULT_ECONOMY, null) === 1, 'a Standard session earns 12 Loops: 12 Loops = 1 session')
+assert(standardSessionsFor(3000, DEFAULT_ECONOMY, null) === 3, '30 Loops ≈ 3 Standard sessions')
+assert(standardSessionsFor(3000, DEFAULT_ECONOMY, 1.5) === 2, 'at 1.5× a Standard session earns 18: ≈ 2 sessions')
 assert(standardSessionsFor(0, DEFAULT_ECONOMY, null) === 0, 'nothing missing, no sessions')
 {
   const { b } = person()

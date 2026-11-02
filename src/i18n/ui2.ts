@@ -44,6 +44,14 @@ export const IT_UI2: Record<string, string> = {
   /* the check-in */
   'Emotional check-in': 'Check-in emotivo',
   /* the check-in: two sliders, a word, and the glasses */
+  /* ---- the two sliders, at the two ends of a session ---- */
+  'How are you right now? — optional.': 'Come stai in questo momento? — facoltativo.',
+  'Low': 'Bassa',
+  'Medium': 'Media',
+  'Each square is how you answered at the end of a session.':
+    'Ogni quadrato è come hai risposto alla fine di una sessione.',
+  'Finish a session and tell us how you are: the day fills itself in.':
+    'Completa una sessione e dicci come stai: la giornata si riempie da sé.',
   'Energy': 'Energia',
   'Mood': 'Umore',
   'This is how you are seeing the world right now.': 'È così che stai vedendo il mondo adesso.',
@@ -153,6 +161,14 @@ export const PT_UI2: Record<string, string> = {
   /* the check-in */
   'Emotional check-in': 'Check-in emocional',
   /* the check-in: two sliders, a word, and the glasses */
+  /* ---- os dois sliders, nas duas pontas de uma sessão ---- */
+  'How are you right now? — optional.': 'Como você está agora? — opcional.',
+  'Low': 'Baixa',
+  'Medium': 'Média',
+  'Each square is how you answered at the end of a session.':
+    'Cada quadrado é como você respondeu no fim de uma sessão.',
+  'Finish a session and tell us how you are: the day fills itself in.':
+    'Termine uma sessão e diga como você está: o dia se preenche sozinho.',
   'Energy': 'Energia',
   'Mood': 'Humor',
   'This is how you are seeing the world right now.': 'É assim que você está vendo o mundo agora.',

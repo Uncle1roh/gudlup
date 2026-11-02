@@ -8,14 +8,22 @@
    both tools/test-gam-economy.ts and supabase/tests/economy_parity.sql run.
    Change a rule in one place and the other proof fails.
 
-   Points measure care: listening only, never spent, never decrease.
-   Loops are the currency: from Points, plus bonuses. Stored in integer
-   centiloops (1 Loop = 100), shown floored.
-   The company multiplier touches ONLY Loops from listening (GAM-R9).
+   ONE RULE, as the POs set it on 2026-11-02: a minute listened is a Point
+   is a Loop, and a session that was not FINISHED earns nothing at all. So
+   pointsPerMinute = 1, loopsPerPoint = 1, and an unfinished session returns
+   zero however many minutes it played. Half a protocol is not half a pause.
+   Points and Loops are now the same number by construction; Points remain
+   the thing that is never spent and never decreases, and Loops the thing
+   that is. Stored in integer centiloops (1 Loop = 100), shown floored.
+   The company multiplier comes from the CONTRACT and is 1, 1.5 or 2
+   (src/admin/Plans.tsx). It touches ONLY Loops from listening (GAM-R9).
    ============================================================================ */
 
 export interface EconomySettings {
   pointsPerMinute: number
+  /** DEPRECATED, kept at 0: finishing is no longer a bonus, it is the
+      condition. The column stays so the client and credit_session() still
+      compute the same expression from the same row. */
   pointsPerCompletedSession: number
   /** Eligible listened minutes per São Paulo calendar day. */
   dailyMinutesCap: number
@@ -40,10 +48,10 @@ export interface EconomySettings {
 
 export const DEFAULT_ECONOMY: EconomySettings = {
   pointsPerMinute: 1,
-  pointsPerCompletedSession: 10,
+  pointsPerCompletedSession: 0,
   dailyMinutesCap: 120,
   dailyCompletionBonusCap: 4,
-  loopsPerPoint: 0.1,
+  loopsPerPoint: 1,
   minContributionPoints: 30,
   countClinicalSessions: false,
   loopsExpiryMonths: null,
@@ -53,6 +61,12 @@ export const DEFAULT_ECONOMY: EconomySettings = {
 }
 
 export const TIME_ZONE = 'America/Sao_Paulo'
+
+/** The three steps a contract can carry (POs, 2026-11-02). A multiplier is a
+    line in a signed agreement, not a dial: the admin console offers these
+    three, the mock provider refuses anything else, and so does the database
+    (`addon_plans_contract_multiplier`). */
+export const CONTRACT_MULTIPLIERS: number[] = [1, 1.5, 2]
 
 export interface SessionCreditInput {
   kind: 'b2c' | 'b2b'
@@ -147,14 +161,17 @@ const ZERO = (day: string): SessionCredit =>
 /**
  * What one session earns.
  *
+ *   nothing, unless the session was FINISHED
  *   points  = floor(listened minutes, capped at nominal and at the day) × ppm
- *           + completion bonus (if completed and the day has bonuses left)
  *   base    = round(points × loopsPerPoint × 100)          centiloops
  *   company = round(base × (multiplier − 1))               only with an
  *             active affiliation + active subscription at session end
  *
  * SOS earns nothing (GAM-R3); a therapist-console session earns nothing
  * unless `countClinicalSessions`.
+ *
+ * An unfinished session still gets RECORDED — the minutes are real and a
+ * therapist’s history reads them — it is only the credit that is zero.
  */
 export function computeSessionCredit(
   input: SessionCreditInput,
@@ -164,6 +181,8 @@ export function computeSessionCredit(
 ): SessionCredit {
   const day = dayKeySaoPaulo(input.endedAt)
   if (input.sos) return ZERO(day)
+  /* Finishing is the condition, not a bonus (POs, 2026-11-02). */
+  if (!input.completed) return ZERO(day)
   if (input.kind === 'b2b' && !settings.countClinicalSessions) return ZERO(day)
 
   const today = usage && usage.day === day ? usage : { day, eligibleMinutes: 0, completionBonuses: 0 }

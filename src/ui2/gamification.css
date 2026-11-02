@@ -83,8 +83,8 @@
 .gl-root .gam-note,
 .gl-root .gam-optin,
 .gl-root .gam-history {
-  border-radius: 28px;
-  padding: 22px;
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -131,7 +131,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-radius: 16px;
+  border-radius: var(--gl-inset-r);
   padding: 12px 14px;
   background: var(--inset);
   border: 1px solid var(--line);
@@ -232,7 +232,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: var(--gl-inset-r, 18px);
   border: 1px solid var(--su-hair-2, rgba(255, 255, 255, 0.12));
 }
 .gam-dialog .gam-ach__block > * { margin: 0; }
@@ -265,7 +265,6 @@
   flex-direction: row;
   align-items: center;
   gap: 16px;
-  border-radius: 22px;
   width: 100%;
 }
 
@@ -326,7 +325,7 @@
   text-align: center;
   gap: 8px;
   padding: 18px 14px;
-  border-radius: 22px;
+  border-radius: var(--gl-box-r);
   cursor: pointer;
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);

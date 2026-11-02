@@ -1900,10 +1900,13 @@ exception when duplicate_object then null; end $$;
 create table if not exists economy_settings (
   id                            boolean primary key default true check (id),
   points_per_minute             int not null default 1   check (points_per_minute >= 0),
-  points_per_completed_session  int not null default 10  check (points_per_completed_session >= 0),
+  -- Kept at 0 since 2026-11-02: finishing is no longer a bonus, it is the
+  -- condition (see the completion gate in credit_session below).
+  points_per_completed_session  int not null default 0   check (points_per_completed_session >= 0),
   daily_minutes_cap             int not null default 120 check (daily_minutes_cap >= 0),
   daily_completion_bonus_cap    int not null default 4   check (daily_completion_bonus_cap >= 0),
-  loops_per_point               numeric(10,4) not null default 0.1 check (loops_per_point >= 0),
+  -- One minute listened is one Point is one Loop (POs, 2026-11-02).
+  loops_per_point               numeric(10,4) not null default 1 check (loops_per_point >= 0),
   min_contribution_points       int not null default 30  check (min_contribution_points >= 0),
   count_clinical_sessions       boolean not null default false,
   loops_expiry_months           int check (loops_expiry_months is null or loops_expiry_months > 0),
@@ -1979,7 +1982,9 @@ create policy company_affiliations_read on company_affiliations
 create table if not exists addon_plans (
   id                         text primary key,
   name                       text not null,
-  loops_multiplier           numeric(4,2) not null check (loops_multiplier >= 1 and loops_multiplier <= 5),
+  -- The contract offers three steps and no others (POs, 2026-11-02): a
+  -- multiplier is a line in a signed contract, not a dial.
+  loops_multiplier           numeric(4,2) not null check (loops_multiplier in (1, 1.5, 2)),
   allows_company_challenges  boolean not null default true,
   allows_company_benefits    boolean not null default true,
   allows_tag_filter          boolean not null default true,
@@ -1989,7 +1994,6 @@ create table if not exists addon_plans (
 -- Names and values are placeholders (SPEC §7.1); editable.
 insert into addon_plans (id, name, loops_multiplier) values
   ('essencial', 'Essencial', 1.00),
-  ('plus',      'Plus',      1.25),
   ('premium',   'Premium',   1.50),
   ('max',       'Max',       2.00)
 on conflict do nothing;
@@ -2114,8 +2118,9 @@ revoke all on function gam_multiplier_at(uuid, timestamptz) from public;
 
 -- ---- crediting a session ----------------------------------------------------
 -- Mirrors computeSessionCredit() in src/gamification/economy.ts.
+--   nothing at all unless the session was FINISHED
 --   points  = floor(listened minutes, capped at nominal and at the day) × ppm
---           + completion bonus while the day has bonuses left
+--           (ppm = 1 and loops_per_point = 1: a minute is a Point is a Loop)
 --   base    = round(points × loops_per_point × 100)                centiloops
 --   company = round(base × (multiplier − 1))      separate entry, company-funded
 -- Idempotent: a session is credited once, whatever calls it again.
@@ -2142,6 +2147,9 @@ begin
   select * into cfg from economy_settings where id;
 
   if s.is_sos then return; end if;                                          -- GAM-R3
+  -- A session that was not FINISHED earns nothing, however long it played
+  -- (POs, 2026-11-02). The row is still recorded; only the credit is zero.
+  if not s.completed then return; end if;
   if s.kind = 'b2b' and not cfg.count_clinical_sessions then return; end if;
 
   -- One credit at a time per person: the day's caps are read and spent here.

@@ -266,6 +266,19 @@ html.gl2 .helpnow--bar .helpnow__heart { opacity: 0.75; }
      over the photograph); over the light set it is softer. */
   --shadow: 0 12px 40px rgba(31, 43, 42, 0.14);
 
+  /* ONE BOX, EVERY SCREEN. The corner and the breathing room of a pane, as
+     two numbers rather than as a value typed into each stylesheet. Perfil
+     was drawn at 28px and Percurso at 22px, the legacy `.card` at 22px with
+     18px of padding, the therapist's columns at 28px — six screens, four
+     boxes, so moving between tabs looked like moving between apps. Anything
+     that is a pane reads these; nothing else does, and a library tile is
+     not a pane (`.gl-card` is a cover with the words under it). */
+  --gl-box-r: 28px;
+  --gl-box-pad: 22px;
+  /* The second level, and the only other one: a box INSIDE a pane — a
+     consent row, a figure, a list. It was variously 12, 16, 18 and 22px. */
+  --gl-inset-r: 18px;
+
   /* No ground of its own: the page carries the colour and the two lights,
      so they run the full width of the monitor. */
   background: transparent;
@@ -307,12 +320,22 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
    `.g4` is a wrapping row rather than four fixed tracks, because a pillar
    with two benefits in a four-column grid left half the row empty. */
 .g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+/* Four boxes of one size: two by two on a desk, each cell as tall as its
+   row, one column on a phone. `stretch` is the whole point — four equal
+   boxes is what was asked for, and a grid of `start` gives four different
+   heights. */
+.g2x2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+/* All four the same size, which on a grid means the two rows share a height
+   as well. Only on a desk: in one column it would make four boxes as tall as
+   the tallest, and a phone would scroll through three screenfuls of air. */
+@media (min-width: 901px) { .g2x2 { grid-auto-rows: 1fr; } }
 .g4 { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
 .g4 > * { flex: 1 1 260px; max-width: 420px; min-width: 0; }
 .s2 { grid-column: span 2; }
 
 @media (max-width: 900px) {
   .g3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .g2x2 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
   .g4 > * { flex: 1 1 100%; max-width: none; }
   .s2 { grid-column: auto; }
 }
@@ -459,6 +482,43 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 }
 
 .gl-nav__logo .gl-icon { width: 38px; height: 38px; }
+
+/* ---------------------------------------------------------- the top bar ---
+   One bar for every screen of the surface (`ui2/TopBar.tsx`). The mark, the
+   day and the greeting down the left; the Loops pill on the right. The
+   library used to have its own copy of this corner and the deep screens put
+   the name on the OTHER side, so the person's name moved as you changed tab.
+   One component, one rule, and `--over` is the only variant: the library has
+   a photograph behind its first screenful and the bar must stand above it. */
+.gl-top {
+  display: flex;
+  /* NOT wrap. On a phone the greeting and the pill together are wider than
+     the screen, and wrapping dropped the pill onto a line of its own — on
+     the left on the library and on the right everywhere else, because a
+     wrapped line of one item takes the start of the line while an unwrapped
+     one is pushed to the end. The pill keeps the corner it was designed in;
+     what gives is the date, which shortens. */
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.gl-top--over { position: relative; z-index: 5; }
+.gl-top__who { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.gl-top__lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-top__day {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gl-top__hello {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
 
 /* The mark in the top bar, for the phone only. On a desk the rail's square
    is three centimetres away and printing the brand twice on one screen is
@@ -710,8 +770,8 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  border-radius: 28px;
-  padding: 22px;
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
@@ -729,8 +789,8 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 .gl-root .gam-care,
 .gl-root .gam-milestone,
 .gl-root .thr-extra .chron {
-  border-radius: 22px;
-  padding: 18px 20px;
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
@@ -920,24 +980,13 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   /* The phone is its own design, not the desk squeezed (brief §3.4) — but
      the ground is the same colour of the day as the desk's. */
 
-  /* The chip's disc is the only place the mood colour is drawn here, so it
-     grows: it is the whole readout. */
-  .gl-root header .glass > span:first-child { width: 36px; height: 36px; }
-
-  /* The library's top bar is three things on one row on a desk. On a phone
-     it is two rows: who this is and what you have, then the greeting with
-     the check-in across the full width (Mobile.dc.html). */
-  /* The header carries its layout inline, as a port of the mockup should;
-     the phone's two-row arrangement therefore has to say so louder. */
-  .gl-root > .gl-main > .tabview > header:first-child {
-    display: grid !important;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 12px;
-  }
-  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(1) { grid-area: 1 / 1; }
-  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(3) { grid-area: 1 / 2; }
-  .gl-root > .gl-main > .tabview > header:first-child > :nth-child(2) { grid-area: 2 / 1 / 3 / 3; flex-basis: auto; }
+  /* The top bar needs nothing here any more. It used to be three elements
+     carrying their layout inline (the mark and the date, the greeting, the
+     chip), so the phone's arrangement had to be re-declared with a grid and
+     !important to beat them. It is one component with one class now
+     (`.gl-top`, "the top bar" above): greeting left, Loops right, on one row
+     at every width. The grid that stood here outlived its markup and was
+     putting the pill on a line of its own, stretched across the screen. */
 
   /* 76px is the desk's billboard. On a phone the mockup sets its headline
      at 28px, and anything near the desk's size runs off the screen. */
@@ -1243,8 +1292,8 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
    stops reading as two designs stacked. */
 
 .gl-root .jr2-card {
-  border-radius: 28px;
-  padding: 22px;
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1298,7 +1347,7 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
 .gl-root .gam-bar > span { display: block; height: 100%; border-radius: inherit; background: #3db189; }
 
 /* The challenge card takes the pane's geometry too. */
-.gl-root .jr2-cell .gam-challenge { border-radius: 28px; padding: 22px; }
+.gl-root .jr2-cell .gam-challenge { border-radius: var(--gl-box-r); padding: var(--gl-box-pad); }
 
 /* The weekly check-in's five bars, in the surface's colours. */
 .gl-root .glweek { gap: 12px; }
@@ -1341,8 +1390,6 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
   gap: 1px;
   line-height: 1;
 }
-.gl-root .cal__face { font-size: 17px; line-height: 1; }
-.gl-root .cal__day--face .cal__n { font-size: 10px; opacity: 0.72; }
 
 .gl-root .cal__day--today { border-color: var(--ink); color: var(--ink); }
 .gl-root .cal__day[class*='cal__day--l'] { cursor: pointer; }

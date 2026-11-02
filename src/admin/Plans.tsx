@@ -1,11 +1,18 @@
 /* ============================================================================
    Piani e aziende — l’add-on venduto alle aziende
 
-   docs/gamification/SPEC.md §7.1, §8. I piani (Essencial 1×, Plus 1,25×,
-   Premium 1,5×, Max 2× — nomi e valori provvisori) e, per ogni azienda, il
+   docs/gamification/SPEC.md §7.1, §8. I piani (Essencial 1×, Premium 1,5×,
+   Max 2× — i nomi sono provvisori, i tre valori no) e, per ogni azienda, il
    piano in vigore: assegnarlo, cambiarlo, terminarlo. Il moltiplicatore vale
    per le sessioni che FINISCONO mentre l’abbonamento è attivo e la persona è
    ancora dell’azienda, e solo per i Loops dell’ascolto.
+
+   IL MOLTIPLICATORE È UNA SCELTA FRA TRE, non un numero da digitare (POs,
+   2026-11-02): 1, 1,5 o 2, come sta scritto nel contratto. Era un campo
+   numerico da 1 a 5 con passo 0,05 — ottantuno valori possibili, nessuno dei
+   quali si poteva vendere. La scala vive in un posto solo,
+   CONTRACT_MULTIPLIERS (src/gamification/economy.ts), e il database la
+   ripete come vincolo (supabase/27-one-loop-a-minute.sql).
    ============================================================================ */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -13,6 +20,7 @@ import { st } from '../sales/i18n'
 import { useDataProvider } from '../data/provider'
 import type { Company } from './types'
 import type { AddonPlan, CompanySubscription } from '../gamification/company'
+import { CONTRACT_MULTIPLIERS } from '../gamification/economy'
 
 export function Plans({ actor }: { actor: string }) {
   const dp = useDataProvider()
@@ -53,7 +61,7 @@ export function Plans({ actor }: { actor: string }) {
     setBusy(true); setError(null)
     try {
       if (!/^[a-z0-9_]+$/.test(p.id)) throw new Error(st('L’id usa solo lettere minuscole, cifre e _.'))
-      if (p.multiplier < 1 || p.multiplier > 5) throw new Error(st('Il moltiplicatore va da 1 a 5.'))
+      if (!CONTRACT_MULTIPLIERS.includes(p.multiplier)) throw new Error(st('Il moltiplicatore del contratto è 1, 1,5 o 2.'))
       await dp.adminSavePlan(p)
       await dp.logAudit({ actor, action: 'addon.plan_saved', target: p.id, detail: `${p.multiplier}×` }).catch(() => undefined)
       setDraft(null)
@@ -78,7 +86,11 @@ export function Plans({ actor }: { actor: string }) {
           <div className="adm-partner-form__grid">
             <label><span className="b2b-label">{st('Id *')}</span><input className="b2b-input adm-mono" value={draft.id} disabled={plans.some((p) => p.id === draft.id) && !!draft.name} onChange={(e) => setDraft({ ...draft, id: e.target.value.toLowerCase() })} /></label>
             <label><span className="b2b-label">{st('Nome *')}</span><input className="b2b-input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-            <label><span className="b2b-label">{st('Moltiplicatore')}</span><input className="b2b-input" type="number" min={1} max={5} step={0.05} value={draft.multiplier} onChange={(e) => setDraft({ ...draft, multiplier: Number(e.target.value) || 1 })} /></label>
+            <label><span className="b2b-label">{st('Moltiplicatore')}</span>
+              <select className="b2b-input" value={draft.multiplier} onChange={(e) => setDraft({ ...draft, multiplier: Number(e.target.value) })}>
+                {CONTRACT_MULTIPLIERS.map((m) => <option key={m} value={m}>{m.toLocaleString('it-IT')}×</option>)}
+              </select>
+            </label>
             <label className="adm-partner-form__check"><input type="checkbox" checked={draft.companyChallenges} onChange={(e) => setDraft({ ...draft, companyChallenges: e.target.checked })} /><span>{st('Sfide aziendali')}</span></label>
             <label className="adm-partner-form__check"><input type="checkbox" checked={draft.companyBenefits} onChange={(e) => setDraft({ ...draft, companyBenefits: e.target.checked })} /><span>{st('Benefici aziendali')}</span></label>
             <label className="adm-partner-form__check"><input type="checkbox" checked={draft.tagFilter} onChange={(e) => setDraft({ ...draft, tagFilter: e.target.checked })} /><span>{st('Filtro dei tag')}</span></label>

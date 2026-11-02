@@ -33,7 +33,7 @@ import { TherapistTab } from './TherapistTab'
 import { ProgressTab, type ProgressView } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
 import { BenefitsTab } from './BenefitsTab'
-import { GlCheckFlow, DailyMoodFlow } from './Measures'
+import { GlCheckFlow } from './Measures'
 import { SafetyLevel3 } from './Safety'
 import { HelpNowButton } from '../legal/HelpNow'
 import { useLegal } from '../legal/LegalContext'
@@ -50,7 +50,7 @@ import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
 import { ReportSheet } from './ReportSheet'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
-import { dayKey } from '../data/measures'
+import { dayKey, moodEntryFrom, upsertMood } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 
@@ -60,7 +60,7 @@ import { unseenUnlocks, type AchievementView } from '../gamification/achievement
 import { pickHomeChallenge, visibleChallenges, type ChallengeView } from '../gamification/challenges'
 import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
-import { Shell, type Dest } from '../ui2/Shell'
+import { Shell, DESTS, type Dest } from '../ui2/Shell'
 import { GroundProvider } from '../ui2/Ground'
 import { Path } from '../ui2/Path'
 import { usePrescriptions } from '../ui2/prescriptions'
@@ -92,7 +92,6 @@ const TAB_OF: Record<Dest, Tab> = {
 type Overlay =
   | { kind: 'none' }
   | { kind: 'glcheck' }
-  | { kind: 'mood' }
   | { kind: 'safety3' }
   | { kind: 'call' }
 
@@ -218,6 +217,22 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const convention = useMemo(() => resolveCompanyCode(state.companyCode), [state.companyCode])
 
   const hasCompany = Boolean(state.companyCode)
+
+  /* Acompanhamento is a company stop.
+     A path is a list of protocols a PROFESSIONAL parameterised, and the only
+     ways to get one are a company plan with professional support or a
+     therapist who linked you from their console. For everybody else the
+     destination existed to say it was empty — a sixth stop on the rail whose
+     whole content was "ask your HR team". It is not drawn for them now.
+     The link is checked as well as the code, because a therapist can connect
+     someone whose company code lives in another browser or nowhere at all;
+     their path must not vanish with the tab. */
+  const hasPath = hasCompany || Boolean(therapy.link)
+  const dests = useMemo<Dest[]>(() => (hasPath ? DESTS : DESTS.filter((d) => d !== 'path')), [hasPath])
+  /* Losing the company code while standing on Percurso must not leave the
+     person on a screen the rail no longer reaches. */
+  useEffect(() => { if (!hasPath) setTab((cur) => (cur === 'path' ? 'home' : cur)) }, [hasPath])
+
   const mine = useMemo(() => visibleChallenges(challenges, hasCompany), [challenges, hasCompany])
   const homeChallenge = pickHomeChallenge(mine, Date.now())
   const openChallenge = mine.find((c) => c.id === challengeOpen) ?? null
@@ -517,11 +532,30 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   async function finishSession(o: SessionOutcome) {
     const l = launch
     setLaunch(null)
-    /* Ended early: the minutes actually heard still count, at a reduced rate
-       — no completion bonus (docs/gamification/SPEC.md §2.2, PLAN A24). It
-       goes to the server only: the local log, the pathway, the "recent"
-       shelf and the VAS stay what they were, completed sessions only. Under
-       a minute there is nothing to credit, so nothing is sent. */
+
+    /* THE MOOD CALENDAR FILLS ITSELF (POs, 2026-11-02). The reading taken
+       after the session is today's entry — one per day, the latest answer
+       winning — which is why Minha jornada no longer carries a "How was your
+       day?" button. Nothing is written when the person skipped the sliders:
+       an unanswered question is not a neutral mood.
+
+       ABOVE the early-stop return below: Loops are what finishing earns, and
+       how somebody feels is not a reward. A person who stopped at minute
+       four still answered the question, and their answer is theirs. */
+    if (o.moodPost) {
+      const entry = moodEntryFrom(o.moodPost, o.completedAt)
+      update((s) => ({ ...s, moods: upsertMood(s.moods, entry) }))
+    }
+
+    /* Ended early: the row is still recorded, and it earns NOTHING — a Loop
+       is a minute of a protocol a person went through to the end (POs,
+       2026-11-02; docs/gamification/SPEC.md §2.2). The row goes to the
+       server anyway, because the minutes are real and a professional's
+       history reads them; `credit_session()` is what decides they are worth
+       zero, here and in the database, so no caller can disagree with it.
+       The local log, the pathway, the "recent" shelf and the VAS stay what
+       they were: completed sessions only. Under a minute there is nothing
+       worth recording at all, so nothing is sent. */
     if (!o.completed) {
       const s = catalog.sessions.find((x) => x.slug === o.slug)
       if (s && o.listenedSec >= 60) {
@@ -535,10 +569,11 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       return
     }
 
-    /* The session VAS. It runs in this channel as well as the therapist one and
-       lands in the same series, so a person who does both produces one trend
-       rather than two half-trends that no one can compare. It needs no
-       confirmation and is frozen the moment it is written. */
+    /* The session's two readings. They run in this channel as well as the
+       therapist one and land in the same series, so a person who does both
+       produces one trend rather than two half-trends that no one can
+       compare. It needs no confirmation and is frozen the moment it is
+       written. */
     if (typeof o.vasPre === 'number' && typeof o.vasPost === 'number') {
       updateAssessments((rs) => [...rs, vasRecord(SELF_USE_PATIENT_ID, o.vasPre as number, o.vasPost as number, o.completedAt)])
     }
@@ -632,16 +667,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         /* The flow no longer compares anything: answering closes it, and
            the week is read on Progress. */
         onDone={(e) => update((s) => ({ ...s, glChecks: [...s.glChecks, e] }))}
-        onClose={() => setOverlay({ kind: 'none' })}
-      />
-    )
-  }
-  if (overlay.kind === 'mood') {
-    const today = state.moods.find((m) => m.day === dayKey(Date.now())) ?? null
-    return (
-      <DailyMoodFlow
-        today={today}
-        onDone={(e) => update((s) => ({ ...s, moods: [...s.moods.filter((m) => m.day !== e.day), e] }))}
         onClose={() => setOverlay({ kind: 'none' })}
       />
     )
@@ -751,7 +776,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   return (
-    <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])} surface={DEEP.includes(tab) ? 'deep' : 'mood'}>
+    <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])} dests={dests} surface={DEEP.includes(tab) ? 'deep' : 'mood'}>
       <div className="tabview" key={`${tab}:${tabReset}`}>
         {tab === 'home' && openChallenge && (
           <ChallengeDetail c={openChallenge} onBack={() => setChallengeOpen(null)} onStart={() => setChallengeOpen(null)} />
@@ -817,7 +842,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             onStartSession={() => setTab('home')}
             onStartLaunch={(l) => setLaunch(l)}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
-            onMood={() => setOverlay({ kind: 'mood' })}
             onGoTherapist={() => setTab('therapist')}
             onExportSelfUse={() => setReport(true)}
             onExportTherapy={exportTherapy}

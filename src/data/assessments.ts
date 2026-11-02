@@ -222,13 +222,17 @@ export function optionsForItem(instrument: Instrument, item: InstrumentItem): Re
 
 /* =================================================================== VAS === */
 
-/** A face scale rather than a 100 mm line: a line needs fine motor precision
-    that is clumsy on a phone and adds measurement noise from imprecise taps.
-    The system stores the number; the person sees only the face.
+/** The five steps the VAS series is stored in, and the five faces it used to
+    be asked with.
 
-    The faces are DRAWN, not emoji — one instrument in one hand, at a size the
-    app chooses, instead of five pictures from whichever vendor the device
-    ships. `icon` is the glyph's name; see selfuse/icons.tsx. */
+    NO SCREEN DRAWS THESE ANY MORE. Since 2026-11-02 the question at the two
+    ends of a session is two sliders — energy and mood, −1…+1 each
+    (`selfuse/MoodSliders.tsx`) — and the 1–5 the series carries is derived
+    from the mood axis (`vasFromMood`), so the stored shape is unchanged and
+    a reading taken last month is still comparable with one taken today.
+    The table stays because the series is in these five steps and a reader of
+    the data needs to know what a 4 was called. `icon` is the glyph's name;
+    see selfuse/icons.tsx. */
 export const VAS_OPTIONS: (ResponseOption & { icon: IconName })[] = [
   { value: 1, icon: 'vas1', label: 'Very distressed' },
   { value: 2, icon: 'vas2', label: 'Somewhat distressed' },

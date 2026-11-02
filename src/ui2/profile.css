@@ -96,7 +96,7 @@
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--gl-inset-r);
   padding: 16px 18px;
   color: var(--ink);
 }
@@ -190,7 +190,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-radius: 18px;
+  border-radius: var(--gl-inset-r);
   border: 1px solid var(--line);
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -232,7 +232,7 @@
 .gl-root .profile__sponsor {
   margin: 0;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: var(--gl-inset-r);
   background: var(--btn);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -241,9 +241,39 @@
   line-height: 1.55;
 }
 
-.gl-root .menu { margin: 4px 0; border-top: 1px solid var(--hair); }
-.gl-root .menu__row { padding: 16px 2px; border-bottom: 1px solid var(--hair); color: var(--ink); }
+/* A list of doors is a BOX, like every other box on this surface. On the
+   subscreens of Perfil these were bare rows ruled by hairlines, straight on
+   the photograph — the only elements in the app that were not in a pane, and
+   the reason 'Como funciona o Good Loop' looked like it had been left
+   somewhere rather than put somewhere. Same corner, same padding, same
+   glass as the four cards on the menu itself. */
+.gl-root .menu {
+  margin: 4px 0;
+  border-top: 0;
+  border-radius: var(--gl-box-r);
+  padding: 4px var(--gl-box-pad);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.gl-root .menu__row { padding: 16px 0; border-bottom: 1px solid var(--hair); color: var(--ink); }
+.gl-root .menu li:last-child .menu__row { border-bottom: 0; }
 .gl-root .menu__row:hover { color: var(--link); }
+
+/* The tutorial is one card, centred, not a stack of loose elements. */
+.gl-root .tutorial {
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  align-items: center;
+  text-align: center;
+}
 
 .gl-root .pwd-form { display: flex; flex-direction: column; gap: 14px; }
 .gl-root .ob-error { color: var(--warn); font-size: 14px; margin: 0; }

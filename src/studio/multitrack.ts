@@ -737,18 +737,48 @@ export function calibrateBufferToDb(buf: AudioBuffer, targetDb: number): number 
   return g
 }
 
+/**
+ * Every bed ends by fading out over its last three seconds (POs, 2026-11-02).
+ *
+ * A FLOOR, not a default: a clip whose sheet already asks for a longer tail
+ * keeps it, and one that asks for less — or says nothing, which the PLAIN
+ * import cannot tell apart from an explicit zero — gets three. That is what
+ * makes it true of "all the clips" rather than only of the untouched ones.
+ *
+ * Two bounds:
+ *
+ *  · NEVER ON A VOICE CLIP. A voice buffer is exactly as long as the line
+ *    that was spoken (`bakeVoiceBuffer`), so three seconds of fade would be
+ *    three seconds of the sentence going quiet — and it already carries an
+ *    80 ms de-click ramp at both ends. The beds are what stopped abruptly.
+ *  · Never more than half the audio there actually is. A four-second stab
+ *    would otherwise be three quarters fade, and a music window longer than
+ *    the song it drew renders shorter than the window (`sampleCoveredSec`),
+ *    so this is measured on the BUFFER, not on the clip's window.
+ */
+export const STUDIO_FADE_OUT_SEC = 3
+
+/** The fade-out a clip is actually rendered with. */
+export function clipFadeOutSec(type: TrackType | undefined, own: number | undefined, bufferSec: number): number {
+  const asked = Math.max(0, own ?? 0)
+  if (type === undefined || type === 'voice') return asked
+  return Math.max(asked, Math.min(STUDIO_FADE_OUT_SEC, bufferSec / 2))
+}
+
 /** Full PLAIN clip conditioning: parametric EQ (spectral shaping) →
     loudness calibration (when `calibrateDb` is set — AFTER the EQ, so
     equalizing never moves a clip off its protocol layer level) → legacy
-    relative gain + fades. One call, shared by the Studio's buffer pipeline
-    and the offline renderer — both hear the same clip. */
+    relative gain + fades, the fade-out floored at three seconds for a bed
+    (`clipFadeOutSec`). One call, shared by the Studio's buffer pipeline and
+    the offline renderer — both hear the same clip, which is the whole point
+    of putting the floor in here rather than in either of them. */
 export function shapeClipBuffer(
   buf: AudioBuffer,
-  shape: { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number },
+  shape: { eq?: ClipEq; calibrateDb?: number; gainDb?: number; fadeInSec?: number; fadeOutSec?: number; trackType?: TrackType },
 ): AudioBuffer {
   if (shape.eq && !eqIsTransparent(shape.eq)) applyEqToBuffer(buf, shape.eq)
   if (shape.calibrateDb !== undefined) calibrateBufferToDb(buf, shape.calibrateDb)
-  return applyClipShape(buf, shape.gainDb, shape.fadeInSec, shape.fadeOutSec)
+  return applyClipShape(buf, shape.gainDb, shape.fadeInSec, clipFadeOutSec(shape.trackType, shape.fadeOutSec, buf.duration))
 }
 
 /** Bake a PLAIN clip's shape into its rendered buffer: linear gain from a

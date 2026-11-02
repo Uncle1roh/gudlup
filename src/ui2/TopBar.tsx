@@ -1,35 +1,45 @@
 /* ============================================================================
-   The top bar the deep screens share
+   The top bar every screen of the surface shares
 
-   From the <header> of WTerapia.dc.html: today's date on the left, the Loops
-   pill, the avatar and the person's name with their role on the right.
+   ONE bar, not two. The library had its own header — the mark, the day, and
+   "Bom dia, Marina" under it — while every other screen had this one, which
+   put the date on the left and the person's name on the RIGHT, beside the
+   Loops pill. So the one personal line on the screen moved from corner to
+   corner as you changed tab, and on the deep screens it read as a label on
+   the pill rather than as a greeting.
 
-   The mockup set the wordmark above that date, and the port did too — but the
-   rail already carries the mark, in its own rounded square, two centimetres
-   to the left of it. Written twice on every screen it stopped being a logo
-   and became furniture, so the date stands alone.
+   The library's corner won, because it is the one a person opens the app on:
+   the mark, the day, and the greeting with their name, in that order, down
+   the left. The Loops pill keeps the right.
 
-   Below 900px the rail is the tab bar at the foot of the screen and its
-   square is hidden (shell.css, "the phone"). There the mark comes back here,
-   beside the date, because on a phone this is the top left corner.
-
-   The library has its own header — the greeting and the mood chip — so this
-   one is for the screens that stand on the photograph.
+   The mockup set the wordmark above the date on the deep screens, and the
+   port did too — but the rail already carries the mark, two centimetres to
+   the left of it. Below 900px the rail becomes the tab bar at the foot of
+   the screen and its square is hidden (shell.css, "the phone"), which is why
+   `.gl-phonemark` is here: on a phone this is the top left corner.
    ============================================================================ */
 
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
 import { BrandIcon } from '../components/Brand'
+import { greeting } from '../selfuse/greeting'
 import { LoopsChip } from './LoopsChip'
 import { useBrandVariant } from './Shell'
 
-export function TopBar({ name, role }: { name: string | null; role?: string }) {
-  const { d } = useI18n()
+export function TopBar({ name, over }: {
+  name: string | null
+  /** The library draws a picture behind its first screenful; the bar has to
+      stand above it rather than under it. */
+  over?: boolean
+}) {
+  const { t, d } = useI18n()
   const dp = useDataProvider()
   const [loops, setLoops] = useState<number | null>(null)
   const variant = useBrandVariant()
 
+  /* Read-only, and a failure leaves the pill out rather than showing a zero
+     that is not the person's balance. */
   useEffect(() => {
     let alive = true
     void dp.getWallet()
@@ -39,25 +49,25 @@ export function TopBar({ name, role }: { name: string | null; role?: string }) {
   }, [dp])
 
   return (
-    <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <header className={`gl-top${over ? ' gl-top--over' : ''}`}>
+      <span className="gl-top__who">
         <span className="gl-phonemark glass" aria-hidden="true"><BrandIcon variant={variant} /></span>
-        <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-          {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <LoopsChip loops={loops} />
-        {/* No initials disc. It named the person whose name is printed
-            immediately to the right of it, and it was not a button. */}
-        {name && (
-          <span style={{ display: 'flex', flexDirection: 'column', fontSize: 14, lineHeight: 1.25 }}>
-            <strong style={{ fontWeight: 600 }}>{name}</strong>
-            {role && <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>{role}</span>}
+        <span className="gl-top__lines">
+          <span className="gl-top__day">
+            {d(Date.now(), { weekday: 'long', day: 'numeric', month: 'long' })}
           </span>
-        )}
-      </div>
+          {/* `anywhere` in the stylesheet, because a name is whatever a person
+              typed: one unbroken word longer than a phone is still their name,
+              and it folds rather than running off the side of the screen. */}
+          <span className="gl-top__hello">
+            {name ? `${t(greeting())}, ${name}` : t(greeting())}
+          </span>
+        </span>
+      </span>
+
+      {/* No initials disc. It named the person whose name is printed three
+          centimetres to the left of it, and it was not a button. */}
+      <LoopsChip loops={loops} />
     </header>
   )
 }

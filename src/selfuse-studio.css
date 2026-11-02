@@ -1004,9 +1004,7 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .ob-opt,
 .su-studio .ob-radio,
 .su-studio .who5-opt,
-.su-studio .vas-opt,
-.su-studio .scale5 button,
-.su-studio .mood-opt {
+.su-studio .scale5 button {
   background: var(--su-raised);
   border: 1px solid var(--su-hair);
   color: var(--su-fg-2);
@@ -1014,9 +1012,7 @@ body:has(.su-studio) { background: var(--su-void); }
 }
 .su-studio .ob-opt[aria-pressed='true'],
 .su-studio .who5-opt[aria-pressed='true'],
-.su-studio .vas-opt[aria-pressed='true'],
-.su-studio .scale5 button[aria-pressed='true'],
-.su-studio .mood-opt[aria-pressed='true'] {
+.su-studio .scale5 button[aria-pressed='true'] {
   background: rgba(31, 191, 148, 0.14);
   border-color: rgba(31, 191, 148, 0.45);
   color: var(--su-fg);

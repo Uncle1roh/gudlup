@@ -21,6 +21,7 @@ import { MockBenefits } from '../gamification/mockBenefits'
 import { MockChallenges } from '../gamification/mockChallenges'
 import { MockCompany, DEMO_COMPANY_ID as GAM_COMPANY_ID } from '../gamification/mockCompany'
 import { seedDemoHistory } from '../gamification/mockDemo'
+import { CONTRACT_MULTIPLIERS } from '../gamification/economy'
 import { hasConsent } from '../legal/records'
 import {
   DEMO_CITY_MONTH, DEMO_MUNICIPALITIES, REGION_OF_UF, rankUnits, rollUp, searchMunicipalities as searchCities,
@@ -1276,7 +1277,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     adminListPlans: async () => delay(company.plans.map((p) => ({ ...p })), 40),
     adminSavePlan: async (p) => {
       await wait(40)
-      if (p.multiplier < 1 || p.multiplier > 5) throw new Error('Il moltiplicatore va da 1 a 5.')
+      if (!CONTRACT_MULTIPLIERS.includes(p.multiplier)) throw new Error('Il moltiplicatore del contratto è 1, 1,5 o 2.')
       const i = company.plans.findIndex((x) => x.id === p.id)
       if (i >= 0) company.plans[i] = { ...p }
       else company.plans.push({ ...p })

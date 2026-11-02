@@ -183,7 +183,7 @@ export async function renderPlainWav(
              mid-phrase in the WAV but not in the Studio. */
           const room = lengthSec - c.startSec
           let baked = await bakeVoiceBuffer(decoded, vp.pan, room, vp.speed ?? 1)
-          baked = shapeClipBuffer(baked, c)
+          baked = shapeClipBuffer(baked, { ...c, trackType: 'voice' })
           /* A calibrated clip can legitimately sit above full scale — the
              buffers are float and §9 brings the finished mix back under the
              ceiling. But it is worth SAYING, because a lane asking for a level
@@ -204,7 +204,7 @@ export async function renderPlainWav(
           if (sp && !sp.url) continue // undrawn lane — silent by design
           progress(`Render di ${t.name} @ ${secToMmss(c.startSec)}…`)
           let buf = await renderClipBuffer(t.type, c.params, dur)
-          buf = shapeClipBuffer(buf, c)
+          buf = shapeClipBuffer(buf, { ...c, trackType: t.type })
           buffer = buf
           /* A music window longer than the song it drew renders shorter than
              the window (see `sampleCoveredSec`). Schedule what exists, so the

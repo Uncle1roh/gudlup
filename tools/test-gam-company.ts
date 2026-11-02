@@ -47,7 +47,7 @@ async function run() {
   let w = await dp.getWallet()
   assert(w.multiplier === 1.5, 'the employee’s wallet says 1.5×')
   const entries = await dp.listLoopsLedger()
-  assert(entries.some((e) => e.entryType === 'earn_company_multiplier' && e.fundingSource === 'company' && e.amountCenti === 110), 'a Standard session: +1.10 Loops, company-funded')
+  assert(entries.some((e) => e.entryType === 'earn_company_multiplier' && e.fundingSource === 'company' && e.amountCenti === 600), 'a Standard session: +6 Loops, company-funded')
   await dp.adminSetCompanyPlan('AURORA-2026-Z5', 'max')
   assert((await dp.hrGetAddon())?.multiplier === 2, 'a plan change takes effect')
   await dp.adminSetCompanyPlan('AURORA-2026-Z5', null)

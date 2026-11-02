@@ -38,7 +38,9 @@ import { GlCheckWeek } from './Measures'
 import { useI18n, fmtDate } from '../i18n'
 import {
   dayKey,
-  MOOD_LEVELS,
+  energyLabel,
+  levelFromAxis,
+  moodLabel,
   type MoodEntry,
 } from '../data/measures'
 import { glCheckDue, type Launch, type SelfUseState } from '../data/selfUseStore'
@@ -73,7 +75,6 @@ interface ProgressProps {
   /** Start one session straight away — the pathway's next, from the ring. */
   onStartLaunch: (l: Launch) => void
   onGlCheck: () => void
-  onMood: () => void
   onGoTherapist: () => void
   onExportSelfUse: () => void
   onExportTherapy: () => void
@@ -113,7 +114,7 @@ export function ProgressTab(props: ProgressProps) {
   )
 }
 
-function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
+function Summary({ hasCompany, state, therapy, onGlCheck, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const [wallet, setWallet] = useState<Wallet | null>(null)
@@ -194,15 +195,20 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onMood, onExportSelfUs
           {!due && last && <p className="call2-ok">{t('Done for this week.')}</p>}
         </section>
 
-        {/* The one thing on this tab a person writes rather than is told.
-            The same calendar as before — the month, a square a day. */}
+        {/* The month, a square a day, filled by the sliders at the end of
+            each session (POs, 2026-11-02) — so there is no button here any
+            more. There used to be one, and it was the only way the calendar
+            ever got anything in it: a person who had just answered how they
+            felt twice inside the player was then asked a third time, on
+            another screen, by another instrument. */}
         <section className="glass jr2-card">
           <h2 className="call2-pane__h">{t('Mood calendar')}</h2>
           <MoodCalendar moods={state.moods} />
-          {!state.moods.length && (
-            <p className="call2-note">{t('Track your daily mood — it takes 1 second.')}</p>
-          )}
-          <button type="button" className="glass-btn jr2-btn" onClick={onMood}>{t('How was your day?')}</button>
+          <p className="call2-note">
+            {state.moods.length
+              ? t('Each square is how you answered at the end of a session.')
+              : t('Finish a session and tell us how you are: the day fills itself in.')}
+          </p>
         </section>
 
         {felt && <VasPanel points={vas} />}
@@ -234,6 +240,14 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
   const { t } = useI18n()
   const [open, setOpen] = useState<MoodEntry | null>(null)
   const byDay = new Map(moods.map((m) => [m.day, m]))
+  /* Both axes in words, for the line under the month and for the square's
+     own label. Never a score, never a judgement — the words are the ends of
+     the two sliders the person moved. */
+  const words = (m: MoodEntry) => {
+    const mood = t(moodLabel(m.level))
+    if (m.arousal === undefined) return mood
+    return `${mood} · ${t(energyLabel(levelFromAxis(m.arousal)))}`
+  }
   const now = new Date()
   const first = new Date(now.getFullYear(), now.getMonth(), 1)
   const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
@@ -248,21 +262,19 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
           const d = new Date(now.getFullYear(), now.getMonth(), i + 1)
           const key = dayKey(d.getTime())
           const m = byDay.get(key)
-          const level = m ? MOOD_LEVELS.find((l) => l.value === m.level) : undefined
           return (
             <button
               key={i}
               type="button"
-              className={`cal__day${m ? ` cal__day--l${m.level} cal__day--face` : ''}${key === today ? ' cal__day--today' : ''}`}
+              className={`cal__day${m ? ` cal__day--l${m.level}` : ''}${key === today ? ' cal__day--today' : ''}`}
               aria-current={key === today ? 'date' : undefined}
               onClick={() => m && setOpen(m)}
-              /* The square used to carry the day and a shade of green, and
-                 the shade is a scale nobody can read off a wall. The face
-                 the person actually chose is drawn in it now — and said
-                 out loud too, because an emoji is not a label. */
-              aria-label={level ? `${i + 1} · ${t(level.label)}` : `${i + 1}`}
+              /* The emoji that was drawn in here is gone with the five faces
+                 it came from. A shade is not a scale anybody can read off a
+                 wall, so the words are said out loud to a screen reader and
+                 printed in full under the month when a day is tapped. */
+              aria-label={m ? `${i + 1} · ${words(m)}` : `${i + 1}`}
             >
-              {level && <span className="cal__face" aria-hidden="true">{level.icon}</span>}
               <span className="cal__n">{i + 1}</span>
             </button>
           )
@@ -270,8 +282,7 @@ function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
       </div>
       {open && (
         <p className="small muted fade-in">
-          {new Date(open.at).toLocaleDateString()} ·{' '}
-          {t(MOOD_LEVELS.find((l) => l.value === open.level)?.label ?? '')}
+          {new Date(open.at).toLocaleDateString()} · {words(open)}
           {open.note ? ` — ${open.note}` : ''}
         </p>
       )}
