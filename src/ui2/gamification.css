@@ -404,3 +404,20 @@
   .gl-root .segmented > button { flex: none; white-space: nowrap; }
   .gl-root .gam-rank__list > li { gap: 12px; }
 }
+
+/* ------------------------------------------- the unlock sheet's orbits ---
+   Two faint ellipses behind the badge. They were styled under `.su-studio`
+   only (selfuse-studio.css §gam), and this surface is not that one — so on
+   the redesign the SVG fell back to the browser's default fill and the art
+   was a black blob behind the badge. It was invisible until the sheet
+   became reachable again (the popup at the moment an achievement completes,
+   POs 2026-11-03); the defect is older than that.
+
+   Not a token: inside the dialog the palette is the sheet's own light one,
+   fixed, the way `.fc2` is. */
+.gl-root .gam-unlock__art { position: relative; display: grid; place-items: center; width: 200px; height: 140px; }
+.gl-root .gam-unlock__art > * { grid-area: 1 / 1; }
+.gl-root .gam-unlock__orbits { fill: none; stroke: #3db189; stroke-width: 1; opacity: 0.3; }
+
+/* The Loops popup: the same dialog, with nothing drawn in it. */
+.gl-root .gam-about { gap: 10px; }

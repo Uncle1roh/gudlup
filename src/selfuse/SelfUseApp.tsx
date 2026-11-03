@@ -30,9 +30,9 @@ import { FirstRun } from './FirstRun'
 import { AddressedAsGate } from './AddressedAsGate'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
-import { ProgressTab, type ProgressView } from './ProgressTab'
+import { ProgressTab } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
-import { BenefitsTab } from './BenefitsTab'
+import { LoopsTab, type LoopsView } from './LoopsTab'
 import { GlCheckFlow } from './Measures'
 import { SafetyLevel3 } from './Safety'
 import { HelpNowButton } from '../legal/HelpNow'
@@ -69,7 +69,7 @@ import { usePrescriptions } from '../ui2/prescriptions'
    pathways and the continue card are one screen, because a person opening the
    app wants to choose something, and a Home that only linked to the place
    where you choose was a hop with nothing in it. */
-type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'benefits' | 'profile'
+type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'loops' | 'profile'
 
 
 /* The rail's destinations and this surface's tabs are the same six things
@@ -77,16 +77,16 @@ type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'benefits' | 'profile'
    it is built at its own stop. */
 const DEST_OF: Record<Tab, Dest> = {
   home: 'home', therapist: 'therapy', path: 'path',
-  progress: 'journey', benefits: 'benefits', profile: 'profile',
+  progress: 'journey', loops: 'loops', profile: 'profile',
 }
 /* Only the library stands on the colour of the mood. Every other mockup is
    the same photograph under a dark wash — a room you go into, rather than
    the shelf you browse. A screen gets the deep surface once it is ported. */
-const DEEP: Tab[] = ['therapist', 'path', 'progress', 'benefits', 'profile']
+const DEEP: Tab[] = ['therapist', 'path', 'progress', 'loops', 'profile']
 
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',
-  journey: 'progress', benefits: 'benefits', profile: 'profile',
+  journey: 'progress', loops: 'loops', profile: 'profile',
 }
 
 type Overlay =
@@ -179,30 +179,38 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     setOverlay({ kind: 'none' })
   })
 
-  /* Achievements unlocked since the app was last opened (SPEC §3.4). Read
-     when the app opens and when it comes back to the foreground — never
-     when a session ends: the post-session screen keeps its one metric and
-     two actions (GAM-R6), and the sheet only ever opens over Home. */
+  /* Achievements unlocked, and the sheet that says so (SPEC §3.4).
+     Read when the app opens, when it comes back to the foreground, and —
+     since 2026-11-03, the POs — THE MOMENT A SESSION ENDS. It used to wait
+     for the next open, so the one thing that unlocks an achievement was
+     also the one thing that never showed it: somebody finished their first
+     session, earned "First Loop", and heard about it the following day, if
+     at all.
+
+     What has not changed is where it is NOT shown: not on the post-session
+     screen, which keeps its one metric and two actions (GAM-R6, RN-UX-03).
+     The sheet opens over whatever screen the person lands back on once the
+     player has closed — a second later, and never over the player, a
+     launch or another sheet. */
   const [unlocks, setUnlocks] = useState<AchievementView[]>([])
-  const [progressView, setProgressView] = useState<ProgressView>('summary')
+  const [loopsView, setLoopsView] = useState<LoopsView>('hub')
+  const checkUnlocks = useCallback(() => {
+    if (document.visibilityState !== 'visible') return
+    void dp.listMyAchievements()
+      .then((rows) => setUnlocks(unseenUnlocks(rows)))
+      .catch(() => { /* offline — they wait for the next open */ })
+  }, [dp])
   useEffect(() => {
-    let alive = true
-    const check = () => {
-      if (document.visibilityState !== 'visible') return
-      void dp.listMyAchievements()
-        .then((rows) => { if (alive) setUnlocks(unseenUnlocks(rows)) })
-        .catch(() => { /* offline — they wait for the next open */ })
-    }
-    check()
-    document.addEventListener('visibilitychange', check)
-    return () => { alive = false; document.removeEventListener('visibilitychange', check) }
-  }, [dp, storeId])
+    checkUnlocks()
+    document.addEventListener('visibilitychange', checkUnlocks)
+    return () => { document.removeEventListener('visibilitychange', checkUnlocks) }
+  }, [checkUnlocks, storeId])
   const closeUnlocks = () => {
     const ids = unlocks.map((a) => a.id)
     setUnlocks([])
     if (ids.length) void dp.markAchievementsSeen(ids).catch(() => { /* shown again next open */ })
   }
-  const unlockSheetUp = unlocks.length > 0 && tab === 'home' && !launch && overlay.kind === 'none'
+  const unlockSheetUp = unlocks.length > 0 && !launch && overlay.kind === 'none'
   useBackLayer(unlockSheetUp, closeUnlocks)
 
   /* Challenges (SPEC §5.5): read when the app opens and again after a
@@ -511,11 +519,12 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           /* The gate above guarantees an answer; 'm' is only the type's
              floor, never a silent default anybody actually hears. */
           addressedAs={state.addressedAs ?? 'm'}
-          needsStereoCheck={!state.stereoCheckedAt}
           contextLine={context}
           demoSeconds={demoSeconds}
-          /* Only a PASS retires the check. Recording a failure as a pass meant
-             someone on a mono Bluetooth earpiece was never asked again. */
+          /* EVERY session runs the check now (POs, 2026-11-03) — SES-2 in
+             `selfuse/Session.tsx` says why it stopped being a first-run-only
+             screen. `stereoCheckedAt` survives as the record of the last time
+             it passed; nothing gates on it any more. */
           onStereoChecked={(passed) => { if (passed) update((s) => ({ ...s, stereoCheckedAt: Date.now() })) }}
           onCancel={() => setLaunch(null)}
           onNeedSupport={() => { setLaunch(null); setOverlay({ kind: 'safety3' }) }}
@@ -565,6 +574,9 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           listenedSec: o.listenedSec, stereoChecked: o.stereoChecked,
         }).catch(() => { /* offline — nothing else depends on it */ })
         loadChallenges()
+        /* An unfinished session earns nothing, so it unlocks nothing — but
+           the read is cheap and the alternative is a rule written twice. */
+        checkUnlocks()
       }
       return
     }
@@ -655,6 +667,12 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
     setTab(l?.prescriptionId ? 'therapist' : 'home')
     loadChallenges()
+    /* The unlock sheet, now rather than tomorrow (POs, 2026-11-03). Last
+       in the function, after recordSession has been awaited: it is that
+       write which unlocks anything, and asking before it returned read
+       the achievements the person had BEFORE the session they just
+       finished. */
+    checkUnlocks()
   }
 
   /* --------------------------------------------------------- overlays --- */
@@ -837,8 +855,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
             name={displayName(user?.email, legal.profile?.name)}
             state={state}
             therapy={therapy}
-            view={progressView}
-            onView={setProgressView}
+            onGoAchievements={() => { setLoopsView('achievements'); setTab('loops') }}
+            onGoChallenges={() => { setLoopsView('challenges'); setTab('loops') }}
             onStartSession={() => setTab('home')}
             onStartLaunch={(l) => setLaunch(l)}
             onGlCheck={() => setOverlay({ kind: 'glcheck' })}
@@ -848,13 +866,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           />
         )}
 
-        {tab === 'benefits' && (
-          <BenefitsTab
+        {tab === 'loops' && (
+          <LoopsTab
             hasCompany={hasCompany}
             name={displayName(user?.email, legal.profile?.name)}
-            onSeeChallenges={() => { setProgressView('challenges'); setTab('progress') }}
+            view={loopsView}
+            onView={setLoopsView}
             onStartSession={() => setTab('home')}
-            onSeeAchievements={() => { setProgressView('achievements'); setTab('progress') }}
           />
         )}
 
@@ -877,7 +895,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       {unlockSheetUp && (
         <UnlockSheet
           queue={unlocks}
-          onSeeAll={() => { closeUnlocks(); setProgressView('achievements'); setTab('progress') }}
+          onSeeAll={() => { closeUnlocks(); setLoopsView('achievements'); setTab('loops') }}
           onClose={closeUnlocks}
         />
       )}

@@ -20,7 +20,7 @@ import { useI18n } from '../i18n'
 import { BrandIcon } from '../components/Brand'
 import { useGround } from './groundChoice'
 
-export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'benefits' | 'profile'
+export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'loops' | 'profile'
 
 /* The mockup's SVGs, copied. Every one is 24×24, 1.8 stroke, round caps. */
 const ICONS: Record<Dest, ReactNode> = {
@@ -45,10 +45,14 @@ const ICONS: Record<Dest, ReactNode> = {
       <path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7" />
     </>
   ),
-  benefits: (
+  /* The two crossed ellipses the app draws everywhere a Loop is named
+     (`selfuse/icons.tsx`, 'loop'). It was a heart with a plus in it, for a
+     destination called "Benefícios" — a heart on a rail beside a therapy
+     tab reads as care, not as what a minute of listening earns. */
+  loops: (
     <>
-      <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />
-      <path d="M12 9.5v5M9.5 12h5" />
+      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(-30 12 12)" />
+      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(30 12 12)" />
     </>
   ),
   profile: (
@@ -65,11 +69,11 @@ const LABELS: Record<Dest, string> = {
   therapy: 'Therapy',
   path: 'Guided care',
   journey: 'My journey',
-  benefits: 'Benefits',
+  loops: 'Loops',
   profile: 'Profile',
 }
 
-export const DESTS: Dest[] = ['home', 'therapy', 'path', 'journey', 'benefits', 'profile']
+export const DESTS: Dest[] = ['home', 'therapy', 'path', 'journey', 'loops', 'profile']
 
 function Glyph({ dest }: { dest: Dest }) {
   return (
@@ -107,7 +111,7 @@ export function Shell({
   onDest(next: Dest): void
   dests?: Dest[]
   /** 'mood' is the library's ground; 'deep' is the photograph the therapy,
-      journey, benefits and profile mockups stand on. */
+      journey, Loops and profile mockups stand on. */
   surface?: 'mood' | 'deep'
   children: ReactNode
 }) {

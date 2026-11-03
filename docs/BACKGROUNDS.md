@@ -146,6 +146,25 @@ escuras e não carregam texto corrido por cima — só título e botões.
 Se a capa de algum protocolo ficar lavada ou brigando com o botão creme, esse
 é o número para subir.
 
+### A capa pinta a JANELA inteira (03/11/2026)
+
+Enquanto uma tela de protocolo está aberta — a página do protocolo, o card
+antes de começar, o teste de fones, o player, a tela do fim — quem recebe a
+capa é a página, não o elemento. Antes era só o elemento, e sobrava uma faixa
+de uns 50px no alto com a foto da montanha: a tarja do botão **Apoio
+emocional** fica *acima* da superfície e é transparente, então o fundo do app
+aparecia atrás dela. Duas imagens e uma emenda, bem na tela que existe para
+dar vontade de ouvir.
+
+Quem faz isso é `src/ui2/pageGround.ts`: escreve a capa em
+`--gl-session-image` no `<html>` e liga `data-gl-session='on'`. A regra em
+`shell.css` então pinta `body` com a capa e **apaga** a cópia que o elemento
+pintava — a mesma imagem cortada em duas caixas diferentes são dois cortes, e
+a emenda voltaria dois centímetros mais abaixo.
+
+Nada a configurar: sai sozinho ao sair da sessão, e o botão Apoio emocional
+continua clicável por cima da capa (CRS-01).
+
 ---
 
 ## 3. Testar rápido sem mexer no código

@@ -53,6 +53,9 @@ for (const b of DEMO_BENEFITS) scan(`demo benefit "${b.title}"`, [b.title, b.car
 /* the screens: their string literals and t() keys, and the forbidden UI patterns */
 const SCREENS = [
   'src/selfuse/BenefitsTab.tsx',
+  'src/selfuse/LoopsTab.tsx',
+  'src/ui2/LoopsChip.tsx',
+  'src/gamification/copy.ts',
   'src/selfuse/ChallengeCard.tsx',
   'src/selfuse/ChallengeDetail.tsx',
 ]

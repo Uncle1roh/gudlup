@@ -21,7 +21,8 @@ import { durationLabel, primaryBlock, weekCount, type PathwayId } from '../data/
 import { Home } from '../ui2/Home'
 import { useDataProvider } from '../data/provider'
 import type { ExploreRail } from '../data/rails'
-import { coverFor, sessionGround } from './artwork'
+import { coverCssUrl, coverFor, sessionGround } from './artwork'
+import { usePageSessionGround } from '../ui2/pageGround'
 import {
   useCatalog,
   findPathway,
@@ -397,6 +398,11 @@ function SessionDetail({
   const pathway = catalog.pathways.find((p) => p.plan.some((w) => w.blocks.some((b) => b.slug === session.slug)))
 
   const cover = coverFor(session.slug, session.theme, session.coverUrl)
+  /* …and the picture is the whole WINDOW, not the part of it below the Help
+     now strip: that strip is transparent, so the app's own photograph was
+     showing through the top fifty pixels of this screen. See
+     `ui2/pageGround.ts`. */
+  usePageSessionGround(coverCssUrl(cover))
 
   /* The picture IS the screen.
      It used to be a 150px strip above a page of text, which spent the one

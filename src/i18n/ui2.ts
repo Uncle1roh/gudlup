@@ -122,6 +122,23 @@ export const IT_UI2: Record<string, string> = {
   'How you felt': 'Come ti sei sentito',
   'Before and after each session (1–5)': 'Prima e dopo ogni seduta (1–5)',
   'Done for this week.': 'Fatto per questa settimana.',
+  /* ---- a tela Loops: quattro porte, e che cosa è un Loop ---- */
+  /* `LOOPS_EXPLAINER` (gamification/copy.ts): lo stesso testo per il popup
+     della pastiglia e per il sottotitolo della schermata. Niente genere:
+     non è stato chiesto niente al riguardo. */
+  'What are Loops?': 'Che cosa sono i Loops?',
+  'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.':
+    'Un Loop è un minuto di cura per la tua mente: quando porti a termine un protocollo, ogni minuto che hai ascoltato diventa un Loop. Esistono per la tua salute e per nient’altro — mai per il tempo che passi davanti a uno schermo — e non si possono acquistare.',
+  'Prizes': 'Premi',
+  'Care that comes back to you.': 'La cura che torna a te.',
+  'What stays once it is reached: the time you have given yourself, the lengths you have tried, the pathways you have walked.':
+    'Quello che resta una volta raggiunto: il tempo che hai dedicato a te, le durate che hai provato, i percorsi che hai completato.',
+  'Something to take part in for a few days or a month — on your own, with your city, or with your company.':
+    'Qualcosa a cui partecipare per qualche giorno o per un mese — per conto tuo, con la tua città o con la tua azienda.',
+  'How your city, your state and your region are taking care of themselves. Places only — never people, never names.':
+    'Come la tua città, il tuo stato e la tua regione si prendono cura di sé. Solo luoghi — mai persone, mai nomi.',
+  'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
+    'La cura che torna a te: scambia i tuoi Loops con qualcosa che si prende cura del tuo corpo o della tua mente.',
 }
 
 export const PT_UI2: Record<string, string> = {
@@ -239,4 +256,21 @@ export const PT_UI2: Record<string, string> = {
   'How you felt': 'Como você se sentiu',
   'Before and after each session (1–5)': 'Antes e depois de cada sessão (1–5)',
   'Done for this week.': 'Feito nesta semana.',
+  /* ---- a tela Loops: quatro portas, e o que é um Loop ---- */
+  /* `LOOPS_EXPLAINER` (gamification/copy.ts): o mesmo texto no popup da
+     pastilha e no subtítulo da tela — uma definição só. Sem gênero em
+     nenhuma frase: nada foi perguntado sobre isso. */
+  'What are Loops?': 'O que são os Loops?',
+  'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.':
+    'Um Loop é um minuto de cuidado com a sua mente: quando você termina um protocolo, cada minuto que ouviu vira um Loop. Eles existem pela sua saúde e por nada mais — nunca pelo tempo que você passa numa tela — e nunca podem ser adquiridos.',
+  'Prizes': 'Prêmios',
+  'Care that comes back to you.': 'O cuidado que volta para você.',
+  'What stays once it is reached: the time you have given yourself, the lengths you have tried, the pathways you have walked.':
+    'O que fica depois de conquistado: o tempo que você se deu, as durações que experimentou, as trilhas que percorreu.',
+  'Something to take part in for a few days or a month — on your own, with your city, or with your company.':
+    'Algo de que participar por alguns dias ou por um mês — por conta própria, com a sua cidade ou com a sua empresa.',
+  'How your city, your state and your region are taking care of themselves. Places only — never people, never names.':
+    'Como a sua cidade, o seu estado e a sua região estão cuidando de si. Só lugares — nunca pessoas, nunca nomes.',
+  'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
+    'O cuidado que volta para você: troque seus Loops por algo que cuide do seu corpo ou da sua mente.',
 }

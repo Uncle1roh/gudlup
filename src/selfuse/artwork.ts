@@ -364,7 +364,14 @@ export function coverDataUri(c: Cover): string {
  * docs/BACKGROUNDS.md.
  */
 export function sessionGround(c: Cover): React.CSSProperties {
-  return { ['--gl-session-image' as string]: `url("${c.imageUrl ?? coverDataUri(c)}")` }
+  return { ['--gl-session-image' as string]: coverCssUrl(c) }
+}
+
+/** The cover as a CSS `url(…)` value — what both the element's own style and
+    the PAGE's ground are set from (`ui2/pageGround.ts`), so the two can never
+    be two different pictures. */
+export function coverCssUrl(c: Cover): string {
+  return `url("${c.imageUrl ?? coverDataUri(c)}")`
 }
 
 /** The inline style a cover element needs. Kept here so a component never has

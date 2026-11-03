@@ -454,6 +454,59 @@
 .gl-root .gam-benefit__price.is-ready { color: var(--link); }
 .gl-root .gam-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 
+/* ----------------------------------------------------------------- loops ---
+   FOUR doors, the same box as everywhere else (`--gl-box-*`), each one wide
+   enough to say what is behind it. They replaced four words in a segmented
+   control on another screen — the room is the point, so the sentence is not
+   clamped and the card grows to hold it.
+
+   `.lp2-card` is a <button>, so everything in it has to be a span: the title
+   is drawn, not marked up, and the screen's real headings are its own. */
+
+.lp2-doors { margin-top: 4px; }
+
+.lp2-card {
+  border-radius: var(--gl-box-r);
+  padding: var(--gl-box-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: background-color 0.2s ease;
+}
+
+.gl-root .lp2-card:hover { background: var(--btn); }
+
+.lp2-card__top { display: flex; align-items: center; gap: 12px; }
+
+.lp2-card__icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp2-card__h {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.lp2-card__go { flex: none; font-size: 22px; color: var(--ink-2); }
+
+.lp2-card__about { font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+
 /* ---------------------------------------------------------------- perfil ---
    FOUR cards, each one a door the app already had, all the same box. */
 

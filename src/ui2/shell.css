@@ -142,6 +142,46 @@ html.gl2 body {
   background-repeat: no-repeat, no-repeat;
 }
 
+/* ----------------------------------------- the window a protocol fills ---
+   While a protocol screen is open — its detail page, the pre-session card,
+   the headphone check, the player, the post-session screen — the PAGE
+   carries that protocol's cover instead of the app's photograph, set by
+   `ui2/pageGround.ts` on <html>.
+
+   Why the page and not only the element: the Help now strip sits ABOVE the
+   surface and is transparent (CRS-01 — it may never be covered), so the
+   app's own mountain photograph showed through the top ~50px of a screen
+   standing on a different picture. Two pictures and a seam. Painting the
+   window means the cover runs behind the Help button and the button is
+   still a button.
+
+   The elements then stop painting their own copy, because the same image
+   cropped to two different boxes is two different crops — which is the seam
+   again, two centimetres lower. One picture, cropped once, to the window.
+
+   `--gl-session-dim` is the same dial as everywhere else (docs/BACKGROUNDS.md). */
+html.gl2[data-gl-session='on'] body {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(4, 16, 14, var(--gl-session-dim, 0.6)) 0%,
+      rgba(4, 16, 14, calc(var(--gl-session-dim, 0.6) - 0.06)) 38%,
+      rgba(3, 11, 10, calc(var(--gl-session-dim, 0.6) + 0.26)) 100%),
+    var(--gl-session-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-color: #07140f;
+}
+
+/* The grain belongs to the app's own sky; over a cover it is dirt. */
+html.gl2[data-gl-session='on'] body::before { display: none; }
+
+html.gl2[data-gl-session='on'] .gl-root .sess-full,
+html.gl2[data-gl-session='on'] .su-session {
+  background-image: none;
+  background-color: transparent;
+}
+
 /* The grain. Glass over a flat colour is invisible — a blur has nothing to
    blur, so a pane reads as a lighter rectangle and a button as a painted
    disc. The Studio laid one tile of fractal noise over its ground for the

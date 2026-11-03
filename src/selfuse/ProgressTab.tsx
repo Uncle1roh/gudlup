@@ -19,11 +19,18 @@
    Two rules the copy here still follows without exception: nothing guilts,
    and no number is ever given a clinical reading.
 
-   Conquistas (docs/gamification/SPEC.md §3.4) sits beside that summary as
-   its own view, not inside it. It does not reopen the scoreboard: it shows
-   time given and milestones that, once reached, stay reached — no streaks,
-   no counts of what was missed, no points (PLAN A6), nothing ranked against
-   anyone, and never a clinical value.
+   NO TABS (POs, 2026-11-03). This screen carried four: Resumo, Conquistas,
+   Rankings, Desafios — so three kinds of information that are about what a
+   person EARNS sat behind a segmented control on a screen whose title says
+   "journey". They have a screen of their own now, with a door each
+   (`selfuse/LoopsTab.tsx`), and Minha jornada is the Resumo and nothing
+   else: what this week felt like, the month's calendar, and the lines a
+   therapist's VAS draws.
+
+   Two of the desk's side cards still point at that screen — the next
+   milestone and the live challenge. They are summaries, not tabs: each one
+   is a sentence about something that is happening, and tapping it opens the
+   page where it lives.
 
    On a desk the summary is the redesign's three-column grid (WJornada):
    the pathway's ring beside its weeks, then the check-in beside the care
@@ -45,9 +52,6 @@ import {
 } from '../data/measures'
 import { glCheckDue, type Launch, type SelfUseState } from '../data/selfUseStore'
 import { type TherapyState } from './therapyStore'
-import { Conquistas } from './Conquistas'
-import { RankingsTab } from './Coletivas'
-import { ChallengesTab } from './ChallengesTab'
 import { ChallengeCard } from './ChallengeCard'
 import { Icon } from './icons'
 import { useDataProvider } from '../data/provider'
@@ -59,8 +63,6 @@ import { fmtMinutes, nextAchievement, type AchievementView } from '../gamificati
 import { isLive, type ChallengeView, visibleChallenges } from '../gamification/challenges'
 import type { Wallet } from '../gamification/economy'
 
-export type ProgressView = 'summary' | 'achievements' | 'rankings' | 'challenges'
-
 interface ProgressProps {
   /** First name, when the account gives one — the top bar prints it. */
   name: string | null
@@ -68,10 +70,11 @@ interface ProgressProps {
   hasCompany: boolean
   state: SelfUseState
   therapy: TherapyState
-  view: ProgressView
-  onView: (v: ProgressView) => void
-  /** "Iniciar sessão" from a challenge: back to the library. */
+  /** "Iniciar sessão": back to the library. */
   onStartSession: () => void
+  /** The two side cards are doors into the Loops screen. */
+  onGoAchievements: () => void
+  onGoChallenges: () => void
   /** Start one session straight away — the pathway's next, from the ring. */
   onStartLaunch: (l: Launch) => void
   onGlCheck: () => void
@@ -80,16 +83,8 @@ interface ProgressProps {
   onExportTherapy: () => void
 }
 
-const VIEWS: { id: ProgressView; label: string }[] = [
-  { id: 'summary', label: 'Summary' },
-  { id: 'achievements', label: 'Achievements' },
-  { id: 'rankings', label: 'Rankings' },
-  { id: 'challenges', label: 'Challenges' },
-]
-
 export function ProgressTab(props: ProgressProps) {
   const { t } = useI18n()
-  const { view, onView } = props
   const pw = usePathwayView(props.state.pathway)
   return (
     <>
@@ -98,23 +93,12 @@ export function ProgressTab(props: ProgressProps) {
         title={t('My journey')}
         note={pw ? `${t(pw.active.name)} · ${t('Week {n} of {total}', { n: pw.week, total: pw.active.weeks })}` : undefined}
       />
-      {/* Four views, each its own kind of information: how the week felt,
-          what stays (achievements), where you stand together (rankings),
-          and the challenges — the company's, the live ones, the history. */}
-      <div className="segmented gam-seg gam-seg--4" role="tablist" aria-label={t('Progress')}>
-        {VIEWS.map((v) => (
-          <button key={v.id} role="tab" aria-selected={view === v.id} aria-pressed={view === v.id} onClick={() => onView(v.id)}>{t(v.label)}</button>
-        ))}
-      </div>
-      {view === 'achievements' && <Conquistas onGoRankings={() => onView('rankings')} />}
-      {view === 'rankings' && <RankingsTab />}
-      {view === 'challenges' && <ChallengesTab hasCompany={props.hasCompany} onStartSession={props.onStartSession} />}
-      {view === 'summary' && <Summary {...props} />}
+      <Summary {...props} />
     </>
   )
 }
 
-function Summary({ hasCompany, state, therapy, onGlCheck, onExportSelfUse, onStartSession, onStartLaunch, onView }: ProgressProps) {
+function Summary({ hasCompany, state, therapy, onGlCheck, onExportSelfUse, onStartSession, onStartLaunch, onGoAchievements, onGoChallenges }: ProgressProps) {
   const { t } = useI18n()
   const dp = useDataProvider()
   const [wallet, setWallet] = useState<Wallet | null>(null)
@@ -159,7 +143,7 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onExportSelfUse, onSta
   )
 
   const milestone = next && (
-    <button type="button" className="glass jr2-card gam-milestone" onClick={() => onView('achievements')}>
+    <button type="button" className="glass jr2-card gam-milestone" onClick={onGoAchievements}>
       <Badge icon={next.icon} tier={next.tier} shape="circle" size={48} locked />
       <span className="gam-milestone__body">
         <span className="eyebrow">{t('Next milestone of care')}</span>
@@ -170,7 +154,7 @@ function Summary({ hasCompany, state, therapy, onGlCheck, onExportSelfUse, onSta
   )
 
   const live = challenge && (
-    <div className="jr2-cell"><ChallengeCard c={challenge} onOpen={() => onView('challenges')} /></div>
+    <div className="jr2-cell"><ChallengeCard c={challenge} onOpen={onGoChallenges} /></div>
   )
 
   return (

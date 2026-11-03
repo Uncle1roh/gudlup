@@ -2,7 +2,7 @@
    Self Use — the session experience (SES-1 … SES-5)
 
      SES-1  Pre-session card      set the pace before anything starts
-     SES-2  Stereo check          FIRST session only; later ones check silently
+     SES-2  Headphone check       EVERY session, between SES-1 and the player
      SES-3  Immersive player      eyes closed, no interaction needed after play
      SES-4  Post-session          Quick / Standard
      SES-5  Post-session          Deep — one extra re-orientation line
@@ -38,8 +38,9 @@ import type { Duration } from '../types/domain'
 import { Icon } from './icons'
 import { MoodSliders } from './MoodSliders'
 import { vasFromMood, type MoodPoint } from '../data/measures'
-import { coverFor, sessionGround } from './artwork'
+import { coverCssUrl, coverFor } from './artwork'
 import { useBackLayer } from './backStack'
+import { usePageSessionGround } from '../ui2/pageGround'
 
 /* A catalog row can arrive without phases (an import that only carried a
    timeline). The standard six-phase split keeps the player's screen
@@ -85,8 +86,6 @@ export interface SessionOutcome {
 interface SessionFlowProps {
   session: ResolvedSession
   duration: Duration
-  /** First session ever → run the stereo check. */
-  needsStereoCheck: boolean
   /** Pathway context line under the feedback row, e.g. "3 of 5 this week." */
   contextLine?: string
   /** Testing hook: shorten every session to N seconds. null = full length. */
@@ -139,16 +138,25 @@ function SessionFrame({ ground, children }: { ground: CSSProperties; children: R
   return <div className={`${SESSION_FRAME} su-session`} style={ground}>{children}</div>
 }
 
-/** The cover of the session being played, as a full-bleed ground. */
+/** The cover of the session being played, as a full-bleed ground.
+
+    It is set on the element AND, through `usePageSessionGround`, on the page
+    — the element because the frame has to carry it even where the page is
+    covered, the page because the Help now strip above the frame is
+    transparent and was showing the app's own photograph through it (one
+    screen, two pictures). The second one wins where both apply: see
+    `data-gl-session` in `ui2/shell.css`. */
 function useSessionGround(session: ResolvedSession): CSSProperties {
-  return useMemo(
-    () => sessionGround(coverFor(session.slug, session.theme, session.coverUrl)),
+  const image = useMemo(
+    () => coverCssUrl(coverFor(session.slug, session.theme, session.coverUrl)),
     [session.slug, session.theme, session.coverUrl],
   )
+  usePageSessionGround(image)
+  return useMemo(() => ({ ['--gl-session-image' as string]: image }), [image])
 }
 
 export function SessionFlow(props: SessionFlowProps) {
-  const { session, duration, needsStereoCheck, onCancel } = props
+  const { session, duration, onCancel } = props
   /* The player kill switch. Checked HERE, above every stage, because this is
      the one door into playback: the pre-session screen, the stereo check and
      the player itself are all behind it. */
@@ -179,7 +187,7 @@ export function SessionFlow(props: SessionFlowProps) {
   function begin(pre: MoodPoint | null) {
     moodPre.current = pre
     startedAt.current = Date.now()
-    setStage(needsStereoCheck ? 'stereo' : 'play')
+    setStage('stereo')
   }
 
   if (stage === 'pre') {
@@ -312,6 +320,14 @@ function PreSession({
 
 /**
  * Two buttons. Tap each one, hear each side, Start appears.
+ *
+ * EVERY SESSION, AFTER THE MOOD QUESTION (POs, 2026-11-03). It used to run
+ * once per device, on the first session ever, and then never again — which
+ * is why the POs could not find it any more. Once is the wrong number: the
+ * headphones are not the same headphones. A person who passed this in
+ * October on wired earbuds is in November on one borrowed Bluetooth earpiece
+ * with a flat left side, and a treatment that moves between the ears does
+ * nothing at all for them. Two taps is the whole cost of knowing.
  *
  * The rules are in `lib/stereoCheck.ts`, with what this shape gives up and
  * why. What lives here is the screen, and the one thing it must not get

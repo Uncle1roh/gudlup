@@ -1,5 +1,12 @@
 /* ============================================================================
-   Benefícios — SPEC §6
+   Prêmios — SPEC §6 (the screen Benefícios became)
+
+   One of the four doors of the Loops screen (POs, 2026-11-03), and no longer
+   a destination of its own on the rail: "Benefícios" and "Loops" were two
+   names for the same promise, on two screens, one of which also held three
+   tabs that belonged here. The CONTENT is unchanged — this is still care
+   that comes back to you, in the words of §6.5 — and what changed is where
+   it is reached from and the back button at its head.
 
    Care that comes back to you, not a shop. Top to bottom:
      1. "Seu cuidado": the time given to yourself this month, and the Loops it
@@ -32,11 +39,13 @@ import {
   type BenefitView, type Redemption, type RedeemResult,
 } from '../gamification/benefits'
 
-export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievements, onSeeChallenges }: {
+export function BenefitsTab({ name, hasCompany, onBack, onStartSession, onSeeAchievements, onSeeChallenges }: {
   /** First name, when the account gives one — the top bar prints it. */
   name: string | null
   /** The person belongs to a company, so an employer's challenge is theirs. */
   hasCompany: boolean
+  /** Back to the four doors. */
+  onBack: () => void
   onStartSession: () => void
   onSeeAchievements: () => void
   onSeeChallenges: () => void
@@ -74,7 +83,7 @@ export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievement
     return (
       <>
         <TopBar name={name} />
-        <PageTitle title={t('Benefits')} />
+        <Head onBack={onBack} />
         <p className="call2-note">{t('Your benefits could not be loaded right now.')}</p>
       </>
     )
@@ -83,7 +92,7 @@ export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievement
     return (
       <>
         <TopBar name={name} />
-        <PageTitle title={t('Benefits')} />
+        <Head onBack={onBack} />
         <p className="call2-note" aria-busy="true">{t('Loading…')}</p>
       </>
     )
@@ -95,7 +104,7 @@ export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievement
   return (
     <>
       <TopBar name={name} />
-      <PageTitle title={t('Benefits')} note={t('Every Loop is born from a minute of care for your mind.')} />
+      <Head onBack={onBack} />
 
       {/* The mockup's three cards across the top: the balance, the company's
           challenge, and what has been unlocked. Each one is the app's own
@@ -204,6 +213,20 @@ export function BenefitsTab({ name, hasCompany, onStartSession, onSeeAchievement
           onRedeemed={() => load()}
         />
       )}
+    </>
+  )
+}
+
+/* The head of the page, in one place: the three states above it (failed,
+   loading, loaded) all print the same title, and the definition of a Loop is
+   NOT repeated here — it is the subtitle of the screen this one opens from
+   (`selfuse/LoopsTab.tsx`). */
+function Head({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n()
+  return (
+    <>
+      <button className="su-back" onClick={onBack}>‹ {t('Loops')}</button>
+      <PageTitle title={t('Prizes')} note={t('Care that comes back to you.')} />
     </>
   )
 }

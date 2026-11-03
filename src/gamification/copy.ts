@@ -168,3 +168,27 @@ export function progressKey(metric: AchievementMetric): { of: string; left: stri
       return { of: '{value} of {goal} sessions', left: '{left} to go' }
   }
 }
+
+/* ---------------------------------------------------------------- Loops ---
+   WHAT A LOOP IS, in one text (POs, 2026-11-03).
+
+   It is printed in exactly two places, and they must read the same: the
+   popup that opens from the Loops pill in the top bar, and the subtitle of
+   the Loops screen. One constant, because two copies of a definition is how
+   two definitions happen.
+
+   What it has to say, and why each part is in it:
+     · a Loop IS a minute of a protocol listened to the end — the rule the
+       economy actually runs on (SPEC §2.2, `gamification/economy.ts`);
+     · this exists for the person's health, not for their time on a screen —
+       the POs' own words, and the reason nothing here is earned by opening
+       the app;
+     · they cannot be bought, which is what keeps the Loop a measure of care
+       rather than a currency (GAM-R7, §6.5).
+
+   No forbidden word, no measurement word ("pontuação", "nível" — PLAN A6),
+   and nothing a person could read as a score. */
+export const LOOPS_TITLE = 'What are Loops?'
+
+export const LOOPS_EXPLAINER =
+  'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.'

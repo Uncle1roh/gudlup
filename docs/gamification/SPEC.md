@@ -159,6 +159,22 @@ Awarded to every user who contributed at least `min_contribution_points` in the 
 There are **no** area/unit/team achievements (GAM-R4).
 
 ### 3.4 UI
+
+> **Amended 2026-11-03 (POs).** Two things in this section are no longer true,
+> and the code is the newer one.
+>
+> 1. **There is no segmented control.** "Minha jornada" is the Resumo and
+>    nothing else. Conquistas, Rankings and Desafios moved to a screen of
+>    their own — **Loops** (`selfuse/LoopsTab.tsx`) — which opens on four
+>    boxes, one per door, the fourth being Prêmios (what §6 calls the
+>    Benefits tab). The screen's subtitle is the definition of a Loop, in the
+>    same words as the popup on the Loops pill (`LOOPS_EXPLAINER`).
+> 2. **The unlock sheet is not "on the next app open".** It is read again the
+>    moment a session ends, so the achievement is announced when it happens.
+>    What GAM-R6 forbids is unchanged and still holds: nothing from
+>    gamification is on the post-session screen itself, and no sheet opens
+>    while a session or any other overlay is up.
+
 - **Progress tab → segmented control "Resumo | Conquistas".** Under Conquistas: chips "Individuais · 7 de 16" / "Coletivas · 3 de 8"; a "Próxima conquista" card (badge, name, progress bar, "3h 40min de 5h · faltam 80 min"); a 3-column badge grid (unlocked in tier colours, locked in greyed state with "Bloqueada"); link "Ver todas as 16 conquistas".
 - **Unlock sheet** (bottom sheet over Home, on the **next app open** — never after a session, GAM-R6): large badge with two faint orbit ellipses, eyebrow "Conquista desbloqueada", name, one warm sentence ("Você concluiu sua primeira sessão Deep de 24 minutos. Que bom ter dedicado esse tempo a você."), pill "+50 Loops de bônus", primary "Ver minhas conquistas", text button "Agora não". Queue multiple unlocks into one sheet with a pager. Mark `seen_at` on close.
 - **Badge visual system:** individual = circle; collective = hexagon (shape differs, not only colour). Each badge: outer ring, inner fill, two faint rotated ellipses (the "loop" motif from the logo) and a centred stroke icon. Tier colours in §9. Locked = `#ECEADB` fill, `#8E8B7A` icon. Build it as one reusable `<Badge icon tier shape size locked />` SVG component.
@@ -228,6 +244,11 @@ A challenge is a **time-boxed event**. Two formats only:
 ---
 
 ## 6. Benefits tab — health-first, Loops wallet
+
+> **Renamed 2026-11-03 (POs): the screen is "Prêmios"**, and it is not a tab
+> on the rail any more — it is the fourth door of the Loops screen (§3.4).
+> Everything below still describes it: the wallet header, the pillars, the
+> redemption flow and §6.5's glossary are unchanged.
 
 ### 6.1 Intent
 The tab must read as **care that comes back to you**, not as a shop. The person's care habit is the hero; Loops are the evidence of that care; benefits are what care unlocks beyond health.
@@ -320,6 +341,7 @@ Sidebar adds: **Economia · Conquistas · Desafios · Benefícios · Tags · Pla
 - Badge tier colours (fill / ring / icon): Semente `#E3EDC6/#B7DBAD/#2F5B3A` · Broto `#B7DBAD/#7AC69B/#1F4A33` · Raiz `#3DB189/#7AC69B/#0E3527` · Copa `#00785C/#3DB189/#FAF8DF` · Coletiva `#533360/#E89D64/#F4F0BE` · Nacional `#2465AB/#F4F0BE/#FFFFFF` · Empresa `#3B2A47/#E89D64/#F4F0BE` · Bloqueada `#ECEADB/#D9D6C3/#8E8B7A`.
 - Cards: white, radius 20, 1px border. Pills: radius 999, 12px bold. Touch targets ≥ 44px. Text contrast ≥ 4.5:1. Stroke icons (no emoji anywhere).
 - B2C tab bar: Início · Jornada · Benefícios · Progresso · Perfil (keep existing order if it differs, but Benefits must be a tab).
+  **2026-11-03:** the rail is Início · Terapia · (Acompanhamento) · Minha jornada · **Loops** · Perfil; Benefícios is inside Loops, as Prêmios.
 
 ---
 
