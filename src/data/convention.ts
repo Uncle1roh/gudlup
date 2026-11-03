@@ -56,6 +56,7 @@
          so nobody keeps a paid feature by keeping an old code.
    ============================================================================ */
 
+import { demoCompanyName, previewing } from '../demo/flag'
 export type ConventionType = 'self-use' | 'self-use-plus'
 
 export interface EapContact {
@@ -355,7 +356,17 @@ export function resolveCompanyCode(raw: string | null | undefined, now = Date.no
   const code = normalizeCode(raw)
   const found = allConventions().find((c) => c.code === code)
   if (!found) return null
-  return conventionStatus(found, now) === 'expired' ? null : found
+  if (conventionStatus(found, now) === 'expired') return null
+  /* THE PROSPECT'S OWN NAME, during a demo. The commercial console asks for
+     it before opening a surface, and this is the one place every screen
+     that prints a company name goes through — the sponsor line in Perfil,
+     the Loops multiplier, the dashboard's header, the challenge that comes
+     "from your company". Only the demo tenant, and only while a demo is
+     being given; a real code is never renamed (`demo/flag.ts`). */
+  if (code === DEMO_TENANT_CODE && previewing()) {
+    return { ...found, companyName: demoCompanyName() }
+  }
+  return found
 }
 
 /** The contact the Safety Gateway should print: the company's EAP when one is

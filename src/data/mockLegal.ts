@@ -14,6 +14,8 @@ import type {
 } from '../legal/records'
 import { DEFAULT_CRISIS, DSR_DAYS, type CrisisResource } from '../legal/market'
 import { LEGAL_VERSION } from '../legal/types'
+import { previewing } from '../demo/flag'
+import { demoAcceptedDocs, demoProfile } from '../demo/world'
 
 const KEY = 'gl.mock.legal'
 
@@ -34,15 +36,33 @@ export interface MockLegalState {
 
 const DAY = 86_400_000
 
+/* While a DEMO is being given, the three people in it have a history: the
+   store opens with their profile and with what they have accepted, so no
+   surface opens on a consent screen in front of a prospect
+   (`demo/world.ts`). Outside a demo this is exactly what it always was —
+   one nameless demo profile that has accepted nothing, which is what lets a
+   developer see the first run. */
+function demoAcceptances(profileId: string): Acceptance[] {
+  if (!previewing()) return []
+  const at = Date.now() - 120 * DAY
+  return demoAcceptedDocs().map((docId, i) => ({
+    id: `demo-acc-${i}`, profileId, docId, version: LEGAL_VERSION,
+    locale: 'pt-BR', channel: 'demo', acceptedAt: at,
+  }))
+}
+
 function fresh(): MockLegalState {
   const today = new Date().toISOString().slice(0, 10)
+  const who = previewing() ? demoProfile() : null
   return {
     profile: {
-      id: 'demo-profile', name: 'Demo', email: 'demo@goodloop.app',
+      id: 'demo-profile',
+      name: who?.name ?? 'Demo',
+      email: who?.email ?? 'demo@goodloop.app',
       birthDate: null, country: null, market: null, personalEmail: null, locale: null,
-      companyId: null, sponsorFields: ['company code'],
+      companyId: who?.companyId ?? null, sponsorFields: ['company code'],
     },
-    acceptances: [],
+    acceptances: demoAcceptances('demo-profile'),
     consents: [],
     dataRequests: [],
     reports: [],

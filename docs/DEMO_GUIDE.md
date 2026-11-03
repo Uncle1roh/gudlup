@@ -1,5 +1,43 @@
 # Good Loop — B2B demo script (full journey)
 
+> ## Giving a demo from the commercial console (2026-11-03)
+>
+> This is the way to do it in front of a client. Everything below it is the
+> older developer-machine walkthrough, still true, still useful for testing.
+>
+> 1. Sign in to **#sales** with a commercial account.
+> 2. In the sidebar, **▶ Fare una demo**. Type the **client's company name**
+>    in the field — "Vale Logística", whatever is on the contract. It will be
+>    the company on every screen: the dashboard's header, the sponsor line in
+>    the profile, the Loops multiplier, the account settings. Leave it empty
+>    and the demo company is called Aurora Tech.
+> 3. Pick a door: **Utente**, **Terapeuta**, **Impresa**. The bar at the top
+>    of each surface moves between them without leaving the demo, and **Esci
+>    dall'anteprima** ends it and clears everything the demo wrote.
+>
+> **One story, three sides.** The person in the app is **Mariana Alves**, an
+> employee of the client's company, in treatment with **Dra. Helena Costa**.
+> Open the clinician's door and Mariana is in her roster, with her sessions,
+> her DASS-21 and her notes. Open the company's door and it is the same
+> company, run by **Camila Rocha** in HR. A session finished in front of the
+> client on the first screen shows up on the other two.
+>
+> **Her month is fourteen finished sessions and 198 minutes**, two of them
+> stopped early, with a mood calendar and two weekly check-ins — and the
+> Loops balance is the arithmetic of exactly those minutes. One list in
+> `src/demo/world.ts` feeds the device, the ledger and the clinician's
+> record, so the three cannot disagree on screen.
+>
+> **Nothing real is read or written.** A demo forces the in-memory data
+> layer, whatever the deployment is configured with (`src/demo/flag.ts`,
+> per tab, in sessionStorage). It no longer needs a deployment of its own or
+> `VITE_DEMO_FIXTURES`: the switch is the demo itself.
+>
+> **Every demo starts clean.** Whatever the last one left behind — a
+> half-finished session, a redeemed benefit, another client's company name —
+> is cleared when a surface is opened. Moving between the three surfaces
+> keeps it: there the state is the demo being given.
+
 Everything below works **offline, with no backend and no API keys**. Mock data lives in
 memory and is shared across B2C and B2B for the whole browser session.
 

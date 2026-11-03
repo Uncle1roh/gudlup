@@ -43,6 +43,7 @@ import { useSelfUseStore, takeSignupIntake, type Launch } from '../data/selfUseS
 import { accountName, displayName } from './greeting'
 import { useTherapyStore, linkFromServer, profileFor, withoutFixtures } from './therapyStore'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
+import { demoProfile } from '../demo/world'
 import { demoFixturesOn } from '../app/environment'
 import { resolveCompanyCode, hasProfessionalSupport, isDemoTenantCode } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
@@ -135,6 +136,11 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      whoever is signed in: a sales walkthrough must not write itself into the
      admin's own Self Use record, and must not read one either. */
   const storeId = previewing() ? PREVIEW_USER_ID : user?.id
+  /* In a demo the person on screen is Mariana, not the salesperson signed in
+     to the console — her name comes from the legal profile and her address
+     has to come from the same place, or the profile card reads
+     "Mariana Alves / comercial@goodloop.app" in front of a prospect. */
+  const accountEmail = (previewing() ? demoProfile('person').email : user?.email) ?? ''
   const { state, update, reset } = useSelfUseStore(storeId)
   /* The catalog offers this person only what is recorded in their language
      and their form (owner's rule, 2026-10-21): tell it who is listening. */
@@ -274,9 +280,19 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       .then((rows) => {
         if (!alive || !rows.length) return
         update((s) => {
-          const seen = new Set(s.logs.map((l) => `${l.at}|${l.duration}`))
+          /* MATCHED ON A WINDOW, not on an exact timestamp. A local log is
+             stamped when the session ENDED (`finishSession`) and the record
+             carries when it STARTED, so keying on equality never matched:
+             every session a person finished came back from the server as a
+             second one, and the profile counted it twice. Found while the
+             demo person's month showed 22 sessions for the 14 she had done,
+             but it is not a demo bug — it doubles a real history too, on
+             the next open. Same length, started within the session's own
+             span: that is the same session. */
+          const same = (r: { startedAt: number; duration: number }) =>
+            s.logs.some((l) => l.duration === r.duration && Math.abs(l.at - r.startedAt) <= (r.duration + 5) * 60_000)
           const extra = rows
-            .filter((r) => !seen.has(`${r.startedAt}|${r.duration}`))
+            .filter((r) => !same(r))
             .map((r) => ({
               at: r.startedAt,
               /* The log is keyed by SESSION SLUG and the record carries a
@@ -699,7 +715,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     }
     return (
       <PatientVideoCall
-        name={displayName(user?.email, legal.profile?.name)}
+        name={displayName(accountEmail, legal.profile?.name)}
         addressedAs={state.addressedAs ?? 'm'}
         therapist={therapy.link.therapist}
         startsAt={appointment?.startsAtMs ?? therapy.link.nextSessionAt}
@@ -802,7 +818,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         {tab === 'home' && !openChallenge && (
           <Explore
             topCard={homeChallenge ? <ChallengeCard c={homeChallenge} onOpen={() => setChallengeOpen(homeChallenge.id)} /> : null}
-            name={displayName(user?.email, legal.profile?.name)}
+            name={displayName(accountEmail, legal.profile?.name)}
             pathway={state.pathway}
             onStartPathway={startPathway}
             onStart={startFromExplore}
@@ -828,7 +844,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'path' && (
           <Path
-            name={displayName(user?.email, legal.profile?.name)}
+            name={displayName(accountEmail, legal.profile?.name)}
             therapistName={therapy.link?.therapist.name ?? null}
             prescriptions={prescriptions}
             onStart={(slug, duration, id) => setLaunch({ slug, duration, prescriptionId: id })}
@@ -837,7 +853,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'therapist' && (
           <TherapistTab
-            name={displayName(user?.email, legal.profile?.name)}
+            name={displayName(accountEmail, legal.profile?.name)}
             hasConvention={hasProfessionalSupport(convention)}
             therapy={therapy}
             update={updateTherapy}
@@ -852,7 +868,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         {tab === 'progress' && (
           <ProgressTab
             hasCompany={hasCompany}
-            name={displayName(user?.email, legal.profile?.name)}
+            name={displayName(accountEmail, legal.profile?.name)}
             state={state}
             therapy={therapy}
             onGoAchievements={() => { setLoopsView('achievements'); setTab('loops') }}
@@ -869,7 +885,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
         {tab === 'loops' && (
           <LoopsTab
             hasCompany={hasCompany}
-            name={displayName(user?.email, legal.profile?.name)}
+            name={displayName(accountEmail, legal.profile?.name)}
             view={loopsView}
             onView={setLoopsView}
             onStartSession={() => setTab('home')}
@@ -878,8 +894,8 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
 
         {tab === 'profile' && (
           <ProfileTab
-            name={accountName(user?.email, legal.profile?.name)}
-            email={user?.email ?? ''}
+            name={accountName(accountEmail, legal.profile?.name)}
+            email={accountEmail}
             convention={convention}
             hasTherapist={Boolean(therapy.link)}
             state={state}

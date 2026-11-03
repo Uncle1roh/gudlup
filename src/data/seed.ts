@@ -1,35 +1,44 @@
 import type { SessionRecord, Duration } from '../types/domain'
 import { makeMoodCheck } from '../lib/vas'
+import { SELF_USE_SESSIONS } from './selfuse'
+import { DEMO_SESSIONS, demoSessionStart } from '../demo/world'
 
 /* Mock data so the returning-user app has something to show before persistence
    and real history exist. Replaced by real records as sessions are completed. */
 
-const DAY = 86_400_000
 const now = Date.now()
 
-function rec(daysAgo: number, code: string, duration: Duration, pre: number, post: number): SessionRecord {
-  const started = now - daysAgo * DAY
-  return {
-    id: `seed-${daysAgo}-${code}`,
-    protocolCode: code,
-    duration,
-    startedAt: started,
-    completedAt: started + duration * 60_000,
-    vasPre: { ...makeMoodCheck(pre), at: started },
-    vasPost: { ...makeMoodCheck(post), at: started + duration * 60_000 },
-  }
-}
 
-export const SEED_HISTORY: SessionRecord[] = [
-  rec(18, 'GL-ANX 1.1', 6, 2, 4),
-  rec(16, 'GL-ANX 1.1', 6, 2, 4),
-  rec(14, 'GL-STRESS 4.1', 12, 3, 4),
-  rec(11, 'GL-ANX 1.1', 12, 2, 5),
-  rec(9, 'GL-ANX 1.1', 12, 3, 5),
-  rec(6, 'GL-DEP 2.4', 6, 3, 4),
-  rec(3, 'GL-ANX 1.1', 12, 3, 5),
-  rec(1, 'GL-ANX 1.1', 12, 4, 5),
-]
+/* THE SAME SESSIONS, SERVER-SIDE. This is what `listSessions` returns — the
+   clinician's view of her patient, and what the app merges into the device's
+   own log. It used to be eight invented records with different dates and
+   different protocols from the sixteen in `demo/world.ts`, so the demo
+   person had two histories: 22 sessions and 276 minutes in her profile, for
+   a month in which she had done 14.
+
+   One list now (`DEMO_SESSIONS`), mapped from session slug to the protocol
+   code behind it — which is the join the clinical record is keyed on. The
+   VAS pair either side of each one wanders a little rather than improving
+   every time: a demo that draws a cure is a demo that promises one. */
+const VAS_PAIRS: [number, number][] = [[2, 4], [3, 4], [2, 5], [3, 5], [3, 4], [2, 4], [4, 5], [3, 5]]
+
+export const SEED_HISTORY: SessionRecord[] = DEMO_SESSIONS
+  .filter(([, , , done]) => done)
+  .map((session, i) => {
+    const [, , duration, , slug] = session
+    const code = SELF_USE_SESSIONS.find((x) => x.slug === slug)?.protocolCode ?? 'GL-ANX 1.1'
+    const started = demoSessionStart(session, now)
+    const [pre, post] = VAS_PAIRS[i % VAS_PAIRS.length]
+    return {
+      id: `seed-${i}-${code}`,
+      protocolCode: code,
+      duration,
+      startedAt: started,
+      completedAt: started + duration * 60_000,
+      vasPre: { ...makeMoodCheck(pre), at: started },
+      vasPost: { ...makeMoodCheck(post), at: started + duration * 60_000 },
+    }
+  })
 
 /* The 3-month journey (weekly cadence). */
 export const JOURNEY_TOTAL_WEEKS = 12

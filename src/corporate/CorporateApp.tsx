@@ -24,7 +24,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth, SignOutButton } from '../auth/auth'
 import { useI18n } from '../i18n'
 import { useDataProvider } from '../data/provider'
-import { normalizeCode, resolveCompanyCode } from '../data/convention'
+import { normalizeCode, resolveCompanyCode, DEMO_TENANT_CODE } from '../data/convention'
+import { previewing } from '../demo/flag'
+import { demoProfile } from '../demo/world'
 import { LanguagePicker } from '../components/LanguagePicker'
 import { SetupWizard } from './Setup'
 import { Overview, Engagement, Wellbeing, Reports } from './Screens'
@@ -97,6 +99,17 @@ function useTenant(): Tenant | null {
 
   useEffect(() => {
     let live = true
+    /* A DEMO: the dashboard is the demo company's, whoever is signed in.
+       The salesperson is signed in as themselves — their address is in no
+       company's user list — so this used to fall through to Acme
+       Corporation, in front of a prospect, while the app surface beside it
+       showed a different company entirely. One story: the person in the
+       app works HERE (`demo/world.ts`). */
+    if (previewing()) {
+      const c = resolveCompanyCode(DEMO_TENANT_CODE)
+      setTenant(c ? tenantFromConvention(c) : FALLBACK_TENANT)
+      return () => { live = false }
+    }
     void (async () => {
       let code: string | null = null
       try {
@@ -152,7 +165,12 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
   const agg = useMemo(() => buildAggregates(state), [state, locale])
   const unread = state.reports.filter((r) => !r.viewed).length
 
-  const adminName = state.profile.contactName || displayName(user?.email)
+  /* In a demo this is the company's own HR admin, not the salesperson
+     signed in to the console — the dashboard greeted "Boa tarde, Comercial"
+     in front of the prospect (`demo/world.ts`). */
+  const adminName = previewing()
+    ? demoProfile('company').name
+    : state.profile.contactName || displayName(user?.email)
 
   /* SPN-07 — before anything else, once, logged: this service supports
      wellbeing and neither assesses workplace risk nor meets any legal

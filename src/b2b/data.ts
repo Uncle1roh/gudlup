@@ -10,6 +10,7 @@ const DAY = 86_400_000
 const HOUR = 3_600_000
 const now = Date.now()
 
+import { DEMO_CLINICIAN } from '../demo/world'
 export interface Goal {
   text: string
   status: 'achieved' | 'in-progress' | 'review'
@@ -106,9 +107,11 @@ export interface Therapist {
   avatar: string
 }
 
+/* The clinician of the demo world (`demo/world.ts`) — the same person the
+   app's therapist link names and the console's user list shows. */
 export const DEMO_THERAPIST: Therapist = {
-  name: 'Dra. Helena Costa',
-  crp: 'CRP 04/45821',
+  name: DEMO_CLINICIAN.name,
+  crp: DEMO_CLINICIAN.registration,
   status: 'approved',
   documents: [],
   avatar: '👩🏻‍⚕️',

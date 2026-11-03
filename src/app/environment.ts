@@ -41,6 +41,7 @@
    ============================================================================ */
 
 import { hasSupabaseEnv } from '../auth/supabaseClient'
+import { previewing } from '../demo/flag'
 
 export type AppEnv = 'production' | 'staging' | 'demo' | 'local' | 'unknown'
 
@@ -56,6 +57,14 @@ export type AppEnv = 'production' | 'staging' | 'demo' | 'local' | 'unknown'
  * their browser for ever otherwise (`selfuse/SelfUseApp.tsx`, the sweep).
  */
 export function demoFixturesOn(): boolean {
+  /* A DEMO IS BEING GIVEN, so the demo world exists (owner, 2026-11-03).
+     This used to be the build variable alone, which meant the commercial
+     team needed a deployment of their own to show the product on — and
+     until they had one, the walkthrough opened on an account with no
+     company and no therapist, which is half the product missing. The flag
+     is per-tab and only a console can set it (`demo/flag.ts`), so nothing
+     here can reach a person who is not being shown a demo. */
+  if (previewing()) return true
   const env = import.meta.env as ImportMetaEnv | undefined
   const v = env?.VITE_DEMO_FIXTURES
   return v === '1' || v === 'true'

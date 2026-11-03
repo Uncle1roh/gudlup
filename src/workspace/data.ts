@@ -46,6 +46,8 @@ const HOUR = 3_600_000
 
 /* ------------------------------------------------------------ therapist -- */
 
+import { DEMO_CLINICIAN, DEMO_PERSON } from '../demo/world'
+import { demoCompanyName } from '../demo/flag'
 export type VerificationState = 'pending' | 'approved' | 'rejected' | 'docs-needed'
 
 export interface TherapistAccount {
@@ -263,9 +265,13 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
   const base = emptyWorkspace()
   const acct: TherapistAccount = {
     ...base.account,
-    fullName: 'Dr. Ana Ribeiro',
-    email: 'ana.ribeiro@example.com',
-    licenceNumber: 'CRP 06/158342',
+    /* The demo world's clinician (`demo/world.ts`) — the same person the
+       app's therapist link names, the console's user list shows and the
+       legal store signs in as. She was "Dr. Ana Ribeiro" here, which made
+       four different therapists across one walkthrough. */
+    fullName: DEMO_CLINICIAN.name,
+    email: DEMO_CLINICIAN.email,
+    licenceNumber: DEMO_CLINICIAN.registration,
     licenceRegion: 'SP',
     glcpNumber: 'GLCP-2025-0418',
     bio: 'Clinical psychologist specializing in anxiety and stress-related disorders. 12 years of practice with a focus on evidence-based, integrative approaches.',
@@ -305,7 +311,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     id,
     name,
     memberSince: now - 400 * DAY,
-    company: 'Nexa Health',
+    company: demoCompanyName(),
     status: 'active',
     linkedAt: now - 380 * DAY,
     nextSessionAt: opts.nextAt,
@@ -321,7 +327,9 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
     ...opts,
   })
 
-  const maria = mk('p-maria', 'Maria Santos', {
+  /* The one patient whose Self Use activity is bridged is the person the
+     app surface shows — that is what makes the three screens one story. */
+  const maria = mk(DEMO_PERSON.patientId, DEMO_PERSON.name, {
     nextAt: clinicAt(0, [14, 0]),
     lastAgo: 6 * DAY,
     assessmentDue: 'DASS-21 (T2)',
@@ -356,7 +364,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
       { id: 'g2', text: 'Re-establish evening wind-down routine', status: 'achieved', createdAt: now - 90 * DAY, closedAt: now - 20 * DAY },
     ],
     prescriptions: [
-      { id: 'rx-m1', patientId: 'p-maria', protocolCode: 'GL-ANX 1.1', version: 6, perWeek: 3, fromAt: now - 6 * DAY, toAt: now + DAY, done: 2 },
+      { id: 'rx-m1', patientId: DEMO_PERSON.patientId, protocolCode: 'GL-ANX 1.1', version: 6, perWeek: 3, fromAt: now - 6 * DAY, toAt: now + DAY, done: 2 },
     ],
     bridgedSessions: [
       { at: now - 3 * DAY, protocolCode: 'GL-STRESS 4.1', minutes: 12, completed: true },

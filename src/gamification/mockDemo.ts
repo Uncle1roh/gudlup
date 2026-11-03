@@ -16,6 +16,7 @@
 
 import type { MockLedger } from './mockLedger'
 import type { MockBenefits } from './mockBenefits'
+import { DEMO_SESSIONS, demoListenedSec, demoSessionStart } from '../demo/world'
 
 const DAY = 86_400_000
 const HOUR = 3_600_000
@@ -23,16 +24,15 @@ const HOUR = 3_600_000
 export function seedDemoHistory(ledger: MockLedger, benefits: MockBenefits, now = Date.now()): void {
   const keep = ledger.settings.maxBackdateHours
   ledger.settings = { ...ledger.settings, maxBackdateHours: null }
-  /* [days ago, hour of day in São Paulo (UTC−3), minutes, completed] */
-  const plan: [number, number, 6 | 12 | 24, boolean][] = [
-    [20, 21, 12, true], [19, 12, 6, true], [17, 22, 24, true], [16, 13, 12, true], [15, 8, 6, false],
-    [13, 21, 24, true], [12, 12, 12, true], [11, 22, 12, true], [9, 13, 6, true], [8, 21, 24, true],
-    [6, 12, 12, true], [5, 7, 24, false], [4, 22, 12, true], [3, 13, 6, true], [2, 21, 24, true], [1, 12, 12, true],
-  ]
-  plan.forEach(([ago, hour, min, completed], i) => {
-    const day = new Date(now - ago * DAY)
-    const start = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour + 3, 5)
-    const heard = completed ? min * 60 : Math.round(min * 60 * 0.45)
+  /* THE SAME SIXTEEN the person's own device keeps (`demo/world.ts`,
+     `admin/preview.ts`). They used to be written out twice, here and in the
+     preview seed, and the two lists disagreed — so the Loops pill said 542
+     while the profile beside it said 78 minutes and the journey said there
+     had been no sessions at all. One list, two readers. */
+  DEMO_SESSIONS.forEach((s, i) => {
+    const [, , min, completed] = s
+    const start = demoSessionStart(s, now)
+    const heard = demoListenedSec(s)
     ledger.creditSession({
       id: `demo-${i}`, protocolCode: 'DEMO', duration: min, startedAt: start, completedAt: start + heard * 1000,
       completed, listenedSec: heard, stereoChecked: i === 0,

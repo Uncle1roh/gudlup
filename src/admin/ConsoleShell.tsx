@@ -25,6 +25,7 @@ import { AvatarUpload } from '../components/AvatarUpload'
 import { HelpNowButton } from '../legal/HelpNow'
 import { LanguagePicker } from '../components/LanguagePicker'
 import { SURFACES, openPreview, type PreviewSurface } from './preview'
+import { demoCompanyName, setDemoCompanyName, DEMO_COMPANY_FALLBACK } from '../demo/flag'
 
 export interface ConsoleNavItem<Id extends string> {
   id: Id
@@ -89,6 +90,12 @@ export function ConsoleShell<Id extends string>({
      the other keeps the Italian its screens are written in. */
   const ct = language ? st : (k: string) => k
   const [demoOpen, setDemoOpen] = useState(false)
+  /* Pre-filled with whatever a previous demo in this tab typed, so coming
+     back from a surface does not lose it. */
+  const [company, setCompany] = useState(() => {
+    const n = demoCompanyName()
+    return n === DEMO_COMPANY_FALLBACK ? '' : n
+  })
   const current = nav.find((n) => n.id === section)
 
   return (
@@ -146,9 +153,26 @@ export function ConsoleShell<Id extends string>({
             {demoOpen && (
               <div className="adm-open__panel">
                 <span className="adm-open__note">{ct('Dati dimostrativi: niente di reale viene letto o scritto.')}</span>
+                {/* THE PROSPECT'S OWN NAME ON THE SCREEN. Typed here, before
+                    a surface opens, and printed by every screen that names a
+                    company — the dashboard's header, the sponsor line in the
+                    profile, the Loops multiplier, the company's challenge.
+                    It lives in sessionStorage with the demo flag, so it is
+                    one tab's and is gone when the tab closes
+                    (`demo/flag.ts`). Empty is fine: the demo company has a
+                    name of its own. */}
+                <label className="adm-open__field">
+                  <span>{ct('Azienda del cliente')}</span>
+                  <input
+                    type="text"
+                    value={company}
+                    placeholder={DEMO_COMPANY_FALLBACK}
+                    onChange={(e) => { setCompany(e.target.value); setDemoCompanyName(e.target.value) }}
+                  />
+                </label>
                 <div className="adm-open__row">
                   {SURFACES.filter((s) => preview.includes(s.id)).map((s) => (
-                    <button key={s.id} className="adm-open__btn" onClick={() => openPreview(s.id)}>
+                    <button key={s.id} className="adm-open__btn" onClick={() => { setDemoCompanyName(company); openPreview(s.id) }}>
                       {ct(s.label)}
                     </button>
                   ))}

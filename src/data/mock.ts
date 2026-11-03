@@ -15,6 +15,8 @@ import type { AssessmentRecord } from './assessments'
 import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
 import { MIN_COHORT } from '../legal/market'
 import { demoFixturesOn } from '../app/environment'
+import { DEMO_CLINICIAN } from '../demo/world'
+import { demoCompanyName } from '../demo/flag'
 import type { DataRequest, Report } from '../legal/records'
 import { MockLedger } from '../gamification/mockLedger'
 import { MockBenefits } from '../gamification/mockBenefits'
@@ -115,9 +117,9 @@ export const LINKED_PATIENT_ID = 'p1'
    three months, one session a week, her own pacing. The app did not compose
    it and cannot — this is what a therapist's plan looks like in the data. */
 const DEMO_PLAN_ITEMS: PlanItem[] = [
-  { id: 'pi-1', position: 0, protocolCode: 'GL-ANX 1.1', duration: 12, week: 1, note: 'Iniziamo da qui, anche solo tre volte questa settimana.', doneAt: Date.now() - 6 * 86_400_000 },
+  { id: 'pi-1', position: 0, protocolCode: 'GL-ANX 1.1', duration: 12, week: 1, note: 'Vamos começar por aqui, mesmo que só três vezes esta semana.', doneAt: Date.now() - 6 * 86_400_000 },
   { id: 'pi-2', position: 1, protocolCode: 'GL-ANX 1.1', duration: 12, week: 2, doneAt: Date.now() - 2 * 86_400_000 },
-  { id: 'pi-3', position: 2, protocolCode: 'GL-ANX 1.3', duration: 12, week: 3, note: 'Questa lavora sul respiro: falla quando senti il corpo attivato.' },
+  { id: 'pi-3', position: 2, protocolCode: 'GL-ANX 1.3', duration: 12, week: 3, note: 'Esta trabalha a respiração: faça quando sentir o corpo acelerado.' },
   { id: 'pi-4', position: 3, protocolCode: 'GL-ANX 1.3', duration: 24, week: 4 },
   { id: 'pi-5', position: 4, protocolCode: 'GL-ANX 1.4', duration: 12, week: 5 },
   { id: 'pi-6', position: 5, protocolCode: 'GL-ANX 1.4', duration: 12, week: 6 },
@@ -127,7 +129,7 @@ const DEMO_PLAN_ITEMS: PlanItem[] = [
   { id: 'pi-10', position: 9, protocolCode: 'GL-ANX 1.5', duration: 24, week: 10 },
   { id: 'pi-11', position: 10, protocolCode: 'GL-ANX 1.1', duration: 12, week: 11 },
   { id: 'pi-12', position: 11, protocolCode: 'GL-ANX 1.4', duration: 12, week: 12 },
-  { id: 'pi-13', position: 12, protocolCode: 'GL-ANX 1.5', duration: 24, week: 13, note: 'Ultima del percorso: ci rivediamo per rivedere insieme come è andata.' },
+  { id: 'pi-13', position: 12, protocolCode: 'GL-ANX 1.5', duration: 24, week: 13, note: 'Última do percurso: a gente se vê para ver juntas como foi.' },
 ]
 
 const DEMO_PLAN: Plan = {
@@ -156,12 +158,17 @@ const clonePlan = (p: Plan | null): Plan | null => (p ? { ...p, items: p.items.m
    old two-localStorage arrangement the therapist console and the patient app
    genuinely read the SAME messages here — which is what makes the demo an
    honest rehearsal of the wired version rather than a mime of it. */
+/* ONE CLINICIAN, not three. The person's therapist was "Dra. Ana Silva"
+   here, "Dra. Ana Fontes" in the bookable directory and "Dra. Helena Costa"
+   in the console's user list — so a walkthrough that moved between the
+   three surfaces changed doctor twice. She is `DEMO_THERAPIST`
+   (`demo/world.ts`) everywhere now. */
 const link: TherapistLink = {
   patientId: LINKED_PATIENT_ID,
-  therapistId: 'th-silva',
-  therapistName: 'Dra. Ana Silva',
-  crp: 'CRP 06/12345',
-  since: Date.now() - 21 * 86_400_000,
+  therapistId: DEMO_CLINICIAN.id,
+  therapistName: DEMO_CLINICIAN.name,
+  crp: DEMO_CLINICIAN.registration,
+  since: Date.now() - 120 * 86_400_000,
 }
 let therapistCodes: TherapistCode[] = [
   { code: 'GL-DEMO-CODE', label: 'Demo', active: true, createdAt: Date.now() - 86_400_000 },
@@ -355,6 +362,7 @@ let sessionRequests: SessionRequest[] = [
    booking with Dr. Ana Silva (the Self Use app's th-silva) came back under
    somebody else's name. */
 const MOCK_THERAPIST_NAMES: Record<string, string> = {
+  [DEMO_CLINICIAN.id]: DEMO_CLINICIAN.name,
   'th-demo': 'Dra. Ana Fontes',
   'th-demo-2': 'Dr. Rafael Lima',
   // the Self Use app's bookable therapist (selfuse/therapyStore DEMO_THERAPISTS)
@@ -377,7 +385,11 @@ function gamification(history: boolean) {
     const ledger = new MockLedger()
     const benefits = new MockBenefits(ledger)
     const challenges = new MockChallenges(ledger, benefits)
-    const company = new MockCompany(ledger, benefits, challenges, companies.find((c) => c.id === GAM_COMPANY_ID)?.name ?? 'Aurora')
+    /* The employer behind the multiplier and the company challenge is the
+       one the demo is about — the prospect's own name while a demo is being
+       given, and `Aurora Tech` otherwise, which is the name the companies
+       list carried anyway (`demo/flag.ts`). */
+    const company = new MockCompany(ledger, benefits, challenges, demoCompanyName())
     gamState = { ledger, benefits, challenges, company }
     /* A lived-in walkthrough: three weeks of listening, a city chosen, one
        benefit redeemed (src/gamification/mockDemo.ts). Demo data only — the
@@ -412,7 +424,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
        somebody with no plan. */
     listAvailableTherapists: async () => (DEMO_FIXTURES
       ? [
-          { id: 'th-demo', name: 'Dra. Ana Fontes', avatarUrl: null },
+          { id: DEMO_CLINICIAN.id, name: DEMO_CLINICIAN.name, avatarUrl: null },
           { id: 'th-demo-2', name: 'Dr. Rafael Lima', avatarUrl: null },
         ]
       : []),
@@ -1092,7 +1104,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     getProfessionalCard: async (therapistId) => {
       await wait(40)
       const p = loadMockLegal().professional
-      const name = therapistId === 'th-demo-2' ? 'Dr. Rafael Lima' : 'Dra. Ana Fontes'
+      const name = therapistId === 'th-demo-2' ? 'Dr. Rafael Lima' : DEMO_CLINICIAN.name
       return {
         id: therapistId, name, registration: p.registration, registry: p.registry, registryRegion: p.registryRegion,
         verifiedAt: p.verifiedAt, consentTemplate: p.consentTemplate,

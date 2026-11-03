@@ -231,7 +231,7 @@ const DAY = 86_400_000
 export const DEMO_THERAPISTS: TherapistProfile[] = [
   {
     id: 'th-silva',
-    name: 'Dr. Ana Silva',
+    name: 'Dra. Ana Silva',
     role: 'Clinical Psychologist',
     registration: 'CRP 06/158342',
     bio: 'Specializing in stress management and burnout prevention. 12 years of clinical experience.',
@@ -253,7 +253,7 @@ export const DEMO_THERAPISTS: TherapistProfile[] = [
   },
   {
     id: 'th-rocha',
-    name: 'Dr. Lucia Rocha',
+    name: 'Dra. Lúcia Rocha',
     role: 'Clinical Psychologist',
     registration: 'CRP 06/171904',
     bio: 'Works with stress, balance and sustainable working habits.',
@@ -275,8 +275,15 @@ export const DEMO_THERAPISTS: TherapistProfile[] = [
  */
 export function isFixtureTherapist(t: { id?: string; name?: string } | null | undefined): boolean {
   if (!t) return false
-  const ids = new Set([...DEMO_THERAPISTS.map((d) => d.id), 'th-demo', 'th-demo-2'])
-  const names = new Set([...DEMO_THERAPISTS.map((d) => d.name), 'Dra. Ana Fontes', 'Dr. Rafael Lima'])
+  /* Every name the fixtures have EVER used, not only the current ones: this
+     is what sweeps a demo clinician out of a real person's browser, and a
+     rename must not strand the ones already written there
+     (`demo/world.ts` is the current cast). */
+  const ids = new Set([...DEMO_THERAPISTS.map((d) => d.id), 'th-demo', 'th-demo-2', 'th-helena', 'th-silva'])
+  const names = new Set([
+    ...DEMO_THERAPISTS.map((d) => d.name),
+    'Dra. Ana Fontes', 'Dr. Rafael Lima', 'Dra. Helena Costa', 'Dra. Ana Silva', 'Dr. Ana Silva',
+  ])
   return (!!t.id && ids.has(t.id)) || (!!t.name && names.has(t.name))
 }
 

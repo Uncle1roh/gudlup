@@ -3149,6 +3149,24 @@ td, th { overflow-wrap: anywhere; }
 .adm-open__go:hover { background: rgba(255, 255, 255, 0.16); }
 .adm-open__panel { margin-top: 8px; }
 
+/* The prospect's company, typed before a demo opens (ConsoleShell). A demo
+   headed by the client's own name sells; one headed by "Acme Corporation"
+   has to be apologised for. */
+.adm-open__field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; }
+.adm-open__field > span { font-size: 11px; color: #8ba394; }
+.adm-open__field > input {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8f0ea;
+  font: inherit;
+  font-size: 13px;
+}
+.adm-open__field > input::placeholder { color: #6f8679; }
+.adm-open__field > input:focus-visible { outline: 2px solid #1fbf94; outline-offset: 1px; }
+
 /* ---- the console's create dialog ---------------------------------------- */
 .adm-modal {
   position: fixed; inset: 0; z-index: 80;
