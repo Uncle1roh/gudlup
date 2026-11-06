@@ -142,6 +142,30 @@ html.gl2 body {
   background-repeat: no-repeat, no-repeat;
 }
 
+/* --------------------------------- and the window the rings fill, instead ---
+   While `components/ambient/AmbientBackground` owns the window — on the
+   library, and on the public pages and the door, which never get this far —
+   the app's own ground steps aside.
+
+   It has to be said out loud rather than simply covered. The background is
+   an opaque layer at `z-index: -1`, which on an ordinary page paints over
+   the canvas and under the content; but <html> here carries a background,
+   so the BODY's is no longer propagated to the canvas and is painted as an
+   in-flow background instead — after the negative layer, and therefore on
+   top of the rings. The photograph came back over the thing that replaced
+   it.
+
+   The COLOUR goes with the picture. It is opaque and it paints in the same
+   in-flow layer, so leaving it behind left a flat cream page with the
+   shelves moved up and no rings on it.
+
+   The attribute is written by the background itself, and dropped a beat
+   AFTER the background goes off rather than on the same frame: the app's
+   ground coming back instantly behind something that is still fading out
+   is a fade nobody sees. The other four destinations are untouched. */
+html.gl2[data-gl-amb='on'] body { background: transparent; }
+html.gl2[data-gl-amb='on'] body::before { display: none; }
+
 /* ----------------------------------------- the window a protocol fills ---
    While a protocol screen is open — its detail page, the pre-session card,
    the headphone check, the player, the post-session screen — the PAGE
@@ -496,8 +520,10 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  /* Above the Home's photograph, which is absolutely positioned against
-     this same box and runs the full width behind everything (`.gl-homebg`). */
+  /* Above the window's own background — the rings and the ground drawn by
+     `components/ambient/`, which is fixed and behind everything. The rail
+     was lifted for the library's old 760px photograph, which is gone; it
+     stays lifted because the thing it has to stand above did not. */
   position: relative;
   z-index: 2;
 }
@@ -1655,140 +1681,47 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
 .gl-root .thr-extra .thr-col:empty { display: none; }
 @media (min-width: 900px) { .gl-root .thr-extra .thr-cols { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); } }
 
-/* ------------------------------------------------------ the Home ridge ---
-   One photograph at the head of the library, and nowhere else.
+/* ------------------------------------------------- the library's ground ---
+   The library used to carry a ridge of its own: `.gl-homefill`, a flat
+   colour fixed to the window, and `.gl-homebg`, the app's mountain
+   photograph 760px tall at the head of the column, fading into it sideways
+   and downwards. Two more rules went with them — a `:has(.gl-homebg)` rule
+   that pulled the column up under the transparent Help now strip so the
+   picture could reach the top of the WINDOW rather than the top of the
+   column, and a sibling rule that lifted everything printed after it.
 
-   TWO layers, and the difference between them is the whole of it:
+   All four are gone (POs, 2026-11-06). The window is dressed once, at the
+   app root, by `components/ambient/` — the brand's rings in the corner, the
+   person's own light or dark palette under them, and a fade at the foot so
+   a card is read against a colour. The library claims that background by
+   mounting (`ui2/Home.tsx`); the other four destinations do not, and they
+   stand on the app's veiled photograph exactly as before.
 
-     · `.gl-homefill` is this screen's ground — one flat
-       `--gl-ground-base`, FIXED to the window, under everything the Home
-       draws. Fixed because `.gl-root` IS the scroller: an absolutely
-       placed box inside a scroller is only ever as tall as one screenful,
-       so `bottom: 0` would have painted the first screen and left the rest
-       of the page to the surface's photograph;
+   The photograph itself is untouched in `public/media/` and is still that
+   ground. What left this file is the second, cropped copy of it that only
+   the library drew.
 
-     · `.gl-homebg` is the picture, 760px at the head of the column,
-       absolute against `.gl-root`, so it spans the window and scrolls away
-       with the first screenful.
+   ONE ENTRANCE, on one path. Signing in sends the rings travelling from the
+   person in the hero photograph out to the corner of the library, and the
+   content waits for them: 0.9s, after a 1.7s beat. `SelfUseApp` puts the
+   class on for the few seconds the arrival lasts and never for an ordinary
+   visit — tapping Início is not an arrival, and a shelf that faded in every
+   time would be a shelf you waited for. */
 
-   The fill is what closes the seam. The ridge's bottom fade ends in
-   `--gl-ground-base` and the fill IS `--gl-ground-base`, so the picture
-   dissolves into the colour that then runs to the foot of the page. Before
-   it, the fade ended at 760px and the surface's own ground reappeared
-   underneath — the same mountains, veiled and cropped to the window: a
-   straight line across the screen at the height of the cards, and a blue
-   cast over the shelves where the page should have been cream.
-
-   So this is the one destination that covers the surface's ground rather
-   than standing on it. The other five are untouched, and the fades are
-   still drawn in the ground's own colour, so the day that colour changes
-   neither layer needs editing.
-
-   `.gl-nav` is lifted above both; everything the Home prints after the
-   picture is lifted by the sibling rule below. */
-
-.gl-homefill {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: var(--gl-ground-base);
-  pointer-events: none;
+.gl-root .tabview.is-arriving {
+  animation: gl-arrive 0.9s ease 1.7s both;
 }
 
-/* The dark room keeps its grain. `body::before` lays one tile of noise over
-   the ground (see "the grain" at the top of this file) at `z-index: -1`,
-   which the fill now covers, so the fill carries its own copy — without it
-   the glass panes on this screen would have a flat colour to blur, which is
-   to say nothing. Same tile, same opacity, same blend. */
-html.gl2[data-ground='dark'] .gl-homefill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.11;
-  mix-blend-mode: overlay;
-  background-size: 170px 170px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23n)'/%3E%3C/svg%3E");
+@keyframes gl-arrive {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
 }
 
-/* …and the picture reaches the top of the WINDOW, not the top of the
-   column. The Help now strip above it (`.su-shell__bar`) is transparent on
-   this surface, but it is still a row of the shell's flex column, so
-   `.gl-root` began 50px down and the picture began with it: a band of the
-   surface's ground over the greeting, behind the pill.
-
-   The fix is geometric rather than structural, which is why it is this one
-   and not the alternatives — the strip keeps its place in the flow, and the
-   column is pulled up under it by exactly its height and gives that height
-   back as padding. Nothing on the screen moves; the picture simply starts
-   at the top of the window, and the pill, a flex item with a z-index of its
-   own, goes on standing over it.
-
-   `:has` keyed on the ridge rather than on a destination name, so the rule
-   is true by construction: the column rises under the strip exactly when
-   there is a picture up there to fill it. The five other destinations stand
-   on the surface's ground, which already runs behind the strip. */
-.gl-root:has(.gl-homebg) {
-  margin-top: calc(-1 * var(--gl-bar-h));
-  padding-top: calc(28px + var(--gl-bar-h));
-}
-
-.gl-homebg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 760px;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.gl-homebg img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 40%;
-}
-
-/* The side fade, then the bottom fade over it. `color-mix` with 0% of the
-   ground gives a TRANSPARENT ground rather than transparent black, which is
-   what keeps the middle of the picture from greying out. */
-.gl-homebg::before,
-.gl-homebg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.gl-homebg::before {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--gl-ground-base) 82%, transparent) 0%,
-    color-mix(in srgb, var(--gl-ground-base) 40%, transparent) 45%,
-    color-mix(in srgb, var(--gl-ground-base) 0%, transparent) 70%);
-}
-
-.gl-homebg::after {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--gl-ground-base) 0%, transparent) 45%,
-    var(--gl-ground-base) 96%);
-}
-
-/* Everything the Home draws after the picture stands on it, unmoved.
-
-   `z-index: auto`, not 1, and the difference is the whole of a bug: a layer
-   with a NUMBER is a stacking context, and everything inside it is sealed
-   into that number. The library's "Learn more" sheet is `position: fixed,
-   z-index: 60` — and it was printed inside this rule's subtree, so it could
-   never rise above the top bar (5) or the rail (2): a dialog that opened
-   behind the page that opened it. Positioned and unnumbered, these blocks
-   still paint after the picture (both are at level 0 and the picture comes
-   first in the markup), and anything fixed inside them reaches the window. */
-.gl-homebg ~ * {
-  position: relative;
-  z-index: auto;
+@media (prefers-reduced-motion: reduce) {
+  .gl-root .tabview.is-arriving {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
 }
 
 /* ------------------------------------------------------- the audio card ---

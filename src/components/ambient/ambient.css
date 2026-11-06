@@ -1,0 +1,232 @@
+/* ============================================================================
+   The background's five layers, and the clock they move on
+
+   Every duration in this file is from the brief for this round (section 10).
+   They are written as custom properties on `.amb` and overridden per stage,
+   rather than repeated in each rule, because the same two properties —
+   ring position and ring scale — are given four different pairs of timings
+   depending on what the person just did.
+
+   Nothing here is interactive. The whole stack is `pointer-events: none`,
+   and it sits at `z-index: -1`: behind every pixel of page content, above
+   the page's own canvas. That one value is why no other stylesheet in the
+   project had to be renumbered for this.
+   ============================================================================ */
+
+.amb {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1;
+  /* Arriving at a stage that HAS a background: the fade in of 10.4. */
+  transition: opacity 0.4s ease;
+
+  /* the ring clock, overridden below */
+  --amb-move: 1s;
+  --amb-zoom: 1.1s;
+  --amb-move-delay: 0s;
+  --amb-zoom-delay: 0s;
+  /* The rings decelerate into place; everything else is plain ease. */
+  --amb-ease: cubic-bezier(0.7, 0, 0.3, 1);
+}
+
+/* Every route that is not one of the seven. The layers stay in the document
+   so that LEAVING is a fade rather than a cut (10.4) — at zero opacity and
+   with no pointer events they draw nothing and catch nothing, which is what
+   the brief's "render nothing" asks for in practice. */
+.amb--off {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* The first paint after a direct load: be on the target stage, do not
+   travel to it. One frame, removed by the component. */
+.amb.no-anim,
+.amb.no-anim * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ------------------------------------------------------------- 1 · ground --- */
+
+.amb-base {
+  position: absolute;
+  inset: 0;
+  background: #0b1a13;
+  transition: background-color 0.6s ease;
+}
+
+.amb--pal-light .amb-base { background: #faf8df; }
+
+/* ------------------------------------------------------------- 2 · rings --- */
+
+.amb-rings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transition: transform var(--amb-move) var(--amb-ease) var(--amb-move-delay);
+}
+
+.amb-rings__scale {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  transition: transform var(--amb-zoom) var(--amb-ease) var(--amb-zoom-delay);
+}
+
+/* The two palettes stacked, so a change of preference dissolves instead of
+   snapping (5.1). */
+.amb-rings__pal {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.amb-rings__pal.is-on { opacity: 1; }
+
+.amb-rings__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Signing in: the rings leave the person and open out across the library.
+   Slower than a nav, and both legs wait for the login card to clear. */
+.amb.is-arriving {
+  --amb-move: 1.8s;
+  --amb-zoom: 2s;
+  --amb-move-delay: 0.35s;
+  --amb-zoom-delay: 0.35s;
+}
+
+/* ------------------------------------------------------- 3 · the picture --- */
+
+.amb-photo {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /* Leaving the landing for an inner page: out in 0.8s, after a beat. */
+  transition: opacity 0.8s ease 0.1s, filter 1s ease;
+}
+
+.amb-photo.is-on {
+  opacity: 1;
+  /* …and back in without the beat, once the rings have started home. */
+  transition: opacity 0.8s ease, filter 1s ease;
+}
+
+/* The door dims and softens what is behind the card, and keeps that filter
+   while it dissolves into the library (10.3). */
+.amb--login .amb-photo,
+.amb.is-arriving .amb-photo {
+  filter: brightness(0.72) blur(2px);
+}
+
+/* The long dissolve of an arrival, rather than the 0.8s of a nav. */
+.amb.is-arriving .amb-photo {
+  transition: opacity 1.4s ease 0.25s, filter 1s ease;
+}
+
+.amb-photo__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.amb-photo__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 22, 15, 0.72) 0%,
+    rgba(5, 22, 15, 0.40) 40%,
+    rgba(5, 22, 15, 0) 62%,
+    rgba(5, 22, 15, 0.55) 100%
+  );
+}
+
+/* ---------------------------------------------- 4 · the rings on the person --- */
+
+.amb-outline {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* Back in after the photograph, not with it. */
+.amb-outline.is-on {
+  opacity: 1;
+  transition: opacity 0.8s ease 0.5s;
+}
+
+/* An arrival takes a full second to let them go. */
+.amb.is-arriving .amb-outline {
+  transition: opacity 1s ease;
+}
+
+.amb-outline__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.amb-outline__g.is-breathing {
+  animation: amb-breathe 5s ease-in-out infinite;
+}
+
+@keyframes amb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ------------------------------------------------- 5 · the library's fade --- */
+
+.amb-fade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1s ease;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 26, 19, 0) 0%,
+    rgba(11, 26, 19, 0) 28%,
+    rgba(11, 26, 19, 0.9) 50%,
+    #0b1a13 68%
+  );
+}
+
+.amb--pal-light .amb-fade {
+  background: linear-gradient(
+    180deg,
+    rgba(250, 248, 223, 0) 0%,
+    rgba(250, 248, 223, 0) 28%,
+    rgba(250, 248, 223, 0.9) 50%,
+    #faf8df 68%
+  );
+}
+
+.amb--home .amb-fade { opacity: 1; }
+
+/* On an arrival it comes in last, once the rings have nearly settled. */
+.amb--home.is-arriving .amb-fade { transition: opacity 1s ease 1.2s; }
+
+/* --------------------------------------------------------- reduced motion ---
+   Everything still changes; nothing moves on the way. The durations are not
+   zero but 0.01s, because a zero-duration transition fires no
+   `transitionend` and some of the page's own entrances wait for one. */
+
+@media (prefers-reduced-motion: reduce) {
+  .amb,
+  .amb * {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+    animation: none !important;
+  }
+}

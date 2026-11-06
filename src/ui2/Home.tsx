@@ -28,6 +28,7 @@ import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_TINT, tilePosition } from './theme'
 import { TopBar } from './TopBar'
+import { useStageClaim } from '../components/ambient/stage'
 
 interface HomeProps {
   name: string | null
@@ -51,6 +52,19 @@ interface HomeProps {
 export function Home({ name, catalog, storedRails, recent = [], saved = [], onToggleSave, top = [], query, onQuery, onOpen, noticeSlot, footSlot }: HomeProps) {
   const { t } = useI18n()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
+
+  /* THE LIBRARY IS A STAGE for the one background the product now has
+     (`components/ambient/`): the brand's rings, large, in the corner, over
+     the person's own choice of light or dark, with a fade at the foot of the
+     window so a card is read against a colour.
+
+     The claim is made HERE and not in `SelfUseApp` on purpose. This
+     component is mounted exactly when the library is the screen somebody is
+     looking at — not while a session is open over it (that screen carries
+     the protocol's cover, `ui2/pageGround.ts`), not on the other four
+     destinations, and not during the first run. Mounting is the condition,
+     so there is no condition to keep in step. */
+  useStageClaim('home')
 
   const all = catalog.browsable
 
@@ -105,27 +119,28 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
 
   return (
     <>
-      {/* ---------------------------------------------------- the ridge --- */}
-      {/* Two layers, and shell.css ("the Home ridge") is where they are
-          explained. The fill is this screen's ground: one flat colour over
-          the whole window, so nothing of the surface's own photograph shows
-          through under the picture — it used to reappear below 760px and
-          draw a straight line across the page. The picture sits on it, at
-          the head of the column, and scrolls away with the first screenful.
-          Both fades are drawn in `--gl-ground-base`, the same variable the
-          fill paints, so the one dissolves into the other and the day that
-          colour changes neither is touched. */}
-      <div className="gl-homefill" aria-hidden="true" />
-      <div className="gl-homebg" aria-hidden="true">
-        <img src="/media/home-bg-mountains.jpg" alt="" />
-      </div>
+      {/* ---------------------------------------------------- the ground ---
+          Nothing is drawn here any more.
+
+          There used to be two layers at the head of this fragment: a flat
+          fill fixed to the window, and the app's mountain photograph, 760px
+          tall, fading into it. Both are gone — the window is dressed by
+          `components/ambient/AmbientBackground`, mounted once at the app
+          root, which is also what dresses the landing page and the door. The
+          shelves move up into the room the picture used to take.
+
+          `.gl-homefill`, `.gl-homebg` and the `:has()` rule that pulled the
+          column up under the Help now strip went with them (shell.css, "the
+          Home ridge"). The photograph itself stays in `public/media/`: it is
+          still the ground of the other four destinations. */}
 
       {/* ------------------------------------------------------- top bar --- */}
       {/* The same bar as every other screen of the surface, from the same
           component — this corner is where it was designed, and the deep
           screens copied it rather than keeping a second one of their own
-          (see `ui2/TopBar.tsx`). `over` is the one difference: here it has
-          a photograph behind it. */}
+          (see `ui2/TopBar.tsx`). `over` still marks this one out: the rings
+          are behind it here, where the other screens have the app's own
+          veiled photograph. */}
       <TopBar name={name} over />
 
       {/* What this place is, and what it is not. Two lines, deliberately

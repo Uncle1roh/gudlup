@@ -37,3 +37,6 @@ export const WorkspaceApp = NotInApp
 export const CorporateApp = NotInApp
 export const Hub = NotInApp
 export const PreviewBar = NotInApp
+/* The public site. Never rendered in the app — `pubStage` is null there —
+   so this only has to exist for the import to resolve. */
+export const PublicRoute = NotInApp

@@ -19,6 +19,9 @@ import { LegalPage } from './legal/LegalPage'
 import { EnvBanner } from './app/EnvBanner'
 import { appEnv, showsBanner, warnIfUndeclared, type Surface } from './app/environment'
 import { initFeatures } from './app/features'
+import { PublicRoute } from './public/PublicRoute'
+import { AmbientBackground } from './components/ambient/AmbientBackground'
+import { publicStage } from './components/ambient/stage'
 
 /* Where the Sound Studio was opened from. Reached from the admin console it
    is part of the console's flow, so it stays in the console's language
@@ -61,7 +64,16 @@ export default function App() {
       setRoute(next)
     }
     window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    /* The landing lives at the EMPTY hash, which `navigate()` reaches with
+       `pushState` — and no browser event covers a push. It fires
+       `hashchange` by hand on the way there; Back and Forward across that
+       same entry fire `popstate`, so both are heard here. The handler reads
+       the live hash, so hearing it twice costs one identical setState. */
+    window.addEventListener('popstate', onHash)
+    return () => {
+      window.removeEventListener('hashchange', onHash)
+      window.removeEventListener('popstate', onHash)
+    }
   }, [])
 
   /* Three surfaces built to the 2026-08 wireframe specs, and the three that
@@ -96,6 +108,11 @@ export default function App() {
   const isSales = route === '#sales'
   const isCorporate = route === '#employer' || route === '#hr' || route === '#corporate' || route === '#nr1'
   const isLegal = route === '#legal' || route.startsWith('#legal/')
+  /* The public site's own five routes. Null everywhere else, which is every
+     surface that existed before this round — none of them changes. In the
+     phone build it is null always: the app ignores the hash and opens on the
+     library, and `vite.config.ts` resolves the whole folder away. */
+  const pubStage = __GL_APP__ ? null : publicStage(route)
 
   /* The console is pinned to Italian (FixedLocale); the page's lang attribute
      follows, so a screen reader reads it as Italian too. Anywhere else it is
@@ -138,6 +155,33 @@ export default function App() {
     // Demo hub: links every surface for testers. No gate — it's just links.
     if (route === '#hub') {
       return <Hub />
+    }
+
+    /* ---- the public site, and the one door --------------------------------
+
+       The landing page, the three pages it leads to, and the sign-in page
+       (`#entrar`). Four of the five are public to anybody; the fifth, the
+       empty hash, is the landing for a stranger and the app for somebody
+       signed in — `PublicRoute` is where that is settled, because it is the
+       first component on this route that can ask.
+
+       The gate is handed to it as `children` rather than rendered here: on
+       `#entrar` it IS the page, and on the empty hash it is what a signed-in
+       person gets instead of the landing. */
+    if (pubStage) {
+      return (
+        <AuthProvider>
+          <DataLayerProvider>
+            <LegalProvider>
+              <PublicRoute stage={pubStage}>
+                <AuthGate mode="b2c">
+                  <SelfUseApp />
+                </AuthGate>
+              </PublicRoute>
+            </LegalProvider>
+          </DataLayerProvider>
+        </AuthProvider>
+      )
     }
 
     /* The legal information page is public (LEG-06): no gate, no login. It
@@ -291,8 +335,16 @@ export default function App() {
   const strip = isAdmin
     ? <FixedLocale locale="it"><EnvBanner surface={surface} /></FixedLocale>
     : <EnvBanner surface={surface} />
+  /* ONE background, for the landing, the three public pages, the door and
+     the library. Mounted here, outside everything that routes, because the
+     rings travel between those places and a transition only runs on an
+     element that lives through the change. On every other route it is
+     `off` and draws nothing — the surface under it keeps the background it
+     always had. It takes no props: the screen that is on claims its stage
+     (`components/ambient/stage.ts`). */
   return (
     <I18nProvider>
+      <AmbientBackground />
       {bar || banner ? (
         <div className={`pvw-shell${banner ? ' pvw-shell--env' : ''}${bar ? ' pvw-shell--bar' : ''}`}>
           {banner && strip}

@@ -3,6 +3,9 @@
 Tudo o que você precisa mexer está em **`src/ui2/shell.css`**, em dois blocos.
 Nenhum outro arquivo precisa saber.
 
+> **Menos a Início.** A biblioteca saiu desse esquema em 06/11/2026 e tem um
+> fundo só dela — os anéis da marca. Veja a seção 1b.
+
 Depois de salvar, o `npm run dev` recarrega sozinho. Para publicar, é commit
 normal — não tem build especial nem nada para registrar em outro lugar.
 
@@ -121,8 +124,30 @@ A foto é cortada para caber na janela. Dois valores, horizontal e vertical:
 
 A cor sólida atrás da foto: aparece no instante antes dela carregar. Deixe
 parecida com a ponta da foto que combina com o tema — a parte clara no claro,
-a escura no escuro. Os dois degradês da montanha na Home também saem dela
-(`.gl-homebg`), então ela é a cor em que a foto da Home se dissolve.
+a escura no escuro.
+
+---
+
+## 1b. A Início é a exceção: lá não tem foto nenhuma
+
+Desde 06/11/2026 a biblioteca **não usa** nada do bloco acima. Ela tem um
+fundo próprio: os anéis da marca, grandes, no canto de cima à direita, na
+cor clara ou escura que a pessoa escolheu, com um esfumado no pé da tela
+para os cards continuarem legíveis. É o mesmo fundo da página pública e da
+tela de entrar, e é por isso que os anéis conseguem *viajar* de uma para a
+outra quando alguém faz login — é um elemento só, montado na raiz do app.
+
+Onde mexer:
+
+- os anéis, as cores e o esfumado: `src/components/ambient/`
+  (`rings.tsx` tem as duas paletas, `ambient.css` tem as durações)
+- onde os anéis ficam em cada tela: a tabela `CENTRE` em
+  `AmbientBackground.tsx`
+
+Enquanto esse fundo está no ar ele escreve `data-gl-amb="on"` no `<html>`, e
+`ui2/shell.css` tira a foto do `body` — senão a montanha ficaria **por cima**
+dos anéis (a razão está escrita lá). Nas outras quatro telas — Terapia,
+Loops, Perfil, Percurso — nada disso acontece e a foto é a de sempre.
 
 ---
 

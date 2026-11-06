@@ -3315,3 +3315,254 @@ td, th { overflow-wrap: anywhere; }
   .adm-modal__body .adm-challenges__edit { grid-template-columns: minmax(0, 1fr); }
   .adm-modal__body .adm-challenges__preview { overflow-x: auto; }
 }
+
+
+/* ===========================================================================
+   The person's door, on the landing page
+
+   This is `.auth--hero`: the b2c door, and only that one, once it moved onto
+   the public site. The window behind it is the waterfall — dimmed, softened,
+   with the brand's rings breathing around the person in it — drawn by
+   `components/ambient/`, which also draws the landing page the visitor
+   clicked Entrar on. The door and the landing are one place now, and the
+   card is what makes cream type readable over a photograph.
+
+   IT IS A CARD AGAIN, AND THAT IS A REVERSAL. "The door is not a dialog"
+   above this block took the panel away on purpose: the screens that follow
+   the door put their content straight on the ground, so a card made the
+   first screen the only boxed one in the flow. That reasoning still holds
+   for the four doors it was written about — the clinician, employer, admin
+   and commercial ones, which are untouched and still have no panel. It does
+   not hold here: those doors stand on a flat ground, and this one stands on
+   moving water. Text with no pane under it is not minimal there, it is
+   unreadable.
+
+   The four other doors reach none of these rules: every one is prefixed
+   `.auth--hero`.
+   =========================================================================== */
+
+/* The soft green bloom `su-studio` floats above its own ground. Over the
+   waterfall it is a smudge, and the ground it was lighting is not there. */
+.auth.auth--hero.su-studio::before { display: none; }
+
+.auth.auth--hero.su-studio {
+  display: block;
+  position: relative;
+  /* The same subtraction the public pages make: a deployment that declares
+     itself as not production puts a banner above every surface, and its
+     height is published as `--pvw-h`. */
+  min-height: calc(100dvh - var(--pvw-h, 0px));
+  padding: 0;
+  /* The photograph is behind the whole window; a ground here would hide it. */
+  background: none;
+}
+
+.auth.auth--hero.su-studio .auth__card {
+  position: absolute;
+  top: 150px;
+  right: 140px;
+  width: 400px;
+  max-width: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 36px;
+  border-radius: 24px;
+  background: rgba(10, 32, 24, 0.5);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(250, 248, 223, 0.18);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  /* It arrives after the photograph has dimmed and the rings have started
+     to breathe, so the three read as one movement (brief 10.2). */
+  animation: auth-hero-in 0.8s ease 0.45s both;
+}
+
+@keyframes auth-hero-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The mark is already top-left, in the site's own header, at the size it was
+   drawn for. A second copy inside the card was the logo twice on one screen.
+   The row itself stays, because the language picker lives in it — on a
+   public page that picker is the ONLY way a visitor can choose a language,
+   and it was here before this round. */
+.auth.auth--hero.su-studio .auth__brand { margin: 0; justify-content: flex-end; }
+.auth.auth--hero.su-studio .auth__brand .gl-logo { display: none; }
+
+.auth.auth--hero.su-studio .auth__title {
+  margin: 0;
+  font-family: 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #faf8df;
+}
+
+.auth.auth--hero.su-studio .auth__sub {
+  margin: -10px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #e8edd6;
+}
+
+.auth.auth--hero.su-studio .auth__fields {
+  margin: 0;
+  gap: 18px;
+}
+
+.auth.auth--hero.su-studio .auth__lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth.auth--hero.su-studio .auth__lbltext {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e8edd6;
+}
+
+.auth.auth--hero.su-studio .auth__input {
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 248, 223, 0.3);
+  background: rgba(4, 20, 14, 0.35);
+  color: #faf8df;
+  font-size: 15px;
+}
+
+.auth.auth--hero.su-studio .auth__input::placeholder { color: #b9c8b4; }
+
+.auth.auth--hero.su-studio .auth__input:focus {
+  border-color: #b7dbad;
+  background: rgba(4, 20, 14, 0.5);
+}
+
+/* A `select` and a `date` on the sign-up form of the same door. */
+.auth.auth--hero.su-studio select.auth__input,
+.auth.auth--hero.su-studio input[type='date'].auth__input { color-scheme: dark; }
+
+.auth.auth--hero.su-studio .auth__forgot--row {
+  align-self: flex-end;
+  padding: 0;
+  font-size: 13px;
+  color: #d6e6b6;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+}
+
+.auth.auth--hero.su-studio .auth__btn {
+  margin: 0;
+  min-height: 50px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #faf8df;
+  color: #0b3d31;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.auth.auth--hero.su-studio .auth__btn:not(:disabled) { background: #faf8df; }
+
+/* Which field the button is still waiting for, and anything that went wrong,
+   on the card's own ground rather than on the page's. */
+.auth.auth--hero.su-studio .auth__need,
+.auth.auth--hero.su-studio .auth__bad { color: #f2c29a; }
+
+.auth.auth--hero.su-studio .auth__error {
+  background: rgba(120, 30, 24, 0.35);
+  border: 1px solid rgba(250, 248, 223, 0.22);
+  color: #faf8df;
+}
+
+.auth.auth--hero.su-studio .auth__sent {
+  background: rgba(10, 60, 44, 0.4);
+  border: 1px solid rgba(250, 248, 223, 0.22);
+  color: #e8edd6;
+}
+
+/* The demo notice is a pale panel from the Self Use sheet, which on this
+   card was cream on cream and could not be read at all. Every preview
+   deployment and every sales walkthrough shows it. */
+.auth.auth--hero.su-studio .auth__demo {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(4, 20, 14, 0.4);
+  border: 1px solid rgba(250, 248, 223, 0.18);
+  color: #d6e6b6;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.auth.auth--hero.su-studio .auth__first {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(250, 248, 223, 0.18);
+  text-align: center;
+  font-size: 14px;
+  color: #e8edd6;
+}
+
+.auth.auth--hero.su-studio .auth__firstlink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #faf8df;
+  text-decoration: underline;
+}
+
+/* Help now is on every screen of the product, the door included (CRS-01),
+   and the legal page's link sits beside it. Neither is in the brief's list
+   for this card; both stay, because one is a requirement and the other is
+   the only way to the public legal information. */
+.auth.auth--hero.su-studio .auth__foot {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(250, 248, 223, 0.18);
+}
+
+.auth.auth--hero.su-studio .auth__foot,
+.auth.auth--hero.su-studio .auth__links,
+.auth.auth--hero.su-studio .auth__hub,
+.auth.auth--hero.su-studio .auth__demo,
+.auth.auth--hero.su-studio .auth__toggle { color: #e8edd6; }
+
+.auth.auth--hero.su-studio .auth__hub { color: #d6e6b6; }
+
+.auth.auth--hero.su-studio *:focus-visible {
+  outline: 2px solid #b7dbad;
+  outline-offset: 3px;
+}
+
+/* The phone: centred under the header rather than out to one side. */
+@media (max-width: 767px) {
+  .auth.auth--hero.su-studio .auth__card {
+    top: 120px;
+    right: auto;
+    left: 24px;
+    width: calc(100% - 48px);
+    padding: 28px;
+  }
+}
+
+/* The sign-up form on this door is nine fields deep, which is taller than a
+   phone and taller than some laptops. The card scrolls with the page rather
+   than being pinned to a height it cannot keep. */
+@media (max-height: 760px) {
+  .auth.auth--hero.su-studio { padding-bottom: 48px; }
+  .auth.auth--hero.su-studio .auth__card { position: relative; top: 0; right: 0; left: auto; margin: 110px auto 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth.auth--hero.su-studio .auth__card { animation-duration: 0.01s; animation-delay: 0s; }
+}

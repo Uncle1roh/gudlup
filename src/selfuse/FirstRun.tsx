@@ -31,7 +31,7 @@
    Someone who accepts and then closes the app has accepted.
    ============================================================================ */
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { Icon, type IconName } from './icons'
@@ -42,6 +42,7 @@ import { useLegal } from '../legal/LegalContext'
 import { LegalSheet } from '../legal/LegalPage'
 import type { LegalDocId } from '../legal/types'
 import type { ConsentPurpose } from '../legal/records'
+import { clearArrival } from '../components/ambient/stage'
 
 interface Point {
   label: string
@@ -195,6 +196,15 @@ export function FirstRun({
   needsTutorial?: boolean
 }) {
   const { t } = useI18n()
+
+  /* A FIRST RUN IS NOT AN ARRIVAL. Signing in sets a flag that sends the
+     background's rings travelling out across the library (brief 10.3) —
+     but if the terms have never been accepted, this screen is what comes
+     next, and the brief is explicit that a login landing on consent gets a
+     plain fade and no travel. Clearing the flag here is what makes that
+     true, and it also means the animation cannot fire late, when the person
+     finally reaches the library minutes later. */
+  useEffect(() => { clearArrival() }, [])
   const theme = useSuTheme()
   const legal = useLegal()
   const dp = useDataProvider()

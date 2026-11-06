@@ -35,6 +35,10 @@ const DESKTOP_ONLY = new Set([
   './corporate/CorporateApp',
   './hub/Hub',
   './admin/PreviewBar',
+  /* The landing page and the three pages behind it. A marketing site has no
+     place in the binary: App.tsx ignores the hash in app mode and opens the
+     library, so none of it is reachable there anyway. */
+  './public/PublicRoute',
 ])
 
 /**

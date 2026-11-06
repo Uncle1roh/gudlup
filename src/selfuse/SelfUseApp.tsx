@@ -27,6 +27,7 @@ import { useDataProvider } from '../data/provider'
 import { useI18n } from '../i18n'
 import { Explore } from './Explore'
 import { FirstRun } from './FirstRun'
+import { useArrived } from '../components/ambient/stage'
 import { AddressedAsGate } from './AddressedAsGate'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
@@ -146,6 +147,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 
   const [tab, setTab] = useState<Tab>('home')
+  /* Set by the door when a sign-in succeeded, and true only for the couple
+     of seconds the background takes to travel from the person in the
+     photograph out to the corner of the library. It is what gives the
+     library its one entrance: the content waits for the rings and then
+     fades up under them. Tapping Inicio later is not an arrival and gets
+     nothing (brief 10.3 / 10.4). */
+  const arriving = useArrived()
   /* Tapping the tab you are already on takes that tab back to its root, the
      way a phone's tab bar does: the Therapist tab left on "Find a therapist"
      used to stay there however often its tab was tapped. The counter keys the
@@ -785,7 +793,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
        the mood (`ui2/MoodPill.tsx`). */
     <MoodProvider moods={state.moods}>
     <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])} dests={dests} surface={DEEP.includes(tab) ? 'deep' : 'mood'}>
-      <div className="tabview" key={`${tab}:${tabReset}`}>
+      <div className={`tabview${arriving && tab === 'home' ? ' is-arriving' : ''}`} key={`${tab}:${tabReset}`}>
         {tab === 'home' && openChallenge && (
           <ChallengeDetail c={openChallenge} onBack={() => setChallengeOpen(null)} onStart={() => setChallengeOpen(null)} />
         )}

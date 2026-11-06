@@ -14,6 +14,7 @@ import { useLegal } from '../legal/LegalContext'
 import { HelpNowButton } from '../legal/HelpNow'
 import { LanguagePicker } from '../components/LanguagePicker'
 import { SUPPORTED_COUNTRIES, OTHER_COUNTRIES, marketForCountry } from '../legal/market'
+import { navigate, noteArrival, publicStage, R_LOGIN } from '../components/ambient/stage'
 
 /** Every field that can be missing, in the order the eye meets them — which
     is the order the button walks when it refuses. */
@@ -29,6 +30,19 @@ export function ageAt(birthDate: string, now = new Date()): number | null {
   const m = now.getMonth() - b.getMonth()
   if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1
   return age
+}
+
+/** `on` ? the field wearing a visible label : the field as it was. The
+    label wraps rather than replaces, so there is one input in the tree with
+    one ref and one handler however it is dressed. */
+function labelled(on: boolean, text: string, field: ReactNode): ReactNode {
+  if (!on) return field
+  return (
+    <label className="auth__lbl">
+      <span className="auth__lbltext">{text}</span>
+      {field}
+    </label>
+  )
 }
 
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales' }) {
@@ -62,6 +76,17 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      internal consoles — admin and commercial — keep their own doors, because
      neither has a sign-up at all: those accounts are provisioned by hand. */
   const asCompany = isHr || (mode === 'b2c' && signup && kind === 'company')
+  /* THE PUBLIC DOOR STANDS ON THE LANDING PAGE NOW (POs, 2026-11-06). It is
+     the same component and the same handlers; what it no longer carries is a
+     photograph of its own, because the window behind it already has one —
+     the waterfall, dimmed and softened, with the rings breathing around the
+     person in it (`components/ambient/`). `hero` is that door; the four
+     others are unchanged. */
+  const hero = mode === 'b2c'
+  /* The card the brief draws: title, subtitle, two labelled fields, the
+     forgotten-password link, the button, and the company code in the foot.
+     Sign-UP on the same door keeps its own longer form. */
+  const heroIn = hero && !signup
   const role: Role = isAdmin ? 'admin' : isSales ? 'sales' : asCompany ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
   const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isSales ? 'comercial@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
   const [password, setPassword] = useState(demo ? 'demo' : '')
@@ -152,6 +177,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
            it sends none and the account's own record answers — in demo
            mode, by its address (`auth/auth.tsx`). */
         await auth.signIn(email.trim(), password, isAdmin || isSales ? role : undefined)
+        /* Signed in from the public door: the background is told, so the
+           rings leave the person in the photograph and open out across the
+           library (brief 10.3). It is only ever set here — on the sign-UP
+           path the next screen is the terms, which is not an arrival, and
+           `FirstRun` clears the flag if it ever gets one. The hash follows
+           WITHOUT a page load, or there would be nothing left to animate. */
+        if (hero) {
+          noteArrival()
+          navigate('')
+        }
       }
     } catch (e) {
       setError((e as Error).message)
@@ -355,7 +390,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
        a dark app; a cream app behind a black door is the same mismatch the
        other way round. The clinician, employer and admin doors are
        unchanged. */
-    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr || isSales ? '' : ' su-studio'}`}>
+    <div className={`auth ${isB2b ? 'auth--b2b' : 'auth--b2c'}${isB2b || isAdmin || isHr || isSales ? '' : ' su-studio'}${hero ? ' auth--hero' : ''}`}>
       {/* ---- the desktop half ------------------------------------------------
 
           A door the size of a phone, centred in a 27-inch monitor, is a form
@@ -379,9 +414,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           CSS on the stage itself, so there is nothing to decode, nothing to
           autoplay and nothing to switch off for a person who has asked not
           to be animated. */}
-      <div className="auth__stage" aria-hidden="true">
-        <div className="auth__stage__scrim" />
-      </div>
+      {/* NOT on the public door any more: the window behind it carries the
+          waterfall full-bleed, and a second cropped photograph beside the
+          card was two pictures with a seam between them. The element and its
+          CSS are untouched for the clinician, employer, admin and commercial
+          doors, which still open on it. */}
+      {!hero && (
+        <div className="auth__stage" aria-hidden="true">
+          <div className="auth__stage__scrim" />
+        </div>
+      )}
       <div className="auth__card">
         {/* The b2c door is the dark Self Use ground; the clinician, employer
             and admin doors are light. Same logo, the colourway its ground asks
@@ -394,7 +436,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               Not on the admin door: the console is pinned to Italian. */}
           {!isAdmin && !isSales && <LanguagePicker className="auth__lang" label={false} />}
         </div>
-        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isSales ? t('Commercial access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : t('Welcome')}</h1>
+        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isSales ? t('Commercial access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : heroIn ? t('Good to have you here') : t('Welcome')}</h1>
         {/* Only the sign-UP state says anything here. On the sign-in state the
             line under the title repeated what the title and the button had
             both already said — "Welcome / Sign in to continue / Sign in" is
@@ -402,19 +444,45 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         {signup && (
           <p className="auth__sub">{isHr ? t('Create the account for your company') : t('Create your account')}</p>
         )}
+        {/* The sign-in state used to say nothing here, because "Welcome /
+            Sign in to continue / Sign in" was three ways of announcing a
+            door somebody was already standing at. With the title now a
+            greeting rather than an instruction, one line saying what the
+            door is for earns its place back. */}
+        {heroIn && <p className="auth__sub">{t('Sign in to carry on with your pauses.')}</p>}
 
         <div className="auth__fields">
-          <input className="auth__input" type="email" placeholder={t('Email')} autoComplete="email"
-            value={email} onChange={(e) => setEmail(e.target.value)}
-            ref={hold('email')}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          {/* One pair of inputs, worn two ways. On the public door's sign-in
+              state they are labelled, because that card has room for a label
+              and a placeholder that shows the SHAPE of the answer; everywhere
+              else the placeholder is still the label, which is how all five
+              doors were drawn. Same element, same handlers, same refs — the
+              label is a wrapper, not a second field. */}
+          {labelled(heroIn, t('E-mail'), (
+            <input className="auth__input" type="email"
+              placeholder={heroIn ? t('name@company.com') : t('Email')} autoComplete="email"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              ref={hold('email')}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          ))}
           {bad('email') && <p className="auth__bad" role="alert">{bad('email')}</p>}
-          <input className="auth__input" type="password" placeholder={t('Password')}
-            autoComplete={signup ? 'new-password' : 'current-password'}
-            value={password} onChange={(e) => setPassword(e.target.value)}
-            ref={hold('password')}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          {labelled(heroIn, t('Password'), (
+            <input className="auth__input" type="password"
+              placeholder={heroIn ? t('Your password') : t('Password')}
+              autoComplete={signup ? 'new-password' : 'current-password'}
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              ref={hold('password')}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          ))}
           {bad('password') && <p className="auth__bad" role="alert">{bad('password')}</p>}
+          {/* Above the button on this door, not below it: the brief's order,
+              and the order a person reads in — the thing you do when the
+              password will not come to you belongs beside the password. */}
+          {heroIn && !demo && (
+            <button type="button" className="auth__forgot auth__forgot--row" disabled={busy} onClick={() => void forgot()}>
+              {t('I forgot my password')}
+            </button>
+          )}
 
           {/* Which kind of account this will be. Two buttons rather than a
               second URL: a clinician who lands on the app's own door can
@@ -566,17 +634,33 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
             only: on the sign-up form there is no password to have forgotten. */}
         {(!noSignup || (!signup && !demo)) && (
           <div className="auth__alt">
-            {!signup && !demo && (
+            {/* On the public door's sign-in state this link has already been
+                printed, above the button. */}
+            {!signup && !demo && !heroIn && (
               <button type="button" className="auth__forgot" disabled={busy} onClick={() => void forgot()}>
                 {t('Forgot your password?')}
               </button>
             )}
-            {!noSignup && (
+            {!noSignup && !heroIn && (
               <button type="button" className="auth__toggle" onClick={() => { setSignup((s) => !s); setError(null); setTried(false); setResetSent(false) }}>
                 {signup ? t('Sign in') : t('Create an account')}
               </button>
             )}
           </div>
+        )}
+
+        {/* The foot of the card on the public door: the way to an account,
+            named by the thing a first-timer actually holds — the code their
+            employer sent them. It is the same control as "Create an account"
+            everywhere else, and it opens the same form, where the company
+            code is a field. */}
+        {heroIn && (
+          <p className="auth__first">
+            {t('First time here?')}{' '}
+            <button type="button" className="auth__firstlink" onClick={() => { setSignup(true); setError(null); setTried(false); setResetSent(false) }}>
+              {t('Use your company code')}
+            </button>
+          </p>
         )}
 
         {demo && <p className="auth__demo">{t('Demo mode — any email & password works. Tap {action}.', { action: signup ? t('Create account') : t('Sign in') })}</p>}
@@ -655,13 +739,16 @@ const SHARES_THE_DOOR: GateMode[] = ['b2b', 'hr']
 
 /** One frame on the way to the public door. A redirect and not a link: a
     person who typed #hr wanted to sign in, not to read about where. */
-function ToTheDoor() {
+function ToTheDoor({ to = R_LOGIN }: { to?: string }) {
   const { t } = useI18n()
   useEffect(() => {
-    /* The hash AND a reload: each surface mounts its own data layer and its
-       own gate, and only a load puts the person on the right one. */
-    if (window.location.hash) window.location.href = window.location.pathname
-  }, [])
+    /* A reload, not a hash change: each surface mounts its own data layer
+       and its own gate, and only a load puts the person on the right one.
+       That is the opposite of what the public site needs — see `navigate()`
+       in `components/ambient/stage.ts` — and it is right here, because this
+       is a person crossing from one surface to another. */
+    window.location.href = window.location.pathname + to
+  }, [to])
   return (
     <div className="auth auth--loading auth--b2c su-studio">
       <div className="auth__spin" aria-label={t('Loading')} />
@@ -720,6 +807,14 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
     /* `allow` means this surface serves more than the one role its mode
        names — the Studio — and that one keeps its own door. */
     if (!allow && SHARES_THE_DOOR.includes(mode)) return <ToTheDoor />
+    /* The person's door has an address of its own now (`#entrar`), because
+       the empty hash became the landing page. A signed-out visitor who
+       arrives on an app route — a bookmark, a deep link, a stale tab — is
+       sent to it rather than shown a door at a URL that is not the door's:
+       one address for signing in, which is also the one the landing's
+       Entrar button and every invitation point at. Not in the phone build,
+       where there is no landing and the hash means nothing. */
+    if (mode === 'b2c' && !__GL_APP__ && publicStage(window.location.hash) === null) return <ToTheDoor to={R_LOGIN} />
     return <AuthScreen mode={mode} />
   }
 

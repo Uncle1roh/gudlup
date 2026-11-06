@@ -1,7 +1,14 @@
-# Fonts — Roboto, bundled
+# Fonts — Roboto, bundled (and Instrument Sans on the public pages)
 
-The whole product is set in **Roboto**: the Self Use app, the Therapist
+The **product** is set in **Roboto**: the Self Use app, the Therapist
 Workspace, the company dashboard, the admin console and the Sound Studio.
+
+The **public site** — the landing page, Como funciona, Para empresas, O
+método and the sign-in page — is set in **Instrument Sans**, from 06/11/2026.
+It is the only place the two meet, and they do not: the family is declared on
+`.pub` and on `.auth--hero`, never on `body`, so nothing inside the app
+changes. The faces are bundled on exactly the same terms as Roboto (below),
+and Instrument Sans is licensed under the SIL Open Font License 1.1.
 Headings, body and UI all draw on the same family; anywhere digits have to line
 up in a column — timecodes in the Studio, licence numbers, company codes — uses
 **Roboto Mono**, so even those stay in the family instead of falling back to
@@ -28,7 +35,17 @@ public/fonts/
   Roboto-Italic-latin-ext.woff2     31 KB
   RobotoMono-Roman-latin.woff2      32 KB   weights 100–700
   RobotoMono-Roman-latin-ext.woff2  22 KB
+
+  InstrumentSans-Roman-latin.woff2        29 KB   weights 400–700
+  InstrumentSans-Roman-latin-ext.woff2    11 KB
+  InstrumentSans-Italic-latin.woff2       31 KB   weights 400–700, italic
+  InstrumentSans-Italic-latin-ext.woff2   11 KB
 ```
+
+The Instrument Sans faces are declared at the foot of
+`src/public/public.css`, with the same `unicode-range` split; `index.html`
+preloads the roman latin one, because the landing page's headline is set in
+it and nothing else on that page is.
 
 Latin and Latin Extended only. Italian, Portuguese and English are covered by
 the first file; each `@font-face` carries the `unicode-range` Google publishes,

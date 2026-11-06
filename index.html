@@ -24,6 +24,22 @@
          so no viewer's address reaches a third party. Preload the Latin roman
          face, which every screen needs, to avoid a flash of fallback text. -->
     <link rel="preload" href="/fonts/Roboto-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Instrument Sans, for the public pages and the door only (the app keeps
+         Roboto). Self-hosted exactly like the rest: the spec for this round
+         asked for a fonts.googleapis.com <link>, and that is the one line of
+         it we did not do. A <link> there makes every visitor's browser
+         announce its IP to a third party before the first word is drawn, and
+         the landing page is the FIRST thing a stranger loads. See
+         README_FONTS.md. Preloaded because the landing's headline is set in
+         it and nothing else on that page is. -->
+    <link rel="preload" href="/fonts/InstrumentSans-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- The landing and the door stand on this photograph, full-viewport. It
+         is the largest thing either page loads and the only one that matters
+         before the fold, so the browser is told about it in the head rather
+         than discovering it when React mounts. -->
+    <link rel="preload" as="image" href="/hero/goodloop-hero-waterfall.jpg" />
   </head>
   <body>
     <div id="root"></div>
