@@ -428,7 +428,7 @@ export const IT_STUDIO_EDITOR: Record<string, string> = {
 export const PT_STUDIO_EDITOR: Record<string, string> = {
   /* gate */
   'The Sound Studio is desktop only': 'O Sound Studio é só para desktop',
-  'The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.': 'O editor multipista precisa de uma tela maior. Abra o Good Loop em um notebook ou desktop para compor e renderizar sessões.',
+  'The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.': 'O editor multipista precisa de uma tela maior. Abra a Good Loop em um notebook ou desktop para compor e renderizar sessões.',
   '← Back to the app': '← Voltar ao app',
 
   /* saving */
@@ -491,7 +491,7 @@ export const PT_STUDIO_EDITOR: Record<string, string> = {
     'Ainda NÃO está no banco de dados — pressione 💾 Salvar para recolocá-lo.',
   'That file is not readable: check you picked a Studio session file.':
     'Não foi possível ler o arquivo: confira se escolheu um arquivo de sessão do Studio.',
-  'That is not a Good Loop session file.': 'Não é um arquivo de sessão do Good Loop.',
+  'That is not a Good Loop session file.': 'Não é um arquivo de sessão da Good Loop.',
   'That file was written by a newer Studio than this one. Reload the page and open it again — opening it here would silently drop what this version does not know about.':
     'O arquivo foi gravado por um Studio mais novo que este. Recarregue a página e abra de novo — abri-lo aqui descartaria em silêncio o que esta versão não conhece.',
   'That session file has no tracks in it.': 'Este arquivo de sessão não contém faixas.',

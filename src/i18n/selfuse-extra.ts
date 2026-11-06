@@ -304,7 +304,7 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
 
   /* ---- the Therapist tab ---- */
   "Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.":
-    'O Good Loop também oferece sessões guiadas com profissionais habilitados, disponíveis pelo plano estendido da sua empresa.',
+    'A Good Loop também oferece sessões guiadas com profissionais habilitados, disponíveis pelo plano estendido da sua empresa.',
   'Pick a time above': 'Escolha um horário acima',
   "You'll receive a notification when your therapist confirms.": 'Você receberá uma notificação quando seu terapeuta confirmar.',
   "You're all set.": 'Tudo pronto.',
@@ -331,7 +331,7 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   /* ---- Profile ---- */
   'High': 'Alta',
   'Good Loop uses stereo audio. Always use wired stereo headphones for the full experience.':
-    'O Good Loop usa áudio estéreo. Use sempre fones estéreo com fio para a experiência completa.',
+    'A Good Loop usa áudio estéreo. Use sempre fones estéreo com fio para a experiência completa.',
 
   /* ---- the before/after faces (their spoken names) ---- */
   'Very distressed': 'Muito mal',

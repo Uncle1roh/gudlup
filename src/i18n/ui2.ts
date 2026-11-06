@@ -175,7 +175,7 @@ export const PT_UI2: Record<string, string> = {
   'Write to us and tell us what is happening. We answer within two working days.':
     'Escreva para nós e conte o que está acontecendo. Respondemos em até dois dias úteis.',
   'Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
-    'Conte o que deixaria o Good Loop melhor para você. A gente lê tudo — e não é um chamado de suporte, nada está quebrado do seu lado.',
+    'Conte o que deixaria a Good Loop melhor para você. A gente lê tudo — e não é um chamado de suporte, nada está quebrado do seu lado.',
   'Copy the address': 'Copiar o endereço',
   'Open my e-mail program': 'Abrir meu programa de e-mail',
   'If something is not working, use “Report a problem” instead — that one reaches us with a case number.':
@@ -267,7 +267,7 @@ export const PT_UI2: Record<string, string> = {
   /* percurso */
   '{n}× this week': '{n}× esta semana',
   'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
-    'O acompanhamento são trilhas desenhadas para andar junto com a sua terapia. Fale com o RH da sua empresa e experimente o Good Loop para empresas, com o apoio profissional.',
+    'O acompanhamento são trilhas desenhadas para andar junto com a sua terapia. Fale com o RH da sua empresa e experimente a Good Loop para empresas, com o apoio profissional.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sessões',
@@ -310,5 +310,5 @@ export const PT_UI2: Record<string, string> = {
   /* ---- uma porta só: o terceiro card ---- */
   'You have given {time} to yourself so far': 'Até agora você dedicou {time} a você',
   'For my company': 'Para a minha empresa',
-  'I manage Good Loop where I work': 'Eu cuido do Good Loop onde trabalho',
+  'I manage Good Loop where I work': 'Eu cuido da Good Loop onde trabalho',
 }

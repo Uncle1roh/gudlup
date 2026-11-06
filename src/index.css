@@ -3566,3 +3566,173 @@ td, th { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   .auth.auth--hero.su-studio .auth__card { animation-duration: 0.01s; animation-delay: 0s; }
 }
+
+
+/* ---- the ink on the hero door ------------------------------------------
+   `.auth--b2c.su-studio` (above) re-declares the whole Self Use token set in
+   DAYLIGHT values, because the person's door used to be a cream screen. On
+   the waterfall it is a dark screen again, and every widget the sign-up
+   form is built from — the account cards, the age and country fields, the
+   voice choice, the company-code note, the language picker — reads those
+   tokens. They were resolving to #11241e on dark glass: 1.09:1, which is
+   not low contrast, it is no contrast.
+
+   So the dark set goes back, on this door only. Fixing the tokens fixes
+   every widget at once, including the ones that have not been looked at;
+   fixing the widgets one `color` at a time would leave the next one to be
+   found by somebody who cannot read it.
+
+   The values are `selfuse-studio.css`'s own, with the grounds lifted a
+   step: the Studio paints them on a flat near-black, and here they sit on
+   glass over a photograph, where a near-black fill disappears. */
+.auth.auth--hero.su-studio {
+  --su-void:     rgba(4, 20, 14, 0.5);
+  --su-ground:   rgba(4, 20, 14, 0.35);
+  --su-raised:   rgba(250, 248, 223, 0.08);
+  --su-well:     rgba(4, 20, 14, 0.4);
+  --su-hair:     rgba(250, 248, 223, 0.22);
+  --su-hair-2:   rgba(250, 248, 223, 0.34);
+
+  --su-fg:       #faf8df;
+  --su-fg-2:     #e8edd6;
+  --su-muted:    #c9d7c0;
+  --su-faint:    #b9c8b4;
+  --su-meta:     #d9e3cf;
+
+  --su-accent:   #b7dbad;
+  --su-accent-2: #d6e6b6;
+  --su-cream:    #faf8df;
+  --su-cream-2:  #f6f3d6;
+
+  --su-on-accent: #0b3d31;
+  --su-hover:     rgba(250, 248, 223, 0.08);
+  --su-fill:      rgba(250, 248, 223, 0.12);
+  --su-fill-2:    rgba(250, 248, 223, 0.22);
+  --su-on:        rgba(250, 248, 223, 0.18);
+  --su-bloom:     rgba(31, 191, 148, 0.2);
+  --su-glow:      rgba(242, 238, 196, 0.5);
+  --su-cast:      rgba(0, 0, 0, 0.6);
+  --su-warm:      rgba(60, 30, 12, 0.5);
+  --su-warm-fg:   #f6e6d4;
+
+  --mist:        transparent;
+  --mist-2:      var(--su-well);
+  --ink:         var(--su-fg);
+  --slate:       var(--su-muted);
+  --line:        var(--su-hair);
+  --aura:        var(--su-accent);
+  --aura-deep:   #0b3d31;
+  --core:        var(--su-cream);
+  --halo:        var(--su-accent-2);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-lift: 0 18px 40px -22px var(--su-cast);
+
+  color: var(--su-fg-2);
+}
+
+/* Three cards across a 328px column is three words a line. On this card
+   they stack, which is also the order a person reads them in. */
+.auth.auth--hero.su-studio .auth__kind { flex-direction: column; }
+.auth.auth--hero.su-studio .auth__kindbtn { flex: 0 0 auto; }
+
+/* The three account cards and the voice choice: a pane on the glass, and
+   the chosen one filled rather than merely outlined. */
+.auth.auth--hero.su-studio .auth__kindbtn,
+.auth.auth--hero.su-studio .adr__choice {
+  background: rgba(250, 248, 223, 0.07);
+  border: 1px solid var(--su-hair);
+  color: var(--su-fg);
+}
+
+.auth.auth--hero.su-studio .auth__kindbtn small,
+.auth.auth--hero.su-studio .adr__choice small { color: var(--su-muted); }
+
+.auth.auth--hero.su-studio .auth__kindbtn.is-on,
+.auth.auth--hero.su-studio .auth__kindbtn[aria-pressed='true'],
+.auth.auth--hero.su-studio .adr__choice.is-on,
+.auth.auth--hero.su-studio .adr__choice[aria-pressed='true'] {
+  background: rgba(183, 219, 173, 0.22);
+  border-color: var(--su-accent);
+}
+
+/* The labels over the age, country and code fields, and the footnote under
+   the country one. */
+.auth.auth--hero.su-studio .auth__gatefield > span,
+.auth.auth--hero.su-studio .auth__codelabel { color: var(--su-ink, #e8edd6); }
+.auth.auth--hero.su-studio .auth__why,
+.auth.auth--hero.su-studio .auth__fine,
+.auth.auth--hero.su-studio .auth__code { color: var(--su-muted); }
+.auth.auth--hero.su-studio .auth__req { color: var(--su-accent); }
+.auth.auth--hero.su-studio .auth__code.is-ok { color: var(--su-accent-2); }
+
+/* The language picker is a native select: its popup is drawn by the
+   operating system, so it is told the page is dark rather than being
+   painted over. */
+.auth.auth--hero.su-studio .auth__lang,
+.auth.auth--hero.su-studio .auth__lang select {
+  color-scheme: dark;
+  color: var(--su-fg-2);
+  background: rgba(4, 20, 14, 0.4);
+  border-color: var(--su-hair);
+}
+
+/* Anything in the card that still asks for the page's default ink. */
+.auth.auth--hero.su-studio label,
+.auth.auth--hero.su-studio small,
+.auth.auth--hero.su-studio p,
+.auth.auth--hero.su-studio span,
+.auth.auth--hero.su-studio legend { color: inherit; }
+
+
+/* ---- the screens between the form and the library ----------------------
+   Creating an account is one flow with four screens. The form stands on the
+   waterfall; the three after it — the terms, the optional choices, the
+   cards explaining what Good Loop is — are `.app-frame.su-studio`, and
+   `.su-studio` paints its own near-black ground across the whole window. So
+   the photograph ended at the top of the second screen and the flow changed
+   rooms halfway through, at the moment somebody had just handed over their
+   details.
+
+   The frame goes clear while the door's photograph is the ground (POs,
+   2026-11-06). Everything INSIDE it keeps its own panes — the cards, the
+   consent rows, the orb — so nothing is read against moving water; what
+   goes is the sheet of near-black between them and the picture.
+
+   Keyed on the stage name, so this is the door and the first run and
+   nothing else: on the library `data-gl-amb` reads `home` and this rule
+   does not apply. */
+html[data-gl-amb='login'] .app-frame.su-studio {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The bloom `su-studio` floats above its ground is for a flat ground. */
+html[data-gl-amb='login'] .app-frame.su-studio::before { display: none; }
+
+/* The left half of the first-run screens is `.fr__stage`: a flat panel with
+   the orb's glow over it. Only the flat colour goes — the glow is a stack
+   of rgba stops and layers over the photograph as it was meant to, which is
+   what keeps the orb from floating on water with nothing under it. */
+html[data-gl-amb='login'] .fr__stage { background-color: transparent; }
+
+/* The words sit straight on the frame, which is now a photograph — and a
+   photograph is not an even ground. The right-hand column carries a veil
+   of its own so a paragraph is read against one colour whether it happens
+   to fall on the dark cliff or on the lit moss beside it. A blur rather
+   than a flat fill, so the picture is still there behind the text. */
+html[data-gl-amb='login'] .fr__col {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 18, 14, 0) 0%,
+    rgba(5, 18, 14, 0.55) 12%,
+    rgba(5, 18, 14, 0.72) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* …and the faint grades of ink were drawn for a flat near-black. Over the
+   picture the quietest of them stops being quiet and starts being absent. */
+html[data-gl-amb='login'] .fr__body,
+html[data-gl-amb='login'] .fr__foot,
+html[data-gl-amb='login'] .fr__need { color: #e8edd6; }

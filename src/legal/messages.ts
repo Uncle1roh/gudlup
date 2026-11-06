@@ -63,13 +63,13 @@ export const LEGAL_MESSAGES = {
     it: 'In crisi? Chiama il 112.' },
   'WEB-3': { tier: 'A',
     en: 'Relaxation sessions for everyday moments. Good Loop is a wellbeing app — not a medical device and not treatment.',
-    'pt-BR': 'Sessões de relaxamento para os momentos do dia a dia. O Good Loop é um aplicativo de bem-estar — não é dispositivo médico nem tratamento.',
+    'pt-BR': 'Sessões de relaxamento para os momentos do dia a dia. A Good Loop é um aplicativo de bem-estar — não é dispositivo médico nem tratamento.',
     it: 'Sessioni di rilassamento per i momenti di ogni giorno. Good Loop è un\'app di benessere — non è un dispositivo medico né un trattamento.' },
 
   /* ---- onboarding ------------------------------------------------------- */
   'ONB-1.1': { tier: 'A',
     en: 'Good Loop is for adults. What\'s your date of birth?',
-    'pt-BR': 'O Good Loop é para adultos. Qual é a sua data de nascimento?',
+    'pt-BR': 'A Good Loop é para adultos. Qual é a sua data de nascimento?',
     it: 'Good Loop è per adulti. Qual è la tua data di nascita?' },
   /* The question, and — separately — why it is asked. It used to be one
      sentence in which the reason was three times the length of the question,
@@ -87,11 +87,11 @@ export const LEGAL_MESSAGES = {
     it: 'Questo imposta i tuoi numeri di emergenza, la lingua e i termini legali.' },
   'ONB-1.3': { tier: 'A',
     en: 'Sorry — Good Loop is only for people aged 18 and over.',
-    'pt-BR': 'O Good Loop é apenas para maiores de 18 anos.',
+    'pt-BR': 'A Good Loop é apenas para maiores de 18 anos.',
     it: 'Good Loop è riservato ai maggiori di 18 anni.' },
   'ONB-1.4': { tier: 'A',
     en: 'Good Loop isn\'t available in your country yet.',
-    'pt-BR': 'O Good Loop ainda não está disponível no seu país.',
+    'pt-BR': 'A Good Loop ainda não está disponível no seu país.',
     it: 'Good Loop non è ancora disponibile nel tuo Paese.' },
   /* The same two ways, in the order a person meets them, and without the
      masculine agreement — «sozinho», «da solo» — put on somebody nobody has
@@ -99,11 +99,11 @@ export const LEGAL_MESSAGES = {
      in, so naming it says "licensed" without the word. */
   'ONB-2.1': { tier: 'A',
     en: 'You can use Good Loop in two ways. On your own, to relax: used that way it is not treatment and not therapy. With a psychologist: then it is the professional who cares for you, and Good Loop is the space where that care happens.',
-    'pt-BR': 'Você pode usar o Good Loop de duas formas. Por conta própria, para relaxar: nesse caso, ele não é tratamento nem terapia. Com um psicólogo ou psicóloga: aí quem cuida de você é o profissional, e o Good Loop é o espaço onde esse acompanhamento acontece.',
+    'pt-BR': 'Você pode usar a Good Loop de duas formas. Por conta própria, para relaxar: nesse caso, ela não é tratamento nem terapia. Com um psicólogo ou psicóloga: aí quem cuida de você é o profissional, e a Good Loop é o espaço onde esse acompanhamento acontece.',
     it: 'Puoi usare Good Loop in due modi. Per conto tuo, per rilassarti: usato così non è né un trattamento né una terapia. Con uno psicologo o una psicologa: lì chi si prende cura di te è il professionista, e Good Loop è lo spazio in cui questo avviene.' },
   'ONB-2.2': { tier: 'A',
     en: 'I understand Good Loop does not answer emergencies. If I am at risk, I will use the Emotional support button or call emergency services.',
-    'pt-BR': 'Entendo que o Good Loop não atende emergências. Se eu estiver em risco, vou usar o botão Apoio emocional ou ligar para os serviços de emergência.',
+    'pt-BR': 'Entendo que a Good Loop não atende emergências. Se eu estiver em risco, vou usar o botão Apoio emocional ou ligar para os serviços de emergência.',
     it: 'Capisco che Good Loop non risponde alle emergenze. Se sono a rischio, userò il pulsante Supporto emotivo o chiamerò i servizi di emergenza.' },
   'ONB-2.3': { tier: 'A',
     en: 'The Emotional support button is always at the top of the screen. It opens the support and emergency contacts.',
@@ -128,11 +128,11 @@ export const LEGAL_MESSAGES = {
      lines has read more than somebody who scrolled past a wall. */
   'ONB-3.4': { tier: 'A',
     en: 'Good Loop is for relaxation and does not replace therapy. When you use it with a psychologist, the professional is the one who cares for you.',
-    'pt-BR': 'O Good Loop é para relaxar e não substitui terapia. Quando você usa com um psicólogo ou psicóloga, quem cuida de você é o profissional.',
+    'pt-BR': 'A Good Loop é para relaxar e não substitui terapia. Quando você usa com um psicólogo ou psicóloga, quem cuida de você é o profissional.',
     it: 'Good Loop serve per rilassarsi e non sostituisce la terapia. Quando lo usi con uno psicologo o una psicologa, chi si prende cura di te è il professionista.' },
   'ONB-3.5': { tier: 'A',
     en: 'Good Loop does not answer emergencies. If you need help, use the Emotional support button at the top of the screen.',
-    'pt-BR': 'O Good Loop não atende emergências. Se precisar, use o botão Apoio emocional, no topo da tela.',
+    'pt-BR': 'A Good Loop não atende emergências. Se precisar, use o botão Apoio emocional, no topo da tela.',
     it: 'Good Loop non risponde alle emergenze. Se ti serve aiuto, usa il pulsante Supporto emotivo, in alto nello schermo.' },
   'ONB-3.6': { tier: 'A',
     en: 'What you listen to is yours alone: your company does not see it.',
@@ -141,7 +141,7 @@ export const LEGAL_MESSAGES = {
 
   'ONB-4.1': { tier: 'A',
     en: '{sponsor} pays for your access. They never see whether you use Good Loop, when, or what you do — only programme totals for groups of 25 or more.',
-    'pt-BR': 'A {sponsor} paga o seu acesso. Ela nunca vê se você usa o Good Loop, quando ou o que você faz — apenas totais do programa, para grupos de 25 pessoas ou mais.',
+    'pt-BR': 'A {sponsor} paga o seu acesso. Ela nunca vê se você usa a Good Loop, quando ou o que você faz — apenas totais do programa, para grupos de 25 pessoas ou mais.',
     it: '{sponsor} paga il tuo accesso. Non vede mai se usi Good Loop, quando o che cosa fai — solo totali del programma per gruppi di 25 persone o più.' },
   'ONB-4.2': { tier: 'A',
     en: 'On a work phone or computer, your employer may be able to see the app is installed. A personal device keeps it private.',
@@ -163,11 +163,11 @@ export const LEGAL_MESSAGES = {
     it: 'Supporto emotivo' },
   'NAV-2': { tier: 'on-demand', market: 'BR',
     en: 'CVV 188 (24h, free) · SAMU 192 · Police 190 — or go to the nearest emergency department. Good Loop can\'t respond to emergencies.',
-    'pt-BR': 'CVV 188 (24h, gratuito) · SAMU 192 · Polícia 190 — ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.',
+    'pt-BR': 'CVV 188 (24h, gratuito) · SAMU 192 · Polícia 190 — ou vá ao pronto-socorro mais próximo. A Good Loop não atende emergências.',
     it: 'CVV 188 (24h, gratuito) · SAMU 192 · Polizia 190 — oppure vai al pronto soccorso più vicino. Good Loop non risponde alle emergenze.' }, // draft — not in register
   'NAV-3': { tier: 'on-demand', market: 'EU',
     en: 'Emergency 112 · {supportLine} — or go to the nearest emergency department. Good Loop can\'t respond to emergencies.',
-    'pt-BR': 'Emergência 112 · {supportLine} — ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.', // draft — not in register
+    'pt-BR': 'Emergência 112 · {supportLine} — ou vá ao pronto-socorro mais próximo. A Good Loop não atende emergências.', // draft — not in register
     it: 'Emergenze 112 · {supportLine} — oppure vai al pronto soccorso più vicino. Good Loop non risponde alle emergenze.' },
 
   /* The sentence under the numbers in the Help sheet. It was a plain t()
@@ -176,7 +176,7 @@ export const LEGAL_MESSAGES = {
      right thing to do before it says what this product cannot do. */
   'CRS-02': { tier: 'on-demand',
     en: 'Asking for help is an important step. If you need care right now, call the emergency number or go to the nearest emergency department. Good Loop does not respond to emergencies.',
-    'pt-BR': 'Pedir ajuda é um passo importante. Se precisar de atendimento imediatamente, ligue para o número de emergência ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.',
+    'pt-BR': 'Pedir ajuda é um passo importante. Se precisar de atendimento imediatamente, ligue para o número de emergência ou vá ao pronto-socorro mais próximo. A Good Loop não atende emergências.',
     it: 'Chiedere aiuto è un passo importante. Se hai bisogno di assistenza adesso, chiama il numero di emergenza o vai al pronto soccorso più vicino. Good Loop non risponde alle emergenze.' }, // draft — not in register
 
   /* ---- library (self-guided) ------------------------------------------- */
@@ -268,7 +268,7 @@ export const LEGAL_MESSAGES = {
   /* ---- booking ---------------------------------------------------------- */
   'BKG-1': { tier: 'A',
     en: '{name} provides your sessions and is responsible for your care, and decides what is used and when. Good Loop provides the audio content, the tools and the platform, and checks registration — not clinical skill.',
-    'pt-BR': '{name} realiza as suas sessões, decide como elas funcionam e é responsável pelo seu cuidado. O Good Loop oferece o conteúdo em áudio e as ferramentas, e verifica o registro profissional — não a competência clínica.',
+    'pt-BR': '{name} realiza as suas sessões, decide como elas funcionam e é responsável pelo seu cuidado. A Good Loop oferece o conteúdo em áudio e as ferramentas, e verifica o registro profissional — não a competência clínica.',
     it: '{name} conduce le tue sessioni, decide come si svolgono ed è responsabile della tua cura. Good Loop fornisce i contenuti audio e gli strumenti, e verifica l\'iscrizione all\'albo — non la competenza clinica.' },
   'BKG-2': { tier: 'D',
     en: 'Free to cancel or move up to {hours} before. The same rule applies to {name}.',
@@ -328,7 +328,7 @@ export const LEGAL_MESSAGES = {
     it: 'Hai cambiato idea? Rimborso integrale entro 7 giorni.' }, // draft — not in register
   'CHK-4': { tier: 'A', market: 'EU',
     en: 'You can withdraw within 14 days — even if you\'ve started using Good Loop.',
-    'pt-BR': 'Você pode desistir em até 14 dias — mesmo que já tenha começado a usar o Good Loop.', // draft — not in register
+    'pt-BR': 'Você pode desistir em até 14 dias — mesmo que já tenha começado a usar a Good Loop.', // draft — not in register
     it: 'Puoi recedere entro 14 giorni — anche se hai già iniziato a usare Good Loop.' },
 
   /* ---- settings --------------------------------------------------------- */
@@ -368,7 +368,7 @@ export const LEGAL_MESSAGES = {
   /* ---- notifications ---------------------------------------------------- */
   'NOT-1': { tier: 'D',
     en: 'You have a Good Loop appointment at {time}.',
-    'pt-BR': 'Você tem um compromisso no Good Loop às {time}.',
+    'pt-BR': 'Você tem um compromisso na Good Loop às {time}.',
     it: 'Hai un appuntamento Good Loop alle {time}.' },
   'NOT-2': { tier: 'A',
     en: 'Your Good Loop plan renews on {date} at {price}. Manage or cancel in Settings.',
@@ -402,7 +402,7 @@ export const LEGAL_MESSAGES = {
   /* ---- sponsor console -------------------------------------------------- */
   'SPC-1': { tier: 'A',
     en: 'Good Loop supports your people\'s wellbeing. It doesn\'t assess workplace risk or meet any legal obligation for you.',
-    'pt-BR': 'O Good Loop apoia o bem-estar das suas pessoas. Ele não avalia riscos do trabalho nem cumpre qualquer obrigação legal da sua empresa.',
+    'pt-BR': 'A Good Loop apoia o bem-estar das suas pessoas. Ela não avalia riscos do trabalho nem cumpre qualquer obrigação legal da sua empresa.',
     it: 'Good Loop sostiene il benessere delle tue persone. Non valuta i rischi sul lavoro e non assolve alcun obbligo di legge della tua azienda.' },
   'SPC-2': { tier: 'D',
     en: 'Figures for groups under 25 people are hidden to protect privacy.',
@@ -428,7 +428,7 @@ export const LEGAL_MESSAGES = {
     it: 'La verifica della tua iscrizione scade il {date}.' },
   'PRO-4': { tier: 'B',
     en: 'You choose. Good Loop doesn\'t recommend content or plan care.',
-    'pt-BR': 'Você escolhe. O Good Loop não recomenda conteúdo nem planeja cuidado.',
+    'pt-BR': 'Você escolhe. A Good Loop não recomenda conteúdo nem planeja cuidado.',
     it: 'Scegli tu. Good Loop non consiglia contenuti né pianifica la cura.' },
 } as const satisfies Record<string, LegalMessage>
 

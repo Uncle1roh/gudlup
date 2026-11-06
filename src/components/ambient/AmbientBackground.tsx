@@ -186,7 +186,11 @@ export function AmbientBackground() {
   useEffect(() => {
     const root = document.documentElement
     if (owning) {
-      root.dataset.glAmb = 'on'
+      /* The STAGE, not just "on": `shell.css` wants to know that the app's
+         own ground must step aside, and `index.css` wants to know the
+         narrower thing — that the ground in question is the door's
+         photograph, which the first-run screens stand on too. */
+      root.dataset.glAmb = stage
       return
     }
     /* Held through the fade. `.amb--off` takes 0.3s to reach zero, and the
@@ -194,7 +198,14 @@ export function AmbientBackground() {
        the stage changed and the fade happens behind it, invisibly. */
     const id = window.setTimeout(() => { delete root.dataset.glAmb }, OFF_FADE_MS)
     return () => window.clearTimeout(id)
-  }, [owning])
+    /* `stage`, not just `owning`. The attribute carries the stage's NAME,
+       and `index.css` keys the first-run rules on `login` specifically — so
+       an effect that only re-ran when ownership changed left `login` on the
+       document all the way into the library, where those rules would then
+       strip the ground from any screen that happened to use the same
+       classes. Caught in a browser: the library reported
+       `data-gl-amb="landing"`. */
+  }, [owning, stage])
 
   const diameter = 3000 * Math.max(vp.w / HERO_BASE_WIDTH, vp.h / 900)
   const k = anchor ? anchor.displayedWidth / HERO_BASE_WIDTH : 1

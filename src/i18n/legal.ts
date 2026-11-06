@@ -381,7 +381,7 @@ export const PT_LEGAL: Record<string, string> = {
   'Where you live': 'Onde você mora',
 
   /* ---- first run ---- */
-  'How Good Loop works': 'Como o Good Loop funciona',
+  'How Good Loop works': 'Como a Good Loop funciona',
   'Your terms and your choices': 'Os seus termos e as suas escolhas',
   'What this means': 'O que isso significa',
   'Optional — all off unless you turn them on': 'Opcional — tudo desligado até você ligar',
@@ -419,7 +419,7 @@ export const PT_LEGAL: Record<string, string> = {
     'Contado em totais de grupos de 25 pessoas ou mais. Nunca compartilhado individualmente.',
   'Reminders on this device': 'Lembretes neste aparelho',
   'Reminders never contain health information.': 'Os lembretes nunca contêm informações de saúde.',
-  'News from Good Loop': 'Novidades do Good Loop',
+  'News from Good Loop': 'Novidades da Good Loop',
   'Occasional product news by e-mail.': 'Novidades sobre o produto por e-mail, de vez em quando.',
   'Research on the methodology': 'Pesquisa sobre a metodologia',
   'De-identified use, only in research about how the sessions work.':
@@ -436,7 +436,7 @@ export const PT_LEGAL: Record<string, string> = {
   'Read the full notice': 'Ler o aviso completo',
   'One library, two ways to use it': 'Uma biblioteca, duas formas de usar',
   'Most days you open Good Loop on your own. Where your plan includes it, a licensed professional can also work with you — and may use the same sessions in the care they provide.':
-    'Na maioria dos dias você abre o Good Loop por conta própria. Onde o seu plano incluir, um profissional habilitado também pode trabalhar com você — e pode usar as mesmas sessões no cuidado que presta.',
+    'Na maioria dos dias você abre a Good Loop por conta própria. Onde o seu plano incluir, um profissional habilitado também pode trabalhar com você — e pode usar as mesmas sessões no cuidado que presta.',
   'Short audio sessions for the moment you are in — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.':
     'Sessões de áudio curtas para o momento em que você está — 6, 12 ou 24 minutos, quando quiser, sem precisar pedir a ninguém.',
   'Included in your plan: sessions with a licensed psychologist, booked and held inside the app. They decide what is used and when.':
@@ -459,7 +459,7 @@ export const PT_LEGAL: Record<string, string> = {
 
   /* ---- Help now, crisis, legal page ---- */
   'Or go to the nearest emergency department. Good Loop can’t respond to emergencies.':
-    'Ou vá ao pronto-socorro mais próximo. O Good Loop não atende emergências.',
+    'Ou vá ao pronto-socorro mais próximo. A Good Loop não atende emergências.',
   'Close': 'Fechar',
   'All legal information': 'Todas as informações legais',
   'Version {v}. These texts are a working draft pending review by counsel in Brazil and Italy; the Portuguese and Italian versions will be the governing ones in their markets once reviewed.':
@@ -545,19 +545,19 @@ export const PT_LEGAL: Record<string, string> = {
   'A weekly check-in lives in the Progress tab. Less than a minute, and completely optional.':
     'O check-in semanal fica na aba Progresso. Menos de um minuto, e totalmente opcional.',
   'Where your plan includes it, a licensed professional can work with you in a video session and may select sessions for you to listen to on your own. They decide what is used and when; Good Loop provides the content and the tools.':
-    'Onde o seu plano incluir, um profissional habilitado pode trabalhar com você em uma sessão por vídeo e pode escolher sessões para você ouvir por conta própria. É ele quem decide o que é usado e quando; o Good Loop fornece o conteúdo e as ferramentas.',
+    'Onde o seu plano incluir, um profissional habilitado pode trabalhar com você em uma sessão por vídeo e pode escolher sessões para você ouvir por conta própria. É ele quem decide o que é usado e quando; a Good Loop fornece o conteúdo e as ferramentas.',
   'In an emergency, Emotional support is always in the menu:': 'Em uma emergência, o Apoio emocional está sempre no menu:',
   'Legal texts': 'Textos legais',
   'Good Loop combines guided voice, stereo sound design and structured audio segments into short relaxation sessions you can fit into a working day.':
-    'O Good Loop combina voz guiada, design de som estéreo e segmentos de áudio estruturados em sessões curtas de relaxamento que cabem em um dia de trabalho.',
+    'A Good Loop combina voz guiada, design de som estéreo e segmentos de áudio estruturados em sessões curtas de relaxamento que cabem em um dia de trabalho.',
   'Terms and Conditions': 'Termos e condições',
   'All notices and previous versions': 'Todos os avisos e versões anteriores',
   'The Good Loop platform, its content and the GL Methodology are protected by copyright and other intellectual property rights.':
     'A plataforma Good Loop, o seu conteúdo e a Metodologia GL são protegidos por direitos autorais e outros direitos de propriedade intelectual.',
   'Good Loop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.':
-    'O Good Loop é um serviço de bem-estar. Não é tratamento e não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com o seu médico ou com o serviço de apoio da sua empresa.',
+    'A Good Loop é um serviço de bem-estar. Não é tratamento e não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com o seu médico ou com o serviço de apoio da sua empresa.',
   'Good Loop can’t respond to emergencies. Good Loop is a wellbeing service and does not replace professional care.':
-    'O Good Loop não atende emergências. O Good Loop é um serviço de bem-estar e não substitui o cuidado profissional.',
+    'A Good Loop não atende emergências. A Good Loop é um serviço de bem-estar e não substitui o cuidado profissional.',
   'Emergency and support lines': 'Linhas de emergência e apoio',
 
   /* ---- therapist tab, video ---- */
@@ -598,7 +598,7 @@ export const PT_LEGAL: Record<string, string> = {
   'Numbers only — never a diagnostic label, never a change the platform computed.':
     'Só os números — nunca um rótulo diagnóstico, nunca uma variação calculada pela plataforma.',
   'Which instrument, and when, is your decision. Good Loop proposes nothing.':
-    'Qual instrumento, e quando, é decisão sua. O Good Loop não propõe nada.',
+    'Qual instrumento, e quando, é decisão sua. A Good Loop não propõe nada.',
   'Content between sessions': 'Conteúdo entre sessões',
   'Current: {code} — {done} of {total} done.': 'Atual: {code} — {done} de {total} ouvidos.',
   'Nothing this time': 'Nada desta vez',
@@ -672,7 +672,7 @@ export const PT_LEGAL: Record<string, string> = {
   'Closing a professional account is a request we log and confirm within two working days, so that anyone you are working with gets an orderly handover first (Professional Terms P3.5).':
     'O encerramento de uma conta profissional é uma solicitação que registramos e confirmamos em até dois dias úteis, para que as pessoas com quem você trabalha tenham antes uma transição ordenada (Termos para profissionais, P3.5).',
   'Encryption in transit and at rest, access limited to your own account, and every access logged — built so you can meet your own duty of confidentiality. Good Loop holds no certification or clearance for this and claims none: the duty is yours, and these are the tools for it.':
-    'Criptografia em trânsito e em repouso, acesso limitado à sua própria conta e todo acesso registrado — construídos para que você cumpra o seu próprio dever de confidencialidade. O Good Loop não possui certificação ou autorização para isso e não a alega: o dever é seu, e estas são as ferramentas para cumpri-lo.',
+    'Criptografia em trânsito e em repouso, acesso limitado à sua própria conta e todo acesso registrado — construídos para que você cumpra o seu próprio dever de confidencialidade. A Good Loop não possui certificação ou autorização para isso e não a alega: o dever é seu, e estas são as ferramentas para cumpri-lo.',
   'Two-factor sign-in for professional accounts is enabled by the Good Loop team in the authentication service; ask support if it is not yet active on yours.':
     'O acesso em duas etapas para contas profissionais é ativado pela equipe Good Loop no serviço de autenticação; fale com o suporte se ainda não estiver ativo na sua.',
   'Professional body': 'Conselho profissional',
@@ -723,5 +723,5 @@ export const PT_LEGAL: Record<string, string> = {
   'Employees choose whether to be counted in aggregate figures, with no consequence either way.':
     'Os colaboradores escolhem se querem ser contados nos totais agregados, sem consequência em nenhum dos casos.',
   'What your people’s employer never sees': 'O que o empregador nunca vê',
-  'Good Loop and your obligations as an employer': 'O Good Loop e as suas obrigações como empregador',
+  'Good Loop and your obligations as an employer': 'A Good Loop e as suas obrigações como empregador',
 }

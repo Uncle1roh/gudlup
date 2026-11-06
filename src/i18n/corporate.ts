@@ -401,7 +401,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Custom range': 'Período personalizado',
 
   /* ---- setup wizard ---- */
-  'Welcome to Good Loop for {company}': 'Boas-vindas ao Good Loop para {company}',
+  'Welcome to Good Loop for {company}': 'Boas-vindas à Good Loop para {company}',
   "Your company's wellbeing program is ready to configure. This setup takes about 5 minutes.": 'O programa de bem-estar da sua empresa está pronto para ser configurado. Leva cerca de 5 minutos.',
   'Your convention': 'Seu convênio',
   'Employees get autonomous audio wellbeing sessions via the app, plus access to therapist-led sessions via video call.': 'Os colaboradores têm sessões de áudio de bem-estar para usar por conta própria no app, além de acesso a sessões com terapeuta por videochamada.',
@@ -431,7 +431,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Invitation sent': 'Convite enviado',
   'Remove': 'Remover',
   'What happens next': 'O que acontece depois',
-  'Existing Good Loop therapists receive a notification to accept. New ones get an email to register and complete credential verification. Status updates appear in Management.': 'Terapeutas que já estão no Good Loop recebem uma notificação para aceitar. Os novos recebem um e-mail para se cadastrar e concluir a verificação de credenciais. As atualizações aparecem em Gestão.',
+  'Existing Good Loop therapists receive a notification to accept. New ones get an email to register and complete credential verification. Status updates appear in Management.': 'Terapeutas que já estão na Good Loop recebem uma notificação para aceitar. Os novos recebem um e-mail para se cadastrar e concluir a verificação de credenciais. As atualizações aparecem em Gestão.',
   "Skip for now — I'll add therapists later": 'Pular por enquanto: vou adicionar terapeutas depois',
   'Setup complete': 'Configuração concluída',
   "Your Good Loop wellbeing program is ready. Here's your summary:": 'Seu programa de bem-estar Good Loop está pronto. Veja o resumo:',
@@ -489,7 +489,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Share your company code': 'Compartilhe o código da empresa',
 
   /* ---- therapists ---- */
-  'These are the professionals your people can book. A therapist joins by entering an activation code you give them — you never add someone by name, because only a Good Loop credential review makes a clinician bookable.': 'Estes são os profissionais que as suas pessoas podem agendar. Um terapeuta entra na lista digitando um código de ativação que você fornece: ninguém é adicionado pelo nome, porque só a verificação de credenciais do Good Loop torna um profissional agendável.',
+  'These are the professionals your people can book. A therapist joins by entering an activation code you give them — you never add someone by name, because only a Good Loop credential review makes a clinician bookable.': 'Estes são os profissionais que as suas pessoas podem agendar. Um terapeuta entra na lista digitando um código de ativação que você fornece: ninguém é adicionado pelo nome, porque só a verificação de credenciais da Good Loop torna um profissional agendável.',
   'Activation codes': 'Códigos de ativação',
   'Generate a code': 'Gerar um código',
   'No unused codes. Generate one and send it to the therapist you want on your list.': 'Nenhum código sem uso. Gere um e envie ao terapeuta que você quer na lista.',
@@ -570,7 +570,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Usage Patterns': 'Padrões de uso',
   'Sessions per Week': 'Sessões por semana',
   'Session Frequency': 'Frequência de sessões',
-  'How frequently active employees use Good Loop': 'Com que frequência os colaboradores ativos usam o Good Loop',
+  'How frequently active employees use Good Loop': 'Com que frequência os colaboradores ativos usam a Good Loop',
   '1 / week': '1 / semana',
   '2–3 / week': '2–3 / semana',
   '4–5 / week': '4–5 / semana',
@@ -667,7 +667,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'The current code stops working immediately. Employees who already registered keep their access; anyone who has not yet registered will need the new code.': 'O código atual deixa de funcionar na hora. Quem já se cadastrou mantém o acesso; quem ainda não se cadastrou vai precisar do novo código.',
   'Regenerate': 'Gerar novo',
   'Your Good Loop access code — {company}': 'Seu código de acesso Good Loop — {company}',
-  'Good Loop is now available to you through {company}.': 'O Good Loop agora está disponível para você pelo programa da {company}.',
+  'Good Loop is now available to you through {company}.': 'A Good Loop agora está disponível para você pelo programa da {company}.',
   'Company code: {code}': 'Código da empresa: {code}',
   'Download the app, create your account, and enter this code during registration to link it to your company plan.': 'Baixe o app, crie sua conta e digite este código no cadastro para vinculá-la ao plano da sua empresa.',
   'Total': 'Total',
@@ -676,7 +676,7 @@ export const PT_CORPORATE: Record<string, string> = {
   'Available': 'Disponíveis',
   'License utilization is high. Contact your Good Loop representative to expand your plan.': 'Quase todas as licenças estão em uso. Fale com seu representante Good Loop para ampliar o plano.',
   'Licence expansion — {company}': 'Ampliação de licenças — {company}',
-  'Contact Good Loop': 'Falar com o Good Loop',
+  'Contact Good Loop': 'Falar com a Good Loop',
   'License count is set by the commercial agreement — not self-service.': 'O número de licenças é definido pelo contrato comercial: não se altera por aqui.',
   'Therapists in your convention': 'Terapeutas do seu convênio',
   'Invite therapist': 'Convidar terapeuta',

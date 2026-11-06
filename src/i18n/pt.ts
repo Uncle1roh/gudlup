@@ -81,7 +81,7 @@ export const PT: Record<string, string> = {
   'Sign in': 'Entrar',
   'Have an account? Sign in': 'Já tem uma conta? Entre',
   'New here? Create an account': 'Novo por aqui? Crie uma conta',
-  'Create an account': 'Crie uma conta',
+  'Create an account': 'Criar uma conta',
   'Demo mode — any email & password works. Tap {action}.': 'Modo demo — qualquer email e senha funciona. Toque em {action}.',
   'Clinician accounts start unverified — credentialing is reviewed before patient sessions.': 'Contas de clínicos começam não verificadas — o credenciamento é revisado antes das sessões com pacientes.',
 
@@ -95,7 +95,7 @@ export const PT: Record<string, string> = {
   /* ---- stereo check ---- */
   'Headphones': 'Fones de ouvido',
   'Put on your headphones': 'Coloque seus fones de ouvido',
-  'Good Loop uses sound that moves between your ears. Tap each side to check it reaches the right one.': 'O Good Loop usa som que se move entre seus ouvidos. Toque em cada lado para verificar se ele chega ao ouvido certo.',
+  'Good Loop uses sound that moves between your ears. Tap each side to check it reaches the right one.': 'A Good Loop usa som que se move entre seus ouvidos. Toque em cada lado para verificar se ele chega ao ouvido certo.',
   'Left ear': 'Ouvido esquerdo',
   'Right ear': 'Ouvido direito',
   'For the full effect, wired headphones work best. You can continue either way.': 'Para o efeito completo, fones com fio funcionam melhor. Você pode continuar de qualquer forma.',
@@ -765,10 +765,10 @@ export const PT: Record<string, string> = {
   'Frequently asked questions': 'Perguntas frequentes',
   'Contact support': 'Falar com o suporte',
   'Report a problem': 'Relatar um problema',
-  'About Good Loop': 'Sobre o Good Loop',
+  'About Good Loop': 'Sobre a Good Loop',
   'Version': 'Versão',
   'Good Loop combines guided voice, stereo sound design and structured session phases into short audio practices you can fit into a working day.':
-    'O Good Loop reúne voz guiada, desenho sonoro em estéreo e fases estruturadas em práticas de áudio curtas, que cabem em um dia de trabalho.',
+    'A Good Loop reúne voz guiada, desenho sonoro em estéreo e fases estruturadas em práticas de áudio curtas, que cabem em um dia de trabalho.',
   'Nothing here yet.': 'Ainda nada por aqui.',
   'Your check-in and your mood calendar appear here once you start filling them in.':
     'Seu check-in e seu calendário do humor aparecem aqui assim que você começar a preenchê-los.',
@@ -786,7 +786,7 @@ export const PT: Record<string, string> = {
   'Checking in — how are you doing?': 'Um instante — como você está?',
   'Not now': 'Agora não',
   'Good Loop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
-    'O Good Loop é um programa pessoal de bem-estar e desenvolvimento. Ele não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com seu médico ou com o serviço de apoio da sua empresa.',
+    'A Good Loop é um programa pessoal de bem-estar e desenvolvimento. Ela não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com seu médico ou com o serviço de apoio da sua empresa.',
   'This session is not available': 'Esta sessão não está disponível',
   'It is no longer in the catalog. If your therapist prescribed it, they can prescribe it again.':
     'Ela não está mais no catálogo. Se o seu terapeuta a indicou, ele pode indicá-la de novo.',
@@ -990,7 +990,7 @@ export const PT: Record<string, string> = {
   'For me': 'Para mim',
   'Sessions to listen to on my own': 'Sessões para ouvir por conta própria',
   'I am a therapist': 'Sou terapeuta',
-  'I see people through Good Loop': 'Atendo pessoas pelo Good Loop',
+  'I see people through Good Loop': 'Atendo pessoas pela Good Loop',
   'Company code (required)': 'Código da empresa (obrigatório)',
   'Used to remember your preferences and suggest the right sessions.':
     'Serve para lembrar suas preferências e sugerir as sessões certas.',
@@ -1035,10 +1035,10 @@ export const PT: Record<string, string> = {
   'Finding balance': 'Encontrar equilíbrio',
   'Good': 'Bom',
   'Good Loop uses stereo audio technology. Always use wired stereo headphones for the full experience.':
-    'O Good Loop usa tecnologia de áudio em estéreo. Use sempre fones estéreo com fio para a experiência completa.',
+    'A Good Loop usa tecnologia de áudio em estéreo. Use sempre fones estéreo com fio para a experiência completa.',
   'Great': 'Ótimo',
   'Home': 'Início',
-  'How Good Loop Works': 'Como funciona o Good Loop',
+  'How Good Loop Works': 'Como funciona a Good Loop',
   'Less than half the time': 'Menos da metade do tempo',
   'Low energy, feeling drained': 'Pouca energia, me sentindo esgotado',
   'Lunch break': 'Hora do almoço',
@@ -1053,7 +1053,7 @@ export const PT: Record<string, string> = {
   'Overwhelmed by tasks': 'Soterrado de tarefas',
   'Your data, your control.': 'Seus dados, sob o seu controle.',
   'Good Loop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.':
-    'O Good Loop segue os padrões da LGPD e do GDPR. O que você escuta e como você diz que está é seu: nunca é vendido, nunca é mostrado à sua empresa e só é compartilhado com um terapeuta se você pedir.',
+    'A Good Loop segue os padrões da LGPD e do GDPR. O que você escuta e como você diz que está é seu: nunca é vendido, nunca é mostrado à sua empresa e só é compartilhado com um terapeuta se você pedir.',
   'What we keep': 'O que guardamos',
   'Your account, the sessions you play and the check-ins you fill in — nothing else.':
     'Sua conta, as sessões que você ouve e os check-ins que você preenche. Nada além disso.',
@@ -1070,7 +1070,7 @@ export const PT: Record<string, string> = {
   'Goals you agree on with your therapist appear here.': 'Os objetivos que você combinar com seu terapeuta aparecem aqui.',
   'One method, two ways to use it': 'Um método, dois jeitos de usar',
   'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
-    'A sua empresa oferece os dois. Na maioria dos dias você abre o Good Loop sozinho; quando quiser alguém junto, o mesmo método vem com um profissional habilitado.',
+    'A sua empresa oferece os dois. Na maioria dos dias você abre a Good Loop sozinho; quando quiser alguém junto, o mesmo método vem com um profissional habilitado.',
   'On your own': 'Sozinho',
   'Short guided audio sessions for the day you are having — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.':
     'Sessões curtas de áudio guiado para o dia que você está tendo — 6, 12 ou 24 minutos, quando quiser, sem precisar pedir a ninguém.',
@@ -1099,7 +1099,7 @@ export const PT: Record<string, string> = {
   'A sound that moves from one ear to the other, at a steady rhythm.': 'Um som que vai de um ouvido ao outro, num ritmo regular.',
   'Different frequencies in each ear. That is why you need headphones.': 'Frequências diferentes em cada ouvido. Por isso, use fones.',
   'On your own, Good Loop supports your wellbeing, but it is not medical or psychological care and does not replace that care.':
-    'Por conta própria, o Good Loop apoia o seu bem-estar, mas não é cuidado médico ou psicológico e não substitui esse cuidado.',
+    'Por conta própria, a Good Loop apoia o seu bem-estar, mas não é cuidado médico ou psicológico e não substitui esse cuidado.',
   'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
     'Coloque os fones, escolha uma duração e escute: a voz e o som ao redor fazem o trabalho. Nada para ler, nada para responder, e ninguém fica sabendo o que você escolheu.',
   'Before': 'Antes',
@@ -1110,7 +1110,7 @@ export const PT: Record<string, string> = {
   'Closing the day so it does not follow you home.': 'Fechar o dia para ele não ir junto para casa.',
   'Not belief. Neuroscience.': 'Não é crença. É neurociência.',
   'Good Loop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.':
-    'O Good Loop não inventa ciência nova: ele organiza o que já funciona. Seis fases, construídas sobre técnicas clínicas consolidadas e entregues como som.',
+    'A Good Loop não inventa ciência nova: ela organiza o que já funciona. Seis fases, construídas sobre técnicas clínicas consolidadas e entregues como som.',
   'bilateral stimulation': 'estimulação bilateral',
   'Polyvagal theory': 'Teoria polivagal',
   'nervous-system regulation': 'regulação do sistema nervoso',
@@ -1124,13 +1124,13 @@ export const PT: Record<string, string> = {
   'Giampiero Varetti · Clinical psychologist · Creator of the methodology · 30+ years of practice':
     'Giampiero Varetti · Psicólogo clínico · Criador da metodologia · 30+ anos de prática',
   'Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
-    'O Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
+    'A Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
   'Press play and listen': 'Aperte play e escute',
   'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
-    'O Good Loop é uma biblioteca de sessões curtas de áudio guiado para o seu bem-estar. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Seis, doze ou vinte e quatro minutos, o que couber no seu dia.',
+    'A Good Loop é uma biblioteca de sessões curtas de áudio guiado para o seu bem-estar. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Seis, doze ou vinte e quatro minutos, o que couber no seu dia.',
   'Your therapist, inside the app': 'Seu terapeuta, dentro do app',
   'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
-    'Se você faz acompanhamento com um terapeuta, é aqui que vocês se encontram: as sessões que ele indica aparecem em Terapeuta, e as videochamadas de vocês acontecem ali também. O Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
+    'Se você faz acompanhamento com um terapeuta, é aqui que vocês se encontram: as sessões que ele indica aparecem em Terapeuta, e as videochamadas de vocês acontecem ali também. A Good Loop apoia o seu bem-estar: não é cuidado médico ou psicológico e nunca o substitui.',
   'The science behind the listening': 'A ciência por trás da escuta',
   'Phases, frequencies and voice are built on research in psychology and the neuroscience of sound, and tuned session by session by Giampiero. Nothing you hear is there by accident.':
     'Fases, frequências e voz são construídas sobre pesquisa em psicologia e neurociência do som, e ajustadas sessão por sessão por Giampiero. Nada do que você ouve está ali por acaso.',
@@ -1152,9 +1152,9 @@ export const PT: Record<string, string> = {
   'Why headphones matter': 'Por que os fones importam',
   'Your pathway': 'O seu percurso',
   'Good Loop is a library of short guided audio sessions. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Nothing to read, nothing to answer.':
-    'O Good Loop é uma biblioteca de sessões de áudio guiadas e curtas. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Nada para ler, nada para responder.',
+    'A Good Loop é uma biblioteca de sessões de áudio guiadas e curtas. Coloque os fones, escolha uma e escute: a voz e o som ao redor fazem o trabalho. Nada para ler, nada para responder.',
   'Every session is built in phases: it settles you, it does its work, and it brings you back. Pick the length that fits the day you are having — the short one is a whole session, not a taste of one.':
     'Cada sessão é construída em fases: ela acalma você, faz o seu trabalho e traz você de volta. Escolha a duração que cabe no dia que você está tendo — a curta é uma sessão inteira, não uma amostra.',
   'A few minutes on most days does more than one long session now and then. You can note how you feel before and after and watch it move. Good Loop supports your wellbeing — it is not medical or psychological care and does not replace it.':
-    'Alguns minutos quase todos os dias fazem mais do que uma sessão longa de vez em quando. Você pode anotar como se sente antes e depois e acompanhar a mudança. O Good Loop apoia o seu bem-estar — não é cuidado médico ou psicológico e não substitui nenhum dos dois.',
+    'Alguns minutos quase todos os dias fazem mais do que uma sessão longa de vez em quando. Você pode anotar como se sente antes e depois e acompanhar a mudança. A Good Loop apoia o seu bem-estar — não é cuidado médico ou psicológico e não substitui nenhum dos dois.',
 }

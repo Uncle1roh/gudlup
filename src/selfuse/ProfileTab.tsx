@@ -110,7 +110,7 @@ export function ProfileTab(props: ProfileProps) {
   ]
 
   /* These three used to be loose full-width rows below the cards, under no
-     heading: "Como funciona o Good Loop" sat outside every box on the
+     heading: "Como funciona a Good Loop" sat outside every box on the
      screen, which is both the odd one out and the first thing a new person
      looks for. It is a box like the others now, and it says what it is. */
   const about: { id: Page; label: string }[] = [

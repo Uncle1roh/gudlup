@@ -159,7 +159,8 @@ html.gl2 body {
    in-flow layer, so leaving it behind left a flat cream page with the
    shelves moved up and no rings on it.
 
-   The attribute is written by the background itself, and dropped a beat
+   The attribute carries the stage's name; any value means the same
+   thing here. The attribute is written by the background itself, and dropped a beat
    AFTER the background goes off rather than on the same frame: the app's
    ground coming back instantly behind something that is still fading out
    is a fade nobody sees. The other four destinations are untouched. */
@@ -170,8 +171,8 @@ html.gl2 body {
    specificity, so without this the winner would be whichever Vite happened
    to concatenate last: the cover is the one that must win, and it says so
    here rather than depending on the order of a file. */
-html.gl2[data-gl-amb='on']:not([data-gl-session='on']) body { background: transparent; }
-html.gl2[data-gl-amb='on']:not([data-gl-session='on']) body::before { display: none; }
+html.gl2[data-gl-amb]:not([data-gl-session='on']) body { background: transparent; }
+html.gl2[data-gl-amb]:not([data-gl-session='on']) body::before { display: none; }
 
 /* ----------------------------------------- the window a protocol fills ---
    While a protocol screen is open — its detail page, the pre-session card,

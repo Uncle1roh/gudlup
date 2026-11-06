@@ -42,7 +42,7 @@ import { useLegal } from '../legal/LegalContext'
 import { LegalSheet } from '../legal/LegalPage'
 import type { LegalDocId } from '../legal/types'
 import type { ConsentPurpose } from '../legal/records'
-import { clearArrival } from '../components/ambient/stage'
+import { clearArrival, useStageClaim } from '../components/ambient/stage'
 
 interface Point {
   label: string
@@ -205,6 +205,19 @@ export function FirstRun({
      true, and it also means the animation cannot fire late, when the person
      finally reaches the library minutes later. */
   useEffect(() => { clearArrival() }, [])
+
+  /* THE WATERFALL STAYS (POs, 2026-11-06). Creating an account is one flow
+     with several screens: the form stands on the photograph, and from the
+     second screen on — the terms, then the cards explaining what Good Loop
+     is — it used to fall back to this surface's own near-black ground. Same
+     flow, two different rooms, with the change happening at the moment a
+     person has just handed over their details.
+
+     The door's stage, not the library's: the picture is dimmed and softened
+     and the rings breathe around the person in it, exactly as they do
+     behind the form this follows. The library's rings arrive later, when
+     the flow is finished and there is something to arrive at. */
+  useStageClaim('login')
   const theme = useSuTheme()
   const legal = useLegal()
   const dp = useDataProvider()

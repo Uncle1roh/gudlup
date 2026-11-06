@@ -104,7 +104,7 @@ export const PT_GAMIFICATION: Record<string, string> = {
   'Twelve weeks of taking care of yourself. Thank you for staying with you.':
     'Doze semanas cuidando de você. Obrigado por ficar com você.',
   'First challenge': 'Primeiro desafio',
-  'Complete a challenge — a Good Loop one or your company’s.': 'Conclua um desafio — do Good Loop ou da sua empresa.',
+  'Complete a challenge — a Good Loop one or your company’s.': 'Conclua um desafio — da Good Loop ou da sua empresa.',
   'You completed your first challenge, at your own pace.': 'Você concluiu seu primeiro desafio, no seu ritmo.',
   'Challenger': 'Desafiante',
   'Complete 5 challenges.': 'Conclua 5 desafios.',
@@ -271,7 +271,7 @@ export const PT_GAMIFICATION: Record<string, string> = {
   'Benefits redeemed this month': 'Benefícios resgatados no mês',
   'New company challenge': 'Novo desafio da empresa',
   'Edit company challenge': 'Editar desafio da empresa',
-  'Start from a template. Its name and text are what your people read — they are written by Good Loop, so every company challenge speaks the same careful language.': 'Comece por um modelo. O nome e o texto são o que seus colaboradores leem — escritos pelo Good Loop, para que todo desafio de empresa fale a mesma linguagem cuidadosa.',
+  'Start from a template. Its name and text are what your people read — they are written by Good Loop, so every company challenge speaks the same careful language.': 'Comece por um modelo. O nome e o texto são o que seus colaboradores leem — escritos pela Good Loop, para que todo desafio de empresa fale a mesma linguagem cuidadosa.',
   'Collective · the whole company': 'Coletivo · a empresa inteira',
   'Individual': 'Individual',
   'Starts': 'Começa',

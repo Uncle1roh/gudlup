@@ -20,8 +20,12 @@ import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import type { Addressee } from '../tts/voiceLang'
+import { useStageClaim } from '../components/ambient/stage'
 
 export function AddressedAsGate({ onChoose }: { onChoose: (to: Addressee) => void }) {
+  /* The same ground as the door and the first run it belongs to: this is
+     still the way in, and the way in is one place (POs, 2026-11-06). */
+  useStageClaim('login')
   const { t } = useI18n()
   const [busy, setBusy] = useState<Addressee | null>(null)
 

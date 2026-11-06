@@ -94,7 +94,7 @@ export const PT_SALES: Record<string, string> = {
   'Codice terapeuta': 'Código do terapeuta',
   'Copia l’invito': 'Copiar o convite',
   'Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
-    'O código da sua empresa no Good Loop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
+    'O código da sua empresa na Good Loop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
   'Sospendi': 'Pausar',
   'Riattiva': 'Reativar',
   'Attiva': 'Ativa',

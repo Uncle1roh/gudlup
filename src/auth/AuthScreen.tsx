@@ -436,7 +436,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               Not on the admin door: the console is pinned to Italian. */}
           {!isAdmin && !isSales && <LanguagePicker className="auth__lang" label={false} />}
         </div>
-        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isSales ? t('Commercial access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : heroIn ? t('Good to have you here') : t('Welcome')}</h1>
+        <h1 className="auth__title">{isAdmin ? t('Administrator access') : isSales ? t('Commercial access') : isHr ? t('Employer access') : isB2b ? t('Clinician access') : hero ? t('Good to have you here') : t('Welcome')}</h1>
         {/* Only the sign-UP state says anything here. On the sign-in state the
             line under the title repeated what the title and the button had
             both already said — "Welcome / Sign in to continue / Sign in" is
@@ -450,6 +450,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
             greeting rather than an instruction, one line saying what the
             door is for earns its place back. */}
         {heroIn && <p className="auth__sub">{t('Sign in to carry on with your pauses.')}</p>}
+        {/* `hero` and not `heroIn` on the title above, so the sign-UP state
+            of this door is greeted too. It used to fall through to
+            t('Welcome') — "Bem-vindo" in Portuguese, which picks a gender
+            for a visitor the form has not even asked yet, two fields above
+            the question that does ask. The key stays where it is: a session
+            phase is also called Welcome and that one is not about anybody. */}
 
         <div className="auth__fields">
           {/* One pair of inputs, worn two ways. On the public door's sign-in
@@ -650,15 +656,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         )}
 
         {/* The foot of the card on the public door: the way to an account,
-            named by the thing a first-timer actually holds — the code their
-            employer sent them. It is the same control as "Create an account"
-            everywhere else, and it opens the same form, where the company
-            code is a field. */}
+            and nothing else. It read "Primeiro acesso? Use o código da sua
+            empresa" — the company code named as the way in, because that is
+            what a first-timer is holding — and the POs prefer the plain
+            verb (2026-11-06). The question and the code go with it; the
+            code is still a field on the form this opens. */}
         {heroIn && (
           <p className="auth__first">
-            {t('First time here?')}{' '}
             <button type="button" className="auth__firstlink" onClick={() => { setSignup(true); setError(null); setTried(false); setResetSent(false) }}>
-              {t('Use your company code')}
+              {t('Create an account')}
             </button>
           </p>
         )}
