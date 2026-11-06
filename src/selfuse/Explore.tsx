@@ -151,7 +151,6 @@ export function Explore({ name, pathway, onStartPathway, onStart, query = '', on
         query={query}
         onQuery={(q) => onQuery?.(q)}
         onOpen={(slug) => setView({ kind: 'session', slug })}
-        onStart={(slug, duration) => onStart({ slug, duration })}
         noticeSlot={
           <>
             <LibraryNotice sponsored={sponsored} />

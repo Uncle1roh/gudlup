@@ -141,7 +141,7 @@ export function Companies({ actor }: { actor: string }) {
       {adding && (
         <ConsoleModal
           title={st('+ Nuova azienda')}
-          note={st('Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé su #hr con questo codice, e i dipendenti lo inseriscono alla registrazione.')}
+          note={st('Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé, dalla pagina di accesso, scegliendo «Per la mia azienda» e inserendo questo codice; i dipendenti lo inseriscono alla registrazione.')}
           onClose={() => setAdding(false)}
         >
           <div className="adm-form">
@@ -174,7 +174,7 @@ export function Companies({ actor }: { actor: string }) {
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
               />
-              <span className="adm-form__hint">{st('A chi mandare il codice. Non crea un login: lo apre la persona stessa su #hr.')}</span>
+              <span className="adm-form__hint">{st('A chi mandare il codice. Non crea un login: lo apre la persona stessa, dalla pagina di accesso.')}</span>
             </label>
             <label className="adm-form__field">
               <span className="b2b-label">{st('Quante persone può registrare')} *</span>
@@ -215,7 +215,7 @@ export function Companies({ actor }: { actor: string }) {
             {st('{name} creata. Codice azienda:', { name: made.name })}{' '}
             <span className="adm-code">{made.id}</span>
             {made.contactEmail && (
-              <div className="adm-muted">{st('Mandalo a {email} — con questo codice apre il pannello aziendale su #hr.', { email: made.contactEmail })}</div>
+              <div className="adm-muted">{st('Mandalo a {email} — con questo codice apre il pannello aziendale dalla pagina di accesso.', { email: made.contactEmail })}</div>
             )}
           </div>
           <div className="adm-made__acts">
@@ -223,7 +223,7 @@ export function Companies({ actor }: { actor: string }) {
                 so the thing to copy is the message and not just the code. */}
             <button
               className="b2b-btn b2b-btn--primary"
-              onClick={() => copy(st('Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url} e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.', { code: made.id, url: `${window.location.origin}${window.location.pathname}#hr` }))}
+              onClick={() => copy(st('Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.', { code: made.id, url: `${window.location.origin}${window.location.pathname}` }))}
             >
               {copied ? st('Copiato') : st('Copia l’invito')}
             </button>

@@ -1101,6 +1101,36 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
 .su-session.app-frame::before,
 .su-session.app-frame--tabs::before { display: none; }
 
+/* --------------------------------------------------- the mood pill ------
+   A pair of glasses beside the Loops chip, wearing the colour of today
+   (`ui2/MoodPill.tsx`). It is the whole of what is left of the mood colour:
+   this circle and the squares in the calendar it opens.
+
+   Square-ish rather than round-ish, and the same height as the chip beside
+   it, so the two read as a pair of controls and not as a badge stuck onto
+   one. */
+
+.gl-top__pills { display: flex; align-items: center; gap: 10px; flex: none; }
+
+.gl-mood {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* With a colour behind it the glyph has to hold its own against a vivid
+   fill, so it stops taking the surface's ink and goes dark. */
+.gl-root .gl-mood.is-set { color: #10201c !important; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18); }
+
+/* The calendar's dialog is a box of colour; it does not need a second one
+   behind the month. */
+.gl-root .gam-mood .cal { margin-top: 4px; }
+
 /* The Loops chip in the top bar. It lived in `mood.css` while it also wore
    the check-in colour; the check-in is gone and the chip is just a chip. */
 .gl-loops {
@@ -1432,12 +1462,24 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
 }
 
 .gl-root .cal__day--today { border-color: var(--ink); color: var(--ink); }
-.gl-root .cal__day[class*='cal__day--l'] { cursor: pointer; }
-.gl-root .cal__day--l1 { background: #cbd8cf; color: #1f2b2a; }
-.gl-root .cal__day--l2 { background: #b8d3c2; color: #1f2b2a; }
-.gl-root .cal__day--l3 { background: #97c8ac; color: #1f2b2a; }
-.gl-root .cal__day--l4 { background: #6dba92; color: #06140f; }
-.gl-root .cal__day--l5 { background: #3db189; color: #06140f; }
+
+/* THE FILL IS NOT A CLASS ANY MORE. It was five greens, one per level of the
+   mood axis — a scale nobody can read off a wall, and only ever the mood
+   half of a two-axis answer. The square now carries the colour of the
+   reading itself, set inline from `data/measures.ts`, and a day answered
+   twice carries both as bands (POs, 2026-11-06).
+
+   Dark type on it, always: every corner of the circumplex is a saturated
+   colour, and cream on vivid yellow is unreadable. */
+.gl-root .cal__day--set { cursor: pointer; color: #10201c; border-color: rgba(0, 0, 0, 0.12); }
+.gl-root .cal__day--set .cal__n { text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45); }
+.gl-root .cal__day--today.cal__day--set { border-color: #10201c; }
+
+/* The readings of the day somebody tapped, one line each with its own
+   colour beside it — which is what makes a two-band square legible. */
+.gl-root .cal__read { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gl-root .cal__read li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.gl-root .cal__read i { width: 12px; height: 12px; flex: none; border-radius: 4px; }
 
 @media (min-width: 900px) {
   .gl-root .cal { gap: 8px; }

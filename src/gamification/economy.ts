@@ -259,6 +259,16 @@ export interface Wallet {
   pointsMonth: number
   /** Minutes credited this São Paulo month — "você dedicou 3h 40min". */
   minutesMonth: number
+  /**
+   * Every minute ever credited.
+   *
+   * Added 2026-11-06, because the month alone lies on the first week of
+   * one: the POs opened the app in November, read "você dedicou 0 min a
+   * você este mês" under a balance of several hundred Loops, and were
+   * right to call it broken. The month was true and useless. A card that
+   * has both can lead with whichever one is not zero.
+   */
+  minutesTotal: number
   /** Sessions credited this São Paulo month. */
   sessionsMonth: number
   /** The company multiplier in force now, or null. */
@@ -274,6 +284,7 @@ export function walletFrom(
   sessionsMonth: number,
   multiplier: number | null,
   now: number,
+  minutesTotal = minutesMonth,
 ): Wallet {
   const balanceCenti = loops.reduce((a, e) => a + e.amountCenti, 0)
   const month = monthKeySaoPaulo(now)
@@ -283,6 +294,7 @@ export function walletFrom(
     pointsTotal: points.reduce((a, e) => a + e.points, 0),
     pointsMonth: points.filter((e) => e.periodMonth === month).reduce((a, e) => a + e.points, 0),
     minutesMonth,
+    minutesTotal,
     sessionsMonth,
     multiplier: multiplier !== null && multiplier > 1 ? multiplier : null,
   }

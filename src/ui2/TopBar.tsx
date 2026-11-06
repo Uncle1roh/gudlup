@@ -25,6 +25,7 @@ import { useDataProvider } from '../data/provider'
 import { BrandIcon } from '../components/Brand'
 import { greeting } from '../selfuse/greeting'
 import { LoopsChip } from './LoopsChip'
+import { MoodPill } from './MoodPill'
 import { useBrandVariant } from './Shell'
 
 export function TopBar({ name, over }: {
@@ -66,8 +67,15 @@ export function TopBar({ name, over }: {
       </span>
 
       {/* No initials disc. It named the person whose name is printed three
-          centimetres to the left of it, and it was not a button. */}
-      <LoopsChip loops={loops} />
+          centimetres to the left of it, and it was not a button.
+
+          The glasses came instead (POs, 2026-11-06): the mood calendar used
+          to be a card on a screen of its own, and it is a glance, not a
+          destination. It wears the colour of today and opens the month. */}
+      <span className="gl-top__pills">
+        <MoodPill />
+        <LoopsChip loops={loops} />
+      </span>
     </header>
   )
 }

@@ -588,6 +588,19 @@ body:has(.su-studio) { background: var(--su-void); }
   .su-studio .hud__knob { transition: none; }
 }
 
+/* A READOUT, not a control (POs, 2026-11-06 — see `selfuse/Session.tsx`).
+   The bar still shows the phases and the position; what it no longer does
+   is invite a finger. A handle that grows under the cursor on something
+   that cannot be dragged is a promise the screen does not keep. */
+.su-studio .hud__seek.is-fixed { cursor: default; touch-action: auto; }
+.su-studio .hud__seek.is-fixed:hover .hud__knob { width: 14px; height: 14px; }
+.su-studio .hud__seek.is-fixed .hud__knob { width: 10px; height: 10px; opacity: 0.9; }
+
+/* The second line of the leaving warning: the encouraging one. Quieter
+   than the sentence about Loops above it, because the first one is the
+   fact and this one is the invitation. */
+.su-studio .player__confirmwarm { font-size: 13.5px; opacity: 0.8; margin-top: -4px; }
+
 /* ========================================================= 03 · LIBRERIA ==
    Search field, filter pills, then covers at 138px on a 14px radius with the
    title under the card rather than over it. */

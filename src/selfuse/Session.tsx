@@ -19,7 +19,7 @@
    post-session screen fades in only after the audio has finished.
    ============================================================================ */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { BreathingOrb } from '../components/BreathingOrb'
 import { SessionPlayer, playEarTone } from '../lib/audio'
 import {
@@ -514,7 +514,6 @@ function ImmersiveSession({
   /* While a finger (or the keyboard) is on the position control, the clock
      shows where it is being moved TO, not where the audio still is. Null
      when nobody is holding it. */
-  const [scrubTo, setScrubTo] = useState<number | null>(null)
 
   const playerRef = useRef<SessionPlayer | null>(null)
   const tickRef = useRef<number | null>(null)
@@ -530,7 +529,7 @@ function ImmersiveSession({
 
   /* The position the screen is showing: where the session is, or where it is
      being dragged to. */
-  const shown = scrubTo ?? elapsed
+  const shown = elapsed
   const { index: phaseIdx, within } = phaseAt(shown, total, fractions)
   const isBreath = phaseIdx === 1
   const isClosing = phaseIdx === fractions.length - 1
@@ -589,7 +588,6 @@ function ImmersiveSession({
         artist: 'Good Loop',
         durationSec: total,
       },
-      onSeekRequest: (sec) => seekRef.current(sec),
     })
     playerRef.current = p
     await p.play()
@@ -611,67 +609,25 @@ function ImmersiveSession({
      So: the bar is draggable, and it ends one second short of the end. A
      drag is a way to move inside a session, never a way to finish one — the
      session completes by being listened to, or not at all. */
-  const SKIP_SEC = 15
-  const seekTo = useCallback((sec: number) => {
-    const at = Math.max(0, Math.min(total - 1, sec))
-    elapsedRef.current = at
-    setElapsed(at)
-    /* The audio element moves if there is one; the synthesized bed has no
-       position, and the timeline moving is the whole of what happens. */
-    playerRef.current?.seek(at)
-    playerRef.current?.reportPosition(at)
-    /* A seek while paused must not be undone by the tick that follows the
-       resume: the clock advances from NOW, not from before the drag. */
-    lastRef.current = Date.now()
-    armFade()
-  }, [total, armFade])
+  /* ---- THE TIMELINE DOES NOT MOVE (POs, 2026-11-06) -------------------
 
-  /* The lock screen's own scrubber and its ±15s buttons land here too — the
-     surface a person has with the screen dark should not be the poorer one. */
-  const seekRef = useRef(seekTo)
-  seekRef.current = seekTo
+     This bar used to be draggable, and the reasoning for that is still in
+     the history: a person interrupted at minute nine had one option, begin
+     again, and twelve minutes of somebody's evening does not survive being
+     spent twice.
 
-  /** Where on the bar a point is, in seconds. */
-  function railSec(rail: HTMLElement, clientX: number): number {
-    const r = rail.getBoundingClientRect()
-    if (r.width <= 0) return 0
-    return Math.max(0, Math.min(total - 1, ((clientX - r.left) / r.width) * total))
-  }
+     It is removed anyway, because a Loop is a minute of listening and a
+     draggable bar is a way to earn one without listening — drag to the end,
+     collect, repeat. The economy cannot be built on an honour system that
+     the interface itself offers to break.
 
-  /* Press anywhere on the bar to go there, and keep the finger down to drag.
-     The pointer is captured, so the drag survives leaving the bar — which,
-     on a 6px-tall control held with a thumb, it does constantly. */
-  function beginScrub(e: ReactPointerEvent<HTMLDivElement>) {
-    e.stopPropagation()
-    const rail = e.currentTarget
-    try { rail.setPointerCapture(e.pointerId) } catch { /* no capture: the drag still works over the bar */ }
-    setScrubTo(railSec(rail, e.clientX))
-    const move = (ev: globalThis.PointerEvent) => setScrubTo(railSec(rail, ev.clientX))
-    const end = (ev: globalThis.PointerEvent) => {
-      rail.removeEventListener('pointermove', move)
-      rail.removeEventListener('pointerup', end)
-      rail.removeEventListener('pointercancel', end)
-      seekTo(railSec(rail, ev.clientX))
-      setScrubTo(null)
-    }
-    rail.addEventListener('pointermove', move)
-    rail.addEventListener('pointerup', end)
-    rail.addEventListener('pointercancel', end)
-  }
+     What goes with it: the keyboard seek, and the LOCK SCREEN's scrubber,
+     which was the same hole with the screen dark (`onSeekRequest` is no
+     longer passed, so the OS is never offered a seek handler). What stays
+     is pause, resume, volume and leaving — none of which skips anything.
 
-  function onScrubKey(e: ReactKeyboardEvent<HTMLDivElement>) {
-    let next: number | null = null
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = elapsedRef.current - SKIP_SEC
-    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = elapsedRef.current + SKIP_SEC
-    else if (e.key === 'PageDown') next = elapsedRef.current - SKIP_SEC * 4
-    else if (e.key === 'PageUp') next = elapsedRef.current + SKIP_SEC * 4
-    else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = total
-    else return
-    e.preventDefault()
-    e.stopPropagation()
-    seekTo(next)
-  }
+     The bar is a readout now: it still shows every phase, which is what
+     makes the shape of a session visible while it plays. */
 
   function toggle() {
     const p = playerRef.current
@@ -749,7 +705,7 @@ function ImmersiveSession({
     )
   }
 
-  const showControls = controls || !playing || scrubTo !== null
+  const showControls = controls || !playing
   const pct = total > 0 ? Math.max(0, Math.min(100, (shown / total) * 100)) : 0
 
   return (
@@ -803,22 +759,14 @@ function ImmersiveSession({
             </div>
 
             {/* Every phase at once, so the shape of the session is visible
-                rather than only the one it is in — and now a control, not a
-                readout: press anywhere on it to go there, or hold and drag.
-                The row is 28px tall for a thumb; the bar drawn inside it
-                stays the thin line the screen was designed around. */}
+                rather than only the one it is in. A READOUT, not a control:
+                see the block above `toggle` for why it stopped being
+                draggable. */}
             <div
-              className={`hud__seek${scrubTo !== null ? ' is-scrubbing' : ''}`}
-              role="slider"
-              tabIndex={0}
-              aria-label={t('Position in the session')}
-              aria-valuemin={0}
-              aria-valuemax={Math.round(total)}
-              aria-valuenow={Math.round(shown)}
-              aria-valuetext={`${fmt(shown)} / ${fmt(total)}`}
+              className="hud__seek is-fixed"
+              role="img"
+              aria-label={`${t('Position in the session')}: ${fmt(shown)} / ${fmt(total)}`}
               onClick={(e) => e.stopPropagation()}
-              onPointerDown={beginScrub}
-              onKeyDown={onScrubKey}
             >
               <div className="hud__ticks" aria-hidden="true">
                 {fractions.map((f, i) => (
@@ -865,8 +813,15 @@ function ImmersiveSession({
 
         {confirmExit && (
           <div className="player__confirm" onClick={(e) => e.stopPropagation()}>
+            {/* Said warmly, and said straight (POs, 2026-11-06). Two
+                sentences, in this order: what leaving costs, and why
+                staying is worth it. The second one describes the PROTOCOL
+                — the closing phase is re-orientation, which is a fact
+                about the audio — and promises nothing about how the person
+                will feel afterwards (MN-05, M1-08). */}
             <div className="player__confirmbox fade-in">
-              <p>{t('End session early? Loops are for the sessions you finish.')}</p>
+              <p>{t('If you stop now, this session earns no Loops — they are for the ones you go all the way through.')}</p>
+              <p className="player__confirmwarm">{t('And the last minutes are the ones that bring you back gently. Stay with it if you can.')}</p>
               <div className="chip-row">
                 <button className="btn btn--light" onClick={() => setConfirmExit(false)}>{t('Keep listening')}</button>
                 <button className="btn btn--light" onClick={exitNow}>{t('End session')}</button>

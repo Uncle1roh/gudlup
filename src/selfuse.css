@@ -1275,6 +1275,31 @@
 
 .ms2-axis__end { font-size: 12px; opacity: 0.66; }
 
+/* The ticks and the track stand side by side, so the ticks can be read
+   against the colour without sitting on top of it (POs, 2026-11-06). */
+.ms2-rail { display: flex; align-items: stretch; gap: 7px; }
+
+.ms2-ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 2px 0;
+}
+
+.ms2-ticks i {
+  display: block;
+  width: 8px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+/* The middle one is longer: it is the only tick that means something on its
+   own — neither end — and a finger aiming for "about the middle" should
+   have something to aim at. */
+.ms2-ticks i.is-mid { width: 13px; opacity: 0.7; }
+
 .ms2-track {
   position: relative;
   width: 26px;

@@ -73,17 +73,17 @@ export const PT_SALES: Record<string, string> = {
   'Quante persone può registrare': 'Quantas pessoas pode cadastrar',
   'Le aziende su cui la piattaforma è attivata. {n} in totale.':
     'As empresas com a plataforma ativada. {n} no total.',
-  'Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé su #hr con questo codice, e i dipendenti lo inseriscono alla registrazione.':
-    'O código é o acesso. Criar a empresa não cria nenhum login: o RH se cadastra sozinho em #hr com este código, e os funcionários o informam no cadastro.',
+  'Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé, dalla pagina di accesso, scegliendo «Per la mia azienda» e inserendo questo codice; i dipendenti lo inseriscono alla registrazione.':
+    'O código é o acesso. Criar a empresa não cria nenhum login: o RH se cadastra sozinho, na página de acesso, escolhendo «Para a minha empresa» e informando este código; os funcionários o informam no cadastro.',
   'Suggerito dal nome, e modificabile. È quello che l’HR e i dipendenti digitano.':
     'Sugerido pelo nome, e editável. É o que o RH e os funcionários digitam.',
-  'A chi mandare il codice. Non crea un login: lo apre la persona stessa su #hr.':
-    'Para quem enviar o código. Não cria um login: a própria pessoa o abre em #hr.',
+  'A chi mandare il codice. Non crea un login: lo apre la persona stessa, dalla pagina di accesso.':
+    'Para quem enviar o código. Não cria um login: a própria pessoa o abre, na página de acesso.',
   'Il numero di dipendenti coperti dal contratto.': 'O número de funcionários cobertos pelo contrato.',
   'Senza piano i Loops valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».':
     'Sem plano os Loops valem 1×. Dá para atribuir depois, em «Planos e multiplicadores».',
-  'Mandalo a {email} — con questo codice apre il pannello aziendale su #hr.':
-    'Envie para {email} — com este código ela abre o painel da empresa em #hr.',
+  'Mandalo a {email} — con questo codice apre il pannello aziendale dalla pagina di accesso.':
+    'Envie para {email} — com este código ela abre o painel da empresa pela página de acesso.',
   'ES. BENVENUTO10': 'EX. BEMVINDO10',
   'Postazioni': 'Assentos',
   'Postazioni usate': 'Assentos usados',
@@ -93,7 +93,7 @@ export const PT_SALES: Record<string, string> = {
   'Copia il codice': 'Copiar o código',
   'Codice terapeuta': 'Código do terapeuta',
   'Copia l’invito': 'Copiar o convite',
-  'Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url} e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
+  'Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
     'O código da sua empresa no Good Loop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
   'Sospendi': 'Pausar',
   'Riattiva': 'Reativar',
@@ -109,8 +109,8 @@ export const PT_SALES: Record<string, string> = {
   'Assegnalo da “Piani e moltiplicatori”.': 'Atribua em “Planos e multiplicadores”.',
   'Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.':
     'Com o {plan}, os Loops da escuta valem {mult}× para quem é desta empresa, enquanto a assinatura estiver ativa. Vale para as sessões que terminarem a partir de agora: nada é recalculado para trás.',
-  'Il codice azienda è anche l’accesso: con questo codice l’HR si registra su #hr e apre il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.':
-    'O código da empresa também é o acesso: com ele o RH se cadastra em #hr e abre o painel da empresa, e os funcionários o informam no cadastro para serem vinculados.',
+  'Il codice azienda è anche l’accesso: con questo codice l’HR si registra dalla pagina di accesso e apre il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.':
+    'O código da empresa também é o acesso: com ele o RH se cadastra pela página de acesso e abre o painel da empresa, e os funcionários o informam no cadastro para serem vinculados.',
 
   /* ---- Piani e moltiplicatori ---- */
   'Piani e aziende': 'Planos e empresas',

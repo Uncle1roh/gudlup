@@ -23,7 +23,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
-import { SELF_USE_THEMES, durationLabel, type SelfUseTheme } from '../data/selfuse'
+import { SELF_USE_THEMES, type SelfUseTheme } from '../data/selfuse'
 import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_TINT, tilePosition } from './theme'
@@ -43,25 +43,16 @@ interface HomeProps {
   query: string
   onQuery(q: string): void
   onOpen(slug: string): void
-  onStart(slug: string, duration: Duration): void
   /** The legal elements this screen owes (MN-25, LIB-2/3). Not in the mockup. */
   noticeSlot?: ReactNode
   footSlot?: ReactNode
 }
 
-export function Home({ name, catalog, storedRails, recent = [], saved = [], onToggleSave, top = [], query, onQuery, onOpen, onStart, noticeSlot, footSlot }: HomeProps) {
+export function Home({ name, catalog, storedRails, recent = [], saved = [], onToggleSave, top = [], query, onQuery, onOpen, noticeSlot, footSlot }: HomeProps) {
   const { t } = useI18n()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
 
   const all = catalog.browsable
-
-  /* The billboard. Not the pathway's session of the day: the self-guided
-     library leads with its own lowest-commitment start, so nothing on this
-     screen is correlated with what a clinician set. */
-  const featured = useMemo(
-    () => all.find((s) => s.theme === 'calm' && s.durations.includes(6)) ?? all[0],
-    [all],
-  )
 
   const rails = useMemo(() => resolveRails(storedRails, all), [storedRails, all])
 
@@ -147,50 +138,18 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         {noticeSlot}
       </div>
 
-      {/* ----------------------------------------------------- billboard --- */}
-      <section style={{ minHeight: 420, display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, padding: '36px 8px 0' }}>
-        {featured && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-2)' }}>
-              <span aria-hidden="true" style={{ width: 28, height: 2, background: 'currentColor' }} />
-              {t('A good place to start')}
-            </span>
+      {/* THE BILLBOARD IS GONE (POs, 2026-11-06). It was 420px of one
+          protocol — a 76px title, a blurb and a play button — chosen by the
+          library itself as "a good place to start", and it pushed every
+          shelf below the fold. A person opening this screen is choosing,
+          and the thing that helps them choose is the shelves. What is left
+          of that row is the search field, which is the other half of
+          choosing.
 
-            <h1 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 400, fontSize: 76, lineHeight: 0.95, letterSpacing: '-0.03em' }}>
-              {t(featured.name)}
-            </h1>
-
-            {/* The mockup's meta line, minus the protocol code and minus the
-                voice: the self-guided catalogue does not carry one. */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 14, color: 'var(--ink-2)' }}>
-              <span>{featured.durations.map((d) => `${t(durationLabel(d))} ${d} min`).join(' · ')}</span>
-            </div>
-
-            <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-2)' }}>{t(featured.about || featured.blurb)}</p>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
-              <button
-                type="button"
-                onClick={() => onStart(featured.slug, shortestOf(featured))}
-                style={{ height: 56, padding: '0 28px 0 10px', borderRadius: 999, background: 'var(--act-bg)', color: 'var(--act-fg)', display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 16, fontFamily: "'DM Sans', sans-serif", transition: 'background-color 1.5s ease, color 1.5s ease' }}
-              >
-                <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: '50%', background: '#3DB189', color: '#06140f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor" /></svg>
-                </span>
-                {t('Play')} · {shortestOf(featured)}m
-              </button>
-              <button
-                type="button"
-                className="glass-btn"
-                onClick={() => onOpen(featured.slug)}
-                style={{ height: 56, padding: '0 24px', borderRadius: 999, display: 'flex', alignItems: 'center', fontWeight: 500, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }}
-              >
-                {t('More')}
-              </button>
-            </div>
-          </div>
-        )}
-
+          The pick is gone too, not hidden: `featured` named one protocol as
+          the app's recommendation on a screen whose whole point is that
+          nothing here is prescribed. */}
+      <section style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 24, padding: '20px 8px 0' }}>
         <label className="glass" style={{ flex: '0 1 440px', height: 60, borderRadius: 999, display: 'flex', alignItems: 'center', gap: 12, padding: '0 22px', alignSelf: 'flex-end', position: 'relative' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7" />

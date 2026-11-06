@@ -168,7 +168,7 @@ export const MOOD_NOTE_MAX = 200
 
 export interface MoodEntry {
   at: number
-  /** YYYY-MM-DD, so one entry per calendar day. */
+  /** YYYY-MM-DD. Several entries can share one — see `addMood`. */
   day: string
   /** 1–5, derived from `valence` when the entry came from the sliders. */
   level: MoodLevel
@@ -197,10 +197,110 @@ export function vasFromMood(point: MoodPoint): number {
   return levelFromAxis(point.valence)
 }
 
-/** One per day, newest answer wins: the end of today's second session
-    replaces the end of today's first. */
-export function upsertMood(moods: MoodEntry[], entry: MoodEntry): MoodEntry[] {
-  return [...moods.filter((m) => m.day !== entry.day), entry]
+/**
+ * EVERY reading is kept, including several on one day (POs, 2026-11-06).
+ *
+ * It used to be one per day, newest wins — the end of today's second session
+ * overwrote the end of today's first. That threw away the more interesting
+ * half of the answer: somebody who starts the day flat and ends it bright
+ * has told you something that a single square cannot say, and the POs asked
+ * for the day to be "uma mescla de todos os inputs coloridos feitos no dia".
+ * The calendar blends them (`dayMood`, `moodGradient`); nothing is replaced.
+ *
+ * Kept in time order, because the blend is drawn in the order the day
+ * happened.
+ */
+export function addMood(moods: MoodEntry[], entry: MoodEntry): MoodEntry[] {
+  return [...moods, entry].sort((a, b) => a.at - b.at)
+}
+
+/** The readings of one day, oldest first. */
+export function moodsOfDay(moods: MoodEntry[], day: string): MoodEntry[] {
+  return moods.filter((m) => m.day === day).sort((a, b) => a.at - b.at)
+}
+
+/** Every day that has at least one reading, newest day first. */
+export function moodDays(moods: MoodEntry[]): string[] {
+  return [...new Set(moods.map((m) => m.day))].sort().reverse()
+}
+
+/* ------------------------------------------------------- the colour ------
+
+   THE FOUR CORNERS OF THE SQUARE. A reading is a point in the circumplex,
+   and the circumplex has had the same four colours since Russell drew it:
+   high energy and unpleasant is red, high energy and pleasant is yellow,
+   low energy and unpleasant is blue, low energy and pleasant is green. This
+   is not a palette somebody invented for this app — it is the one a person
+   who has seen a mood meter before already knows how to read.
+
+   Vivid on purpose (POs, 2026-11-06: "cores mais vivas e mais
+   expressivas"). The first pass was muted to sit politely beside the cream
+   action, and a mood calendar in four shades of sage says nothing from
+   across a room.
+
+   WHAT THIS IS NOT. It is not the mood COLOUR MECHANIC that was built and
+   removed in October — no engine, no tinted glasses, no colour that follows
+   the person from screen to screen. It is the fill of a calendar square and
+   of one pill that opens that calendar, and it is computed here, from the
+   two numbers the person moved, with nothing kept anywhere. */
+
+type Rgb = [number, number, number]
+
+const CORNER: { hiUnpleasant: Rgb; hiPleasant: Rgb; loUnpleasant: Rgb; loPleasant: Rgb } = {
+  hiUnpleasant: [224, 62, 62],   // lit up and not enjoying it
+  hiPleasant: [245, 183, 0],     // lit up and enjoying it
+  loUnpleasant: [45, 102, 201],  // low and heavy
+  loPleasant: [25, 169, 116],    // low and at ease
+}
+
+const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
+  Math.round(a[0] + (b[0] - a[0]) * t),
+  Math.round(a[1] + (b[1] - a[1]) * t),
+  Math.round(a[2] + (b[2] - a[2]) * t),
+]
+
+/** The colour of one reading, as `rgb(…)`. Bilinear between the corners:
+    the mood axis picks left-to-right, the energy axis top-to-bottom. */
+export function moodColor(point: MoodPoint): string {
+  const x = (Math.max(-1, Math.min(1, point.valence)) + 1) / 2
+  const y = (Math.max(-1, Math.min(1, point.arousal)) + 1) / 2
+  const hi = mix(CORNER.hiUnpleasant, CORNER.hiPleasant, x)
+  const lo = mix(CORNER.loUnpleasant, CORNER.loPleasant, x)
+  const [r, g, b] = mix(lo, hi, y)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+/** The colour of a stored entry. Entries written before the two axes existed
+    carry only a 1–5 level; they are placed on the mood axis at that level
+    with the energy axis unknown, which is the middle. */
+export function entryColor(m: MoodEntry): string {
+  const valence = m.valence ?? (m.level - 3) / 2
+  return moodColor({ valence, arousal: m.arousal ?? 0 })
+}
+
+/** The whole day, as one fill: a flat colour for a single reading, and a
+    gradient across them — in the order they happened — for a day with more
+    than one. A morning that was heavy and an evening that was not should
+    look like a day that changed, not like the average of the two. */
+export function moodGradient(entries: MoodEntry[]): string | null {
+  if (!entries.length) return null
+  const stops = entries.map(entryColor)
+  if (stops.length === 1) return stops[0]
+  const step = 100 / stops.length
+  const bands = stops.map((c, i) => `${c} ${(i * step).toFixed(1)}%, ${c} ${((i + 1) * step).toFixed(1)}%`)
+  return `linear-gradient(135deg, ${bands.join(', ')})`
+}
+
+/** The day's reading as ONE point — for anything that needs a single
+    answer (the pill's own fill, the 1–5 the series carries). The mean of
+    what was said, which is the honest summary of a mixed day. */
+export function dayMood(entries: MoodEntry[]): MoodPoint | null {
+  const withAxes = entries.filter((m) => m.valence !== undefined)
+  const src = withAxes.length ? withAxes : entries
+  if (!src.length) return null
+  const v = src.reduce((a, m) => a + (m.valence ?? (m.level - 3) / 2), 0) / src.length
+  const r = src.reduce((a, m) => a + (m.arousal ?? 0), 0) / src.length
+  return { valence: roundAxis(v), arousal: roundAxis(r) }
 }
 
 export function dayKey(ms: number): string {

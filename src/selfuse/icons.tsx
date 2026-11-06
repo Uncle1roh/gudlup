@@ -59,6 +59,8 @@ export type IconName =
   | 'exit'
   /* what the employer never sees */
   | 'lock'
+  /* the mood pill, and the Loops rail */
+  | 'glasses' | 'trophy'
 
 const PATHS: Record<IconName, JSX.Element> = {
   /* graphic_eq — the app's own subject: sound. */
@@ -421,6 +423,27 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M14.5 12H4" />
     </>),
   /* the Loop — the logo's two crossing orbits; the app's currency */
+  /* A pair of glasses. The pill that opens the mood calendar wears the
+     colour of the day behind it, so the drawing has to read at 20px as an
+     outline over any of the four corners of the circumplex: two circles and
+     a bridge, nothing filled. */
+  glasses: (<>
+      <circle cx="6.2" cy="13.5" r="4.3" />
+      <circle cx="17.8" cy="13.5" r="4.3" />
+      <path d="M10.5 13c.5-1 2.5-1 3 0" />
+      <path d="M1.9 12.6c.2-2.3 1-4.3 2-5.4" />
+      <path d="M22.1 12.6c-.2-2.3-1-4.3-2-5.4" />
+    </>),
+  /* The rail's Loops destination (POs, 2026-11-06). The two crossed
+     ellipses read as a logo rather than as a place to go; a cup is what
+     everybody already reads as "what you have won". */
+  trophy: (<>
+      <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+      <path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11" />
+      <path d="M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11" />
+      <path d="M12 14v3" />
+      <path d="M8.5 20h7l-.7-3h-5.6z" />
+    </>),
   loop: (<>
       <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(-30 12 12)" />
       <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(30 12 12)" />

@@ -118,7 +118,17 @@ export function BenefitsTab({ name, hasCompany, onBack, onStartSession, onSeeAch
             {displayLoops(wallet.balanceCenti).toLocaleString('pt-BR')}
             <small>{t('Loops')}</small>
           </span>
-          <span className="call2-note">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</span>
+          {/* THE FIGURE HAS TO BE A REAL ONE (POs, 2026-11-06). On the
+              first days of a month this read "você dedicou 0 min a você
+              este mês" under a balance of hundreds of Loops — true, and
+              useless, and it made the balance look invented. The month
+              leads while there is a month to lead with; before that, the
+              whole of what the person has given. */}
+          {wallet.minutesMonth > 0 ? (
+            <span className="call2-note">{t('You gave {time} to yourself this month', { time: fmtMinutes(wallet.minutesMonth) })}</span>
+          ) : (
+            <span className="call2-note">{t('You have given {time} to yourself so far', { time: fmtMinutes(wallet.minutesTotal) })}</span>
+          )}
           {/* "Your company multiplies your Loops" is a sentence about an
               employer. Without a company code there is no employer to
               multiply anything. */}

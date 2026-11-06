@@ -54,9 +54,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      and the clinicians who work in it — asking here is what lets a therapist
      register at all without knowing a second URL, and what sends them to the
      workspace instead of the library afterwards. */
-  const [kind, setKind] = useState<'b2c_user' | 'therapist'>('b2c_user')
+  const [kind, setKind] = useState<'b2c_user' | 'therapist' | 'company'>('b2c_user')
   const asTherapist = isB2b || (mode === 'b2c' && signup && kind === 'therapist')
-  const role: Role = isAdmin ? 'admin' : isSales ? 'sales' : isHr ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
+  /* ONE DOOR FOR THE THREE PUBLIC APPS (POs, 2026-11-06). The person's app,
+     the clinic and the employer's panel had a sign-in page each; they share
+     this one now, and WHO is registering is the third card below. The two
+     internal consoles — admin and commercial — keep their own doors, because
+     neither has a sign-up at all: those accounts are provisioned by hand. */
+  const asCompany = isHr || (mode === 'b2c' && signup && kind === 'company')
+  const role: Role = isAdmin ? 'admin' : isSales ? 'sales' : asCompany ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
   const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isSales ? 'comercial@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
   const [password, setPassword] = useState(demo ? 'demo' : '')
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
@@ -102,7 +108,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           throw new Error(t('This promo code is not valid. Check it, or leave the field empty.'))
         }
       }
-      if (signup && !isHr && normalizeCode(companyCode)) {
+      if (signup && !asCompany && normalizeCode(companyCode)) {
         /* Asked again at submit for the same reason the promo code is: the
            live check is a courtesy, and an address the company has not
            approved must be refused BEFORE the account exists. The database
@@ -141,7 +147,11 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         /* The role goes with it for DEMO mode only, where there is no profile
            to read it from: signing in at the clinic door is what makes a demo
            account a clinician. Supabase ignores it and asks the profile. */
-        await auth.signIn(email.trim(), password, role)
+        /* The role goes with it only from a door that IS a role: admin and
+           commercial. The public door serves three roles with one form, so
+           it sends none and the account's own record answers — in demo
+           mode, by its address (`auth/auth.tsx`). */
+        await auth.signIn(email.trim(), password, isAdmin || isSales ? role : undefined)
       }
     } catch (e) {
       setError((e as Error).message)
@@ -150,7 +160,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     }
   }
 
-  const needsConsent = signup && !asTherapist && !isAdmin && !isHr
+  const needsConsent = signup && !asTherapist && !isAdmin && !asCompany
   /** The promo field is on the personal sign-up only — not the clinician, HR
       or admin doors. */
   const offersPromo = needsConsent
@@ -186,7 +196,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   useEffect(() => {
     const code = normalizeCode(companyCode)
     const addr = email.trim().toLowerCase()
-    if (!signup || isHr || !code || !looksLikeCompanyCode(code) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+    if (!signup || asCompany || !code || !looksLikeCompanyCode(code) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
       setRosterOk(null)
       return
     }
@@ -197,7 +207,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         .catch(() => { if (alive) setRosterOk(null) })
     }, 400)
     return () => { alive = false; window.clearTimeout(id) }
-  }, [companyCode, email, signup, isHr, dp])
+  }, [companyCode, email, signup, asCompany, dp])
 
   const promoCheck = useMemo(() => {
     // nothing to say about the first couple of characters
@@ -300,7 +310,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     if (asTherapist) {
       if (!name.trim()) problems.name = t('Enter your full name.')
       if (!crp.trim()) problems.crp = t('Enter your registration number.')
-    } else if (isHr) {
+    } else if (asCompany) {
       // an HR account with no company has no company panel to open
       if (!companyCode.trim()) problems.companyCode = t('Enter the company code.')
       else if (!looksLikeCompanyCode(companyCode)) problems.companyCode = t('A company code looks like ACME-2026-K7. Check it with whoever gave it to you.')
@@ -450,6 +460,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 <b>{t('I am a therapist')}</b>
                 <small>{t('I see people through Good Loop')}</small>
               </button>
+              {/* The third one (POs, 2026-11-06). It used to be a door of its
+                  own at #hr, which meant the code in the invitation e-mail
+                  had to carry a second address with it; the link is the
+                  ordinary one now and this card is what it opens. */}
+              <button type="button" className={`auth__kindbtn${kind === 'company' ? ' is-on' : ''}`}
+                aria-pressed={kind === 'company'} onClick={() => setKind('company')}>
+                <b>{t('For my company')}</b>
+                <small>{t('I manage Good Loop where I work')}</small>
+              </button>
             </div>
           )}
 
@@ -461,13 +480,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               value={crp} ref={hold('crp')} onChange={(e) => setCrp(e.target.value)} />
             {bad('crp') && <p className="auth__bad" role="alert">{bad('crp')}</p>}
           </>}
-          {signup && isHr && <>
+          {signup && asCompany && <>
             <input className="auth__input" type="text" placeholder={t('Company code (required)')}
               autoCapitalize="characters" spellCheck={false} ref={hold('companyCode')}
               value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
             {bad('companyCode') && <p className="auth__bad" role="alert">{bad('companyCode')}</p>}
           </>}
-          {signup && !asTherapist && !isHr && <>
+          {signup && !asTherapist && !asCompany && <>
             {/* Not optional any more: it is the name the app greets this
                 person by every morning, and "Bom dia," with nothing after
                 the comma is not a greeting. */}
@@ -570,10 +589,11 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
             with the pill, and a third centred under them. */}
         <div className="auth__foot">
           <HelpNowButton variant="inline" />
+          {/* One link, so no separator: "All apps" went with the other
+              doors (POs, 2026-11-06) and the middle dot was left pointing
+              at nothing. */}
           <nav className="auth__links" aria-label={t('Links')}>
             <a className="auth__hub" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
-            <span className="auth__sep" aria-hidden="true">·</span>
-            <a className="auth__hub" href="#hub">{t('All apps')} ↗</a>
           </nav>
         </div>
       </div>
@@ -627,6 +647,28 @@ export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales'
  * team and by the clinicians who compose a session in it. Everything else
  * takes the single role its door is for.
  */
+/** The surfaces that no longer have a door of their own: signed out, they
+    send you to the one public door and the account decides where you land
+    from there (POs, 2026-11-06). The Studio keeps its own — it is an
+    authoring tool reached from a console, like admin and commercial. */
+const SHARES_THE_DOOR: GateMode[] = ['b2b', 'hr']
+
+/** One frame on the way to the public door. A redirect and not a link: a
+    person who typed #hr wanted to sign in, not to read about where. */
+function ToTheDoor() {
+  const { t } = useI18n()
+  useEffect(() => {
+    /* The hash AND a reload: each surface mounts its own data layer and its
+       own gate, and only a load puts the person on the right one. */
+    if (window.location.hash) window.location.href = window.location.pathname
+  }, [])
+  return (
+    <div className="auth auth--loading auth--b2c su-studio">
+      <div className="auth__spin" aria-label={t('Loading')} />
+    </div>
+  )
+}
+
 export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
   const { ready, user, role, signOut } = useAuth()
   const { t } = useI18n()
@@ -674,7 +716,12 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
       </div>
     )
   }
-  if (!user) return <AuthScreen mode={mode} />
+  if (!user) {
+    /* `allow` means this surface serves more than the one role its mode
+       names — the Studio — and that one keeps its own door. */
+    if (!allow && SHARES_THE_DOOR.includes(mode)) return <ToTheDoor />
+    return <AuthScreen mode={mode} />
+  }
 
   if (misplaced && role) {
     // the redirect above is already on its way; this is what is on screen for

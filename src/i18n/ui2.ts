@@ -139,6 +139,19 @@ export const IT_UI2: Record<string, string> = {
     'Come la tua città, il tuo stato e la tua regione si prendono cura di sé. Solo luoghi — mai persone, mai nomi.',
   'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
     'La cura che torna a te: scambia i tuoi Loops con qualcosa che si prende cura del tuo corpo o della tua mente.',
+  /* ---- la pastiglia dell'umore, e l'avviso quando si esce ---- */
+  'No reading yet today': 'Oggi non hai ancora risposto',
+  'Each square is how you answered at the end of a session. A day you answered twice wears both.':
+    'Ogni quadrato è come hai risposto alla fine di una seduta. Un giorno con due risposte le porta entrambe.',
+  'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
+    'Se ti fermi adesso, questa seduta non dà Loops: sono per quelle che porti fino in fondo.',
+  'And the last minutes are the ones that bring you back gently. Stay with it if you can.':
+    'E gli ultimi minuti sono quelli che ti riportano qui con calma. Resta, se puoi.',
+
+  /* ---- una sola porta: la terza scheda ---- */
+  'You have given {time} to yourself so far': 'Finora hai dedicato {time} a te',
+  'For my company': 'Per la mia azienda',
+  'I manage Good Loop where I work': 'Gestisco Good Loop dove lavoro',
 }
 
 export const PT_UI2: Record<string, string> = {
@@ -273,4 +286,17 @@ export const PT_UI2: Record<string, string> = {
     'Como a sua cidade, o seu estado e a sua região estão cuidando de si. Só lugares — nunca pessoas, nunca nomes.',
   'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
     'O cuidado que volta para você: troque seus Loops por algo que cuide do seu corpo ou da sua mente.',
+  /* ---- a pastilha do humor, e o aviso ao sair ---- */
+  'No reading yet today': 'Hoje você ainda não respondeu',
+  'Each square is how you answered at the end of a session. A day you answered twice wears both.':
+    'Cada quadrado é como você respondeu no fim de uma sessão. Um dia com duas respostas carrega as duas.',
+  'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
+    'Se você parar agora, esta sessão não dá Loops: eles são para as que você leva até o fim.',
+  'And the last minutes are the ones that bring you back gently. Stay with it if you can.':
+    'E os últimos minutos são os que trazem você de volta com calma. Fique, se puder.',
+
+  /* ---- uma porta só: o terceiro card ---- */
+  'You have given {time} to yourself so far': 'Até agora você dedicou {time} a você',
+  'For my company': 'Para a minha empresa',
+  'I manage Good Loop where I work': 'Eu cuido do Good Loop onde trabalho',
 }

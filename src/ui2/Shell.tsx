@@ -7,8 +7,10 @@
    colourway the ground asks for: green on a light ground, cream on a dark
    one. Not redrawn here — the brand files are the only logo there is.
 
-   Six destinations. "Percurso" is the new one: the protocols a therapist
-   parameterised for this person, which used to be buried inside Terapia.
+   Five destinations. "Minha jornada" was the sixth and is gone (POs,
+   2026-11-06): its calendar is a pill in the top bar now
+   (`ui2/MoodPill.tsx`), and the rest of it — the weekly check-in, the
+   monthly report, the VAS chart — went with the screen, on their call.
 
    `.gl-root` is the scroller (shell.css, "scrolling"): the document stays
    locked as it always was, and a change of destination puts the column
@@ -20,7 +22,7 @@ import { useI18n } from '../i18n'
 import { BrandIcon } from '../components/Brand'
 import { useGround } from './groundChoice'
 
-export type Dest = 'home' | 'therapy' | 'path' | 'journey' | 'loops' | 'profile'
+export type Dest = 'home' | 'therapy' | 'path' | 'loops' | 'profile'
 
 /* The mockup's SVGs, copied. Every one is 24×24, 1.8 stroke, round caps. */
 const ICONS: Record<Dest, ReactNode> = {
@@ -38,21 +40,18 @@ const ICONS: Record<Dest, ReactNode> = {
       <rect x="17" y="14" width="4" height="6" rx="1.5" />
     </>
   ),
-  journey: (
-    <>
-      <circle cx="6" cy="19" r="2" />
-      <circle cx="18" cy="5" r="2" />
-      <path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7" />
-    </>
-  ),
-  /* The two crossed ellipses the app draws everywhere a Loop is named
-     (`selfuse/icons.tsx`, 'loop'). It was a heart with a plus in it, for a
-     destination called "Benefícios" — a heart on a rail beside a therapy
-     tab reads as care, not as what a minute of listening earns. */
+  /* A cup (POs, 2026-11-06). It was a heart with a plus in it for
+     "Benefícios", then the two crossed ellipses of the Loops mark — which
+     is a LOGO: at 22px in a rail it reads as the brand, not as a
+     destination. Behind this door are achievements, challenges, rankings
+     and prizes, and a cup is the one drawing nobody has to be taught. */
   loops: (
     <>
-      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(-30 12 12)" />
-      <ellipse cx="12" cy="12" rx="8.5" ry="4.2" transform="rotate(30 12 12)" />
+      <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+      <path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11" />
+      <path d="M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11" />
+      <path d="M12 14v3" />
+      <path d="M8.5 20h7l-.7-3h-5.6z" />
     </>
   ),
   profile: (
@@ -68,12 +67,11 @@ const LABELS: Record<Dest, string> = {
   home: 'Home',
   therapy: 'Therapy',
   path: 'Guided care',
-  journey: 'My journey',
   loops: 'Loops',
   profile: 'Profile',
 }
 
-export const DESTS: Dest[] = ['home', 'therapy', 'path', 'journey', 'loops', 'profile']
+export const DESTS: Dest[] = ['home', 'therapy', 'path', 'loops', 'profile']
 
 function Glyph({ dest }: { dest: Dest }) {
   return (
@@ -111,7 +109,7 @@ export function Shell({
   onDest(next: Dest): void
   dests?: Dest[]
   /** 'mood' is the library's ground; 'deep' is the photograph the therapy,
-      journey, Loops and profile mockups stand on. */
+      Loops and profile mockups stand on. */
   surface?: 'mood' | 'deep'
   children: ReactNode
 }) {

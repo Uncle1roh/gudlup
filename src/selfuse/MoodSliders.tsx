@@ -25,12 +25,28 @@
 
 import { useRef, type PointerEvent as RPointerEvent, type KeyboardEvent as RKeyboardEvent } from 'react'
 import { useI18n } from '../i18n'
-import { roundAxis, type MoodPoint } from '../data/measures'
+import { moodColor, roundAxis, type MoodPoint } from '../data/measures'
 
-/* The track is drawn in the colour the axis MEANS, not in a brand colour:
-   energy runs from settled to lit, mood from heavy to bright. */
-const ENERGY_TRACK = 'linear-gradient(180deg, #E8A24B 0%, #9aada5 50%, #6E8BA8 100%)'
-const MOOD_TRACK = 'linear-gradient(180deg, #8FCBA8 0%, #9aada5 50%, #C0724A 100%)'
+/* THE TRACK SHOWS WHAT YOU WOULD GET. It used to be two fixed gradients,
+   mixed to sit quietly on the surface — and the POs asked for colours that
+   are alive (2026-11-06). They are not picked here any more: each track is
+   sampled from `moodColor`, the same function that fills the calendar, with
+   the OTHER axis held where the person has it. So dragging energy repaints
+   the mood track, and the colour under the thumb is the colour the day will
+   wear. Five stops is enough for a smooth 220px track. */
+function trackGradient(axis: 'arousal' | 'valence', other: number): string {
+  const stops = [1, 0.5, 0, -0.5, -1].map((v) => {
+    const point = axis === 'arousal' ? { valence: other, arousal: v } : { valence: v, arousal: other }
+    return moodColor(point)
+  })
+  return `linear-gradient(180deg, ${stops.join(', ')})`
+}
+
+/* The five steps the words already name (`MOOD_LEVELS` / `ENERGY_LEVELS`),
+   drawn as ticks beside the track (POs, 2026-11-06). A continuous track with
+   two words at its ends gives a finger nothing to aim at; the ticks say that
+   the middle is a real answer and not just the place the thumb started. */
+const TICKS = [0, 1, 2, 3, 4]
 
 /** The centre, where a track starts before anybody has said anything. */
 const CENTRE: MoodPoint = { valence: 0, arousal: 0 }
@@ -81,6 +97,10 @@ function Slider({ value, answered, onChange, label, top, bottom, track }: {
     <div className="ms2-axis">
       <span className="ms2-axis__name">{label}</span>
       <span className="ms2-axis__end">{top}</span>
+      <div className="ms2-rail">
+      <span className="ms2-ticks" aria-hidden="true">
+        {TICKS.map((i) => <i key={i} className={i === 2 ? 'is-mid' : undefined} />)}
+      </span>
       <button
         ref={el}
         type="button"
@@ -99,6 +119,7 @@ function Slider({ value, answered, onChange, label, top, bottom, track }: {
       >
         <span className={`ms2-thumb${answered ? ' is-set' : ''}`} style={{ top: `${pos.toFixed(1)}%` }} aria-hidden="true" />
       </button>
+      </div>
       <span className="ms2-axis__end">{bottom}</span>
     </div>
   )
@@ -129,7 +150,7 @@ export function MoodSliders({ value, onChange }: {
           label={t('Energy')}
           top={t('Very high')}
           bottom={t('Very low')}
-          track={ENERGY_TRACK}
+          track={trackGradient('arousal', point.valence)}
           value={point.arousal}
           answered={answered}
           onChange={(v) => onChange({ valence: point.valence, arousal: v })}
@@ -138,7 +159,7 @@ export function MoodSliders({ value, onChange }: {
           label={t('Mood')}
           top={t('pleasant')}
           bottom={t('unpleasant')}
-          track={MOOD_TRACK}
+          track={trackGradient('valence', point.arousal)}
           value={point.valence}
           answered={answered}
           onChange={(v) => onChange({ valence: v, arousal: point.arousal })}

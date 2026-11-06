@@ -2233,6 +2233,7 @@ create or replace function get_wallet() returns json
     'points_total',   coalesce((select sum(p.points) from points_ledger p, me where p.user_id = me.id), 0),
     'points_month',   coalesce((select sum(p.points) from points_ledger p, me, mo where p.user_id = me.id and p.period_month = mo.month), 0),
     'minutes_month',  coalesce((select sum(d.eligible_minutes) from gam_daily_usage d, me, mo where d.user_id = me.id and d.day >= mo.month), 0),
+    'minutes_total',  coalesce((select sum(d.eligible_minutes) from gam_daily_usage d, me where d.user_id = me.id), 0),
     'sessions_month', coalesce((select sum(d.sessions) from gam_daily_usage d, me, mo where d.user_id = me.id and d.day >= mo.month), 0),
     'multiplier',     (select m.multiplier from me, gam_multiplier_at(me.id, now()) m where m.multiplier > 1)
   )

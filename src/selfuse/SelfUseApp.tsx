@@ -24,16 +24,14 @@ import { useAuth } from '../auth/auth'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
 import { useDataProvider } from '../data/provider'
-import { useI18n, fmtDate } from '../i18n'
+import { useI18n } from '../i18n'
 import { Explore } from './Explore'
 import { FirstRun } from './FirstRun'
 import { AddressedAsGate } from './AddressedAsGate'
 import { SessionFlow, type SessionOutcome } from './Session'
 import { TherapistTab } from './TherapistTab'
-import { ProgressTab } from './ProgressTab'
 import { ProfileTab } from './ProfileTab'
 import { LoopsTab, type LoopsView } from './LoopsTab'
-import { GlCheckFlow } from './Measures'
 import { SafetyLevel3 } from './Safety'
 import { HelpNowButton } from '../legal/HelpNow'
 import { useLegal } from '../legal/LegalContext'
@@ -47,11 +45,9 @@ import { demoProfile } from '../demo/world'
 import { demoFixturesOn } from '../app/environment'
 import { resolveCompanyCode, hasProfessionalSupport, isDemoTenantCode } from '../data/convention'
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
-import { buildMonthlyReportPdf, buildTherapyReportPdf } from './progressPdf'
-import { ReportSheet } from './ReportSheet'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
-import { dayKey, moodEntryFrom, upsertMood } from '../data/measures'
+import { addMood, dayKey, moodEntryFrom } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 
@@ -63,6 +59,7 @@ import { ChallengeCard } from './ChallengeCard'
 import { ChallengeDetail } from './ChallengeDetail'
 import { Shell, DESTS, type Dest } from '../ui2/Shell'
 import { GroundProvider } from '../ui2/Ground'
+import { MoodProvider } from '../ui2/MoodPill'
 import { Path } from '../ui2/Path'
 import { usePrescriptions } from '../ui2/prescriptions'
 
@@ -70,7 +67,7 @@ import { usePrescriptions } from '../ui2/prescriptions'
    pathways and the continue card are one screen, because a person opening the
    app wants to choose something, and a Home that only linked to the place
    where you choose was a hop with nothing in it. */
-type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'loops' | 'profile'
+type Tab = 'home' | 'therapist' | 'path' | 'loops' | 'profile'
 
 
 /* The rail's destinations and this surface's tabs are the same six things
@@ -78,21 +75,20 @@ type Tab = 'home' | 'therapist' | 'path' | 'progress' | 'loops' | 'profile'
    it is built at its own stop. */
 const DEST_OF: Record<Tab, Dest> = {
   home: 'home', therapist: 'therapy', path: 'path',
-  progress: 'journey', loops: 'loops', profile: 'profile',
+  loops: 'loops', profile: 'profile',
 }
 /* Only the library stands on the colour of the mood. Every other mockup is
    the same photograph under a dark wash — a room you go into, rather than
    the shelf you browse. A screen gets the deep surface once it is ported. */
-const DEEP: Tab[] = ['therapist', 'path', 'progress', 'loops', 'profile']
+const DEEP: Tab[] = ['therapist', 'path', 'loops', 'profile']
 
 const TAB_OF: Record<Dest, Tab> = {
   home: 'home', therapy: 'therapist', path: 'path',
-  journey: 'progress', loops: 'loops', profile: 'profile',
+  loops: 'loops', profile: 'profile',
 }
 
 type Overlay =
   | { kind: 'none' }
-  | { kind: 'glcheck' }
   | { kind: 'safety3' }
   | { kind: 'call' }
 
@@ -164,9 +160,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   const [query, setQuery] = useState('')
   const [launch, setLaunch] = useState<(Launch & { prescriptionId?: string }) | null>(null)
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' })
-  /* The month's report, open on screen. Not an overlay: the tab stays where
-     it is behind it, the way every other sheet in this app behaves. */
-  const [report, setReport] = useState(false)
   /* Percurso's list, read once for the whole surface. */
   const prescriptions = usePrescriptions(therapy)
   const videoOn = useFeature('video')
@@ -569,7 +562,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
        four still answered the question, and their answer is theirs. */
     if (o.moodPost) {
       const entry = moodEntryFrom(o.moodPost, o.completedAt)
-      update((s) => ({ ...s, moods: upsertMood(s.moods, entry) }))
+      update((s) => ({ ...s, moods: addMood(s.moods, entry) }))
     }
 
     /* Ended early: the row is still recorded, and it earns NOTHING — a Loop
@@ -695,16 +688,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   if (overlay.kind === 'safety3') {
     return <SafetyLevel3 eap={eap} onClose={() => { setOverlay({ kind: 'none' }); setTab('home') }} />
   }
-  if (overlay.kind === 'glcheck') {
-    return (
-      <GlCheckFlow
-        /* The flow no longer compares anything: answering closes it, and
-           the week is read on Progress. */
-        onDone={(e) => update((s) => ({ ...s, glChecks: [...s.glChecks, e] }))}
-        onClose={() => setOverlay({ kind: 'none' })}
-      />
-    )
-  }
   if (overlay.kind === 'call' && therapy.link) {
     /* Gated HERE and not inside the component: PatientVideoCall opens the
        camera and the peer connection from its own hooks, so a switch read
@@ -737,28 +720,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     setLaunch(l)
   }
 
-  /* The monthly summary is a real document a person can keep or show someone.
-     "Export my data" in Privacy & Data stays JSON on purpose — that one exists
-     to be portable and machine-readable, which is a different job.
-
-     The button that leads here says "view", so it opens the document rather
-     than putting it in the Downloads folder unread (`ReportSheet`). The
-     build itself is unchanged, and still happens entirely in this tab. */
-  function buildSelfUseReport() {
-    return buildMonthlyReportPdf({
-      state,
-      sessions: catalog.sessions,
-      pathway: findPathway(catalog.pathways, state.pathway?.id),
-      personName: accountName(user?.email, legal.profile?.name),
-      t,
-    })
-  }
-
-  function exportTherapy() {
-    if (!therapy.link) return
-    buildTherapyReportPdf(therapy.link, catalog.sessions, accountName(user?.email, legal.profile?.name), t)
-      .save(`good-loop-therapy-${dayKey(Date.now())}.pdf`)
-  }
+  /* THE MONTHLY REPORT AND THE THERAPY REPORT ARE GONE (POs, 2026-11-06).
+     They were two buttons at the foot of "Minha jornada", and that screen
+     was removed; asked where the orphans should live, the owner's answer
+     was to let them go with it. `selfuse/progressPdf.ts` and the sheet that
+     showed the result went too — a PDF builder nothing calls is not a
+     feature in reserve, it is a file the next person has to read before
+     they can be sure of that. "Exportar meus dados" in Perfil → Privacidade
+     stays: that one is the legal portability copy (DAT-01), a different
+     job, and it is still reachable. */
 
   /**
    * The data-subject request (DAT-01, DAT-02): a request row with a 15-day
@@ -810,6 +780,10 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
   }
 
   return (
+    /* The mood readings reach the top bar's pill through a context: the bar
+       is on every screen and none of those screens has anything to do with
+       the mood (`ui2/MoodPill.tsx`). */
+    <MoodProvider moods={state.moods}>
     <Shell dest={DEST_OF[tab]} onDest={(d) => selectTab(TAB_OF[d])} dests={dests} surface={DEEP.includes(tab) ? 'deep' : 'mood'}>
       <div className="tabview" key={`${tab}:${tabReset}`}>
         {tab === 'home' && openChallenge && (
@@ -865,23 +839,6 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
           />
         )}
 
-        {tab === 'progress' && (
-          <ProgressTab
-            hasCompany={hasCompany}
-            name={displayName(accountEmail, legal.profile?.name)}
-            state={state}
-            therapy={therapy}
-            onGoAchievements={() => { setLoopsView('achievements'); setTab('loops') }}
-            onGoChallenges={() => { setLoopsView('challenges'); setTab('loops') }}
-            onStartSession={() => setTab('home')}
-            onStartLaunch={(l) => setLaunch(l)}
-            onGlCheck={() => setOverlay({ kind: 'glcheck' })}
-            onGoTherapist={() => setTab('therapist')}
-            onExportSelfUse={() => setReport(true)}
-            onExportTherapy={exportTherapy}
-          />
-        )}
-
         {tab === 'loops' && (
           <LoopsTab
             hasCompany={hasCompany}
@@ -917,21 +874,13 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
       )}
 
 
-      {report && (
-        <ReportSheet
-          title={t('Your {month} report', { month: fmtDate(Date.now(), { month: 'long' }) })}
-          filename={`good-loop-${dayKey(Date.now())}.pdf`}
-          build={buildSelfUseReport}
-          onClose={() => setReport(false)}
-        />
-      )}
-
       {onDemoToggle && (
         <button className="dev-toggle su-dev" onClick={onDemoToggle}>
           {demoSeconds ? t('demo {n}s', { n: demoSeconds }) : t('full length')}
         </button>
       )}
     </Shell>
+    </MoodProvider>
   )
 }
 

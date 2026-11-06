@@ -103,6 +103,23 @@ function readDemoUser(): DemoSession | null {
   } catch { return null }
 }
 
+/**
+ * Which surface a demo address belongs to.
+ *
+ * Only reachable in demo mode (no Supabase configured), where there is no
+ * profile row to read a role from. A real deployment never calls this: the
+ * account's own record answers, which is the only answer that can be
+ * trusted anyway.
+ */
+function demoRoleFor(email: string): Role {
+  const addr = (email || '').trim().toLowerCase()
+  if (addr === 'admin@goodloop.app') return 'admin'
+  if (addr === 'comercial@goodloop.app' || addr === 'commerciale@goodloop.app') return 'sales'
+  if (addr.endsWith('@clinic.demo')) return 'therapist'
+  if (addr === 'camila@aurora.co' || addr.startsWith('hr@') || addr.startsWith('rh@')) return 'hr_admin'
+  return 'b2c_user'
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supa = hasSupabaseEnv()
   const demoSession = supa ? null : readDemoUser()
@@ -168,9 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const api = useMemo<AuthApi>(() => {
     if (!supa) {
-      /* Demo mode — any credentials work, and the DOOR decides the role. There
-         is no profiles table to ask, and a demo where one sign-in opened all
-         four surfaces would be a demo of the bug this gate exists to fix. */
+      /* Demo mode — any credentials work.
+         The DOOR used to decide the role, and with a door per app that was
+         right. There is one public door now (POs, 2026-11-06), so a door
+         that decided would make every demo sign-in a listener, including
+         the clinician's. Without a profiles table to ask, the ADDRESS
+         decides instead, from the demo's own cast; the two internal doors
+         still pass their role and still win. */
       const enter = (email: string, r: Role) => {
         const u: DemoSession = { id: 'demo-' + (email || 'user'), email: email || 'demo@goodloop.app', role: r }
         try { localStorage.setItem(DEMO_KEY, JSON.stringify(u)) } catch { /* ignore */ }
@@ -179,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {
         ready: true, user, role, mode: 'demo',
-        async signIn(email, _password, r) { enter(email, r ?? 'b2c_user') },
+        async signIn(email, _password, r) { enter(email, r ?? demoRoleFor(email)) },
         async resetPassword() { /* demo mode has no mailbox to send to */ },
         async updatePassword() { /* demo mode has no password to change */ },
         async signUp(email, _password, r, extra) {

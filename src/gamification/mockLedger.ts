@@ -170,7 +170,7 @@ export class MockLedger {
       minutes += u.eligibleMinutes
       sessions += u.sessions ?? 0
     }
-    return walletFrom(this.loops, this.points, minutes, sessions, multiplierAt(this.windows, now), now)
+    return walletFrom(this.loops, this.points, minutes, sessions, multiplierAt(this.windows, now), now, this.lifetimeMinutes())
   }
 
   /** Newest first, as the wallet history reads. */

@@ -1637,6 +1637,10 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         pointsTotal: Number(w.points_total ?? 0),
         pointsMonth: Number(w.points_month ?? 0),
         minutesMonth: Number(w.minutes_month ?? 0),
+        /* A database that has not had `28-wallet-minutes-total.sql` run
+           yet answers without this key; the month is then the only figure
+           there is, which is what the card used to show anyway. */
+        minutesTotal: Number(w.minutes_total ?? w.minutes_month ?? 0),
         sessionsMonth: Number(w.sessions_month ?? 0),
         multiplier: w.multiplier == null ? null : Number(w.multiplier),
       }
