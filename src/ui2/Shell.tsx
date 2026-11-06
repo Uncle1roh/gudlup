@@ -19,6 +19,7 @@
 
 import { useRef, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
+import { useStageClaim } from '../components/ambient/stage'
 import { BrandIcon } from '../components/Brand'
 import { useGround } from './groundChoice'
 
@@ -116,6 +117,25 @@ export function Shell({
   const { t } = useI18n()
   const variant = useBrandVariant()
   const root = useRef<HTMLDivElement>(null)
+
+  /* THE SIGNED-IN APP STANDS ON THE RINGS (POs, 2026-11-06). The brand's
+     mark, large, in the corner, over the person's own light or dark palette,
+     with a fade at the foot so a card is read against a colour — drawn once
+     at the app root by `components/ambient/`, which is also what dresses the
+     landing page and the door.
+
+     It began as the library's ground only, and the other four destinations
+     kept the mountain photograph; one app on two different grounds, and
+     changing tab changed the room. The claim moved here, to the shell every
+     destination shares, so it is the ground of all five.
+
+     The shell is also exactly the right place for the exception. A session —
+     the detail page, the headphone check, the player — replaces the shell
+     rather than rendering inside it, so this unmounts and the claim goes
+     with it, which is what lets the protocol's own cover fill the window
+     (`ui2/pageGround.ts`). Mounting is the whole condition; there is no
+     list of screens to keep in step. */
+  useStageClaim('home')
 
   return (
     <div ref={root} className={`gl-root${surface === 'deep' ? ' gl-root--deep' : ''}`}>

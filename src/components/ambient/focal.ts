@@ -58,8 +58,18 @@ export function coverPoint(
 /** The seated person, as fractions of the photograph. */
 export const HERO_FOCUS = { fx: 0.50, fy: 0.644 }
 
-/** `object-position` on a desk: the figure sits high in a wide window. */
-export const HERO_POS_DESKTOP = { x: 0.50, y: 0.388 }
+/**
+ * `object-position` on a desk.
+ *
+ * The vertical was 0.388 and it put the seated figure at ~90% of the window
+ * height: on a 900px screen they were at y=810, under the fold on anything
+ * shorter, and the whole point of the page is that somebody is sitting
+ * there. At 0.60 they land at ~69% of the window at every shape we check —
+ * 1280x800, 1440x900, 1920x1080 and a short 1440x700 all put them within a
+ * couple of percent of each other — which is below the subtitle and clear
+ * of the bottom edge.
+ */
+export const HERO_POS_DESKTOP = { x: 0.50, y: 0.60 }
 
 /** …and on a phone, where the window is taller than the picture is wide. */
 export const HERO_POS_MOBILE = { x: 0.30, y: 0.50 }

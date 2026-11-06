@@ -28,7 +28,6 @@ import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_TINT, tilePosition } from './theme'
 import { TopBar } from './TopBar'
-import { useStageClaim } from '../components/ambient/stage'
 
 interface HomeProps {
   name: string | null
@@ -53,18 +52,6 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
   const { t } = useI18n()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
 
-  /* THE LIBRARY IS A STAGE for the one background the product now has
-     (`components/ambient/`): the brand's rings, large, in the corner, over
-     the person's own choice of light or dark, with a fade at the foot of the
-     window so a card is read against a colour.
-
-     The claim is made HERE and not in `SelfUseApp` on purpose. This
-     component is mounted exactly when the library is the screen somebody is
-     looking at — not while a session is open over it (that screen carries
-     the protocol's cover, `ui2/pageGround.ts`), not on the other four
-     destinations, and not during the first run. Mounting is the condition,
-     so there is no condition to keep in step. */
-  useStageClaim('home')
 
   const all = catalog.browsable
 

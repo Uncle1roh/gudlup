@@ -163,8 +163,15 @@ html.gl2 body {
    AFTER the background goes off rather than on the same frame: the app's
    ground coming back instantly behind something that is still fading out
    is a fade nobody sees. The other four destinations are untouched. */
-html.gl2[data-gl-amb='on'] body { background: transparent; }
-html.gl2[data-gl-amb='on'] body::before { display: none; }
+/* `:not([data-gl-session='on'])` is not decoration. A protocol screen — the
+   detail page, the headphone check, the player — renders INSIDE the shell,
+   so the rings are still claimed while the protocol's own cover is painted
+   on the body by `ui2/pageGround.ts`. Both rules match `body` at the same
+   specificity, so without this the winner would be whichever Vite happened
+   to concatenate last: the cover is the one that must win, and it says so
+   here rather than depending on the order of a file. */
+html.gl2[data-gl-amb='on']:not([data-gl-session='on']) body { background: transparent; }
+html.gl2[data-gl-amb='on']:not([data-gl-session='on']) body::before { display: none; }
 
 /* ----------------------------------------- the window a protocol fills ---
    While a protocol screen is open — its detail page, the pre-session card,
@@ -579,10 +586,15 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The one personal line on the screen, and it was set at 22px — the size of
+   a section heading, under a 13px date, in a corner that is the first thing
+   a person reads when the app opens. Bigger (POs, 2026-11-06), and it
+   shrinks with the window rather than taking two lines on a phone. */
 .gl-top__hello {
   font-family: 'Outfit', system-ui, sans-serif;
-  font-size: 22px;
-  line-height: 1.1;
+  font-size: clamp(26px, 2.4vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
   overflow-wrap: anywhere;
 }
 

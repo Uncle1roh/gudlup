@@ -5,6 +5,12 @@
    missing from one dictionary prints English to the person reading it. */
 
 export const IT_UI2: Record<string, string> = {
+  /* The glasses beside the Loops pill. Not "the mood calendar" any more
+     (POs, 2026-11-06): the colour on them IS the colour the day is being
+     seen through, and the words say so. Neither sentence inflects for
+     gender — nothing has asked. */
+  'This is how you see the world today': 'È così che vedi il mondo oggi',
+  'This is how you have been seeing the world': 'È così che hai visto il mondo in questi giorni',
   /* the library's own line, over the legal one under it */
   'Guided pauses for every moment of your day': 'Pause guidate per ogni momento della tua giornata',
 
@@ -155,6 +161,12 @@ export const IT_UI2: Record<string, string> = {
 }
 
 export const PT_UI2: Record<string, string> = {
+  /* The glasses beside the Loops pill. Not "the mood calendar" any more
+     (POs, 2026-11-06): the colour on them IS the colour the day is being
+     seen through, and the words say so. Neither sentence inflects for
+     gender — nothing has asked. */
+  'This is how you see the world today': 'É assim que você vê o mundo hoje',
+  'This is how you have been seeing the world': 'É assim que você vem vendo o mundo nesses dias',
   /* the library's own line, over the legal one under it */
   'Guided pauses for every moment of your day': 'Pausas guiadas para cada momento do seu dia',
 

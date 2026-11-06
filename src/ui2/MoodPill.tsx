@@ -67,8 +67,12 @@ export function MoodPill() {
         style={fill ? { background: fill, borderColor: 'transparent' } : undefined}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={`${t('Mood calendar')} — ${words}`}
-        title={words}
+        /* It is not "the mood calendar" any more (POs, 2026-11-06). The
+           glasses say what they are for: the colour on them is the colour
+           the day is being seen through. Hovering says it in words, and a
+           screen reader gets the same sentence with the reading after it. */
+        aria-label={`${t('This is how you see the world today')} — ${words}`}
+        title={t('This is how you see the world today')}
       >
         <Icon name="glasses" size={20} />
       </button>
@@ -76,7 +80,7 @@ export function MoodPill() {
       {open && (
         <GamDialog labelledBy="gl-mood-title" onClose={() => setOpen(false)} className="gam-mood">
           <p className="eyebrow">{d(Date.now(), { day: 'numeric', month: 'long' })}</p>
-          <h2 id="gl-mood-title" className="display gam-unlock__name">{t('Mood calendar')}</h2>
+          <h2 id="gl-mood-title" className="display gam-unlock__name">{t('This is how you have been seeing the world')}</h2>
           <MoodCalendar moods={moods} />
           <p className="call2-note">
             {moods.length
