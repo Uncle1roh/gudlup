@@ -667,6 +667,67 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   white-space: nowrap;
 }
 
+/* ------------------------------------------------- narrowing it down ---
+   The themes and the search field on one row (POs, 2026-11-06). They were
+   two, a hundred pixels apart, both answering the same question. The field
+   is 44px so it stands in the same band as the 42px chips; it takes the
+   right-hand end while there is room and a full line of its own when there
+   is not. */
+.gl-sift {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  width: 100%;
+}
+
+/* The chips wrap among THEMSELVES before the row breaks. Left at their
+   max-content width, six themes are 650px, and on a laptop column that
+   left under 280px for the field — so the field dropped to a line of its
+   own and the two controls were two rows again, which is the thing this
+   change was for. Given a basis it can shrink below, the chip block takes
+   a second line and the field stays where it belongs. */
+.gl-sift__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.gl-sift__search {
+  flex: 0 1 300px;
+  min-width: 220px;
+  /* Pushed to the far end of the row, and harmless once it wraps onto a
+     line of its own — `auto` on a full-width item is zero. */
+  margin-left: auto;
+  max-width: 440px;
+  height: 44px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.gl-sift__search .gl-search {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+}
+
+/* A phone has no room for both on one line, and a 280px field beside two
+   chips is worse than a field under them. */
+@media (max-width: 560px) {
+  .gl-sift__search { max-width: none; flex-basis: 100%; }
+}
+
 .gl-search::placeholder { color: var(--ink-2); }
 /* A search input draws its own clear button in a colour we do not control. */
 .gl-search::-webkit-search-cancel-button { filter: invert(var(--mood-invert, 0)); }

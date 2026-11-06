@@ -153,19 +153,53 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         {noticeSlot}
       </div>
 
-      {/* THE BILLBOARD IS GONE (POs, 2026-11-06). It was 420px of one
+      {/* ------------------------------------------- narrowing it down ---
+          THE BILLBOARD IS GONE (POs, 2026-11-06). It was 420px of one
           protocol — a 76px title, a blurb and a play button — chosen by the
           library itself as "a good place to start", and it pushed every
           shelf below the fold. A person opening this screen is choosing,
-          and the thing that helps them choose is the shelves. What is left
-          of that row is the search field, which is the other half of
-          choosing.
+          and the thing that helps them choose is the shelves.
 
           The pick is gone too, not hidden: `featured` named one protocol as
           the app's recommendation on a screen whose whole point is that
-          nothing here is prescribed. */}
-      <section style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 24, padding: '20px 8px 0' }}>
-        <label className="glass" style={{ flex: '0 1 440px', height: 60, borderRadius: 999, display: 'flex', alignItems: 'center', gap: 12, padding: '0 22px', alignSelf: 'flex-end', position: 'relative' }}>
+          nothing here is prescribed.
+
+          AND THE SEARCH FIELD CAME DOWN HERE (POs, 2026-11-06). It had a
+          row of its own above the chips — a 60px pill against the right
+          edge — so the two controls that both answer "show me less than
+          all of this" were a hundred pixels apart with nothing between
+          them. One row: the themes on the left, the field on the right, the
+          field at 44px so it sits in the same band rather than towering
+          over them. Everything below moves up by a row.
+
+          `flex: 1 1 280px` and `margin-left: auto` are what make that
+          survive a narrow window: at the right-hand end while there is
+          room, and a full line of its own underneath the moment there is
+          not. */}
+      <div className="gl-sift">
+        <div role="tablist" aria-label={t('Categories')} className="gl-sift__chips">
+          {([{ id: 'all' as const, label: 'All themes' }, ...SELF_USE_THEMES]).map((c) => {
+            const on = theme === c.id
+            return (
+              <button
+                key={c.id}
+                role="tab"
+                type="button"
+                className="glass-btn"
+                aria-selected={on}
+                onClick={() => setTheme(c.id as SelfUseTheme | 'all')}
+                style={{
+                  height: 42, padding: '0 18px', borderRadius: 999,
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
+                }}
+              >
+                {t(c.label)}
+              </button>
+            )
+          })}
+        </div>
+
+        <label className="glass gl-sift__search">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7" />
             <path d="M20 20l-3.5-3.5" />
@@ -177,32 +211,8 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
             value={query}
             onChange={(e) => onQuery(e.target.value)}
             placeholder={t('Search sessions')}
-            style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: 'var(--ink)', fontFamily: "'DM Sans', sans-serif", fontSize: 16 }}
           />
         </label>
-      </section>
-
-      {/* --------------------------------------------------------- chips --- */}
-      <div role="tablist" aria-label={t('Categories')} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        {([{ id: 'all' as const, label: 'All themes' }, ...SELF_USE_THEMES]).map((c) => {
-          const on = theme === c.id
-          return (
-            <button
-              key={c.id}
-              role="tab"
-              type="button"
-              className="glass-btn"
-              aria-selected={on}
-              onClick={() => setTheme(c.id as SelfUseTheme | 'all')}
-              style={{
-                height: 42, padding: '0 18px', borderRadius: 999,
-                fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
-              }}
-            >
-              {t(c.label)}
-            </button>
-          )
-        })}
       </div>
 
       {/* --------------------------------------------------------- rails --- */}
