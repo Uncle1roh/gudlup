@@ -48,7 +48,7 @@ import {
   type SelfUseSession,
   type SelfUseTheme,
 } from './selfuse'
-import { nameLocales, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Protocol } from '../types/domain'
+import { familyOfCode, nameLocales, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Protocol, type ProtocolFamily } from '../types/domain'
 import { useI18n, type Locale } from '../i18n'
 import { variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { tierChoice } from '../legal/claims'
@@ -219,6 +219,61 @@ const THEME_BY_LIBRARY_CATEGORY: Record<string, SelfUseTheme> = {
 }
 
 /**
+ * …and the same answer from the CODE, for the protocols that have no
+ * category at all.
+ *
+ * Which, until this was written, was all of them. `library.category` is set
+ * by one screen, the Library editor, by hand; the PLAIN import and publish
+ * pipeline never writes one. So every protocol the POs published from a
+ * workbook fell through to the `?? 'calm'` at the end of the lookup, and the
+ * whole shelf came out tagged Calma — the word under every cover, and a
+ * theme chip row that narrowed to nothing because everything was in one
+ * bucket.
+ *
+ * The row already knew. `GL-FOCUS 1.2` is a Focus protocol and `GL-ENER 2.1`
+ * is an Energy one, and `familyOfCode` has been able to say so since the
+ * family prefixes were straightened out. Reading it costs nothing, applies
+ * to everything already published, and needs no migration.
+ *
+ * The clinical families are here for completeness. They are therapist-only
+ * and do not reach this list today (`audienceOf(p) === 'library'` filters
+ * them out), but a map with holes in it is a map that answers `undefined`
+ * the day the filter changes.
+ */
+const THEME_BY_FAMILY: Record<ProtocolFamily, SelfUseTheme> = {
+  'GL-CALM': 'calm',
+  'GL-FOCUS': 'focus',
+  'GL-ENER': 'energy',
+  'GL-GROW': 'growth',
+  /* Vitality — "Cuidar de você também é trabalho seu": sustaining yourself,
+     which is the balance shelf rather than the energy one. */
+  'GL-VIT': 'balance',
+  /* First steps — "Comece devagar. Não há nada para acertar." */
+  'GL-INTRO': 'calm',
+  /* The generic library family names no theme, so it has none to give. */
+  'GL-LIB': 'calm',
+  'GL-ANX': 'calm',
+  'GL-STRESS': 'calm',
+  'GL-BURN': 'balance',
+  'GL-DEP': 'growth',
+  'GL-RESIL': 'growth',
+}
+
+/**
+ * The theme a protocol shows in the library: its editor's choice, else what
+ * its code says, else calm.
+ *
+ * Exported because `tools/test-library-theme.ts` asserts it and because a
+ * second caller deriving this a second way is how it went wrong once.
+ */
+export function themeOf(p: { code: string | null; library?: { category?: string } | null }): SelfUseTheme {
+  const chosen = p.library?.category
+  if (chosen && THEME_BY_LIBRARY_CATEGORY[chosen]) return THEME_BY_LIBRARY_CATEGORY[chosen]
+  const family = familyOfCode(p.code)
+  return family ? THEME_BY_FAMILY[family] : 'calm'
+}
+
+/**
  * The 19 editorial sessions, resolved against the catalog, plus every enabled
  * LIBRARY entry the catalog carries that the spine does not already cover.
  *
@@ -307,7 +362,7 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale, list
       about: patientBlurb(p, locale),
       expect: [],
       series: 'standalone' as const,
-      theme: THEME_BY_LIBRARY_CATEGORY[p.library?.category ?? ''] ?? 'calm',
+      theme: themeOf(p),
       protocolCode: p.code,
       durations: playableDurations(p, listener),
       available: true,

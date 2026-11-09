@@ -106,7 +106,36 @@ export interface RenderPlainOptions {
    * written were read by nothing. See `PlainSeedOptions.to`.
    */
   to?: Addressee
+  /**
+   * Voice clips already synthesized, to draw on and to add to.
+   *
+   * Left out, the render keeps its own cache for its own duration, which is
+   * what every single render does. Passed in, a second render of the same
+   * sheet in the other form pays only for the lines that actually changed.
+   */
+  cache?: VoiceCache
   onProgress?: (msg: string) => void
+}
+
+/**
+ * Synthesized voice clips, kept across renders.
+ *
+ * Pass the same cache to two renders of one sheet — the male form and then
+ * the female — and every line whose words are identical is spoken once. The
+ * counters are what the console reports afterwards, because "28 clip
+ * riusate" is the difference between the operator believing the second
+ * render happened and believing the button did nothing.
+ */
+export interface VoiceCache {
+  buffers: Map<string, AudioBuffer>
+  /** Syntheses avoided because the same words were already spoken. */
+  reused: number
+  /** …and syntheses actually sent to the engine. */
+  synthesized: number
+}
+
+export function newVoiceCache(): VoiceCache {
+  return { buffers: new Map(), reused: 0, synthesized: 0 }
 }
 
 export interface RenderPlainResult {
@@ -114,6 +143,8 @@ export interface RenderPlainResult {
   buffer: AudioBuffer
   seconds: number
   voiceClips: number
+  /** Of those, how many came from the cache instead of the engine. */
+  reusedClips: number
   notes: string[]
 }
 
@@ -138,7 +169,13 @@ export async function renderPlainWav(
 
   /* One decoder AudioContext for the TTS bytes (same pattern as Renderer v3). */
   const decoder = canVoice ? new AudioContext({ sampleRate: SAMPLE_RATE }) : null
-  const ttsCache = new Map<string, AudioBuffer>()
+  /* Shared when the caller is rendering both forms of the same sheet, its
+     own otherwise. An AudioBuffer is plain PCM and outlives the context that
+     decoded it, so the first render closing its decoder does not invalidate
+     anything the second one reads. */
+  const voiceCache = opts.cache ?? newVoiceCache()
+  const ttsCache = voiceCache.buffers
+  const reusedBefore = voiceCache.reused
 
   let voiceClips = 0
   let overran = 0
@@ -170,11 +207,14 @@ export async function renderPlainWav(
           const voiceId = vp.voiceId ?? defaultPrimary(lang).id
           const key = `${voiceId}|${lang}|${text}`
           let decoded = ttsCache.get(key)
-          if (!decoded) {
+          if (decoded) {
+            voiceCache.reused += 1
+          } else {
             progress(`Voce ${voiceClips + 1}: "${text.slice(0, 42)}${text.length > 42 ? '…' : ''}" (${voiceById(voiceId)?.name ?? 'predefinita'})`)
             const bytes = await tts.render(text, { lang, voiceId })
             decoded = await decoder.decodeAudioData(bytes.slice(0))
             ttsCache.set(key, decoded)
+            voiceCache.synthesized += 1
           }
           /* The spoken line is never cut to fit its Excel window — only to the
              end of the session. The window is a placement hint; the real length
@@ -271,9 +311,15 @@ export async function renderPlainWav(
       `${m.limiterDb < -0.1 ? `, limiter fino a ${m.limiterDb.toFixed(1)} dB` : ', limiter non intervenuto'}). ` +
       `Il tetto di 70 dB SPL dipende dal volume del dispositivo di chi ascolta: con questa normalizzazione un’impostazione normale di telefono/cuffie resta al di sotto.`,
     )
-    notes.unshift(`Render ${LANG_IN[lang]}, ${ADDRESSEE_LABEL[to].toLowerCase()}: ${voiceClips} clip vocali.`)
+    const reusedClips = voiceCache.reused - reusedBefore
+    notes.unshift(
+      `Render ${LANG_IN[lang]}, ${ADDRESSEE_LABEL[to].toLowerCase()}: ${voiceClips} clip vocali` +
+      (reusedClips
+        ? ` — ${reusedClips} riusate dal render precedente (stesse parole, stessa voce), ${voiceClips - reusedClips} sintetizzate.`
+        : '.'),
+    )
     const blob = audioBufferToWav(buffer)
-    return { blob, buffer, seconds: lengthSec, voiceClips, notes }
+    return { blob, buffer, seconds: lengthSec, voiceClips, reusedClips, notes }
   } finally {
     if (decoder) { try { await decoder.close() } catch { /* fine */ } }
   }

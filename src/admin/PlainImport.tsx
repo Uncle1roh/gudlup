@@ -40,9 +40,9 @@ import { ProtocolCardEditor, cardDraftFrom, applyCardDraft, type ProtocolCardDra
 import { listAssets } from './assets'
 import { buildAssetPools, loadAssetMeta, type AssetPools } from './assetPools'
 import { buildScriptIndex, missingScripts, plainToStudioTracks } from './plainStudio'
-import { plainWavFileName, renderPlainWav } from './renderPlain'
+import { newVoiceCache, plainWavFileName, renderPlainWav, type VoiceCache } from './renderPlain'
 import { secToMmss, type PlainTimeline } from './plainTimeline'
-import { LANG_IN, LANG_LABEL, VOICE_VARIANTS, variantKey, variantLabel, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
+import { LANG_IN, LANG_LABEL, VOICE_LANGS, VOICE_VARIANTS, variantKey, variantLabel, variantShort, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { hasVoicesFor } from '../tts/voiceCatalog'
 
 interface Props {
@@ -603,11 +603,22 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
   /** Publish = the WHOLE pipeline for the SELECTED time signature: catalog
       entry → render (with voice) → upload & attach → live in the app. The other
       durations of this protocol are left exactly as they are. */
-  async function publish(lang: VoiceLang, to: Addressee = 'm') {
+  /**
+   * Ship ONE variant: catalog row → render → upload → live.
+   *
+   * `opts.proto` and `opts.cache` are what let `publishBoth` call this twice
+   * without doing the expensive half twice. Returns whether it got there, so
+   * the second form is not attempted beside a first that failed.
+   */
+  async function publish(
+    lang: VoiceLang,
+    to: Addressee = 'm',
+    opts: { proto?: CatalogProtocol; cache?: VoiceCache; keepBusy?: boolean } = {},
+  ): Promise<boolean> {
     /* Two ways in: a workbook to render from, or a finished file to ship.
        The second is how a demo protocol is made — and how a PO ships a mix
        mastered outside the app against a time signature that has no Excel. */
-    if (!version && !mastered) return
+    if (!version && !mastered) return false
     /* An uploaded file is filed under the variant it was uploaded FOR, and
        nothing may quietly publish it as another one. This used to be a bare
        `return`: the button did nothing, said nothing, and looked broken. */
@@ -617,13 +628,16 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         `${variantLabel(lang, to)}. Pubblicalo come ${variantLabel(mastered.lang, mastered.to)}, ` +
         'oppure togli il file caricato e carica quello giusto.',
       )
-      return
+      return false
     }
     setBusy(true)
     setError(null)
     try {
       setStatus('Pubblicazione nel catalogo…')
-      const proto = await publishToCatalog()
+      /* Already written by the call that shipped the other form: the row is
+         shared by the two takes and writing it twice would be two audits and
+         two chances to race. */
+      const proto = opts.proto ?? await publishToCatalog()
       const dur = versionDuration
       if (dur == null) throw new Error(`${version?.durationMin ?? picked} min non è una durata di catalogo (6/12/24).`)
       let audioBuffer: AudioBuffer
@@ -649,6 +663,9 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
              silence, because she gets a recording that is wrong rather than
              none. */
           to,
+          /* Shared with the other form when both are being published, so the
+             second take pays only for the lines that changed. */
+          cache: opts.cache,
           onProgress: setStatus,
         })
         setNotes(result.notes)
@@ -695,6 +712,53 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         (attached.demo ? ' (Demo: il file vive solo in questa scheda del browser.)' : '') +
         lengthWarning +
         (persistenceNote() ?? ''),
+      )
+      return true
+    } catch (e) {
+      setStatus(null)
+      setError(explain(e))
+      return false
+    } finally {
+      /* `publishBoth` keeps the screen busy across both takes; on its own
+         this is the end of the job. */
+      if (!opts.keepBusy) setBusy(false)
+    }
+  }
+
+  /**
+   * BOTH FORMS, one press (POs, 2026-11-09).
+   *
+   * The male take first, then the female from the clips that actually
+   * changed. The second render shares the first's voice cache, keyed on
+   * `voiceId|lang|text`, so every line whose words are the same in both
+   * scripts is spoken once — which on a real protocol is most of them. A
+   * 24-minute sheet is around sixty voice clips and perhaps eight carry a
+   * gendered word; the rest used to be synthesized twice.
+   *
+   * It is not offered for a mastered upload: an uploaded file IS one form,
+   * and there is nothing to render the other from.
+   */
+  async function publishBoth(lang: VoiceLang) {
+    if (!version || mastered) return
+    setBusy(true)
+    setError(null)
+    const cache = newVoiceCache()
+    try {
+      setStatus('Pubblicazione nel catalogo…')
+      const proto = await publishToCatalog()
+      const okM = await publish(lang, 'm', { proto, cache, keepBusy: true })
+      if (!okM) return
+      const okF = await publish(lang, 'f', { proto, cache, keepBusy: true })
+      if (!okF) {
+        /* The male take IS on the air — the error must not read as if
+           nothing was published. */
+        setError((prev) => `${prev ?? ''}${prev ? ' ' : ''}La forma maschile è stata pubblicata; la femminile no.`)
+        return
+      }
+      setStatus((prev) =>
+        `${prev ?? ''}${prev ? ' ' : ''}` +
+        `Pubblicate tutte e due le forme in ${LANG_LABEL[lang]}: ${cache.synthesized} clip sintetizzate in tutto, ` +
+        `${cache.reused} riusate dal render maschile (stesse parole, stessa voce).`,
       )
     } catch (e) {
       setStatus(null)
@@ -900,6 +964,29 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
                 ? `Di quale versione è l’audio che stai caricando (${picked} min)?`
                 : `Quale versione vuoi scaricare in WAV (${picked} min)?`}
           </b>
+          {/* THE PAIR, FIRST. A person is offered only their own form, so a
+              protocol published in one of them does not exist for everybody
+              who chose the other. The second take re-uses every line whose
+              words did not change, so it costs a fraction of the first.
+              Not for a mastered upload: that file IS one form. */}
+          {ask === 'publish' && !mastered && (
+            <div className="adm-plain__askrow">
+              {VOICE_LANGS.map((l) => {
+                const missM = version ? missingScripts(t, version, l, 'm') : 0
+                const missF = version ? missingScripts(t, version, l, 'f') : 0
+                return (
+                  <button key={`both:${l}`} className="b2b-btn b2b-btn--primary" onClick={() => { setAsk(null); void publishBoth(l) }}>
+                    {LANG_LABEL[l]} · le due forme
+                    <small>
+                      {' · consigliato'}
+                      {missM || missF ? ` · ${missM + missF} testi mancanti` : ''}
+                      {l !== 'it' && !hasVoicesFor(l) ? ' · nessuna voce BRA: userebbe quella italiana' : ''}
+                    </small>
+                  </button>
+                )
+              })}
+            </div>
+          )}
           <div className="adm-plain__askrow">
             {VOICE_VARIANTS.map(({ lang: l, to }) => {
               const missing = version && ask !== 'upload' ? missingScripts(t, version, l, to) : 0
@@ -921,6 +1008,9 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           <span className="b2b-sub">
             Si scrive solo l’audio della lingua scelta: l’altra lingua, le altre durate, la sessione dello Studio e la timeline restano come sono.
             {ask !== 'upload' && ' Le clip senza testo nella lingua scelta restano mute.'}
+            {ask === 'publish' && !mastered
+              && ' «Le due forme» pubblica prima il maschile e poi il femminile: il secondo render riusa ogni clip le cui parole non cambiano'
+                + ' fra i due testi, quindi il motore vocale parla solo le righe davvero diverse.'}
           </span>
         </div>
       )}

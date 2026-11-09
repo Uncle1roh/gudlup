@@ -72,6 +72,33 @@ None to run by hand. A row written before the split keeps working: its single
 writes the per-duration slots. Run the updated `supabase/setup.sql` (it adds
 the columns and reloads the PostgREST schema cache in one shot).
 
+### Publishing both forms at once
+
+A listener is offered only their own form (`audioPick`), so a protocol live
+in the male form and not the female **does not exist** for everybody who
+chose the other one. Pubblica therefore offers, first:
+
+> **Italiano · le due forme** — *consigliato*
+
+It writes the catalog row once, renders the male take, then renders the
+female one **sharing the first render's voice cache**. The cache is keyed on
+`voiceId|lang|text`, and the voice does not depend on the form — it follows
+the archetype and the spoken language, who is TALKING, while the form is who
+is being talked TO (`plainStudio.ts`). So a line whose words are identical in
+both scripts is synthesized once, and only the lines that actually inflect
+are sent to the engine a second time.
+
+On a real protocol that is most of the sheet: a 24-minute workbook is around
+sixty voice clips and perhaps eight carry a gendered word. The status line
+says what it cost — *"28 clip sintetizzate in tutto, 24 riusate dal render
+maschile"*.
+
+The four single-variant buttons stay underneath, for re-rendering one
+corrected take. The pair is not offered for a **mastered upload**: an
+uploaded file IS one form, and there is nothing to render the other from.
+
+Proof: `tools/test-both-forms.ts`.
+
 ---
 
 ## 2. Two names: clinical and public
@@ -164,6 +191,32 @@ it a proper label and a group to sit in.
 
 Max **12** tags per protocol (`MAX_TAGS`). Past that a tag stops narrowing
 anything.
+
+### The theme is not a tag
+
+The word a person reads under a cover in the library — *Calma*, *Foco*,
+*Energia*, *Equilíbrio*, *Crescimento* — is the **theme**, and it is not one
+of the tags above. It used to be read from `library.category` alone, which
+only the Library editor writes by hand; nothing in the import and publish
+pipeline sets one. So every protocol published from a workbook fell through
+to a `?? 'calm'` and the whole shelf came out tagged Calma.
+
+It now falls back to the **family in the code** before it falls back to a
+constant (`themeOf`, `src/data/liveCatalog.tsx`):
+
+| code | theme |
+|---|---|
+| `GL-CALM` · `GL-INTRO` | calm |
+| `GL-FOCUS` | focus |
+| `GL-ENER` | energy |
+| `GL-GROW` | growth |
+| `GL-VIT` | balance |
+
+An explicit `library.category` still wins — a PO who chose one in the editor
+meant it. Nothing had to be migrated or re-published: the derivation is on
+read, so every row already in the catalogue was right on the next page load.
+
+Proof: `tools/test-both-forms.ts`.
 
 ### Filtering
 
