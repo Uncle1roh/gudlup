@@ -62,7 +62,7 @@ export function AddonPlan({ addon }: { addon: AddonInfo }) {
           </tbody>
         </table>
         <p className="c-small">{t('The multiplier applies only to Loops from listening. It never changes rankings, achievements, challenge progress or bonuses.')}</p>
-        <a className="c-btn c-btn--ghost" href="mailto:support@goodloop.health?subject=Upgrade%20add-on">{t('Talk to us about your plan')}</a>
+        <a className="c-btn c-btn--ghost" href="mailto:Suporte@goodloop.com.br?subject=Upgrade%20add-on">{t('Talk to us about your plan')}</a>
       </div>
     </section>
   )

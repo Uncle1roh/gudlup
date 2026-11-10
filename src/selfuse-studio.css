@@ -1629,8 +1629,31 @@ body:has(.su-studio) { background: var(--su-void); }
 .su-studio .cat__side::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* The page behind the frame never scrolls either: the frame is exactly the
-   viewport and everything moves inside it. */
-body:has(.su-studio) { overflow: hidden; }
+   viewport and everything moves inside it.
+
+   EXCEPT FOR THE PAGES THAT ARE NOT A FRAME. `su-studio` is worn by two
+   different kinds of thing: the app, which is exactly one viewport with its
+   own inner scrollers, and ordinary long documents that wear it only for
+   the palette — the legal information page above all. Those were caught by
+   this rule and became unreadable: 2018px of terms in an 820px window, with
+   the body clipping the overflow and refusing to scroll it. Nothing was
+   broken on the page itself; it simply had no way to move (POs, 2026-11-10,
+   reported on the legal page and on the disclaimers in Profile and in the
+   console).
+
+   A surface that is a document says so with `su-scrolls`, and then the body
+   scrolls the way a body does. */
+body:has(.su-studio):not(:has(.su-scrolls)) { overflow: hidden; }
+
+/* …and the page has to be allowed to GROW, not just to scroll inside a box.
+   `html, body { height: 100% }` (index.css) pins both to the viewport,
+   which is right for the frame and wrong for a document: the body ends up
+   its own scroller, so the wheel works but `scrollTo`, the keyboard's
+   Home/End and a link to an anchor do not, because the document element
+   never gets taller than the window. Released here, the document scrolls
+   the way every other document on the web does. */
+html:has(.su-scrolls),
+body:has(.su-scrolls) { height: auto; min-height: 100%; overflow: visible; }
 
 /* --- titles that can be read ---------------------------------------------
 

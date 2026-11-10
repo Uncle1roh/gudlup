@@ -795,7 +795,7 @@ export function Tutorial({
 
 /** Where to write to us. One address, said out loud rather than handed to
     whatever the device thinks an e-mail program is. */
-export const SUPPORT_EMAIL = 'support@goodloop.health'
+export const SUPPORT_EMAIL = 'Suporte@goodloop.com.br'
 
 function Help({ onReport, onContact, onSuggest }: { onReport: () => void; onContact: () => void; onSuggest: () => void }) {
   const { t } = useI18n()

@@ -13,7 +13,8 @@
 import { useState } from 'react'
 import { LIBRARY_CATEGORIES, LIBRARY_PHASES, LIBRARY_PREFIX, type LibraryCategory, type LibraryTag } from '../data/library'
 import { OFFER_DEFAULT_CURRENCY, OFFER_DEFAULT_MINOR, type CatalogProtocol } from '../data/catalog'
-import type { Duration } from '../types/domain'
+import { type Duration, type ProtocolI18n, type ProtocolText, type TextLocale } from '../types/domain'
+import { CARD_LOCALES } from './ProtocolCard'
 
 /* The ids are machinery (they match the check-in's clusters and are stored
    on rows); the LABELS are what a PO reads, and they name a moment, never a
@@ -48,6 +49,16 @@ export interface LibraryDraft {
   code: string | null // null = new
   title: string
   blurb: string
+  /**
+   * The same title and blurb in the other interface languages.
+   *
+   * The base pair above is Italian and is what a reader with no translation
+   * gets. This is the overlay, per language and per field, exactly as the
+   * clinical card editor writes it — a library audio is read by the same
+   * people in the same three languages, and until this existed it could
+   * only be named in one of them.
+   */
+  i18n: ProtocolI18n
   category: LibraryCategory
   emoji: string
   tags: LibraryTag[]
@@ -84,6 +95,7 @@ export function draftFrom(p: CatalogProtocol): LibraryDraft {
     code: p.code,
     title: p.title,
     blurb: p.blurb,
+    i18n: p.i18n ?? {},
     category: p.library?.category ?? 'calm',
     emoji: p.library?.emoji ?? '🎧',
     tags: p.library?.tags ?? [],
@@ -97,9 +109,28 @@ export function draftFrom(p: CatalogProtocol): LibraryDraft {
 }
 
 export const EMPTY_DRAFT: LibraryDraft = {
-  code: null, title: '', blurb: '', category: 'before', emoji: '🎧', tags: [], duration: 12,
+  code: null, title: '', blurb: '', i18n: {}, category: 'before', emoji: '🎧', tags: [], duration: 12,
   offerKind: 'none', priceMinor: OFFER_DEFAULT_MINOR, currency: OFFER_DEFAULT_CURRENCY,
   offerFrom: '', offerUntil: '',
+}
+
+/** Drop the empty fields and the languages left with nothing, so a row that
+    was typed into and cleared again stops shadowing the base text. */
+function tidyI18n(i18n: ProtocolI18n): ProtocolI18n | undefined {
+  const out: ProtocolI18n = {}
+  for (const { id } of CARD_LOCALES) {
+    const one = i18n[id]
+    if (!one) continue
+    const kept: ProtocolText = {}
+    if (one.title?.trim()) kept.title = one.title.trim()
+    if (one.blurb?.trim()) kept.blurb = one.blurb.trim()
+    /* Anything the clinical editor wrote on this row and this screen does
+       not show is carried through untouched. */
+    if (one.publicTitle?.trim()) kept.publicTitle = one.publicTitle.trim()
+    if (one.publicBlurb?.trim()) kept.publicBlurb = one.publicBlurb.trim()
+    if (Object.keys(kept).length) out[id] = kept
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 /** Fold a draft onto a catalog entry, preserving everything the Studio owns
@@ -118,6 +149,10 @@ export function applyDraft(draft: LibraryDraft, existing?: CatalogProtocol): Cat
     family: 'GL-LIB',
     title: draft.title.trim(),
     blurb: draft.blurb.trim(),
+    /* Empty strings are dropped rather than stored: a blank row means "no
+       translation", and a stored '' would shadow the base text with
+       nothing. */
+    i18n: tidyI18n(draft.i18n),
     phases: existing?.phases?.length ? existing.phases : LIBRARY_PHASES,
     versions: existing?.versions?.length && existing.versions[0].duration === draft.duration
       ? existing.versions
@@ -146,6 +181,10 @@ interface LibraryEditorProps {
 export function LibraryEditor({ draft, busy, onChange, onSave, onCancel }: LibraryEditorProps) {
   const [touched, setTouched] = useState(false)
   const set = (p: Partial<LibraryDraft>) => onChange({ ...draft, ...p })
+  /** Write one field of one language, leaving the rest of that row alone. */
+  const setText = (locale: TextLocale, field: 'title' | 'blurb', value: string) =>
+    set({ i18n: { ...draft.i18n, [locale]: { ...draft.i18n[locale], [field]: value } } })
+
   const codePreview = draft.code ?? `${LIBRARY_PREFIX} ${slugFromTitle(draft.title || 'nuovo-audio')}`
   const titleOk = draft.title.trim().length >= 3
 
@@ -157,22 +196,52 @@ export function LibraryEditor({ draft, busy, onChange, onSave, onCancel }: Libra
         Questo catalogo è a uso libero e non è presentato come terapia.
       </p>
 
-      <label className="pe-field">
-        <span className="pe-label">Titolo <em>quello che legge la persona</em></span>
-        <input
-          className="b2b-input" value={draft.title} placeholder="es. Prepariamoci a una riunione difficile"
-          onChange={(e) => { setTouched(true); set({ title: e.target.value }) }}
-        />
-      </label>
+      {/* ---- the name, per language --------------------------------------
+          All three at once, like the clinical card. A library audio is read
+          by the same people in the same three languages, and until this row
+          existed it could only be named in whichever one the PO was typing
+          in — everybody else read that name (POs, 2026-11-10). Italian is
+          the base and the other two fall back to it; an empty row says what
+          that reader actually sees. */}
+      <div className="pe-field">
+        <span className="pe-label">Titolo e descrizione, per lingua <em>quello che legge la persona, nella lingua in cui usa l’app</em></span>
+        <div className="pe-names">
+          {CARD_LOCALES.map((l) => {
+            const isBase = l.id === 'it'
+            const title = isBase ? draft.title : draft.i18n[l.id]?.title ?? ''
+            const blurb = isBase ? draft.blurb : draft.i18n[l.id]?.blurb ?? ''
+            /* What this language reads today: its own words, else the base. */
+            const shown = (isBase ? draft.title : draft.i18n[l.id]?.title) || draft.title
+            return (
+              <div key={l.id} className={`pe-names__row${title.trim() ? '' : ' is-empty'}`}>
+                <span className="pe-names__lang">
+                  {l.label}{isBase && <em> · predefinito</em>}
+                </span>
+                <input
+                  className="b2b-input" value={title} aria-label={`Titolo — ${l.label}`}
+                  placeholder={isBase ? 'es. Prepariamoci a una riunione difficile' : `Titolo in ${l.label}`}
+                  onChange={(e) => {
+                    setTouched(true)
+                    if (isBase) set({ title: e.target.value })
+                    else setText(l.id, 'title', e.target.value)
+                  }}
+                />
+                <input
+                  className="b2b-input" value={blurb} aria-label={`Descrizione — ${l.label}`}
+                  placeholder={isBase ? 'es. Dieci minuti per arrivarci con la testa sgombra.' : `Una riga in ${l.label}`}
+                  onChange={(e) => (isBase ? set({ blurb: e.target.value }) : setText(l.id, 'blurb', e.target.value))}
+                />
+                <span className={`pe-names__state${title.trim() ? ' is-ok' : ''}`}>
+                  {title.trim()
+                    ? `✓ ${l.label}`
+                    : `mancante in ${l.label} — chi usa l’app in ${l.label} legge «${shown || '—'}»`}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
       {touched && !titleOk && <p className="adm-plain__status adm-plain__status--err">Serve un titolo.</p>}
-
-      <label className="pe-field">
-        <span className="pe-label">Una riga di descrizione</span>
-        <input
-          className="b2b-input" value={draft.blurb} placeholder="es. Dieci minuti per arrivarci con la testa sgombra."
-          onChange={(e) => set({ blurb: e.target.value })}
-        />
-      </label>
 
       <div className="pe-row">
         <label className="pe-field">

@@ -658,7 +658,7 @@ function TopBar({
         {menu && (
           <div className="w-usermenu">
             <button className="w-usermenu__row" onClick={() => { onProfile(); setMenu(false) }}>{t('Profile')}</button>
-            <a className="w-usermenu__row" href="mailto:support@goodloop.health">{t('Help')}</a>
+            <a className="w-usermenu__row" href="mailto:Suporte@goodloop.com.br">{t('Help')}</a>
             <a className="w-usermenu__row" href="#legal" target="_blank" rel="noreferrer">{t('Legal information')} ↗</a>
             <SignOutButton className="w-usermenu__row" />
           </div>

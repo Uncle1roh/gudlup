@@ -171,7 +171,17 @@ html[data-su-theme='light'] .su-shell { background: #eceee6; }
   border-bottom: 1px solid var(--su-hair);
 }
 .legal-page__brand { display: inline-flex; }
-.legal-page__controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legal-page__controls { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+/* A label over each picker. They were there and hidden; a person who does
+   not see that these are choices does not make them. */
+.legal-page__select { display: flex; flex-direction: column; gap: 4px; }
+.legal-page__selectlabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--su-muted);
+}
 .legal-page__select select {
   font: inherit; font-size: 15px;
   padding: 8px 10px; border-radius: 10px;

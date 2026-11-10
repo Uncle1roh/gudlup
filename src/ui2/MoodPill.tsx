@@ -106,13 +106,37 @@ export function MoodPill() {
  * changed.
  */
 export function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
-  const { t } = useI18n()
+  const { t, d: fmt } = useI18n()
   const [open, setOpen] = useState<string | null>(null)
   const now = new Date()
-  const first = new Date(now.getFullYear(), now.getMonth(), 1)
-  const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const pad = (first.getDay() + 6) % 7
   const today = dayKey(now.getTime())
+
+  /* WHICH MONTH IS ON SCREEN. It used to be this one, always — so a person
+     who answered a few sessions in October and opened the glasses in
+     November was shown an empty grid with every reading they had one screen
+     to the left and no way to reach it. That was the "previous days have no
+     colour" report: the squares were right, the month was wrong. */
+  const [shown, setShown] = useState(() => ({ y: now.getFullYear(), m: now.getMonth() }))
+  const step = (by: number) => setShown((s) => {
+    const d = new Date(s.y, s.m + by, 1)
+    return { y: d.getFullYear(), m: d.getMonth() }
+  })
+
+  /* How far back there is anything to see. An arrow that leads to an empty
+     month is worse than no arrow. */
+  const oldest = useMemo(() => {
+    if (!moods.length) return { y: now.getFullYear(), m: now.getMonth() }
+    const at = Math.min(...moods.map((x) => x.at))
+    const d = new Date(at)
+    return { y: d.getFullYear(), m: d.getMonth() }
+  }, [moods, now])
+  const asNum = (x: { y: number; m: number }) => x.y * 12 + x.m
+  const canBack = asNum(shown) > asNum(oldest)
+  const canFwd = asNum(shown) < now.getFullYear() * 12 + now.getMonth()
+
+  const first = new Date(shown.y, shown.m, 1)
+  const days = new Date(shown.y, shown.m + 1, 0).getDate()
+  const pad = (first.getDay() + 6) % 7
 
   /* Both axes in words, never a score and never a judgement: the words are
      the ends of the two sliders the person moved. */
@@ -126,10 +150,27 @@ export function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
 
   return (
     <>
+      <div className="cal__head">
+        <button
+          type="button"
+          className="cal__nav"
+          onClick={() => { setOpen(null); step(-1) }}
+          disabled={!canBack}
+          aria-label={t('Previous month')}
+        >‹</button>
+        <b className="cal__month">{fmt(first.getTime(), { month: 'long', year: 'numeric' })}</b>
+        <button
+          type="button"
+          className="cal__nav"
+          onClick={() => { setOpen(null); step(1) }}
+          disabled={!canFwd}
+          aria-label={t('Next month')}
+        >›</button>
+      </div>
       <div className="cal">
         {Array.from({ length: pad }, (_, i) => <span key={`p${i}`} className="cal__pad" />)}
         {Array.from({ length: days }, (_, i) => {
-          const d = new Date(now.getFullYear(), now.getMonth(), i + 1)
+          const d = new Date(shown.y, shown.m, i + 1)
           const key = dayKey(d.getTime())
           const entries = moodsOfDay(moods, key)
           const fill = moodGradient(entries)

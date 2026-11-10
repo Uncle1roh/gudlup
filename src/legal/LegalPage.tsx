@@ -69,19 +69,26 @@ export function LegalPage() {
     window.scrollTo({ top: 0 })
   }
 
+  /* `su-scrolls`: this page wears `su-studio` for the palette, but it is a
+     long document rather than the app's one-viewport frame — see
+     `selfuse-studio.css`, "the page behind the frame", for why that
+     distinction has to be made out loud. */
   return (
-    <div className="legal-page su-studio">
+    <div className="legal-page su-studio su-scrolls">
       <header className="legal-page__top">
         <a className="legal-page__brand" href="#app" aria-label="Good Loop"><BrandLogo /></a>
         <div className="legal-page__controls">
           <label className="legal-page__select">
-            <span className="visually-hidden">{t('Language')}</span>
+            {/* Visible, not `visually-hidden`. Two unlabelled dropdowns side
+                by side are two things a person scrolls past; this page's
+                whole content depends on both of them (POs, 2026-11-10). */}
+            <span className="legal-page__selectlabel">{t('Language')}</span>
             <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
               {LOCALES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
           </label>
           <label className="legal-page__select">
-            <span className="visually-hidden">{t('Where you live')}</span>
+            <span className="legal-page__selectlabel">{t('Country/Area')}</span>
             <select value={market} onChange={(e) => setMarket(e.target.value as Market)}>
               <option value="EU">{t('Italy / European Union')}</option>
               <option value="BR">{t('Brazil')}</option>

@@ -253,7 +253,7 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
           {menu && (
             <div className="c-usermenu">
               <button className="c-usermenu__row" onClick={() => { setNav('settings'); setMenu(false) }}>{t('Profile')}</button>
-              <a className="c-usermenu__row" href="mailto:support@goodloop.health">{t('Contact support')}</a>
+              <a className="c-usermenu__row" href="mailto:Suporte@goodloop.com.br">{t('Contact support')}</a>
               <div className="c-usermenu__lang"><LanguagePicker className="c-input c-input--sm" /></div>
               <SignOutButton className="c-usermenu__row" />
             </div>

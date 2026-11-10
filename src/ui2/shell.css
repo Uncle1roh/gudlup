@@ -1533,6 +1533,36 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
    The same calendar as the previous interface — the month, a square a day,
    the five levels in the five greens — on the surface's colours. */
 
+/* The month on screen, with a way out of it either side. */
+.gl-root .cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+.gl-root .cal__month {
+  font: 600 15px 'DM Sans', system-ui, sans-serif;
+  color: var(--ink);
+  text-transform: capitalize;
+}
+
+.gl-root .cal__nav {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--btn);
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gl-root .cal__nav:disabled { opacity: 0.3; cursor: default; }
+
 .gl-root .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; width: 100%; }
 .gl-root .cal__pad { aspect-ratio: 1; }
 

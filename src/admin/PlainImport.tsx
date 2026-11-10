@@ -96,7 +96,9 @@ interface Props {
 }
 
 /** What the language question is being asked for. */
-type LangAsk = 'publish' | 'upload' | 'download'
+/* `publish` is gone from here: Pubblica asks nothing now — it ships the
+   file that was uploaded, or refuses and says so. */
+type LangAsk = 'upload' | 'download'
 
 /** What this protocol actually carries, so the confirmation names it rather
     than asking someone to agree to "the material". */
@@ -413,8 +415,6 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
       uploadLang.current = lang
       uploadTo.current = to
       masteredRef.current?.click()
-    } else if (what === 'publish') {
-      void publish(lang, to)
     } else if (what === 'download') {
       void download(lang, to)
     }
@@ -610,19 +610,35 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
    * without doing the expensive half twice. Returns whether it got there, so
    * the second form is not attempted beside a first that failed.
    */
-  async function publish(
-    lang: VoiceLang,
-    to: Addressee = 'm',
-    opts: { proto?: CatalogProtocol; cache?: VoiceCache; keepBusy?: boolean } = {},
-  ): Promise<boolean> {
-    /* Two ways in: a workbook to render from, or a finished file to ship.
-       The second is how a demo protocol is made — and how a PO ships a mix
-       mastered outside the app against a time signature that has no Excel. */
-    if (!version && !mastered) return false
+  /**
+   * Publish = put the UPLOADED audio on the air for the selected time
+   * signature. It renders nothing.
+   *
+   * It used to render the sheet with the voice engine and publish the
+   * result, falling back to an uploaded file when there was one. That put
+   * ElevenLabs in the middle of publishing: when the engine was slow or
+   * refused, the publish failed, and whether anything reached the catalog
+   * depended on how far it had got. The POs make the audio outside the app
+   * anyway — Scarica, master, Carica audio — so the step that puts it live
+   * is now only that.
+   *
+   * A file is ONE language and ONE form, so this publishes one variant: the
+   * one the file was uploaded as. The other three are other uploads.
+   */
+  async function publish(lang: VoiceLang, to: Addressee = 'm'): Promise<boolean> {
+    /* No file, no publish — and it says which one is missing rather than
+       quietly doing something else. */
+    if (!mastered) {
+      setError(
+        `Nessun audio caricato per i ${picked} min: Pubblica mette in linea il file che carichi, non lo genera. ` +
+        'Usa «Carica audio» per questa durata (e per la lingua e la forma che vuoi pubblicare), poi premi Pubblica. ' +
+        'Per ottenere il WAV da masterizzare usa «Scarica».',
+      )
+      return false
+    }
     /* An uploaded file is filed under the variant it was uploaded FOR, and
-       nothing may quietly publish it as another one. This used to be a bare
-       `return`: the button did nothing, said nothing, and looked broken. */
-    if (mastered && (mastered.lang !== lang || mastered.to !== to)) {
+       nothing may quietly publish it as another one. */
+    if (mastered.lang !== lang || mastered.to !== to) {
       setError(
         `Il file caricato è ${variantLabel(mastered.lang, mastered.to)}, ma stai pubblicando ` +
         `${variantLabel(lang, to)}. Pubblicalo come ${variantLabel(mastered.lang, mastered.to)}, ` +
@@ -634,43 +650,11 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
     setError(null)
     try {
       setStatus('Pubblicazione nel catalogo…')
-      /* Already written by the call that shipped the other form: the row is
-         shared by the two takes and writing it twice would be two audits and
-         two chances to race. */
-      const proto = opts.proto ?? await publishToCatalog()
+      const proto = await publishToCatalog()
       const dur = versionDuration
       if (dur == null) throw new Error(`${version?.durationMin ?? picked} min non è una durata di catalogo (6/12/24).`)
-      let audioBuffer: AudioBuffer
-      if (mastered) {
-        // the externally-mastered upload IS the published audio
-        setStatus(`Uso il file masterizzato "${mastered.name}"…`)
-        audioBuffer = mastered.buffer
-      } else if (!version) {
-        throw new Error('Nessun Excel per questa durata: carica un file audio masterizzato, oppure importa il foglio.')
-      } else {
-        if (!tts.canRender) {
-          setDetailsOpen(true)
-          throw new Error('Il motore vocale non ha una chiave — imposta la chiave ElevenLabs in Dettagli e premi di nuovo Pubblica (oppure carica un file masterizzato).')
-        }
-        const slot = plainFor(proto, dur)
-        const result = await renderPlainWav(slot ? { ...t, affirmations: slot.affirmations } : t, version, {
-          pools: pools ?? undefined,
-          withVoice: true,
-          lang,
-          /* The FORM the dialog asked for. It used not to be passed, so
-             "Pubblica · Femminile" rendered the male script and filed it
-             under her key — the one case where no fallback is worse than
-             silence, because she gets a recording that is wrong rather than
-             none. */
-          to,
-          /* Shared with the other form when both are being published, so the
-             second take pays only for the lines that changed. */
-          cache: opts.cache,
-          onProgress: setStatus,
-        })
-        setNotes(result.notes)
-        audioBuffer = result.buffer
-      }
+      setStatus(`Uso il file caricato "${mastered.name}"…`)
+      const audioBuffer: AudioBuffer = mastered.buffer
       setStatus(`Caricamento della copia per lo streaming (${LANG_LABEL[lang]})…`)
       /* The OTHER language's file for this duration, before and after: it has
          to be exactly where it was, and the status line says so. */
@@ -678,35 +662,29 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
       const otherBefore = proto.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
       const attached = await attachRenderedAudio(dp, proto.code, dur, audioBuffer, lang, undefined, to)
       setPublished(attached.protocol)
-      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `plain · ${dur} min · ${variantLabel(lang, to)}` }).catch(() => undefined)
+      await dp.logAudit({ actor, action: 'protocol.audio.attached', target: proto.code, detail: `caricato · ${dur} min · ${variantLabel(lang, to)}` }).catch(() => undefined)
       const otherAfter = attached.protocol.versions.find((v) => v.duration === dur)?.audioUrl?.[otherLang]
       const others = [...liveDurations].filter((d) => d !== dur).sort((a, b) => a - b)
       /* The slot says how long a person expects the session to be, and nothing
          upstream checks that the file agrees. Several protocols already in the
-         catalog carry a four-minute file in their 24-minute slot: the render
-         was right, the workbook it came from was simply not that time
-         signature. It is published either way — the operator may know exactly
-         what they are doing — but it can no longer happen quietly. */
+         catalog carry a four-minute file in their 24-minute slot. It is
+         published either way — the operator may know exactly what they are
+         doing — but it can no longer happen quietly. */
       const gotSec = audioBuffer.duration
       const wantSec = dur * 60
-      const mm = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+      const mm = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`
       const lengthWarning = Math.abs(gotSec - wantSec) > wantSec * 0.1
-        ? ` ⚠ ATTENZIONE: il file dura ${mm(gotSec)}, non ${dur} min. È in linea lo stesso, ma chi sceglie "${dur} min" sentirà ${mm(gotSec)}. Controlla che il foglio pubblicato sia quello della durata giusta.`
+        ? ` ⚠ ATTENZIONE: il file dura ${mm(gotSec)}, non ${dur} min. È in linea lo stesso, ma chi sceglie "${dur} min" sentirà ${mm(gotSec)}. Controlla di aver caricato il file della durata giusta.`
         : ''
       setStatus(
-        `In linea — ${proto.code} · ${dur} min in ${LANG_LABEL[lang]}: ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate per chi usa l’app ${LANG_IN[lang]}${lang === 'pt-BR' ? ' o in inglese' : ''}${mastered ? ` (file masterizzato "${mastered.name}")` : ''}.` +
+        `In linea — ${proto.code} · ${dur} min in ${LANG_LABEL[lang]}: ora viene riprodotto nell’app dei dipendenti e nelle sedute monitorate per chi usa l’app ${LANG_IN[lang]}${lang === 'pt-BR' ? ' o in inglese' : ''} (file caricato "${mastered.name}").` +
         (otherBefore && otherAfter === otherBefore
           ? ` L’audio in ${LANG_LABEL[otherLang]} di questa durata resta invariato.`
           : !otherAfter ? ` In ${LANG_LABEL[otherLang]} non c’è ancora un audio per questa durata: chi usa l’app in quella lingua NON sente questo file — per loro i ${dur} min restano non disponibili finché non ne pubblichi uno.` : '') +
-        /* And the other FORM, which nothing used to mention at all. A file is
-           one language and one addressee, and a listener is offered only
-           their own pair (`audioPick`, data/liveCatalog.tsx). Publishing the
-           male take and saying nothing is how a protocol goes live for half
-           the people who were waiting for it. */
         (() => {
           const otherTo: Addressee = to === 'm' ? 'f' : 'm'
           const has = !!(attached.protocol.versions.find((v) => v.duration === dur)?.audioUrl as Record<string, string | undefined> | undefined)?.[variantKey(lang, otherTo)]
-          return has ? '' : ` Manca ancora ${variantLabel(lang, otherTo)}: per chi ha scelto quella forma questa durata non esiste.`
+          return has ? '' : ` Manca ancora ${variantLabel(lang, otherTo)}: per chi ha scelto quella forma questa durata non esiste. Caricala e pubblicala allo stesso modo.`
         })() +
         (others.length ? ` Le versioni da ${others.map((d) => `${d}`).join(' e ')} min restano invariate.` : '') +
         (attached.demo ? ' (Demo: il file vive solo in questa scheda del browser.)' : '') +
@@ -719,57 +697,14 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
       setError(explain(e))
       return false
     } finally {
-      /* `publishBoth` keeps the screen busy across both takes; on its own
-         this is the end of the job. */
-      if (!opts.keepBusy) setBusy(false)
-    }
-  }
-
-  /**
-   * BOTH FORMS, one press (POs, 2026-11-09).
-   *
-   * The male take first, then the female from the clips that actually
-   * changed. The second render shares the first's voice cache, keyed on
-   * `voiceId|lang|text`, so every line whose words are the same in both
-   * scripts is spoken once — which on a real protocol is most of them. A
-   * 24-minute sheet is around sixty voice clips and perhaps eight carry a
-   * gendered word; the rest used to be synthesized twice.
-   *
-   * It is not offered for a mastered upload: an uploaded file IS one form,
-   * and there is nothing to render the other from.
-   */
-  async function publishBoth(lang: VoiceLang) {
-    if (!version || mastered) return
-    setBusy(true)
-    setError(null)
-    const cache = newVoiceCache()
-    try {
-      setStatus('Pubblicazione nel catalogo…')
-      const proto = await publishToCatalog()
-      const okM = await publish(lang, 'm', { proto, cache, keepBusy: true })
-      if (!okM) return
-      const okF = await publish(lang, 'f', { proto, cache, keepBusy: true })
-      if (!okF) {
-        /* The male take IS on the air — the error must not read as if
-           nothing was published. */
-        setError((prev) => `${prev ?? ''}${prev ? ' ' : ''}La forma maschile è stata pubblicata; la femminile no.`)
-        return
-      }
-      setStatus((prev) =>
-        `${prev ?? ''}${prev ? ' ' : ''}` +
-        `Pubblicate tutte e due le forme in ${LANG_LABEL[lang]}: ${cache.synthesized} clip sintetizzate in tutto, ` +
-        `${cache.reused} riusate dal render maschile (stesse parole, stessa voce).`,
-      )
-    } catch (e) {
-      setStatus(null)
-      setError(explain(e))
-    } finally {
       setBusy(false)
     }
   }
 
-  /** Download = the same full render, saved locally as WAV. */
-  async function download(lang: VoiceLang, to: Addressee = 'm') {
+  /** Download = render the sheet and save it as a WAV, which is the file the
+      operator masters and then uploads. This is where the voice engine lives
+      now; Pubblica no longer touches it. */
+  async function download(lang: VoiceLang, to: Addressee = 'm', cache?: VoiceCache) {
     if (!version) return
     setBusy(true)
     setError(null)
@@ -780,12 +715,56 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
         withVoice: tts.canRender,
         lang,
         to,
+        /* Shared when both forms are being saved: the second render pays
+           only for the lines whose words actually differ. */
+        cache,
         onProgress: setStatus,
       })
       setNotes(result.notes)
       if (!tts.canRender) setStatus('Renderizzato SENZA voce (nessuna chiave del motore vocale — vedi Dettagli).')
       else setStatus(`Scaricato ${variantLabel(lang, to)} — il nome del file dice quale delle quattro versioni è.`)
       downloadBlob(plainWavFileName(t.code, version.sheet, lang, to), result.blob)
+      return true
+    } catch (e) {
+      setStatus(null)
+      setError(explain(e))
+      return false
+    } finally {
+      if (!cache) setBusy(false)
+    }
+  }
+
+  /**
+   * BOTH FORMS, two files, one pass.
+   *
+   * The male take first, then the female one from the clips that actually
+   * changed: the second render shares the first's voice cache, keyed on
+   * `voiceId|lang|text`, so every line whose words are the same in both
+   * scripts is spoken once. On a real sheet that is most of them.
+   *
+   * This used to hang off Pubblica. It moved here when publishing stopped
+   * rendering, which is the right home for it anyway — downloading IS the
+   * step that makes the two WAVs the operator masters and uploads.
+   */
+  async function downloadBoth(lang: VoiceLang) {
+    if (!version) return
+    setBusy(true)
+    setError(null)
+    const cache = newVoiceCache()
+    try {
+      const okM = await download(lang, 'm', cache)
+      if (!okM) return
+      const okF = await download(lang, 'f', cache)
+      if (!okF) {
+        setError((prev) => `${prev ?? ''}${prev ? ' ' : ''}Il file maschile è stato scaricato; quello femminile no.`)
+        return
+      }
+      setStatus((prev) =>
+        `${prev ?? ''}${prev ? ' ' : ''}` +
+        `Scaricate tutte e due le forme in ${LANG_LABEL[lang]}: ${cache.synthesized} clip sintetizzate in tutto, ` +
+        `${cache.reused} riusate dal render maschile (stesse parole, stessa voce). ` +
+        'Masterizzale e caricale con «Carica audio», poi Pubblica mette in linea il file caricato.',
+      )
     } catch (e) {
       setStatus(null)
       setError(explain(e))
@@ -818,18 +797,18 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
      protocol impossible — and it was never a rule the data model had, only
      one this screen enforced. */
   const canUpload = !busy
-  /* Publish ships either a render (needs a clean timeline) or an uploaded
-     file (needs the file). */
+  /* Publish ships the UPLOADED file and nothing else, so the file is the
+     whole condition. The button stays live without one on purpose: pressing
+     it is how an operator finds out what is missing, and a dead button with
+     a tooltip is how they do not. */
   /* What Pubblica will write, and what the row says today. */
   const effectiveAudience: Audience = audience ?? (published ? audienceOf(published) : audienceFromCode(t.code))
   const publishedAudience: Audience | null = published ? audienceOf(published) : null
 
-  const canPublish = !busy && (mastered ? true : hasTimeline && errors.length === 0 && !poolsLoading)
-  const publishWhy = canPublish
-    ? undefined
-    : mastered
-      ? undefined
-      : `${noTimelineWhy ?? ''} Oppure carica un audio masterizzato per pubblicarlo così com'è.`.trim()
+  const canPublish = !busy
+  const publishWhy = mastered
+    ? `Mette in linea «${mastered.name}» come ${variantLabel(mastered.lang, mastered.to)} dei ${picked} min.`
+    : `Pubblica mette in linea il file caricato con «Carica audio» — non lo genera. Per i ${picked} min non ce n’è ancora uno.`
 
   return (
     <div className="adm-page adm-plain">
@@ -946,7 +925,10 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
             ships it under that one. Without, it asks. */}
         <button
           className="adm-plain__act adm-plain__act--primary"
-          onClick={() => (mastered ? void publish(mastered.lang, mastered.to) : setAsk('publish'))}
+          /* No question to ask: a file is one language and one form, and
+             Pubblica puts THAT file on the air. Without one it refuses and
+             says what to do (`publish`). */
+          onClick={() => void publish(mastered?.lang ?? 'it', mastered?.to ?? 'm')}
           disabled={!canPublish}
           title={publishWhy}
         >
@@ -958,24 +940,23 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
       {ask && (
         <div className="adm-plain__status adm-plain__ask" role="dialog" aria-label="Lingua dell’audio">
           <b>
-            {ask === 'publish'
-              ? `Quale versione pubblichi per i ${picked} min?`
-              : ask === 'upload'
-                ? `Di quale versione è l’audio che stai caricando (${picked} min)?`
-                : `Quale versione vuoi scaricare in WAV (${picked} min)?`}
+            {ask === 'upload'
+              ? `Di quale versione è l’audio che stai caricando (${picked} min)?`
+              : `Quale versione vuoi scaricare in WAV (${picked} min)?`}
           </b>
           {/* THE PAIR, FIRST. A person is offered only their own form, so a
-              protocol published in one of them does not exist for everybody
-              who chose the other. The second take re-uses every line whose
-              words did not change, so it costs a fraction of the first.
-              Not for a mastered upload: that file IS one form. */}
-          {ask === 'publish' && !mastered && (
+              protocol that exists in one of them does not exist for anybody
+              who chose the other — and both files have to be made before
+              either can be uploaded. The second render re-uses every line
+              whose words did not change, so it costs a fraction of the
+              first. */}
+          {ask === 'download' && (
             <div className="adm-plain__askrow">
               {VOICE_LANGS.map((l) => {
                 const missM = version ? missingScripts(t, version, l, 'm') : 0
                 const missF = version ? missingScripts(t, version, l, 'f') : 0
                 return (
-                  <button key={`both:${l}`} className="b2b-btn b2b-btn--primary" onClick={() => { setAsk(null); void publishBoth(l) }}>
+                  <button key={`both:${l}`} className="b2b-btn b2b-btn--primary" onClick={() => { setAsk(null); void downloadBoth(l) }}>
                     {LANG_LABEL[l]} · le due forme
                     <small>
                       {' · consigliato'}
@@ -1008,8 +989,8 @@ export function PlainImport({ protocolCode, timeline: workbook, initialDuration,
           <span className="b2b-sub">
             Si scrive solo l’audio della lingua scelta: l’altra lingua, le altre durate, la sessione dello Studio e la timeline restano come sono.
             {ask !== 'upload' && ' Le clip senza testo nella lingua scelta restano mute.'}
-            {ask === 'publish' && !mastered
-              && ' «Le due forme» pubblica prima il maschile e poi il femminile: il secondo render riusa ogni clip le cui parole non cambiano'
+            {ask === 'download'
+              && ' «Le due forme» scarica prima il maschile e poi il femminile: il secondo render riusa ogni clip le cui parole non cambiano'
                 + ' fra i due testi, quindi il motore vocale parla solo le righe davvero diverse.'}
           </span>
         </div>

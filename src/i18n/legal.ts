@@ -17,6 +17,7 @@
    ============================================================================ */
 
 export const IT_LEGAL: Record<string, string> = {
+  'Country/Area': 'Paese/Area',
   /* ---- the door ---- */
   'Choose your country': 'Scegli il tuo Paese',
   'Legal information': 'Informazioni legali',
@@ -372,6 +373,7 @@ export const IT_LEGAL: Record<string, string> = {
 }
 
 export const PT_LEGAL: Record<string, string> = {
+  'Country/Area': 'País/Região',
   /* ---- the door ---- */
   'Choose your country': 'Escolha o seu país',
   'Legal information': 'Informações legais',

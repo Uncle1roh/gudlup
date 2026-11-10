@@ -5,6 +5,8 @@
    missing from one dictionary prints English to the person reading it. */
 
 export const IT_UI2: Record<string, string> = {
+  'Previous month': 'Mese precedente',
+  'Next month': 'Mese successivo',
   /* The glasses beside the Loops pill. Not "the mood calendar" any more
      (POs, 2026-11-06): the colour on them IS the colour the day is being
      seen through, and the words say so. Neither sentence inflects for
@@ -161,6 +163,8 @@ export const IT_UI2: Record<string, string> = {
 }
 
 export const PT_UI2: Record<string, string> = {
+  'Previous month': 'Mês anterior',
+  'Next month': 'Próximo mês',
   /* The glasses beside the Loops pill. Not "the mood calendar" any more
      (POs, 2026-11-06): the colour on them IS the colour the day is being
      seen through, and the words say so. Neither sentence inflects for

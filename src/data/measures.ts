@@ -226,31 +226,55 @@ export function moodDays(moods: MoodEntry[]): string[] {
 
 /* ------------------------------------------------------- the colour ------
 
-   THE FOUR CORNERS OF THE SQUARE. A reading is a point in the circumplex,
-   and the circumplex has had the same four colours since Russell drew it:
-   high energy and unpleasant is red, high energy and pleasant is yellow,
-   low energy and unpleasant is blue, low energy and pleasant is green. This
-   is not a palette somebody invented for this app — it is the one a person
-   who has seen a mood meter before already knows how to read.
+   THE MOOD METER'S OWN COLOURS. A reading is a point on the circumplex, and
+   the colours are not a palette invented here: they are read off the chart
+   the POs supplied (`Suggestions/mood-colors.webp` — the RULER Mood Meter,
+   ten columns of pleasantness by ten rows of energy). High energy and
+   unpleasant is red, high energy and pleasant is yellow, low energy and
+   unpleasant is blue, low energy and pleasant is green.
 
-   Vivid on purpose (POs, 2026-11-06: "cores mais vivas e mais
-   expressivas"). The first pass was muted to sit politely beside the cream
-   action, and a mood calendar in four shades of sage says nothing from
-   across a room.
+   TWO THINGS THE CHART SAYS THAT FOUR CORNERS DID NOT.
+
+   The colour tracks PLEASANTNESS. Inside a half the five rows are the same
+   to within a couple of values — #761610 at the top-left cell, #75160F five
+   rows below it. What the energy axis does is choose the FAMILY: red and
+   yellow above the line, blue and green below it. So there are two ramps of
+   ten, not four corners.
+
+   And the ramps are not straight lines. Blending dark red #761610 to gold
+   #F5CC48 passes through a muddy brown in the middle; the chart puts
+   #E9472A and #E95D3B there, bright saturated orange-reds. A bilinear blend
+   between corners cannot produce that, which is why these are tabulated
+   from the image rather than computed from four values.
 
    WHAT THIS IS NOT. It is not the mood COLOUR MECHANIC that was built and
    removed in October — no engine, no tinted glasses, no colour that follows
    the person from screen to screen. It is the fill of a calendar square and
-   of one pill that opens that calendar, and it is computed here, from the
-   two numbers the person moved, with nothing kept anywhere. */
+   of one pill that opens that calendar, computed here from the two numbers
+   the person moved, and kept nowhere. */
 
 type Rgb = [number, number, number]
 
-const CORNER: { hiUnpleasant: Rgb; hiPleasant: Rgb; loUnpleasant: Rgb; loPleasant: Rgb } = {
-  hiUnpleasant: [224, 62, 62],   // lit up and not enjoying it
-  hiPleasant: [245, 183, 0],     // lit up and enjoying it
-  loUnpleasant: [45, 102, 201],  // low and heavy
-  loPleasant: [25, 169, 116],    // low and at ease
+/** Unpleasant → pleasant, at HIGH energy: the chart's top half, its five
+    rows averaged. Dark red through orange into gold. */
+const MOOD_HIGH = [
+  '#761610', '#8C1C16', '#BB281E', '#E9472A', '#E95D3B',
+  '#F5CC49', '#F6CC4A', '#F5CD49', '#F6CD4A', '#F5CC48',
+]
+
+/** …and at LOW energy: the bottom half. Near-black navy through blue into
+    green, darkening again at the far pleasant end. */
+const MOOD_LOW = [
+  '#060B69', '#061191', '#071AC2', '#0E38C3', '#326DC8',
+  '#6FC95A', '#51A95F', '#3E812B', '#3F802C', '#336825',
+]
+
+function rgbOf(hex: string): Rgb {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]
 }
 
 const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
@@ -259,14 +283,39 @@ const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
   Math.round(a[2] + (b[2] - a[2]) * t),
 ]
 
-/** The colour of one reading, as `rgb(…)`. Bilinear between the corners:
-    the mood axis picks left-to-right, the energy axis top-to-bottom. */
+/** Where `x` (0…1) falls along a ten-step ramp, interpolated so a slider
+    moves through a gradient rather than ten steps. */
+function alongRamp(ramp: string[], x: number): Rgb {
+  const pos = Math.max(0, Math.min(1, x)) * (ramp.length - 1)
+  const i = Math.min(ramp.length - 2, Math.floor(pos))
+  return mix(rgbOf(ramp[i]), rgbOf(ramp[i + 1]), pos - i)
+}
+
+/**
+ * How quickly the two halves hand over, around the energy axis.
+ *
+ * The chart is a grid of discrete cells: the row above the line is orange
+ * and the row below it is blue, with nothing in between. A slider needs a
+ * continuous surface, and blending the two halves across the WHOLE energy
+ * axis would put purple in the middle of a chart that has no purple in it.
+ *
+ * So each half holds its own colour over almost all of its range and the
+ * two cross over inside this band. Crossing the energy axis is meant to be
+ * a change of quadrant — it just should not be a jump cut.
+ */
+const CROSSOVER = 0.22
+
+/** The colour of one reading, as `rgb(…)`. */
 export function moodColor(point: MoodPoint): string {
   const x = (Math.max(-1, Math.min(1, point.valence)) + 1) / 2
-  const y = (Math.max(-1, Math.min(1, point.arousal)) + 1) / 2
-  const hi = mix(CORNER.hiUnpleasant, CORNER.hiPleasant, x)
-  const lo = mix(CORNER.loUnpleasant, CORNER.loPleasant, x)
-  const [r, g, b] = mix(lo, hi, y)
+  const a = Math.max(-1, Math.min(1, point.arousal))
+  const hi = alongRamp(MOOD_HIGH, x)
+  const lo = alongRamp(MOOD_LOW, x)
+  /* 0 at the calm end of the band, 1 at the energetic end, smoothed so the
+     handover has no corner in it. */
+  const raw = Math.max(0, Math.min(1, (a + CROSSOVER) / (2 * CROSSOVER)))
+  const t = raw * raw * (3 - 2 * raw)
+  const [r, g, b] = mix(lo, hi, t)
   return `rgb(${r}, ${g}, ${b})`
 }
 

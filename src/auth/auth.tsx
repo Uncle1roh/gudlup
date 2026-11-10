@@ -215,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async signOut() {
           try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
           setUser(null); setRole(null)
+          toTheLanding()
         },
       }
     }
@@ -272,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signOut() {
         createdRole.current = null
         await sb.auth.signOut()
+        toTheLanding()
       },
       async resetPassword(email: string) {
         /* The redirect comes back to THIS app with a recovery token in the
@@ -309,6 +311,31 @@ export function useAuth(): AuthApi {
 }
 
 /** Sign-out button (shown in both demo and Supabase modes). */
+/**
+ * Where signing out leaves you: the product's front door.
+ *
+ * It used to leave you exactly where you were, which on a console meant the
+ * console's own sign-in page — a door the POs reported as "an older version,
+ * still with mountains/blue", because it is: the hero shell dresses the
+ * public door, and the admin and commercial doors are separate screens with
+ * their own stage. Signing out is leaving, and leaving lands on the landing
+ * page like it does everywhere else.
+ *
+ * A full load, not a hash change. Every surface mounts its own data layer
+ * and its own gate, and the session that was just dropped should not be
+ * carried into the next screen by a React tree that merely re-rendered.
+ *
+ * The team's doors are still reached the way they always were — by typing
+ * `#admin` or `#sales`, which is the only way in to them anyway.
+ */
+function toTheLanding(): void {
+  try {
+    window.location.href = window.location.pathname + window.location.search
+  } catch {
+    /* no window (a test): nothing to navigate */
+  }
+}
+
 export function SignOutButton({ className, label = 'Sign out' }: { className?: string; label?: string }) {
   const { signOut } = useAuth()
   const { t } = useI18n()
