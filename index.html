@@ -38,8 +38,15 @@
     <!-- The landing and the door stand on this photograph, full-viewport. It
          is the largest thing either page loads and the only one that matters
          before the fold, so the browser is told about it in the head rather
-         than discovering it when React mounts. -->
-    <link rel="preload" as="image" href="/hero/goodloop-hero-waterfall.jpg" />
+         than discovering it when React mounts.
+
+         It is the DEFAULT background, not necessarily the one on screen: the
+         two pictures are a setting now (`src/app/backgrounds.ts`) and the
+         commercial console can change them. A preload can only name one file,
+         and the shipped one is the right guess — when it has been changed,
+         this costs one request that the browser drops, and the replacement
+         loads as it always would. -->
+    <link rel="preload" as="image" href="/media/landing-back.jpg" />
   </head>
   <body>
     <div id="root"></div>
