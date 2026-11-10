@@ -1,3 +1,4 @@
+import type { LegalTextOverride } from '../legal/overrides'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { EconomySettings, LoopsEntry, Wallet } from '../gamification/economy'
 import type { AchievementDef, AchievementView, CollectiveProgress, RankingPart } from '../gamification/achievements'
@@ -75,6 +76,8 @@ import type { AssessmentRecord } from './assessments'
 import type {
   LegalProfile, ProfilePatch, Acceptance, AcceptanceDoc, ConsentEvent, ConsentPurpose,
   DataRequest, DataRequestKind, Report, ReportKind, LegalVersion,
+  // the rewritten-disclaimer overlay
+
   ProfessionalRecord, ProfessionalPatch, ProfessionalCard, InformedConsentTemplate,
   PatientInformedConsent, SponsorTotals,
 } from '../legal/records'
@@ -363,6 +366,15 @@ export interface DataProvider {
   listCrisisResources(): Promise<CrisisResource[]>
   /** The version register (ADM-06 / LEG-07). Works signed out. */
   listLegalVersions(): Promise<LegalVersion[]>
+  /**
+   * The disclaimers the console has rewritten (`legal/overrides.ts`).
+   *
+   * Works signed out, and has to: the sentences it carries are shown on the
+   * door, on the legal page and in the first run, none of which has an
+   * account yet. A failure here is not fatal — the app falls back to the
+   * text compiled into the build.
+   */
+  listLegalTexts(): Promise<LegalTextOverride[]>
 
   // --- Legal framework: admin ---
   listDataRequests(): Promise<DataRequest[]>
@@ -370,6 +382,20 @@ export interface DataProvider {
   listReports(): Promise<Report[]>
   updateReport(id: string, patch: Partial<Pick<Report, 'status' | 'acknowledgedAt' | 'decidedAt' | 'decidedBy' | 'decision'>>): Promise<void>
   saveLegalVersion(v: Omit<LegalVersion, 'id' | 'createdAt'>): Promise<void>
+  /**
+   * Rewrite disclaimers, under a version.
+   *
+   * One call writes every edited sentence AND the register row that says
+   * which version they belong to, because the two may not drift apart: a
+   * rewritten tier-A disclaimer with no register entry is a register that
+   * no longer describes what people read (LEG-07 / ADM-06). Returns the
+   * whole overlay as it now stands.
+   */
+  saveLegalTexts(input: {
+    rows: { refId: string; locale: string; body: string }[]
+    version: string
+    changelog: string
+  }): Promise<LegalTextOverride[]>
   saveCrisisResource(r: CrisisResource): Promise<void>
   deleteCrisisResource(id: string): Promise<void>
   /** ADM-07: one person's acceptance and consent history. */

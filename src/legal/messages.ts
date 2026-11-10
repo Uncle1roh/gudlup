@@ -34,6 +34,7 @@
    ============================================================================ */
 
 import type { Locale } from '../i18n'
+import { legalOverride } from './overrides'
 
 /** Where a person lives, for legal purposes. Drives crisis numbers, the
     withdrawal period (7 days BR / 14 days EU), the governing annex and the
@@ -445,7 +446,13 @@ function interpolate(s: string, vars?: Record<string, string | number>): string 
     has no text. Used by `useLegal()`; call it directly only outside React. */
 export function legalMsg(id: LegalMessageId, locale: Locale, vars?: Record<string, string | number>): string {
   const m: LegalMessage = LEGAL_MESSAGES[id]
-  const text = (locale === 'en' ? m.en : m[locale]) || m.en
+  /* What the console has rewritten for this id in this language wins over
+     the sentence compiled into the build (`legal/overrides.ts`). Only the
+     WORDS: the tier, the market and the English fallback below are the
+     build's, so an override can never move a message or change who sees
+     it. Before the overlay has loaded there is nothing in the map and the
+     shipped text stands. */
+  const text = legalOverride(id, locale) || (locale === 'en' ? m.en : m[locale]) || m.en
   return interpolate(text, vars)
 }
 

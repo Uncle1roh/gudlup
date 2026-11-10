@@ -1041,6 +1041,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     },
     listCrisisResources: async () => [...loadMockLegal().crisis],
     listLegalVersions: async () => [...loadMockLegal().versions],
+    listLegalTexts: async () => [...(loadMockLegal().texts ?? [])],
 
     // admin
     listDataRequests: async () => {
@@ -1058,6 +1059,29 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     updateReport: async (id, patch) => {
       await wait(40)
       mutateMockLegal((s) => { s.reports = s.reports.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
+    },
+    saveLegalTexts: async ({ rows, version, changelog }) => {
+      await wait(60)
+      const at = Date.now()
+      mutateMockLegal((s) => {
+        const kept = (s.texts ?? []).filter((t) => !rows.some((r) => r.refId === t.refId && r.locale === t.locale))
+        /* An empty body is a row being taken BACK, not stored blank: the
+           build's own sentence should return, and a stored '' would show a
+           disclaimer that says nothing. */
+        const written = rows
+          .filter((r) => r.body.trim())
+          .map((r) => ({ refId: r.refId, locale: r.locale as 'it' | 'pt-BR' | 'en', body: r.body.trim(), version, updatedAt: at }))
+        s.texts = [...kept, ...written]
+        s.versions = [
+          ...s.versions.map((x) => (x.docId === 'disclaimers' && !x.inForceTo ? { ...x, inForceTo: new Date(at).toISOString().slice(0, 10) } : x)),
+          {
+            id: nextMockLegalId('ver'), docId: 'disclaimers', version, locale: 'all',
+            inForceFrom: new Date(at).toISOString().slice(0, 10), inForceTo: null,
+            changelog, createdAt: at,
+          },
+        ]
+      })
+      return [...(loadMockLegal().texts ?? [])]
     },
     saveLegalVersion: async (v) => {
       await wait(40)

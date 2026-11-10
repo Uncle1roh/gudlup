@@ -242,7 +242,7 @@ function LicensesTab({ state, agg }: { state: CorporateState; agg: Aggregates })
             </p>
             <a
               className="c-btn c-btn--primary"
-              href={`mailto:sales@goodloop.health?subject=${encodeURIComponent(t('Licence expansion — {company}', { company: state.profile.name }))}`}
+              href={`mailto:Suporte@goodloop.com.br?subject=${encodeURIComponent(t('Licence expansion — {company}', { company: state.profile.name }))}`}
             >
               {t('Contact Good Loop')}
             </a>

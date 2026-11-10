@@ -18,6 +18,7 @@ import { DEFAULT_CRISIS, marketForLocale, type CrisisResource } from './market'
 import type { Acceptance, ConsentEvent, ConsentPurpose, LegalProfile } from './records'
 import { consentState } from './records'
 import { LEGAL_VERSION } from './types'
+import { setLegalOverrides } from './overrides'
 
 export interface LegalApi {
   /** The signed-in person's legal profile, or null when signed out / loading. */
@@ -86,6 +87,26 @@ export function LegalProvider({ children }: { children: ReactNode }) {
     return () => { alive = false }
   }, [dp])
 
+  /* ---- the disclaimers the console has rewritten --------------------------
+     Fetched once, into the module map `legalMsg` reads (`legal/overrides.ts`).
+     `textRev` exists only to make the arrival visible to React: the map is
+     not state, so without it every screen would keep showing the sentence it
+     rendered before the fetch landed. A failure is deliberately silent — the
+     text compiled into the build is a complete, reviewed corpus, and a
+     network hiccup must not blank a disclaimer. */
+  const [textRev, setTextRev] = useState(0)
+  useEffect(() => {
+    let alive = true
+    dp.listLegalTexts()
+      .then((rows) => {
+        if (!alive) return
+        setLegalOverrides(rows)
+        if (rows.length) setTextRev((n) => n + 1)
+      })
+      .catch(() => undefined)
+    return () => { alive = false }
+  }, [dp])
+
   const market: Market = profile?.market ?? marketForLocale(locale)
 
   const value = useMemo<LegalApi>(() => {
@@ -110,7 +131,9 @@ export function LegalProvider({ children }: { children: ReactNode }) {
       },
       refresh,
     }
-  }, [profile, loaded, market, locale, crisisAll, acceptances, consents, dp, refresh])
+    /* `textRev` is in the deps on purpose: `m()` reads a module map, so the
+       only thing that tells this memo the words changed is the counter. */
+  }, [profile, loaded, market, locale, crisisAll, acceptances, consents, dp, refresh, textRev])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -30,8 +30,9 @@ import { Users } from './Users'
 import { FeatureSwitches } from './FeatureSwitches'
 import { AuditLog } from './AuditLog'
 import { Compliance } from './Compliance'
+import { LegalTexts } from './LegalTexts'
 
-type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'tags' | 'users' | 'compliance' | 'switches' | 'audit' | 'achievements' | 'gamreports'
+type Section = 'overview' | 'catalog' | 'rails' | 'assets' | 'credentials' | 'tags' | 'users' | 'compliance' | 'legaltexts' | 'switches' | 'audit' | 'achievements' | 'gamreports'
 
 const NAV: ConsoleNavItem<Section>[] = [
   { id: 'overview', label: 'Panoramica', icon: '▦' },
@@ -53,6 +54,9 @@ const NAV: ConsoleNavItem<Section>[] = [
   { id: 'gamreports', label: 'Report', icon: '▥' },
   { id: 'users', label: 'Utenti e ruoli', icon: '◑' },
   { id: 'compliance', label: 'Conformità', icon: '§' },
+  /* The words themselves. Conformità next to it keeps the REGISTER — which
+     text was in force when — and this is where that text is written. */
+  { id: 'legaltexts', label: 'Avvisi legali', icon: '¶' },
   { id: 'switches', label: 'Interruttori', icon: '⏻' },
   { id: 'audit', label: 'Registro attività', icon: '≣' },
 ]
@@ -98,6 +102,7 @@ export function AdminApp() {
       {section === 'tags' && <Tags actor={actor} />}
       {section === 'users' && <Users actor={actor} />}
       {section === 'compliance' && <Compliance actor={actor} />}
+      {section === 'legaltexts' && <LegalTexts />}
       {section === 'switches' && <FeatureSwitches actor={actor} />}
       {section === 'audit' && <AuditLog />}
       {section === 'achievements' && <Achievements actor={actor} />}

@@ -3736,3 +3736,94 @@ html[data-gl-amb='login'] .fr__col {
 html[data-gl-amb='login'] .fr__body,
 html[data-gl-amb='login'] .fr__foot,
 html[data-gl-amb='login'] .fr__need { color: #e8edd6; }
+
+/* ===========================================================================
+   Admin — Avvisi legali
+
+   The registered disclaimers, three languages at a time. A row that differs
+   from the sentence compiled into the build is marked, because the whole
+   point of the screen is being able to see at a glance what this deployment
+   says that the build does not.
+   =========================================================================== */
+
+.adm-legal__bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.adm-legal__bar .b2b-input { flex: 1 1 320px; }
+.adm-legal__only { display: flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; }
+
+.adm-legal__list { display: flex; flex-direction: column; gap: 14px; }
+
+.adm-legal__msg {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+/* Rewritten here, not in the build: the one thing the eye needs to find. */
+.adm-legal__msg.is-changed { border-color: var(--aura); box-shadow: inset 3px 0 0 var(--aura); }
+
+.adm-legal__msghead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.adm-legal__id { font-family: var(--mono, monospace); font-size: 13px; font-weight: 600; }
+.adm-legal__tier,
+.adm-legal__market,
+.adm-legal__group {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--mist-2);
+  color: var(--slate);
+}
+.adm-legal__flag { font-size: 12px; color: var(--aura-deep); font-weight: 600; }
+
+.adm-legal__row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.adm-legal__lang { font-size: 12.5px; color: var(--slate); padding-top: 9px; }
+.adm-legal__text { width: 100%; resize: vertical; line-height: 1.45; font-size: 14px; }
+.adm-legal__row.is-changed .adm-legal__text { border-color: var(--aura); }
+.adm-legal__revert { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+
+/* The save is pinned: the list is 120 messages long and the version the
+   register needs is asked for here, not in a dialog that could be dismissed. */
+.adm-legal__save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--mist);
+  opacity: 0.6;
+}
+
+.adm-legal__save.is-on { opacity: 1; border-color: var(--aura); }
+.adm-legal__savefields { display: flex; gap: 14px; flex: 1 1 420px; flex-wrap: wrap; }
+.adm-legal__savefields .pe-field { flex: 1 1 200px; }
+
+@media (max-width: 860px) {
+  .adm-legal__row { grid-template-columns: 1fr; }
+  .adm-legal__lang { padding-top: 0; }
+}

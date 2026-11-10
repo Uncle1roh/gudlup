@@ -16,6 +16,7 @@ import { DEFAULT_CRISIS, DSR_DAYS, type CrisisResource } from '../legal/market'
 import { LEGAL_VERSION } from '../legal/types'
 import { previewing } from '../demo/flag'
 import { demoAcceptedDocs, demoProfile } from '../demo/world'
+import type { LegalTextOverride } from '../legal/overrides'
 
 const KEY = 'gl.mock.legal'
 
@@ -26,6 +27,8 @@ export interface MockLegalState {
   dataRequests: DataRequest[]
   reports: Report[]
   versions: LegalVersion[]
+  /** Disclaimers the console has rewritten (`legal/overrides.ts`). */
+  texts?: LegalTextOverride[]
   crisis: CrisisResource[]
   professional: ProfessionalRecord
   informedConsents: PatientInformedConsent[]

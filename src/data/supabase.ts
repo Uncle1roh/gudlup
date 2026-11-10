@@ -109,6 +109,7 @@ function mapProfessional(r: any): ProfessionalRecord {
 const DEFAULT_AVATAR = '👩🏻‍⚕️'
 
 import type { AssessmentRecord } from './assessments'
+import type { LegalTextOverride } from '../legal/overrides'
 
 /* ---- small converters ---- */
 const toMs = (t: string | null | undefined): number => (t ? new Date(t).getTime() : 0)
@@ -1483,6 +1484,18 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       if (error) throw error
       return (data ?? []).map(mapLegalVersion)
     },
+    async listLegalTexts(): Promise<LegalTextOverride[]> {
+      const { data, error } = await sb.from('legal_texts').select('*')
+      if (error) throw error
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        refId: String(r.ref_id),
+        locale: String(r.locale) as LegalTextOverride['locale'],
+        body: String(r.body ?? ''),
+        version: String(r.version ?? ''),
+        updatedAt: r.updated_at ? Date.parse(String(r.updated_at)) : 0,
+        updatedBy: r.updated_by ? String(r.updated_by) : undefined,
+      }))
+    },
 
     // admin
     async listDataRequests(): Promise<DataRequest[]> {
@@ -1524,6 +1537,37 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         in_force_to: v.inForceTo, changelog: v.changelog ?? null, created_by: v.createdBy ?? null,
       })
       if (error) throw error
+    },
+    async saveLegalTexts({ rows, version, changelog }): Promise<LegalTextOverride[]> {
+      const now = new Date()
+      const day = now.toISOString().slice(0, 10)
+      /* Rows with words are written; rows emptied on screen are DELETED, so
+         the sentence compiled into the build comes back rather than a blank
+         disclaimer being shown. */
+      const keep = rows.filter((r) => r.body.trim())
+      const drop = rows.filter((r) => !r.body.trim())
+      for (const r of drop) {
+        await sb.from('legal_texts').delete().eq('ref_id', r.refId).eq('locale', r.locale)
+      }
+      if (keep.length) {
+        const { error } = await sb.from('legal_texts').upsert(
+          keep.map((r) => ({
+            ref_id: r.refId, locale: r.locale, body: r.body.trim(),
+            version, updated_at: now.toISOString(),
+          })),
+          { onConflict: 'ref_id,locale' },
+        )
+        if (error) throw error
+      }
+      /* …and the register, in the same call: the two may not drift apart. */
+      await sb.from('legal_versions').update({ in_force_to: day })
+        .eq('doc_id', 'disclaimers').is('in_force_to', null)
+      const { error: vErr } = await sb.from('legal_versions').insert({
+        doc_id: 'disclaimers', version, locale: 'all',
+        in_force_from: day, in_force_to: null, changelog,
+      })
+      if (vErr) throw vErr
+      return await this.listLegalTexts()
     },
     async saveCrisisResource(r): Promise<void> {
       const { error } = await sb.from('crisis_resources').upsert({

@@ -27,10 +27,10 @@ export const SAMPLE_AUDIO_URL = ''
 /**
  * Where "Agendar demonstração" goes.
  *
- * The same sales address the company dashboard already writes to when a
- * sponsor asks about licences (`corporate/Management.tsx`), so a prospect
- * and a customer reach one inbox. It is a `mailto:` and not a booking form
+ * The one address the product writes to, the same one the company
+ * dashboard uses for a licence question (POs, 2026-11-10: everything to
+ * Suporte@goodloop.com.br). It is a `mailto:` and not a booking form
  * because there is no booking form — when there is one, this is the single
  * line that changes.
  */
-export const DEMO_URL = 'mailto:sales@goodloop.health?subject=Good%20Loop%20—%20demonstra%C3%A7%C3%A3o'
+export const DEMO_URL = 'mailto:Suporte@goodloop.com.br?subject=Good%20Loop%20—%20demonstra%C3%A7%C3%A3o'
