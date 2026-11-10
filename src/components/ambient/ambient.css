@@ -151,6 +151,27 @@
   );
 }
 
+/* THE VEIL FOLLOWS THE PERSON'S GROUND, and it has to.
+   The app's ink is theirs to choose: cream on the dark ground, dark slate on
+   the light one. A dark photograph under the dark scrim reads perfectly in
+   cream — and under the same scrim in LIGHT it put dark slate type on a dark
+   picture, which is the greeting, the date and the library's own line all
+   gone at once.
+
+   So the light ground veils the same photograph in cream instead of
+   dimming it, which is what the ground this replaced did (`--gl-ground-veil`
+   against `--gl-ground-dim`, docs/BACKGROUNDS.md). Same picture, same
+   layout, the ink legible either way. */
+.amb--pal-light .amb-photo__scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(250, 248, 223, 0.86) 0%,
+    rgba(250, 248, 223, 0.70) 40%,
+    rgba(250, 248, 223, 0.60) 62%,
+    rgba(250, 248, 223, 0.90) 100%
+  );
+}
+
 /* ---------------------------------------------- 4 · the rings on the person --- */
 
 .amb-outline {

@@ -14,6 +14,7 @@
    ============================================================================ */
 
 export const PT_SALES: Record<string, string> = {
+  'Sfondi': 'Planos de fundo',
   /* ---- the console itself ---- */
   'commerciale': 'comercial',
   'Sezioni della console': 'Seções do console',

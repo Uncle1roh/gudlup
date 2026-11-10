@@ -22,7 +22,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
-import { HERO_SRC } from '../components/ambient/AmbientBackground'
+import { heroSrc } from '../components/ambient/AmbientBackground'
 
 /** The eight layers and where each one sits on the picture, as percentages
     of the frame. The last two are out on the right-hand fall and are the
@@ -91,7 +91,7 @@ export function Metodo() {
         className="pub-frame"
         role="img"
         aria-label={t('A waterfall of many threads of water, each one standing for a layer of sound')}
-        style={{ backgroundImage: `url(${HERO_SRC})` }}
+        style={{ backgroundImage: `url(${heroSrc()})` }}
       >
         <div className="pub-frame__veil" aria-hidden="true" />
         {LAYERS.map((l, i) => (

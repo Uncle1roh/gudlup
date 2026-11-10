@@ -42,8 +42,9 @@ import { Challenges } from '../admin/Challenges'
 import { ChallengeTemplates } from '../admin/ChallengeTemplates'
 import { Benefits } from '../admin/Benefits'
 import { PromoCodes } from '../admin/PromoCodes'
+import { Backgrounds } from './Backgrounds'
 
-type Section = 'companies' | 'plans' | 'promo' | 'challenges' | 'templates' | 'benefits'
+type Section = 'companies' | 'plans' | 'promo' | 'challenges' | 'templates' | 'benefits' | 'backgrounds'
 
 const NAV: ConsoleNavItem<Section>[] = [
   { id: 'companies', label: 'Aziende', icon: '◭' },
@@ -54,6 +55,10 @@ const NAV: ConsoleNavItem<Section>[] = [
   { id: 'challenges', label: 'Campagne', icon: '⚑' },
   { id: 'templates', label: 'Modelli di campagna', icon: '⚐' },
   { id: 'benefits', label: 'Benefici e partner', icon: '❖' },
+  /* The two pictures the product stands on. Here and not in the admin
+     console because this is the team that keeps being asked to change
+     them. */
+  { id: 'backgrounds', label: 'Sfondi', icon: '▣' },
 ]
 
 export function SalesApp() {
@@ -95,6 +100,7 @@ export function SalesApp() {
       {section === 'challenges' && <Challenges actor={actor} />}
       {section === 'templates' && <ChallengeTemplates actor={actor} />}
       {section === 'benefits' && <Benefits actor={actor} />}
+      {section === 'backgrounds' && <Backgrounds />}
     </ConsoleShell>
   )
 }

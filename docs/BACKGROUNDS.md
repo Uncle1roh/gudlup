@@ -128,14 +128,39 @@ a escura no escuro.
 
 ---
 
-## 1b. A Início é a exceção: lá não tem foto nenhuma
+## 1a. Agora os fundos se trocam pelo console, sem rilascio
 
-Desde 06/11/2026 a biblioteca **não usa** nada do bloco acima. Ela tem um
-fundo próprio: os anéis da marca, grandes, no canto de cima à direita, na
-cor clara ou escura que a pessoa escolheu, com um esfumado no pé da tela
-para os cards continuarem legíveis. É o mesmo fundo da página pública e da
-tela de entrar, e é por isso que os anéis conseguem *viajar* de uma para a
-outra quando alguém faz login — é um elemento só, montado na raiz do app.
+Desde 11/11/2026 as **duas fotografias** do produto são um ajuste, não um
+arquivo no código:
+
+| onde | o que fica atrás |
+|---|---|
+| landing, as três páginas públicas e a tela de entrar | `landing` |
+| o app de quem escuta (biblioteca e as outras abas) | `app` |
+
+Quem muda: **console comercial → Sfondi**. Dá para subir uma imagem nova,
+voltar para a que veio no build, e ligar/desligar os anéis da marca em cada
+uma das duas. Fica salvo em `app_settings`, chave `backgrounds`, e cada app
+pega na próxima carga.
+
+O que **não** se mexe por lá: o véu por cima da foto, as sfumature e o texto.
+O véu é justamente o que mantém o texto legível sobre qualquer foto que
+alguém coloque — e ele **segue o fundo claro/escuro da pessoa**: escurece a
+foto no escuro, e a cobre de creme no claro. Sem isso, uma foto escura com o
+ajuste "claro" deixa a tinta escura invisível.
+
+Código: `src/app/backgrounds.ts` (o ajuste), `src/sales/Backgrounds.tsx` (a
+tela), `src/components/ambient/` (quem desenha).
+
+---
+
+## 1b. A Início não usa o bloco acima
+
+Desde 06/11/2026 a biblioteca **não usa** nada do bloco acima: o fundo dela
+é o de `components/ambient/`, montado uma vez na raiz do app. Em 11/11 os
+anéis que ele desenhava deram lugar a uma fotografia (seção 1a) — as duas
+imagens novas já trazem a mesma forma concêntrica, então os anéis vêm
+desligados e se religam pelo console.
 
 Onde mexer:
 

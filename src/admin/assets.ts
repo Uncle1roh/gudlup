@@ -214,6 +214,36 @@ export function coverPathFor(code: string, fileName: string): string {
  * keep serving the old picture from the identical path for hours and the
  * upload would look as if it had silently failed.
  */
+/**
+ * Upload one of the two background pictures and return its public URL.
+ *
+ * The same bucket and the same rules as a protocol cover — it is the same
+ * kind of thing, an image the console puts in front of people — under a
+ * folder of its own so a background can never collide with a cover whose
+ * code happens to be `landing`.
+ */
+export async function uploadBackground(which: 'landing' | 'app', file: File): Promise<string> {
+  if (!COVER_TYPES.includes(file.type)) {
+    throw new Error('Formato non supportato — usa JPG, PNG, WebP o AVIF.')
+  }
+  if (file.size > COVER_MAX_BYTES) {
+    throw new Error(
+      `Immagine troppo grande (${(file.size / 1024 / 1024).toFixed(1)} MB) — massimo ` +
+      `${COVER_MAX_BYTES / 1024 / 1024} MB. Esporta a circa 2000 px sul lato lungo.`,
+    )
+  }
+  const sb = client()
+  const ext = (/\.([a-z0-9]+)$/i.exec(file.name)?.[1] ?? 'jpg').toLowerCase()
+  const path = `backgrounds/${which}.${ext}`
+  const { error } = await sb.storage.from(ASSET_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
+  if (error) throw new Error(`Caricamento non riuscito: ${error.message}`)
+  /* The stamp matters more here than anywhere: the same path is reused every
+     time, and without it the CDN serves yesterday's picture for hours and
+     the upload looks as if it did nothing. */
+  return `${publicUrl(sb, path)}?v=${Date.now()}`
+}
+
 export async function uploadProtocolCover(code: string, file: File): Promise<string> {
   if (!COVER_TYPES.includes(file.type)) {
     throw new Error('Formato non supportato — usa JPG, PNG, WebP o AVIF.')

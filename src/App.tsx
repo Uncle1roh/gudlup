@@ -19,6 +19,7 @@ import { LegalPage } from './legal/LegalPage'
 import { EnvBanner } from './app/EnvBanner'
 import { appEnv, showsBanner, warnIfUndeclared, type Surface } from './app/environment'
 import { initFeatures } from './app/features'
+import { initBackgrounds } from './app/backgrounds'
 import { PublicRoute } from './public/PublicRoute'
 import { AmbientBackground } from './components/ambient/AmbientBackground'
 import { publicStage } from './components/ambient/stage'
@@ -55,6 +56,12 @@ export default function App() {
      then disappear; with no cache at all everything is on, which is the
      only safe default for a kill switch. */
   useEffect(() => { initFeatures() }, [])
+
+  /* The two background pictures, which the commercial console can change
+     without a deploy. Read once per load; until it lands the last answer
+     from this browser stands, so a changed background does not flash the
+     old one and then swap (`app/backgrounds.ts`). */
+  useEffect(() => { initBackgrounds() }, [])
 
   useEffect(() => {
     const onHash = () => {

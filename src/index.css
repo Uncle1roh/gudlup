@@ -3827,3 +3827,94 @@ html[data-gl-amb='login'] .fr__need { color: #e8edd6; }
   .adm-legal__row { grid-template-columns: 1fr; }
   .adm-legal__lang { padding-top: 0; }
 }
+
+/* ===========================================================================
+   Commercial console — Sfondi
+
+   Two cards, each showing the picture cropped the way the app crops it, with
+   the same scrim over it: the only honest preview of a background is one
+   that has been through everything the real one goes through.
+   =========================================================================== */
+
+.sls-bg { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+
+.sls-bg__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.sls-bg__head { display: flex; flex-direction: column; gap: 4px; }
+.sls-bg__title { margin: 0; font-size: 17px; font-weight: 600; }
+
+.sls-bg__preview {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-color: #0b1a13;
+}
+
+/* The same gradient the app lays over its background, so what is judged
+   here is what is actually seen there. */
+.sls-bg__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 22, 15, 0.72) 0%,
+    rgba(5, 22, 15, 0.40) 40%,
+    rgba(5, 22, 15, 0) 62%,
+    rgba(5, 22, 15, 0.55) 100%);
+}
+
+.sls-bg__note {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(5, 22, 15, 0.72);
+  color: #e8edd6;
+  font-size: 11.5px;
+}
+
+.sls-bg__acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.sls-bg__ring { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; }
+.sls-bg__ring span { display: flex; flex-direction: column; gap: 2px; }
+.sls-bg__ring em { font-style: normal; font-size: 12.5px; color: var(--slate); }
+
+.sls-bg__url {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--slate);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sls-bg__save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--mist);
+  opacity: 0.65;
+}
+
+.sls-bg__save.is-on { opacity: 1; border-color: var(--aura); }
+.sls-bg__tip { margin-top: 12px; }

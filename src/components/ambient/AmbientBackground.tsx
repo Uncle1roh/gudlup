@@ -33,10 +33,21 @@ import {
   type CoverPoint,
 } from './focal'
 import { clearArrival, useArrived, useStage, type Stage } from './stage'
+import { backgrounds, subscribeBackgrounds, type BackgroundSet } from '../../app/backgrounds'
 import { useGround } from '../../ui2/groundChoice'
 import './ambient.css'
 
-export const HERO_SRC = '/hero/goodloop-hero-waterfall.jpg'
+/**
+ * The landing's picture, for the one screen that prints it as a FRAME
+ * rather than as a background (`public/Metodo.tsx`).
+ *
+ * It is a function and not a constant now: the picture is a setting, and a
+ * page that quoted the old constant would have shown last month's photograph
+ * beside this month's one.
+ */
+export function heroSrc(): string {
+  return backgrounds().landing
+}
 
 /** Where the rings sit, as fractions of the window, per stage. The landing
     and the door are not here: on those two they are centred on the person,
@@ -70,12 +81,27 @@ interface Geometry {
   k: number
 }
 
+/** The setting, as React state: it arrives from the network a moment after
+    the first paint, and every layer below depends on it. */
+function useBackgrounds(): BackgroundSet {
+  const [bg, setBg] = useState<BackgroundSet>(() => backgrounds())
+  useEffect(() => subscribeBackgrounds(() => setBg(backgrounds())), [])
+  return bg
+}
+
 export function AmbientBackground() {
   /* Not a prop: the stage is claimed by whichever screen is on, because the
      route alone cannot tell the landing from the library. See `stage.ts`. */
   const stage: Stage = useStage()
   const ground = useGround()
   const arrived = useArrived()
+  const bg = useBackgrounds()
+
+  /* One picture per surface. The public pages and the door share the
+     landing's; everything signed in shares the app's. */
+  const onHeroStage = stage === 'landing' || stage === 'login' || stage === 'como' || stage === 'empresas' || stage === 'metodo'
+  const photoSrc = stage === 'home' ? bg.app : bg.landing
+  const wantRings = stage === 'home' ? bg.appRings : bg.landingRings
 
   /* The window, and the photograph's own size. The second is read off the
      loaded <img> rather than written down here, so the POs can drop in a
@@ -209,7 +235,12 @@ export function AmbientBackground() {
 
   const diameter = 3000 * Math.max(vp.w / HERO_BASE_WIDTH, vp.h / 900)
   const k = anchor ? anchor.displayedWidth / HERO_BASE_WIDTH : 1
-  const onHero = stage === 'landing' || stage === 'login'
+  /* THE PICTURE IS SHOWN ON EVERY STAGE NOW. It used to appear on the
+     landing and the door only, because the three public pages were drawn
+     over the rings; with a photograph on both surfaces there is nothing for
+     those pages to stand on otherwise, and sliding the rings between them
+     was the point of hiding it. */
+  const onHero = stage !== 'off'
 
   const cls = [
     'amb',
@@ -224,8 +255,14 @@ export function AmbientBackground() {
       {/* 1 — the ground under everything */}
       <div className="amb-base" />
 
-      {/* 2 — the rings. Two wrappers, because position and scale are given
-          different durations and a single transform can only have one. */}
+      {/* 2 — the rings, when the setting asks for them. Both pictures that
+          ship carry their own concentric structure, so they are off by
+          default and switched back on from the commercial console
+          (`app/backgrounds.ts`) rather than by a deploy.
+
+          Two wrappers, because position and scale are given different
+          durations and a single transform can only have one. */}
+      {wantRings && (
       <div
         className="amb-rings"
         style={{
@@ -242,6 +279,7 @@ export function AmbientBackground() {
           ))}
         </div>
       </div>
+      )}
 
       {/* 3 — the photograph, and the scrim that makes cream type legible on
           it. Always in the DOM: it is the heaviest thing either public page
@@ -251,11 +289,20 @@ export function AmbientBackground() {
         <img
           ref={imgRef}
           className="amb-photo__img"
-          src={HERO_SRC}
+          /* `key` so a change of picture really remounts the element: React
+             would otherwise keep the old `<img>` and its old natural size
+             until the new file happened to decode, and the focal maths
+             would be running against the wrong dimensions in between. */
+          key={photoSrc}
+          src={photoSrc}
           alt=""
           aria-hidden="true"
           decoding="async"
-          style={{ objectPosition: `${pos.x * 100}% ${pos.y * 100}%` }}
+          /* The landing keeps the crop its photograph was framed for; the
+             app's is centred, because that picture is portrait and any
+             offset tuned for a landscape one throws its subject off the
+             edge. Both are `cover`, so nothing is ever letterboxed. */
+          style={{ objectPosition: stage === 'home' ? '50% 50%' : `${pos.x * 100}% ${pos.y * 100}%` }}
           onLoad={(e) => {
             const el = e.currentTarget
             setImg({ w: el.naturalWidth, h: el.naturalHeight })
@@ -266,7 +313,7 @@ export function AmbientBackground() {
 
       {/* 4 — the rings on the person. Only drawn once the picture has said
           how big it is, because without that there is no person to be on. */}
-      {anchor && (
+      {wantRings && anchor && onHeroStage && (
         <div className={onHero ? 'amb-outline is-on' : 'amb-outline'}>
           <OutlineRings x={anchor.x} y={anchor.y} k={k} breathing={stage === 'login'} />
         </div>
