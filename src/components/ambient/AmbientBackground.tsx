@@ -28,6 +28,7 @@ import { FilledRings, OutlineRings, type Palette } from './rings'
 import {
   HERO_BASE_WIDTH,
   HERO_FOCUS,
+  WIDE,
   coverPoint,
   heroPos,
   type CoverPoint,
@@ -298,11 +299,16 @@ export function AmbientBackground() {
           alt=""
           aria-hidden="true"
           decoding="async"
-          /* The landing keeps the crop its photograph was framed for; the
-             app's is centred, because that picture is portrait and any
-             offset tuned for a landscape one throws its subject off the
-             edge. Both are `cover`, so nothing is ever letterboxed. */
-          style={{ objectPosition: stage === 'home' ? '50% 50%' : `${pos.x * 100}% ${pos.y * 100}%` }}
+          /* Centred, except on a phone where the landing's picture is
+             portrait and its subject sits right of centre: cropping that
+             one from the middle cuts the listener's head off at the edge.
+
+             This is the one number in here that is about a particular
+             photograph rather than about the layout, which is why it is
+             written down rather than derived — and why it is worth looking
+             at the landing on a narrow screen after changing that image
+             from the console. */
+          style={{ objectPosition: stage !== 'home' && vp.w < WIDE ? '78% 50%' : '50% 50%' }}
           onLoad={(e) => {
             const el = e.currentTarget
             setImg({ w: el.naturalWidth, h: el.naturalHeight })
