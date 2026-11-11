@@ -53,7 +53,7 @@ function materialLabel(p: CatalogProtocol): string {
   return bits.length ? bits.join(' · ') : 'nessun workbook'
 }
 
-const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicBlurb: '', i18n: {}, tags: [], coverUrl: '', tier: 'green', claimsGate: emptyGate() }
+const EMPTY_CARD: ProtocolCardDraft = { code: '', title: '', publicTitle: '', publicSubtitle: '', publicBlurb: '', i18n: {}, tags: [], coverUrl: '', tier: 'green', claimsGate: emptyGate() }
 
 /** A GL code, the way the workbooks write it: "GL-ANX 1.1". */
 const CODE_SHAPE = /^GL-[A-Z]{2,8}\s+\d+\.\d+$/
@@ -91,6 +91,10 @@ export function newProtocolEntry(draft: ProtocolCardDraft, now = Date.now()): Ca
     audioReady: false,
     audience: 'clinical',
     publicTitle: draft.publicTitle.trim() || undefined,
+    /* `?.` like the cover below it: "Crea nuovo" is also called with a
+       hand-built draft (the suites do), and a field added after those
+       callers were written must not make the call throw. */
+    publicSubtitle: draft.publicSubtitle?.trim() || undefined,
     publicBlurb: draft.publicBlurb.trim() || undefined,
     /* The names written in the other languages and the cover chosen in the
        same dialog. They used to be dropped here, so a protocol created with a

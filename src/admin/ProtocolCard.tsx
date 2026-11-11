@@ -12,7 +12,7 @@
    What is left on the board, and nothing else:
 
      · the CODE, which identifies the material everywhere ("GL-ANX 1.1")
-     · the NAME and the one-line description, per language
+     · the NAME, the SUBTITLE and the one-line description, per language
      · the COVER
      · the TAGS, as free words
      · CLINICO / NON CLINICO
@@ -41,6 +41,9 @@ export interface ProtocolCardDraft {
       and the clinical record read the same words the person reads. */
   title: string
   publicTitle: string
+  /** The line printed UNDER the cover on the home shelf. Empty = empty line:
+      the name is already on the picture (src/types/domain.ts). */
+  publicSubtitle: string
   publicBlurb: string
   /** The same name and description in the other interface languages. */
   i18n: ProtocolI18n
@@ -87,6 +90,8 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     if (id !== 'it') {
       const name = one.publicTitle?.trim() || one.title?.trim()
       if (name) kept.publicTitle = name
+      const sub = one.publicSubtitle?.trim()
+      if (sub) kept.publicSubtitle = sub
       const blurb = one.publicBlurb?.trim()
       if (blurb) kept.publicBlurb = blurb
     }
@@ -100,6 +105,8 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     code: p.code,
     title: p.title,
     publicTitle: it?.publicTitle?.trim() || p.publicTitle || p.title || '',
+    /* No fallback to the name: a subtitle nobody wrote is not a subtitle. */
+    publicSubtitle: it?.publicSubtitle?.trim() || p.publicSubtitle || '',
     publicBlurb: it?.publicBlurb?.trim() || p.publicBlurb || '',
     i18n,
     coverUrl: p.coverUrl ?? '',
@@ -114,6 +121,7 @@ export function cardDraftFrom(p: CatalogProtocol): ProtocolCardDraft {
     carried through untouched: this editor owns naming, the cover and tags. */
 export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtocol): CatalogProtocol {
   const publicTitle = draft.publicTitle.trim()
+  const publicSubtitle = draft.publicSubtitle.trim()
   const publicBlurb = draft.publicBlurb.trim()
   return {
     ...existing,
@@ -123,6 +131,7 @@ export function applyCardDraft(draft: ProtocolCardDraft, existing: CatalogProtoc
        of defence, not the first. */
     title: publicTitle || existing.title,
     publicTitle: publicTitle || undefined,
+    publicSubtitle: publicSubtitle || undefined,
     publicBlurb: publicBlurb || undefined,
     i18n: cleanI18n(draft.i18n),
     coverUrl: draft.coverUrl.trim() || undefined,
@@ -149,6 +158,10 @@ export function cleanI18n(src: ProtocolI18n): ProtocolI18n | undefined {
          first, so a stale clinical title here is what a therapist reading
          the app in this language would see instead of the name. */
       if (name) { kept.publicTitle = name; kept.title = name }
+      /* The subtitle is a label and only a label: it is NOT mirrored onto
+         `title`, because nothing clinical reads it. */
+      const sub = one.publicSubtitle?.trim()
+      if (sub) kept.publicSubtitle = sub
       const blurb = one.publicBlurb?.trim()
       if (blurb) kept.publicBlurb = blurb
     }
@@ -253,7 +266,7 @@ export function ProtocolCardEditor({ draft, busy, inline, codeEditable, onChange
         />
       </label>
 
-      {/* ---- the name, per language --------------------------------------
+      {/* ---- the name, the subtitle and the description, per language ----
           ONE name, read by the person and by the therapist, in THEIR
           language: "Stress 1" is not one string for everyone. All three are
           on screen at once — an empty one says so, and says what that reader
@@ -262,11 +275,12 @@ export function ProtocolCardEditor({ draft, busy, inline, codeEditable, onChange
           other two fall back to it, and English falls back to Portuguese
           first (an English reader hears the Portuguese session). */}
       <div className="pe-field">
-        <span className="pe-label">Nome e descrizione, per lingua <em>quello che leggono la persona e il terapeuta, nella lingua in cui usano l’app</em></span>
+        <span className="pe-label">Nome, sottotitolo e descrizione, per lingua <em>quello che leggono la persona e il terapeuta, nella lingua in cui usano l’app</em></span>
         <div className="pe-names">
           {CARD_LOCALES.map((l) => {
             const isBase = l.id === 'it'
             const title = isBase ? draft.publicTitle : draft.i18n[l.id]?.publicTitle ?? ''
+            const sub = isBase ? draft.publicSubtitle : draft.i18n[l.id]?.publicSubtitle ?? ''
             const blurb = isBase ? draft.publicBlurb : draft.i18n[l.id]?.publicBlurb ?? ''
             const shown = shownName(draft, l.id)
             return (
@@ -278,6 +292,15 @@ export function ProtocolCardEditor({ draft, busy, inline, codeEditable, onChange
                   className="b2b-input" value={title} aria-label={`Nome — ${l.label}`}
                   placeholder={isBase ? 'es. Un respiro prima di dormire' : `Nome in ${l.label}`}
                   onChange={(e) => (isBase ? set({ publicTitle: e.target.value }) : setText(l.id, 'publicTitle', e.target.value))}
+                />
+                {/* The line under the cover on the home shelf. A subtitle,
+                    not a second name: the name is already printed large ON
+                    the picture, and this line used to repeat it. Empty stays
+                    empty — the slot keeps its height either way. */}
+                <input
+                  className="b2b-input" value={sub} aria-label={`Sottotitolo — ${l.label}`}
+                  placeholder={isBase ? 'es. 12 minuti, occhi chiusi' : `Sottotitolo in ${l.label}`}
+                  onChange={(e) => (isBase ? set({ publicSubtitle: e.target.value }) : setText(l.id, 'publicSubtitle', e.target.value))}
                 />
                 <input
                   className="b2b-input" value={blurb} aria-label={`Descrizione — ${l.label}`}
@@ -295,6 +318,9 @@ export function ProtocolCardEditor({ draft, busy, inline, codeEditable, onChange
         </div>
         {invalid && <span className="pe-err">{invalid}</span>}
         <span className="pe-hint">
+          Il <b>nome</b> è stampato grande sulla copertina; il <b>sottotitolo</b> è la riga sotto la copertina
+          nella home (se non lo scrivi, quella riga resta vuota — il nome non viene ripetuto); la{' '}
+          <b>descrizione</b> si legge aprendo la sessione.<br />
           Rinominare cambia solo l’etichetta: codice, famiglia, durate, timeline, sessioni dello Studio e audio
           collegato restano esattamente com’erano.
         </span>

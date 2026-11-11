@@ -74,4 +74,27 @@ const proto = (code: string, files: Record<number, Record<string, string>>, extr
   assert(!rx.includes(CLINICAL_ONLY_CODES[0]), 'the six clinical-only stay inside a led session, never homework')
 }
 
+/* ---- 4: the line under the cover ----------------------------------------
+
+   The home tile prints the NAME across the picture and the SUBTITLE on the
+   line below it. A session with no subtitle written has to resolve to an
+   empty line and not to its name: printing the name there a second time is
+   the behaviour the field was added to remove. */
+{
+  const files = { 12: { 'pt-BR:f': 'x' } }
+  const lib = { audience: 'library' as const, enabled: true }
+  const withSub = proto('GL-CALM 9.1', files, {
+    ...lib,
+    publicTitle: 'Respirar',
+    publicSubtitle: 'Doze minutos, olhos fechados',
+  })
+  const without = proto('GL-CALM 9.2', files, { ...lib, publicTitle: 'Parar' })
+  const sessions = resolveSessions([withSub, without], 'pt-BR', { locale: 'pt-BR', to: 'f' })
+  const a = sessions.find((s) => s.protocolCode === 'GL-CALM 9.1')
+  const b = sessions.find((s) => s.protocolCode === 'GL-CALM 9.2')
+  assert(a?.subtitle === 'Doze minutos, olhos fechados', 'the subtitle a PO wrote reaches the home tile')
+  assert(a?.name === 'Respirar', 'and the name beside it, which is what goes on the picture')
+  assert(b?.subtitle === '', 'no subtitle written is an EMPTY line, never the name printed twice')
+}
+
 console.log(process.exitCode ? '\nFAILED' : '\ndone.')

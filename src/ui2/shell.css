@@ -1832,9 +1832,11 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
    A square cover with the words under it, rather than a landscape tile with
    the words inside it.
 
-   The title is printed twice on purpose: large on the picture, and again as
-   the first line below it. The one on the picture is `aria-hidden` — it is
-   the same words, and a screen reader should hear them once.
+   The title is printed on the picture, large. The line below it is the
+   SUBTITLE a PO writes in the console (protocollo -> Dettagli) -- it used to
+   be the title over again, which said nothing twice. The words on the
+   picture are `aria-hidden`: the square carries the name as its image label
+   and the tap target repeats it, so a screen reader hears it once.
 
    The card is a wrapper holding four things: the square, the save toggle
    over it, the two lines, and a transparent button over all of it carrying
@@ -1937,11 +1939,15 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
   color: #faf8df;
 }
 
+/* The subtitle a PO writes in Dettagli — the line the name used to be
+   repeated on. It holds one line’s height even when nothing is written, so a
+   shelf where some covers have a subtitle and some do not stays aligned. */
 .gl-card__name {
   font-family: 'Outfit', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 1.2;
+  min-height: 1.2em;
 }
 
 /* The ink of the surface, not a fixed slate: this line sits on the ground,

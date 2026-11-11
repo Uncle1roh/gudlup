@@ -128,7 +128,7 @@ export function Catalog({
            way a person finds anything. */
         const e = s.entry
         if (!e) return false
-        return [e.publicTitle, e.publicBlurb, ...Object.values(e.i18n ?? {}).flatMap((x) => [x?.publicTitle, x?.publicBlurb])]
+        return [e.publicTitle, e.publicSubtitle, e.publicBlurb, ...Object.values(e.i18n ?? {}).flatMap((x) => [x?.publicTitle, x?.publicSubtitle, x?.publicBlurb])]
           .some((f) => !!f && f.toLowerCase().includes(q))
       }),
     [all, dur, theme, q, t],

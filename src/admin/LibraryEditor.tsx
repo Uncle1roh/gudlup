@@ -127,6 +127,7 @@ function tidyI18n(i18n: ProtocolI18n): ProtocolI18n | undefined {
     /* Anything the clinical editor wrote on this row and this screen does
        not show is carried through untouched. */
     if (one.publicTitle?.trim()) kept.publicTitle = one.publicTitle.trim()
+    if (one.publicSubtitle?.trim()) kept.publicSubtitle = one.publicSubtitle.trim()
     if (one.publicBlurb?.trim()) kept.publicBlurb = one.publicBlurb.trim()
     if (Object.keys(kept).length) out[id] = kept
   }

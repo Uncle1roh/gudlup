@@ -24,6 +24,9 @@ export interface ProtocolText {
   title?: string
   blurb?: string
   publicTitle?: string
+  /** The short line printed UNDER the cover on the home shelf. See
+      `Protocol.publicSubtitle`. */
+  publicSubtitle?: string
   publicBlurb?: string
 }
 
@@ -144,6 +147,23 @@ export interface Protocol {
    * which is the behavior everything had before this field existed.
    */
   publicTitle?: string
+  /**
+   * The SUBTITLE under the cover on the home shelf.
+   *
+   * The album tile prints the name twice: large on the picture, and again on
+   * the line below it. That line is this field instead — a second, shorter
+   * line that says something the name does not ("12 minuti, occhi chiusi"),
+   * the way a record sleeve carries a subtitle under the title.
+   *
+   * It is EDITORIAL and it is OPTIONAL, and it has no fallback on purpose:
+   * nothing written here means an empty line, not the name printed a second
+   * time, which is the thing it was introduced to stop. The slot keeps its
+   * height either way, so a shelf of covers stays aligned.
+   *
+   * Never a condition, a diagnosis or a claim — the same rule `publicTitle`
+   * lives under, for the same reason: a person reads it.
+   */
+  publicSubtitle?: string
   /** Non-therapeutic one-liner that goes with `publicTitle`. */
   publicBlurb?: string
   /**
@@ -187,7 +207,7 @@ export interface Protocol {
    CLINICAL title in their own language over the PUBLIC one in another, and
    the register boundary is a legal one — it outranks a language preference. */
 
-type Named = Pick<Protocol, 'title' | 'blurb' | 'publicTitle' | 'publicBlurb' | 'i18n'>
+type Named = Pick<Protocol, 'title' | 'blurb' | 'publicTitle' | 'publicSubtitle' | 'publicBlurb' | 'i18n'>
 
 /**
  * The languages a reader of `locale` is served, in order, before the base
@@ -223,6 +243,19 @@ export function protocolTitle(p: Pick<Protocol, 'title' | 'i18n'>, locale?: Text
 /** The title to print where a PERSON reads it (player, home, history). */
 export function patientTitle(p: Pick<Protocol, 'title' | 'publicTitle' | 'i18n'>, locale?: TextLocale): string {
   return field(p, 'publicTitle', locale) || field(p, 'title', locale) || p.title
+}
+
+/**
+ * The SUBTITLE to print under the cover, in `locale`.
+ *
+ * Empty string when no PO has written one — and no fallback to the title or
+ * the blurb, deliberately. The name is already printed on the picture; the
+ * line under it existed to repeat it, which is exactly what this field
+ * replaces. An empty line is the honest answer, and the caller reserves its
+ * height so the shelf does not go ragged.
+ */
+export function patientSubtitle(p: Pick<Protocol, 'publicSubtitle' | 'i18n'>, locale?: TextLocale): string {
+  return field(p, 'publicSubtitle', locale)
 }
 
 /** The blurb to print where a PERSON reads it. Falls back to the clinical one

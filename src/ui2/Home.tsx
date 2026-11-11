@@ -319,8 +319,10 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
             GOOD LOOP
           </span>
 
-          {/* The same words as the line below the cover, printed large on the
-              picture. Hidden from a screen reader rather than said twice. */}
+          {/* The NAME, large on the picture. Hidden from a screen reader:
+              the square above already carries it as its image label, and so
+              does the tap target below. The line under the cover is the
+              subtitle now, not these words a second time. */}
           <span aria-hidden="true" className={onToggleSave ? 'gl-card__over is-narrow' : 'gl-card__over'}>
             {title}
           </span>
@@ -341,7 +343,13 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
         )}
       </span>
 
-      <span className="gl-card__name">{title}</span>
+      {/* The SUBTITLE, where the name used to be printed a second time.
+          The name is on the picture above, large; repeating it here said
+          nothing twice. A PO writes this line in console → protocollo →
+          Dettagli, per language, and nothing written means an empty line
+          rather than the name again — the slot keeps its height (shell.css)
+          so a shelf of covers stays aligned either way. */}
+      <span className="gl-card__name">{session.subtitle ?? ''}</span>
       {/* Where the mockup prints the protocol code, the theme goes. */}
       <span className="gl-card__meta">{label} · {mins} min</span>
 

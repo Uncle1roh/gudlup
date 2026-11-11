@@ -37,7 +37,7 @@ const AUTHORED_KEYS = [
   'plain', 'plainByDuration', 'plainImportedAt',
   'studio', 'studioByDuration',
   'assetMap', 'datasheet', 'spec',
-  'coverUrl', 'publicTitle', 'publicBlurb', 'i18n',
+  'coverUrl', 'publicTitle', 'publicSubtitle', 'publicBlurb', 'i18n',
   'offer', 'library', 'audience', 'tier', 'claimsGate',
 ] as const satisfies readonly (keyof CatalogProtocol)[]
 

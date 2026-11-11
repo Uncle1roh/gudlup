@@ -24,7 +24,7 @@ import {
   timelinesByDuration,
   type CatalogProtocol,
 } from '../src/data/catalog'
-import { patientBlurb, patientTitle, type Duration, type ProtocolVersion } from '../src/types/domain'
+import { patientBlurb, patientSubtitle, patientTitle, type Duration, type ProtocolVersion } from '../src/types/domain'
 import {
   DURATION_TAG_IDS,
   MAX_TAGS,
@@ -257,6 +257,33 @@ assert(after.code === before.code && after.family === before.family, 'the card n
 
 const cleared = applyCardDraft({ ...cardDraftFrom(after), publicTitle: '', publicBlurb: '' }, after)
 assert(cleared.publicTitle === undefined && cleared.publicBlurb === undefined, 'clearing the public name restores the clinical title')
+
+/* --- the SUBTITLE: the line under the cover on the home shelf -------------
+
+   It is the one public field with NO fallback. The tile prints the name large
+   on the picture and used to print it again underneath; a subtitle nobody
+   wrote has to come out EMPTY, because falling back to the name is the exact
+   behaviour it was introduced to remove. */
+assert(patientSubtitle(named) === '', 'no subtitle written reads as empty — never the name again')
+assert(patientSubtitle({ ...named, publicSubtitle: '  ' }) === '', 'a subtitle of spaces is no subtitle')
+assert(patientSubtitle({ ...named, publicSubtitle: '12 minuti, occhi chiusi' }) === '12 minuti, occhi chiusi',
+  'the subtitle a PO wrote is what a person reads')
+assert(patientSubtitle({ publicSubtitle: 'Base', i18n: { 'pt-BR': { publicSubtitle: 'Doze minutos' } } }, 'pt-BR') === 'Doze minutos',
+  'a Portuguese reader gets the Portuguese subtitle')
+assert(patientSubtitle({ publicSubtitle: 'Base', i18n: { 'pt-BR': { publicSubtitle: 'Doze minutos' } } }, 'en') === 'Doze minutos',
+  '…and an English reader falls through to Portuguese, like every other name')
+assert(patientSubtitle({ publicSubtitle: 'Base', i18n: {} }, 'pt-BR') === 'Base', 'with no translation the base line stands')
+
+const subbed = applyCardDraft(
+  { ...cardDraftFrom(before), publicTitle: 'Prima di dormire', publicSubtitle: '12 minuti, occhi chiusi' },
+  before,
+)
+assert(subbed.publicSubtitle === '12 minuti, occhi chiusi', 'the Details board saves the subtitle')
+assert(subbed.title === 'Prima di dormire', '…and the subtitle is NOT mirrored onto the clinical title')
+assert(cardDraftFrom(subbed).publicSubtitle === '12 minuti, occhi chiusi', 'reopening the board shows it back')
+assert(cardDraftFrom(before).publicSubtitle === '', 'a row that never had one opens empty, not pre-filled with the name')
+assert(applyCardDraft({ ...cardDraftFrom(subbed), publicSubtitle: '' }, subbed).publicSubtitle === undefined,
+  'clearing it stores nothing rather than an empty string')
 
 /* ========================================================================== *
    §3 tags

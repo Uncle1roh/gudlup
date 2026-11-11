@@ -462,6 +462,12 @@ alter table protocols  add column if not exists studio_by_duration jsonb;
 -- Setting it changes the LABEL only: the code, the family, the pathway and the
 -- clinical record are untouched.
 alter table protocols  add column if not exists public_title text;
+-- The SUBTITLE under the cover on the home shelf. The tile prints the name
+-- large ON the picture; this is the line beneath it, which used to repeat that
+-- name. Null → an EMPTY line, deliberately: the repetition is what it
+-- replaces. A label only — nothing clinical reads it. Per-language copies go
+-- in the `i18n` column below, as `publicSubtitle`.
+alter table protocols  add column if not exists public_subtitle text;
 alter table protocols  add column if not exists public_blurb text;
 
 -- TAGS. Editorial metadata for finding and grouping published material (what it
@@ -472,7 +478,8 @@ alter table protocols  add column if not exists tags jsonb not null default '[]'
 -- LANGUAGES. The app is read in Italian, Portuguese and English; its protocols
 -- were written in whichever language the PO authored them in, so switching the
 -- interface gave a person a translated app around an untranslated library.
--- This is the overlay: { "it": { "title": …, "publicTitle": …, "publicBlurb": … },
+-- This is the overlay: { "it": { "title": …, "publicTitle": …, "publicSubtitle": …,
+-- "publicBlurb": … },
 -- "pt-BR": { … } }, per language and per field. The columns above stay the
 -- source of truth and are what a row shows when a language has nothing.
 alter table protocols  add column if not exists i18n jsonb not null default '{}';

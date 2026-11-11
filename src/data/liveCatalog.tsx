@@ -48,7 +48,7 @@ import {
   type SelfUseSession,
   type SelfUseTheme,
 } from './selfuse'
-import { familyOfCode, nameLocales, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Protocol, type ProtocolFamily } from '../types/domain'
+import { familyOfCode, nameLocales, patientSubtitle, patientTitle, patientBlurb, protocolBlurb, protocolTitle, type Duration, type Protocol, type ProtocolFamily } from '../types/domain'
 import { useI18n, type Locale } from '../i18n'
 import { variantKey, type Addressee, type VoiceLang } from '../tts/voiceLang'
 import { tierChoice } from '../legal/claims'
@@ -197,6 +197,15 @@ export interface ResolvedSession extends SelfUseSession {
   /** A real cover image a PO uploaded, when there is one. Absent = the
       generated artwork. */
   coverUrl?: string
+  /**
+   * The line a PO wrote for UNDER the cover, in the reader’s language.
+   *
+   * Empty string when nobody has written one, and it does NOT fall back to
+   * the name: the name is already printed on the picture, and the shelf used
+   * to print it a second time underneath. An editorial spine session has no
+   * subtitle of its own — the field comes from the catalogue row.
+   */
+  subtitle?: string
   /** True when the catalog carries this session's protocol and it is enabled. */
   available: boolean
   /** True when a PO has published rendered audio for at least one duration. */
@@ -339,6 +348,9 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale, list
          name for an Italian reader, and asking the base column alone would
          drop them back to the English editorial one. */
       name: publicName(entry, locale) ? patientTitle(entry, locale) : s.name,
+      /* Only the catalogue row carries one; an editorial session has none,
+         and that is an empty line rather than the name twice. */
+      subtitle: patientSubtitle(entry, locale),
       blurb: publicLine(entry, locale) ? patientBlurb(entry, locale) : s.blurb,
       /* No fallback to the editorial durations. When the catalog has nothing
          rendered, the honest answer is that this session cannot be started —
@@ -358,6 +370,7 @@ export function resolveSessions(catalog: CatalogProtocol[], locale: Locale, list
     .map((p) => ({
       slug: `catalog:${p.code}`,
       name: patientTitle(p, locale),
+      subtitle: patientSubtitle(p, locale),
       blurb: patientBlurb(p, locale),
       about: patientBlurb(p, locale),
       expect: [],

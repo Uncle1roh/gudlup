@@ -246,6 +246,8 @@ function mapCatalog(r: any): CatalogProtocol {
     // naming: `title` is the clinical name, `public_title` the non-therapeutic
     // one a person reads. Absent → the clinical title is shown, as before.
     publicTitle: r.public_title ?? undefined,
+    // the line under the cover on the home shelf (script 31)
+    publicSubtitle: r.public_subtitle ?? undefined,
     publicBlurb: r.public_blurb ?? undefined,
     // the per-language overlay on those names (src/types/domain.ts)
     i18n: r.i18n && typeof r.i18n === 'object' ? r.i18n : undefined,
@@ -981,6 +983,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         offer: p.offer ?? null,
         cover_url: p.coverUrl ?? null,
         public_title: p.publicTitle ?? null,
+        public_subtitle: p.publicSubtitle ?? null,
         public_blurb: p.publicBlurb ?? null,
         i18n: p.i18n ?? {},
         tags: normalizeTags(p.tags),

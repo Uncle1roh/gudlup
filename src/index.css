@@ -1359,7 +1359,8 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .pe-langs { display: flex; flex-wrap: wrap; gap: 6px; }
 /* the public name in every language, all on screen at once */
 .pe-names { display: flex; flex-direction: column; gap: 8px; }
-.pe-names__row { display: grid; grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1.4fr); gap: 6px 8px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line, #dfe7e2); background: #fff; }
+/* lingua | nome | sottotitolo | descrizione */
+.pe-names__row { display: grid; grid-template-columns: 120px minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1.3fr); gap: 6px 8px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line, #dfe7e2); background: #fff; }
 .pe-names__row.is-empty { border-style: dashed; border-color: #d9a441; background: #fffaf0; }
 .pe-names__lang { font-size: 13px; font-weight: 700; }
 .pe-names__lang em { font-weight: 500; font-style: normal; color: var(--muted, #7a8a80); font-size: 11.5px; }
