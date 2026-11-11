@@ -75,9 +75,14 @@ export function Backgrounds() {
         setStatus('Anteprima locale: senza database l’immagine non viene caricata da nessuna parte e sparisce al ricaricamento.')
         return
       }
-      const url = await uploadBackground(which, file)
+      const { url, note } = await uploadBackground(which, file)
       setSet((s) => ({ ...s, [which]: url }))
-      setStatus('Immagine caricata. Premi Salva per metterla in linea.')
+      /* `note` is what happened to the FILE on the way — almost always that
+         it was scaled down. Worth saying: an operator who exported at 4000 px
+         should know the page did not use all of it, and an operator whose
+         landing got slower should be able to see that it did not come from
+         here. */
+      setStatus(`Immagine caricata.${note ? ' ' + note : ''} Premi Salva per metterla in linea.`)
     } catch (e) {
       setError(String((e as Error).message ?? e))
     } finally {
@@ -89,7 +94,15 @@ export function Backgrounds() {
     setBusy('save'); setError(null); setStatus(null)
     const res = await saveBackgrounds(set)
     setBusy(null)
-    if (!res.ok) { setError(res.message); return }
+    if (!res.ok) {
+      /* The same permission wall as the upload, one step later: the row is
+         admin-only until script 30 runs, and "new row violates row-level
+         security policy" tells the person nothing they can act on. */
+      setError(/row-level security|violates|permission/i.test(res.message)
+        ? 'Salvataggio non riuscito: questo account non ha il permesso di scrivere questa impostazione. È un permesso del database, da eseguire una volta sola: supabase/30-backgrounds-access.sql.'
+        : res.message)
+      return
+    }
     setStatus('Salvato. Chi apre l’app adesso vede questi sfondi; chi la ha già aperta li vede al prossimo caricamento.')
   }
 
@@ -178,9 +191,11 @@ export function Backgrounds() {
       </div>
 
       <p className="b2b-sub sls-bg__tip">
-        Consigliato: JPG o WebP, circa 2000 px sul lato lungo, sotto 400 KB. L’immagine viene ritagliata
-        al centro per riempire qualsiasi schermo, quindi tieni il soggetto lontano dai bordi — e scura
-        abbastanza da reggere il testo chiaro che ci sta sopra.
+        Carica pure il file pieno: viene ridotto qui, prima di partire, a circa 2000 px sul lato lungo e
+        sotto mezzo megabyte — questa foto è la prima cosa che un telefono scarica, e una da dieci
+        megabyte è una landing rotta per tutti. L’immagine viene ritagliata al centro per riempire
+        qualsiasi schermo, quindi tieni il soggetto lontano dai bordi — e scura abbastanza da reggere
+        il testo chiaro che ci sta sopra.
       </p>
     </div>
   )

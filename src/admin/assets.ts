@@ -222,7 +222,124 @@ export function coverPathFor(code: string, fileName: string): string {
  * folder of its own so a background can never collide with a cover whose
  * code happens to be `landing`.
  */
-export async function uploadBackground(which: 'landing' | 'app', file: File): Promise<string> {
+/* ---- how big a background may actually travel -------------------------
+   A cover is a thumbnail; a background is the whole screen, and the files
+   that arrive here are what a camera or an image generator produced — three,
+   six, ten megabytes of PNG. Two separate things go wrong with that:
+
+     · the upload itself. A ten megabyte POST to São Paulo over an office
+       connection takes long enough that the edge in front of Storage gives
+       up and answers 520, which reaches the operator as "Caricamento non
+       riuscito: http 520" — a number with nothing to do with what they did.
+     · and then every visitor pays for it. This picture is the FIRST paint of
+       the landing page, on whatever phone and whatever connection the person
+       has. A ten megabyte background is a broken landing page for everyone.
+
+   So the file is re-encoded here before it is sent, and the console's own
+   advice ("circa 2000 px, sotto 400 KB") is simply carried out instead of
+   printed and hoped for. */
+const BG_MAX_EDGE = 2200
+const BG_TARGET_BYTES = 480 * 1024
+/** Tried in order: WebP where the browser can write it (roughly a third
+    smaller at the same quality), JPEG where it cannot. */
+const BG_ENCODINGS: { type: string; ext: string }[] = [
+  { type: 'image/webp', ext: 'webp' },
+  { type: 'image/jpeg', ext: 'jpg' },
+]
+const BG_QUALITIES = [0.86, 0.78, 0.7, 0.62]
+
+function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
+}
+
+export interface ShrunkImage {
+  blob: Blob
+  ext: string
+  /** What to tell the operator happened to their file. */
+  note: string
+}
+
+/**
+ * Scale a background down to something a page can actually load.
+ *
+ * Returns the ORIGINAL untouched when it is already small enough, and also
+ * when the browser cannot decode it — an AVIF on an older engine, a file that
+ * is not really an image. Refusing to upload because the re-encode failed
+ * would be a worse outcome than uploading what the person chose: the size
+ * limit above still applies either way.
+ */
+export async function shrinkBackground(file: File): Promise<ShrunkImage> {
+  const ext = (/\.([a-z0-9]+)$/i.exec(file.name)?.[1] ?? 'jpg').toLowerCase()
+  const asIs: ShrunkImage = { blob: file, ext, note: '' }
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    return { ...asIs, note: 'Immagine caricata com’è: questo browser non è riuscito a rileggerla per ridurla.' }
+  }
+  const edge = Math.max(bitmap.width, bitmap.height)
+  if (edge <= BG_MAX_EDGE && file.size <= BG_TARGET_BYTES) {
+    bitmap.close?.()
+    return asIs
+  }
+  const scale = Math.min(1, BG_MAX_EDGE / edge)
+  const w = Math.max(1, Math.round(bitmap.width * scale))
+  const h = Math.max(1, Math.round(bitmap.height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const g = canvas.getContext('2d')
+  if (!g) { bitmap.close?.(); return asIs }
+  g.drawImage(bitmap, 0, 0, w, h)
+  bitmap.close?.()
+
+  /* Best quality that fits the budget, and if nothing fits, the smallest
+     thing produced — still far better than the original. */
+  let best: { blob: Blob; ext: string } | null = null
+  for (const enc of BG_ENCODINGS) {
+    for (const q of BG_QUALITIES) {
+      const blob = await toBlob(canvas, enc.type, q)
+      // a browser that cannot write WebP silently hands back a PNG instead
+      if (!blob || blob.type !== enc.type) break
+      if (!best || blob.size < best.blob.size) best = { blob, ext: enc.ext }
+      if (blob.size <= BG_TARGET_BYTES) {
+        return {
+          blob, ext: enc.ext,
+          note: `Ridotta a ${w}×${h}, ${(blob.size / 1024).toFixed(0)} KB (era ${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+        }
+      }
+    }
+  }
+  if (!best || best.blob.size >= file.size) return asIs
+  return {
+    blob: best.blob, ext: best.ext,
+    note: `Ridotta a ${w}×${h}, ${(best.blob.size / 1024).toFixed(0)} KB (era ${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+  }
+}
+
+/**
+ * Say what a Storage failure actually means.
+ *
+ * The two the Sfondi page produced both read as nonsense to the person who
+ * pressed the button, and both have one concrete answer, so the answer is in
+ * the message rather than in a developer's head.
+ */
+function explainUpload(message: string, status?: number): string {
+  const m = message.toLowerCase()
+  if (m.includes('row-level security') || m.includes('violates') || status === 403) {
+    return 'Caricamento non riuscito: questo account non ha il permesso di scrivere in questa cartella. '
+      + 'È un permesso del database, non un problema dell’immagine — va eseguito una volta sola: '
+      + 'supabase/30-backgrounds-access.sql.'
+  }
+  if (status === 520 || status === 522 || status === 524 || m.includes('520') || m.includes('timeout') || m.includes('failed to fetch')) {
+    return 'Caricamento non riuscito: il server ha chiuso la connessione prima della fine '
+      + `(${status ?? 'timeout'}). Di solito è un file troppo pesante o una rete lenta: riprova, `
+      + 'oppure esporta l’immagine più leggera (circa 2000 px sul lato lungo).'
+  }
+  return `Caricamento non riuscito: ${message}`
+}
+
+export async function uploadBackground(which: 'landing' | 'app', file: File): Promise<{ url: string; note: string }> {
   if (!COVER_TYPES.includes(file.type)) {
     throw new Error('Formato non supportato — usa JPG, PNG, WebP o AVIF.')
   }
@@ -233,15 +350,18 @@ export async function uploadBackground(which: 'landing' | 'app', file: File): Pr
     )
   }
   const sb = client()
-  const ext = (/\.([a-z0-9]+)$/i.exec(file.name)?.[1] ?? 'jpg').toLowerCase()
+  const { blob, ext, note } = await shrinkBackground(file)
   const path = `backgrounds/${which}.${ext}`
   const { error } = await sb.storage.from(ASSET_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
-  if (error) throw new Error(`Caricamento non riuscito: ${error.message}`)
+    .upload(path, blob, { upsert: true, contentType: blob.type || file.type, cacheControl: '3600' })
+  if (error) {
+    const status = (error as { statusCode?: string | number }).statusCode
+    throw new Error(explainUpload(error.message, status === undefined ? undefined : Number(status)))
+  }
   /* The stamp matters more here than anywhere: the same path is reused every
      time, and without it the CDN serves yesterday's picture for hours and
      the upload looks as if it did nothing. */
-  return `${publicUrl(sb, path)}?v=${Date.now()}`
+  return { url: `${publicUrl(sb, path)}?v=${Date.now()}`, note }
 }
 
 export async function uploadProtocolCover(code: string, file: File): Promise<string> {

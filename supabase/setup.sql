@@ -138,6 +138,20 @@ create or replace function is_hr() returns boolean
   language sql stable security definer set search_path = public as
   $$ select exists (select 1 from profiles where auth_uid = auth.uid() and role = 'hr_admin') $$;
 
+-- The commercial team. Its console owns the two background photographs and
+-- nothing else in app_settings, so it needs a predicate of its own rather
+-- than a widened is_admin(). Defined here as well as in the sales section
+-- further down, because the app_settings policies below name it and a policy
+-- cannot be created against a function that does not exist yet.
+--
+-- `role::text`, not `role = 'sales'`: the Supabase editor runs this file as
+-- ONE transaction, and a value added to an enum inside that transaction
+-- cannot be compared against as a literal in it. See the longer note on the
+-- second copy of this function.
+create or replace function is_sales() returns boolean
+  language sql stable security definer set search_path = public as
+  $$ select exists (select 1 from profiles where auth_uid = auth.uid() and role::text = 'sales') $$;
+
 alter table therapist_activation_codes enable row level security;
 alter table company_therapists enable row level security;
 
@@ -771,6 +785,48 @@ drop policy if exists app_settings_read_flags on app_settings;
 create policy app_settings_read_flags on app_settings
   for select using (key = 'feature_flags');
 
+-- The two background photographs are the second such row, and for the same
+-- reason twice over.
+--
+-- READ: the landing page is the surface one of these two pictures sits on,
+-- and it is read by people who are not signed in at all. Admin-only reads
+-- meant refreshBackgrounds() asked for the row, got zero rows back (RLS
+-- filters, it does not refuse) and quietly used the pictures that shipped
+-- with the build. The setting looked saved and changed nothing anywhere.
+--
+-- WRITE: the screen that sets them is in the COMMERCIAL console, which only
+-- the `sales` role can open -- an admin cannot even reach it. So the write
+-- has to name that role, scoped to this one key. The ElevenLabs keys in the
+-- neighbouring rows stay admin-only: policies are OR'd and neither of these
+-- can reach past its own `key =` test.
+drop policy if exists app_settings_read_backgrounds on app_settings;
+create policy app_settings_read_backgrounds on app_settings
+  for select using (key = 'backgrounds');
+
+-- INSERT and UPDATE as two policies rather than one `for all`, and the reason
+-- is not tidiness. A permissive policy's expression is evaluated for EVERY
+-- command it covers, SELECT included -- and `is_sales()` has its execute
+-- permission revoked from public (setup.sql, sales section). A `for all`
+-- policy here would therefore make an anonymous read of this table call a
+-- function anon may not call. `is_admin()` is public-executable, which is why
+-- the older `for all` policies beside these have never shown the problem.
+--
+-- The pair also covers exactly what an upsert does and nothing more: the row
+-- is created by whoever saves first and overwritten by everyone after, and a
+-- policy covering only the insert half would have worked exactly once. No
+-- DELETE: nothing in the console deletes these.
+drop policy if exists app_settings_backgrounds_write on app_settings;
+drop policy if exists app_settings_backgrounds_insert on app_settings;
+create policy app_settings_backgrounds_insert on app_settings
+  for insert
+  with check (key = 'backgrounds' and (is_admin() or is_sales()));
+
+drop policy if exists app_settings_backgrounds_update on app_settings;
+create policy app_settings_backgrounds_update on app_settings
+  for update
+  using (key = 'backgrounds' and (is_admin() or is_sales()))
+  with check (key = 'backgrounds' and (is_admin() or is_sales()));
+
 -- All three areas on. Only ever written by an admin in the console.
 insert into app_settings (key, value)
 values ('feature_flags', '{"player": true, "booking": true, "video": true}'::jsonb)
@@ -1030,6 +1086,40 @@ begin
       create policy protocol_audio_admin_write on storage.objects
         for all using (bucket_id = 'protocol-audio' and is_admin())
         with check (bucket_id = 'protocol-audio' and is_admin())
+    $pol$;
+
+    -- ...and the commercial console may write the two background pictures,
+    -- in that folder and nowhere else. storage.foldername(name) splits the
+    -- object path, so [1] is the first folder: `backgrounds/landing.jpg`
+    -- passes, `GL-ANX/1.1/voce.mp3` does not. `for all` because the page
+    -- overwrites the same two paths (upsert) rather than adding files, and a
+    -- policy covering only the insert half would have worked exactly once.
+    execute 'drop policy if exists protocol_audio_backgrounds_write on storage.objects';
+    execute 'drop policy if exists protocol_audio_backgrounds_insert on storage.objects';
+    execute $pol$
+      create policy protocol_audio_backgrounds_insert on storage.objects
+        for insert
+        with check (
+          bucket_id = 'protocol-audio'
+          and (storage.foldername(name))[1] = 'backgrounds'
+          and (is_admin() or is_sales())
+        )
+    $pol$;
+
+    execute 'drop policy if exists protocol_audio_backgrounds_update on storage.objects';
+    execute $pol$
+      create policy protocol_audio_backgrounds_update on storage.objects
+        for update
+        using (
+          bucket_id = 'protocol-audio'
+          and (storage.foldername(name))[1] = 'backgrounds'
+          and (is_admin() or is_sales())
+        )
+        with check (
+          bucket_id = 'protocol-audio'
+          and (storage.foldername(name))[1] = 'backgrounds'
+          and (is_admin() or is_sales())
+        )
     $pol$;
 
     execute 'drop policy if exists protocol_audio_read on storage.objects';
