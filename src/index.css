@@ -3696,7 +3696,7 @@ td, th { overflow-wrap: anywhere; }
 
    The frame goes clear while the door's photograph is the ground (POs,
    2026-11-06). Everything INSIDE it keeps its own panes — the cards, the
-   consent rows, the orb — so nothing is read against moving water; what
+   consent rows, the figures — so nothing is read against moving water; what
    goes is the sheet of near-black between them and the picture.
 
    Keyed on the stage name, so this is the door and the first run and
@@ -3710,11 +3710,11 @@ html[data-gl-amb='login'] .app-frame.su-studio {
 /* The bloom `su-studio` floats above its ground is for a flat ground. */
 html[data-gl-amb='login'] .app-frame.su-studio::before { display: none; }
 
-/* The left half of the first-run screens is `.fr__stage`: a flat panel with
-   the orb's glow over it. Only the flat colour goes — the glow is a stack
-   of rgba stops and layers over the photograph as it was meant to, which is
-   what keeps the orb from floating on water with nothing under it. */
-html[data-gl-amb='login'] .fr__stage { background-color: transparent; }
+/* The left half of the first-run screens used to be a panel with an orb
+   glowing on it. There is no panel and no orb (POs, 2026-11-11): above
+   1000px that half of the window is the photograph itself, and the only
+   rule it needs is the one above, which takes the near-black sheet off the
+   frame. */
 
 /* The words sit straight on the frame, which is now a photograph — and a
    photograph is not an even ground. The right-hand column carries a veil

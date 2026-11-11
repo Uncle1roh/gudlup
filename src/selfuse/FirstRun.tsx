@@ -19,12 +19,17 @@
                (ONB-4.1), the work-device line (ONB-4.2) and a personal
                e-mail (ONB-4.3, SPN-12).
 
-   After that, the explainer cards: what the sessions are for and where they
-   come from. They promise nothing clinical. The method card describes what
-   the audio technically does — sound alternating between the ears, binaural
-   audio, structured breathing cues, guided imagery — and names no modality
-   (MN-31, Lexicon_Avoid 15/16): the professional may draw such a connection
-   in their own communication with their own client; Good Loop may not.
+   After that, the explainer cards. THE WORDS ON THEM ARE THE POs' OWN
+   (`Good Loop Visual ID/goodloop-onboarding-wizard-v07.html`, 2026-11-11):
+   the methodology and what it is made of, the two ways of using it, and the
+   techniques it draws on, each one quoted from that file rather than
+   rewritten here. The card that used to sit between them — "Made for your
+   working day" — is not in the wizard and is gone with this change.
+
+   The wizard orders its four screens welcome, two ways, techniques, consent.
+   This flow keeps consent FIRST, because that is the legal framework's order
+   (ONB-05) and not a copy decision: nothing of Good Loop is shown to
+   somebody who has not been told what it is not.
 
    Every acceptance is recorded the moment it is given (versioned, timestamped,
    server-side through the legal context), not when the last card is reached.
@@ -35,7 +40,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { Icon, type IconName } from './icons'
-import { BreathingOrb } from '../components/BreathingOrb'
 import { useSuTheme } from './theme'
 import { useDataProvider } from '../data/provider'
 import { useLegal } from '../legal/LegalContext'
@@ -49,21 +53,33 @@ interface Point {
   note: string
 }
 
-type ArtKey = 'modes' | 'work' | 'method'
+/* ---- NO DRAWINGS, AND ONE GROUND ----------------------------------------
 
-const ART: Record<ArtKey, { src: string; wide?: boolean; small?: boolean }> = {
-  modes:  { src: '/tutorial/t2.svg', wide: true },
-  work:   { src: '/tutorial/t1.svg' },
-  method: { src: '/tutorial/t3.svg', small: true },
-}
+   The three `/tutorial/t*.svg` illustrations, and the orb that stood in for
+   them on the legal screens, are gone (POs, 2026-11-11): the photograph
+   behind the door is the ground for the whole of making an account, it does
+   not change from one screen to the next, and nothing is drawn on top of
+   it. What the cards carry instead is what the wizard puts on them — the
+   figures, the session lengths, the techniques. Words. */
 
 interface ExplainerStep {
   kind: 'explainer'
+  /** The small capital line above the title, where the wizard has one. */
+  eyebrow?: string
   title: string
   body: string
-  art: ArtKey
-  points: Point[]
+  points?: Point[]
+  /** Nine short techniques read as a grid of cards, not as a list. */
+  grid?: boolean
   tight?: boolean
+  /** The four figures of the methodology. */
+  stats?: { num: string; label: string }[]
+  /** The three session lengths, named. */
+  durations?: { label: string; mins: string }[]
+  quote?: string
+  credit?: { name: string; role: string }
+  /** The word on the button, where the POs wrote one for this card. */
+  cta?: string
 }
 type Step =
   | { kind: 'how' }
@@ -71,64 +87,86 @@ type Step =
   | { kind: 'sponsored' }
   | ExplainerStep
 
-/** Card 1 of the explainer, only for someone whose company bought this. */
+/* ---- card 1: the methodology --------------------------------------------
+   Wizard screen 1. The figures are the POs' own count of what the method is
+   made of; the three lengths are the three time signatures the catalogue
+   publishes (6 / 12 / 24), under the names the wizard gives them. */
+const WELCOME_STEP: ExplainerStep = {
+  kind: 'explainer',
+  eyebrow: 'Proprietary Methodology',
+  title: 'Mental health and wellbeing, reimagined through listening.',
+  body: 'A proprietary, science-validated audio methodology that speaks directly to your nervous system.',
+  stats: [
+    { num: '9', label: 'Integrated Tools' },
+    { num: '6', label: 'Process Phases' },
+    { num: '112', label: 'Validated Techniques' },
+    { num: '30+', label: 'Years Clinical Practice' },
+  ],
+  durations: [
+    { label: 'Quick Reset', mins: '6 min' },
+    { label: 'Full Session', mins: '12 min' },
+    { label: 'Deep Immersion', mins: '24 min' },
+  ],
+  cta: 'Begin',
+}
+
+/** Card 2 — wizard screen 2 — only for someone whose company bought this:
+    the second way of using Good Loop does not exist without one, and a
+    person who cannot book a professional should not be shown a card about
+    booking one. The qualifier on that line is the one sentence here that is
+    not the wizard's — what the wizard calls Professionally Guided Use is a
+    plan their employer either bought or did not. */
 function modesStep(professional: boolean): ExplainerStep {
   return {
     kind: 'explainer',
-    title: 'One library, two ways to use it',
+    title: 'One platform. Two ways to transform.',
     body:
-      'Most days you open Good Loop on your own. Where your plan includes it, a licensed professional can also work with you — and may use the same sessions in the care they provide.',
-    art: 'modes',
+      'Two ways to experience Good Loop: Self-Guided Use for everyday wellbeing and Professionally Guided Use with a licensed professional.',
+    cta: 'Continue',
     points: [
       {
-        label: 'On your own',
-        note: 'Short audio sessions for the moment you are in — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.',
+        label: 'For You',
+        note: 'Self-directed sessions for everyday wellbeing — stress, sleep, focus. Available anytime, on the go.',
       },
       {
-        label: 'With a professional',
+        label: 'With a Professional',
         note: professional
-          ? 'Included in your plan: sessions with a licensed psychologist, booked and held inside the app. They decide what is used and when.'
-          : 'Available with your company’s extended plan: sessions with a licensed psychologist, booked and held inside the app.',
+          ? 'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.'
+          : 'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.',
       },
     ],
   }
 }
 
-/** What the sessions are FOR. Each moment is named as the moment, not as a
-    preposition: "Before" and "After" were the shortest possible labels and
-    said nothing until you read the line under them. */
-const WORK_STEP: ExplainerStep = {
-  kind: 'explainer',
-  title: 'Made for your working day',
-  body:
-    'Put your headphones on, choose how long you have, and just listen: the voice and the sound guide you. Nothing to read, nothing to answer, and your company is never told what you chose.',
-  art: 'work',
-  points: [
-    { label: 'Before something difficult', note: 'A meeting that worries you, a call you have been putting off.' },
-    { label: 'After something unexpected', note: 'Something that went wrong and is still sitting on your shoulders.' },
-    { label: 'At the end of the day', note: 'To close the working day and not take it home with you.' },
-  ],
-}
+/* ---- card 3: where it comes from ----------------------------------------
+   Wizard screen 3, whole: the nine techniques with the wizard's own one-line
+   glosses, the line about the nervous system, and who wrote the method.
 
-/** Where it comes from: what the audio technically does, built with
-    psychologists. A description of the sound, not a claim about you — and in
-    the order you MEET it, voice first, rather than the order the engine
-    mixes it. */
-const METHOD_STEP: ExplainerStep = {
+   Those glosses name modalities, which the catalogue may not do (MN-31,
+   Lexicon_Avoid row 15). It is the POs' call, and it is already the public
+   position: `public/Metodo.tsx` prints the same list on the open web. The
+   lexicon linter runs over catalogue metadata, never over this. */
+const SCIENCE_STEP: ExplainerStep = {
   kind: 'explainer',
-  title: 'Made of sound',
-  body:
-    'Each session combines six audio elements, built with psychologists to help you relax in the time you have.',
-  art: 'method',
-  tight: true,
+  title: 'Not belief. Neuroscience.',
+  body: 'Good Loop doesn’t invent new science — it orchestrates the best of what already works.',
+  grid: true,
   points: [
-    { label: 'Guiding voice', note: 'A voice that takes you from beginning to end.' },
-    { label: 'Soundscape', note: 'Background sound that makes the room the session happens in.' },
-    { label: 'Guided breathing', note: 'A rhythm to breathe along with.' },
-    { label: 'Guided visualisation', note: 'A scene to picture in detail.' },
-    { label: 'Alternating audio', note: 'A sound that moves from one ear to the other, at a steady rhythm.' },
-    { label: 'Binaural audio', note: 'Different frequencies in each ear. That is why you need headphones.' },
+    { label: 'Dichotic Listening', note: 'Bilateral stimulation, EMDR-style' },
+    { label: 'Imagery Rehearsal', note: 'Guided imagery in a safe space' },
+    { label: 'Binaural Beats', note: 'Calibrated frequencies for state' },
+    { label: 'Voice Morphing', note: 'Shifting tones, deeper reach' },
+    { label: 'Music & Ambient Sounds', note: 'Builds a safe inner space' },
+    { label: 'Dual Voice Immersion', note: 'Layered voices for deep listening' },
+    { label: 'Rhythmic Loop', note: 'Anchors change, layer by layer' },
+    { label: 'Guided Breathing', note: 'Slow, paced breathing for calm' },
+    { label: 'Sensory Stimulation', note: 'Grounds you in the here and now' },
   ],
+  quote: 'Good Loop speaks directly to the nervous system, using the language it truly understands.',
+  credit: {
+    name: 'Giampiero Varetti',
+    role: 'Clinical Psychologist · Methodology Creator · 30+ yrs of clinical practice',
+  },
 }
 
 /** The optional purposes asked on screen 3, with the wording the person sees
@@ -254,8 +292,8 @@ export function FirstRun({
     ? [{ kind: 'how' }, { kind: 'terms' }, ...(hasCompanyCode ? [{ kind: 'sponsored' } as Step] : [])]
     : []
   const explainer: Step[] = hasCompanyCode
-    ? [modesStep(professional), WORK_STEP, METHOD_STEP]
-    : [WORK_STEP, METHOD_STEP]
+    ? [WELCOME_STEP, modesStep(professional), SCIENCE_STEP]
+    : [WELCOME_STEP, SCIENCE_STEP]
   const steps: Step[] = [...legalSteps, ...(showTutorial ? explainer : [])]
 
   /* Nothing may leave somebody on a screen that is not there. The freeze above
@@ -343,26 +381,13 @@ export function FirstRun({
       <div className="screen fr">
         {/* ---- the desktop half ----------------------------------------------
 
-            On a phone this flow is a small drawing above a short column of
-            words, which is right for a phone. On a desktop it was the same
-            560px column stranded in the middle of a wide dark window, with a
-            210px drawing floating at the top of it.
-
-            From 1000px the screen becomes two: the card's picture at the size
-            a desktop has room for on the left, the words and the buttons in
-            their own column on the right. The small drawing is dropped there
-            — it is the SAME picture, and printing it twice is just a smaller
-            copy of the thing already filling half the screen.
-
-            The legal screens have no drawing of their own, so they take the
-            brand's signature: a panel that is never empty, whatever step the
-            person is on. */}
-        <div className="fr__stage" aria-hidden="true">
-          {step.kind === 'explainer'
-            ? <img className="fr__stageart" src={ART[step.art].src} alt="" />
-            : <BreathingOrb size={300} />}
-        </div>
-
+            There is no picture on this side any more and no orb either (POs,
+            2026-11-11): the background does not change for the whole of
+            making an account, and nothing is drawn over it. Above 1000px the
+            left half is simply the photograph, and the words take the column
+            on the right — the side the sign-up card itself stands on, so the
+            flow does not jump across the window at the moment somebody has
+            just handed over their details. */}
         <div className="fr__col">
         <div className="fr__top">
           <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
@@ -371,15 +396,6 @@ export function FirstRun({
           {!onLegal && <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>}
         </div>
         {bar}
-
-        {step.kind === 'explainer' && (
-          <figure
-            className={`fr__art${ART[step.art].wide ? ' fr__art--wide' : ''}${ART[step.art].small ? ' fr__art--small' : ''}`}
-            key={`art-${i}`}
-          >
-            <img className="fr-art" src={ART[step.art].src} alt="" aria-hidden="true" />
-          </figure>
-        )}
 
         <div className="fr__words" key={`words-${i}`}>
           {/* ---- screen 2: how Good Loop works ---------------------------- */}
@@ -410,8 +426,13 @@ export function FirstRun({
               find out. */}
           {step.kind === 'terms' && (
             <>
-              <h1 className="display fr__title">{t('Before you start')}</h1>
-              <p className="lead fr__body">{t('Read the essentials and choose what you want to switch on. You can change your choices whenever you like.')}</p>
+              {/* Wizard screen 4's heading. What is under it is the
+                  registered corpus and is not rewritten; the instruction
+                  that used to be the lead ("read the essentials and choose
+                  what you want to switch on") is still on the screen, above
+                  the switches it is about. */}
+              <h1 className="display fr__title">{t('Your data, your control.')}</h1>
+              <p className="lead fr__body">{t('Good Loop is built to LGPD and GDPR standards from day one.')}</p>
 
               <section className="fr__ess">
                 <h2 className="fr__ess__h">{t('The essentials')}</h2>
@@ -515,16 +536,64 @@ export function FirstRun({
           {/* ---- the explainer ----------------------------------------------- */}
           {step.kind === 'explainer' && (
             <>
-              <h1 className="display fr__title">{t(step.title)}</h1>
+              {step.eyebrow && <span className="fr__eyebrow">{t(step.eyebrow)}</span>}
+              {/* Ranged left, like everything else on these cards and like
+                  the wizard itself. The two legal screens keep their centred
+                  heading: they are one statement, not a page of material. */}
+              <h1 className="display fr__title fr__title--left">{t(step.title)}</h1>
               <p className="lead fr__body">{t(step.body)}</p>
-              <ul className={`fr__points${step.tight ? ' fr__points--tight' : ''}`}>
-                {step.points.map((p) => (
-                  <li key={p.label}>
-                    <b>{t(p.label)}</b>
-                    <span>{t(p.note)}</span>
-                  </li>
-                ))}
-              </ul>
+
+              {/* The four figures. A number and what it counts — not a
+                  claim about anybody, which is why they can be here. */}
+              {step.stats && (
+                <ul className="fr__stats">
+                  {step.stats.map((f) => (
+                    <li key={f.label}>
+                      <b>{f.num}</b>
+                      <span>{t(f.label)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* The three time signatures the catalogue publishes, named. */}
+              {step.durations && (
+                <div className="fr__durs">
+                  <h2 className="fr__durs__h">{t('Session lengths')}</h2>
+                  <ul>
+                    {step.durations.map((d) => (
+                      <li key={d.label}>
+                        <b>{t(d.label)}</b>
+                        <span>{t(d.mins)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {step.points && (
+                <ul className={`fr__points${step.tight ? ' fr__points--tight' : ''}${step.grid ? ' fr__points--grid' : ''}`}>
+                  {step.points.map((p) => (
+                    <li key={p.label}>
+                      <b>{t(p.label)}</b>
+                      <span>{t(p.note)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {step.quote && (
+                <figure className="fr__quote">
+                  <blockquote>{t(step.quote)}</blockquote>
+                  {step.credit && (
+                    <figcaption>
+                      <b>{step.credit.name}</b>
+                      <span>{t(step.credit.role)}</span>
+                    </figcaption>
+                  )}
+                </figure>
+              )}
+
               {last && (
                 <p className="fr__fine">
                   {t('On your own, Good Loop supports your wellbeing, but it is not medical or psychological care and does not replace that care.')}
@@ -549,7 +618,12 @@ export function FirstRun({
             aria-disabled={blocked || busy}
             disabled={busy}
           >
-            {step.kind === 'terms' ? t('Accept & continue') : last ? t('Start listening') : t('Next')}
+            {step.kind === 'terms'
+              ? t('Accept & continue')
+              : last
+                ? t('Start listening')
+                /* The wizard writes its own word on two of the cards. */
+                : step.kind === 'explainer' && step.cta ? t(step.cta) : t('Next')}
           </button>
           {i > 0 && !onLegal && (
             <button className="btn btn--quiet" onClick={() => setI(i - 1)}>{t('Back')}</button>

@@ -91,10 +91,10 @@
   inset: auto;
   margin: 0;
   flex: 0 0 auto;
-  width: 400px;
+  width: 448px;
   max-width: 100%;
   gap: var(--door-gap);
-  padding: 34px 32px;
+  padding: 34px 36px;
   border-radius: 24px;
   background: rgba(10, 32, 24, 0.52);
   border: 1px solid var(--door-hair);
@@ -102,9 +102,17 @@
 }
 
 /* The sign-up form is twice the card and has more to hold apart, so it gets
-   the width the room can spare. */
+   the width the room can spare. Two steps rather than one: 1100px is where
+   the photograph still has to be seen beside it, and above 1440 there is
+   room for the card to be wide without crowding the person in the picture
+   (POs, 2026-11-11 — "mais largo a caixa no total"). */
 @media (min-width: 1100px) {
-  .auth.auth--hero.su-studio .auth__card--signup { width: 440px; }
+  .auth.auth--hero.su-studio .auth__card { width: 496px; }
+  .auth.auth--hero.su-studio .auth__card--signup { width: 536px; }
+}
+
+@media (min-width: 1440px) {
+  .auth.auth--hero.su-studio .auth__card--signup { width: 580px; padding: 38px 40px; }
 }
 
 /* ------------------------------------------------------------ the heading --
