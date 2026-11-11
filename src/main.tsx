@@ -20,6 +20,10 @@ import './workspace.css'
 import './ui2/workspace2.css'
 // legal surfaces: Help now, the legal page, in-context notices (src/legal)
 import './legal/legal.css'
+// the public door (src/auth). LAST on purpose: five sheets above mention
+// `.auth__`, written for four other doors and three earlier designs of this
+// one, and the sign-up form was whatever reached it last. This one owns it.
+import './auth/door.css'
 
 /* After a redeploy, tabs opened before it still reference the previous build's
    hashed chunks; the first lazy import then 404s ("Failed to fetch dynamically

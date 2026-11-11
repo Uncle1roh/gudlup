@@ -1,0 +1,448 @@
+/* ============================================================================
+   Good Loop — the public door, and the SIGN-UP form on it
+
+   The sign-in state of this door was drawn for the waterfall and reads
+   correctly: a label over every field, one rhythm, a cream pill, a hairline
+   before the foot. The sign-UP state was never drawn at all — it is the same
+   card with nine more widgets dropped into it, each styled by whichever of
+   the five sheets that mention `.auth__` happened to reach it last. That is
+   what this file fixes, and it fixes it by OWNING the door: it is imported
+   last (main.tsx), so where it and an older sheet disagree, this wins.
+
+   Three faults, in the order they cost somebody something:
+
+     1. THE FOOT OF THE FORM WAS CLIPPED. The card was `position: absolute`,
+        so the door's scroll area ended at the card's own bottom edge —
+        measured at 1440x950, the last 38px of it, the legal link, could not
+        be scrolled to at all, and nothing above it ever had room beneath.
+        A rule at `max-height: 760px` dropped the card back into flow and,
+        with it, out to CENTRE: on a short laptop window the door moved from
+        the right of the picture to the middle of it, which is a different
+        design rather than the same one adapted. The card is in flow in both
+        states now, the offsets are the door's padding, and the padding at
+        the bottom is part of what scrolls.
+
+     2. NOTHING LINED UP. Font sizes on this card ran 12, 12.5, 13, 14.5,
+        15, 16 and 30 with no scale behind them — the footnote under the
+        voice choice (16px) was LARGER than the fields it explains (15px),
+        because a `:where(.su-studio)` rule written for a phone app reached
+        it. Gaps were patched with negative margins (-9px, -10px). One
+        scale and one rhythm below.
+
+     3. IT DID NOT MEET THE PHOTOGRAPH. Fields at 35% black on a card at
+        50% black is a pane inside a pane with nothing between them; the
+        account cards were a third shade again. The glass is one surface
+        now: the card is the pane, everything inside it is either a WELL
+        (an input) or a CHOICE (a card you press), each with one fill and
+        one hairline, and the only saturated thing on the door is the
+        chosen state and the button.
+
+   Everything is prefixed `.auth--hero`, so the clinician, employer, admin
+   and commercial doors reach none of it.
+   ============================================================================ */
+
+.auth.auth--hero.su-studio {
+  /* ---- the scale -------------------------------------------------------- */
+  --door-ink: #faf8df;        /* titles, values, the chosen thing */
+  --door-ink-2: #e8edd6;      /* labels and body */
+  --door-muted: #c6d4bd;      /* hints, footnotes, the reason a field exists */
+  --door-accent: #b7dbad;     /* focus, the chosen state */
+  --door-accent-2: #d6e6b6;   /* links */
+
+  --door-hair: rgba(250, 248, 223, 0.16);   /* dividers inside the glass */
+  --door-edge: rgba(250, 248, 223, 0.28);   /* the edge of a well or a choice */
+  --door-well: rgba(4, 20, 14, 0.38);       /* an input */
+  --door-choice: rgba(250, 248, 223, 0.07); /* a card you press */
+  --door-on: rgba(183, 219, 173, 0.20);     /* …once it is pressed */
+
+  --door-r-field: 12px;
+  --door-r-card: 14px;
+
+  /* ---- the rhythm ------------------------------------------------------- */
+  --door-gap: 20px;   /* between one thing to answer and the next */
+  --door-gap-s: 7px;  /* between a label and its field */
+  --door-gap-xs: 6px; /* between a field and what it says about itself */
+}
+
+/* ----------------------------------------------------------------- layout --
+   In FLOW, not absolute. The card keeps the position it had — 150px down,
+   140px in from the right — except that those are now the door's padding,
+   so a form taller than the window makes the page longer instead of running
+   off the bottom of it. */
+.auth.auth--hero.su-studio {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  /* The right gutter is the site header's own (72px): the mark stands 72
+     from the left edge, so the card now ends 72 from the right one and the
+     two are on one grid. It used to be 140, which lined up with nothing.
+     The top is the distance the card was drawn at; it closes up as the
+     window gets shorter, because a form that does not fit should spend the
+     room on itself rather than on the air above it. */
+  padding: 150px 72px 72px;
+}
+
+@media (max-height: 860px) {
+  .auth.auth--hero.su-studio { padding-top: 112px; }
+}
+
+.auth.auth--hero.su-studio .auth__card {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  flex: 0 0 auto;
+  width: 400px;
+  max-width: 100%;
+  gap: var(--door-gap);
+  padding: 34px 32px;
+  border-radius: 24px;
+  background: rgba(10, 32, 24, 0.52);
+  border: 1px solid var(--door-hair);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* The sign-up form is twice the card and has more to hold apart, so it gets
+   the width the room can spare. */
+@media (min-width: 1100px) {
+  .auth.auth--hero.su-studio .auth__card--signup { width: 440px; }
+}
+
+/* ------------------------------------------------------------ the heading --
+   The language picker is a utility, not the first field: quiet, small, and
+   close enough to the title to belong to the card rather than hovering over
+   it. The logo is in the site header above, so this row is the picker. */
+.auth.auth--hero.su-studio .auth__brand {
+  margin: 0 0 -6px;
+  justify-content: flex-end;
+}
+
+.auth.auth--hero.su-studio .auth__lang {
+  padding: 5px 8px;
+  font-size: 13px;
+  border-radius: 9px;
+  border: 1px solid var(--door-hair);
+  background: rgba(4, 20, 14, 0.3);
+  color: var(--door-muted);
+}
+
+.auth.auth--hero.su-studio .auth__title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.12;
+  color: var(--door-ink);
+}
+
+.auth.auth--hero.su-studio .auth__sub {
+  margin: -12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--door-ink-2);
+}
+
+/* -------------------------------------------------------------- the form --
+   One gap between one thing to answer and the next, whatever that thing is:
+   an input, a question with a date under it, three cards, a pair of
+   buttons. The negative margins that used to pull these together are gone —
+   they were correcting a rhythm that is now simply right. */
+.auth.auth--hero.su-studio .auth__fields {
+  margin: 0;
+  gap: var(--door-gap);
+}
+
+/* A label over its field. The same shape for every one of them: the two
+   that were already labelled on the sign-in card, the two legal questions,
+   and the four that used to carry their label inside as a placeholder —
+   which vanishes the moment somebody types, taking the question with it. */
+.auth.auth--hero.su-studio .auth__lbl,
+.auth.auth--hero.su-studio .auth__gatefield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--door-gap-s);
+  text-align: left;
+}
+
+.auth.auth--hero.su-studio .auth__lbltext,
+.auth.auth--hero.su-studio .auth__gatefield > span,
+.auth.auth--hero.su-studio .auth__addressed__q {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--door-ink-2);
+}
+
+/* "required", as the tail of the question rather than a chip beside it. It
+   was uppercase, green and bold in a form where almost everything is
+   required — the one word shouted on the card. The middot is what makes it
+   read as part of the sentence on the line where the question is long
+   enough to push it onto its own. */
+.auth.auth--hero.su-studio .auth__req {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  white-space: nowrap;
+  color: var(--door-muted);
+}
+
+.auth.auth--hero.su-studio .auth__req::before {
+  content: '· ';
+  opacity: 0.75;
+}
+
+/* ---- a well: something you type into ------------------------------------ */
+.auth.auth--hero.su-studio .auth__input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--door-r-field);
+  border: 1px solid var(--door-edge);
+  background: var(--door-well);
+  color: var(--door-ink);
+  /* 16px: a smaller font in an input is what makes a phone browser zoom the
+     page on focus, and the door is the first field anybody meets. */
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.auth.auth--hero.su-studio select.auth__input { padding-right: 10px; }
+.auth.auth--hero.su-studio input[type='date'].auth__input { padding-block: 0; }
+
+.auth.auth--hero.su-studio .auth__input::placeholder { color: #a9bca4; }
+
+.auth.auth--hero.su-studio .auth__input:focus {
+  outline: none;
+  border-color: var(--door-accent);
+  background: rgba(4, 20, 14, 0.52);
+}
+
+/* ---- what a field says about itself ------------------------------------- */
+.auth.auth--hero.su-studio .auth__why,
+.auth.auth--hero.su-studio .auth__fine,
+.auth.auth--hero.su-studio .auth__code {
+  display: block;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--door-muted);
+}
+
+.auth.auth--hero.su-studio .auth__code.is-ok { color: var(--door-accent-2); }
+
+/* A refusal is not a footnote: it carries the warm colour and sits tight
+   under the field it belongs to. */
+.auth.auth--hero.su-studio .auth__bad {
+  margin: calc(var(--door-gap-xs) - var(--door-gap)) 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #f2c29a;
+}
+
+/* The age and country questions are one block with one rhythm, and the
+   reason the country is asked hangs off the country field rather than
+   floating between the two. */
+.auth.auth--hero.su-studio .auth__gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--door-gap);
+}
+
+.auth.auth--hero.su-studio .auth__gate > .auth__why {
+  margin: calc(var(--door-gap-xs) - var(--door-gap)) 0 0;
+}
+
+/* ---- a choice: something you press -------------------------------------- */
+.auth.auth--hero.su-studio .auth__kind {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth.auth--hero.su-studio .auth__kindbtn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 12px 14px;
+  text-align: left;
+  border: 1px solid var(--door-edge);
+  border-radius: var(--door-r-card);
+  background: var(--door-choice);
+  color: var(--door-muted);
+  cursor: pointer;
+}
+
+.auth.auth--hero.su-studio .auth__kindbtn b {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--door-ink);
+}
+
+.auth.auth--hero.su-studio .auth__kindbtn small {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--door-muted);
+}
+
+.auth.auth--hero.su-studio .auth__kindbtn.is-on,
+.auth.auth--hero.su-studio .auth__kindbtn[aria-pressed='true'] {
+  border-color: var(--door-accent);
+  background: var(--door-on);
+  color: var(--door-ink-2);
+}
+
+/* A question with choices under it: the three account cards, and the voice.
+   Both wear `.auth__addressed`, because they are the same thing — a
+   question the card asks and a set of cards to answer it with. Two words
+   fit side by side (`--pair`); three sentences do not. */
+.auth.auth--hero.su-studio .auth__addressed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--door-gap-s);
+}
+
+.auth.auth--hero.su-studio .auth__kind--pair {
+  flex-direction: row;
+  gap: 10px;
+}
+
+.auth.auth--hero.su-studio .auth__kind--pair .auth__kindbtn { flex: 1 1 0; }
+
+.auth.auth--hero.su-studio .auth__addressed .auth__fine { margin-top: -1px; }
+
+/* Inside a question block the rows are already 7px apart, so the pull that
+   closes the 20px gap between two questions would weld this one to the line
+   above it. */
+.auth.auth--hero.su-studio .auth__addressed .auth__bad { margin-top: 0; }
+
+/* ------------------------------------------------------------- the button --
+   Flush against the form, like the sign-in card: the gap above it is the
+   form's own rhythm and not a second one. */
+.auth.auth--hero.su-studio .auth__btn {
+  margin: 0;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--door-ink);
+  color: #0b3d31;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth.auth--hero.su-studio .auth__btn:disabled { opacity: 0.45; }
+
+.auth.auth--hero.su-studio .auth__need {
+  margin: calc(var(--door-gap-xs) - var(--door-gap)) 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: #f2c29a;
+}
+
+.auth.auth--hero.su-studio .auth__error,
+.auth.auth--hero.su-studio .auth__sent {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: var(--door-r-card);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* The way back to signing in. One line, centred, under the button. */
+.auth.auth--hero.su-studio .auth__alt {
+  margin: 0;
+  gap: 4px 18px;
+}
+
+.auth.auth--hero.su-studio .auth__alt .auth__toggle,
+.auth.auth--hero.su-studio .auth__alt .auth__forgot {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  color: var(--door-ink-2);
+  text-decoration: underline;
+}
+
+.auth.auth--hero.su-studio .auth__demo {
+  font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------------- the foot */
+.auth.auth--hero.su-studio .auth__foot {
+  margin: 0;
+  padding-top: 18px;
+  gap: 10px;
+  border-top: 1px solid var(--door-hair);
+}
+
+.auth.auth--hero.su-studio .auth__hub { font-size: 13px; }
+
+/* ------------------------------------------------------------- the phone ---
+   The same card, the full width of the screen less a margin, under the site
+   header rather than beside it. The top padding clears the header; the
+   bottom one is there so the last thing in a long form is not welded to the
+   bottom edge of the screen. */
+@media (max-width: 767px) {
+  .auth.auth--hero.su-studio {
+    justify-content: center;
+    /* 24px each side: the same gutter the site header's mark stands on, so
+       the card and the mark share one left edge. */
+    padding: 104px 24px 56px;
+  }
+  .auth.auth--hero.su-studio .auth__card {
+    width: 100%;
+    padding: 26px 22px;
+    border-radius: 20px;
+  }
+  .auth.auth--hero.su-studio .auth__title { font-size: 27px; }
+}
+
+/* A window shorter than the sign-in card: start at the top and let it
+   scroll, rather than centring something that does not fit. */
+@media (max-height: 720px) {
+  .auth.auth--hero.su-studio { padding-top: 88px; padding-bottom: 48px; }
+}
+
+/* ----------------------------------------------------- under the header ---
+   The door is the scroller, and the site's mark is painted over it rather
+   than inside it — so on a phone, where the card is the full width of the
+   screen, a long form scrolls its own words straight under the wordmark and
+   the two print on top of each other.
+
+   The mark is right: it is the only thing on the header on this page, and a
+   person halfway down a sign-up form should still be able to see whose form
+   it is. What was missing is anything between them. The gradient is the
+   picture's own darkness at the top of the frame, continued a little
+   further down, so the mark keeps its contrast and the card passes behind
+   something instead of through it.
+
+   `.pub--door` is the login page and nothing else: the landing, the three
+   public pages and every other header are untouched. */
+.pub--door .pub-head::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -36px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(4, 16, 12, 0.80) 0%,
+    rgba(4, 16, 12, 0.58) 46%,
+    rgba(4, 16, 12, 0) 100%);
+  /* Frosted as well as dark, so what passes under the mark reads as being
+     BEHIND it rather than printed through it. The mask keeps the frost on
+     the band itself: without it the blur would end in a hard line across
+     the photograph. */
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
+}

@@ -424,7 +424,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           <div className="auth__stage__scrim" />
         </div>
       )}
-      <div className="auth__card">
+      <div className={`auth__card${signup ? ' auth__card--signup' : ''}`}>
         {/* The b2c door is the dark Self Use ground; the clinician, employer
             and admin doors are light. Same logo, the colourway its ground asks
             for. */}
@@ -464,17 +464,17 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               else the placeholder is still the label, which is how all five
               doors were drawn. Same element, same handlers, same refs — the
               label is a wrapper, not a second field. */}
-          {labelled(heroIn, t('E-mail'), (
+          {labelled(hero, t('E-mail'), (
             <input className="auth__input" type="email"
-              placeholder={heroIn ? t('name@company.com') : t('Email')} autoComplete="email"
+              placeholder={hero ? t('name@company.com') : t('Email')} autoComplete="email"
               value={email} onChange={(e) => setEmail(e.target.value)}
               ref={hold('email')}
               onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
           ))}
           {bad('email') && <p className="auth__bad" role="alert">{bad('email')}</p>}
-          {labelled(heroIn, t('Password'), (
+          {labelled(hero, t('Password'), (
             <input className="auth__input" type="password"
-              placeholder={heroIn ? t('Your password') : t('Password')}
+              placeholder={hero ? t('Your password') : t('Password')}
               autoComplete={signup ? 'new-password' : 'current-password'}
               value={password} onChange={(e) => setPassword(e.target.value)}
               ref={hold('password')}
@@ -523,56 +523,74 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           )}
 
           {signup && mode === 'b2c' && (
-            <div className="auth__kind" role="group" aria-label={t('What is this account for?')}>
-              <button type="button" className={`auth__kindbtn${kind === 'b2c_user' ? ' is-on' : ''}`}
-                aria-pressed={kind === 'b2c_user'} onClick={() => setKind('b2c_user')}>
-                <b>{t('For me')}</b>
-                <small>{t('Sessions to listen to on my own')}</small>
-              </button>
-              <button type="button" className={`auth__kindbtn${kind === 'therapist' ? ' is-on' : ''}`}
-                aria-pressed={kind === 'therapist'} onClick={() => setKind('therapist')}>
-                <b>{t('I am a therapist')}</b>
-                <small>{t('I see people through Good Loop')}</small>
-              </button>
-              {/* The third one (POs, 2026-11-06). It used to be a door of its
-                  own at #hr, which meant the code in the invitation e-mail
-                  had to carry a second address with it; the link is the
-                  ordinary one now and this card is what it opens. */}
-              <button type="button" className={`auth__kindbtn${kind === 'company' ? ' is-on' : ''}`}
-                aria-pressed={kind === 'company'} onClick={() => setKind('company')}>
-                <b>{t('For my company')}</b>
-                <small>{t('I manage Good Loop where I work')}</small>
-              </button>
+            /* The question was on this group as an `aria-label` only: a
+               screen reader was told what the three cards are FOR and the
+               eye was left to work it out from them. Every other group on
+               this form asks out loud; this one asks too, in the same
+               words it was already asking in. */
+            <div className="auth__addressed" role="group" aria-label={t('What is this account for?')}>
+              <span className="auth__addressed__q">{t('What is this account for?')}</span>
+              <div className="auth__kind">
+                <button type="button" className={`auth__kindbtn${kind === 'b2c_user' ? ' is-on' : ''}`}
+                  aria-pressed={kind === 'b2c_user'} onClick={() => setKind('b2c_user')}>
+                  <b>{t('For me')}</b>
+                  <small>{t('Sessions to listen to on my own')}</small>
+                </button>
+                <button type="button" className={`auth__kindbtn${kind === 'therapist' ? ' is-on' : ''}`}
+                  aria-pressed={kind === 'therapist'} onClick={() => setKind('therapist')}>
+                  <b>{t('I am a therapist')}</b>
+                  <small>{t('I see people through Good Loop')}</small>
+                </button>
+                {/* The third one (POs, 2026-11-06). It used to be a door of its
+                    own at #hr, which meant the code in the invitation e-mail
+                    had to carry a second address with it; the link is the
+                    ordinary one now and this card is what it opens. */}
+                <button type="button" className={`auth__kindbtn${kind === 'company' ? ' is-on' : ''}`}
+                  aria-pressed={kind === 'company'} onClick={() => setKind('company')}>
+                  <b>{t('For my company')}</b>
+                  <small>{t('I manage Good Loop where I work')}</small>
+                </button>
+              </div>
             </div>
           )}
 
           {signup && asTherapist && <>
-            <input className="auth__input" type="text" placeholder={t('Full name')}
-              value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            {labelled(hero, t('Full name'), (
+              <input className="auth__input" type="text" placeholder={hero ? '' : t('Full name')}
+                value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            ))}
             {bad('name') && <p className="auth__bad" role="alert">{bad('name')}</p>}
-            <input className="auth__input" type="text" placeholder={t('CRP / CFP registration')}
-              value={crp} ref={hold('crp')} onChange={(e) => setCrp(e.target.value)} />
+            {labelled(hero, t('CRP / CFP registration'), (
+              <input className="auth__input" type="text" placeholder={hero ? '' : t('CRP / CFP registration')}
+                value={crp} ref={hold('crp')} onChange={(e) => setCrp(e.target.value)} />
+            ))}
             {bad('crp') && <p className="auth__bad" role="alert">{bad('crp')}</p>}
           </>}
           {signup && asCompany && <>
-            <input className="auth__input" type="text" placeholder={t('Company code (required)')}
-              autoCapitalize="characters" spellCheck={false} ref={hold('companyCode')}
-              value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            {labelled(hero, t('Company code (required)'), (
+              <input className="auth__input" type="text" placeholder={hero ? '' : t('Company code (required)')}
+                autoCapitalize="characters" spellCheck={false} ref={hold('companyCode')}
+                value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            ))}
             {bad('companyCode') && <p className="auth__bad" role="alert">{bad('companyCode')}</p>}
           </>}
           {signup && !asTherapist && !asCompany && <>
             {/* Not optional any more: it is the name the app greets this
                 person by every morning, and "Bom dia," with nothing after
                 the comma is not a greeting. */}
-            <input className="auth__input" type="text" placeholder={t('Your name')}
-              value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            {labelled(hero, t('Your name'), (
+              <input className="auth__input" type="text" placeholder={hero ? '' : t('Your name')}
+                value={name} ref={hold('name')} onChange={(e) => setName(e.target.value)} />
+            ))}
             {bad('name') && <p className="auth__bad" role="alert">{bad('name')}</p>}
             {/* The code field is on the demo door too. It is the only way to
                 hand a demo account a convention — and a demo of Professional
                 Support that cannot be switched on is not a demo of it. */}
-            <input className="auth__input" type="text" placeholder={t('Company code (from HR, optional)')}
-              autoCapitalize="characters" spellCheck={false}
-              value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            {labelled(hero, t('Company code (from HR, optional)'), (
+              <input className="auth__input" type="text" placeholder={hero ? '' : t('Company code (from HR, optional)')}
+                autoCapitalize="characters" spellCheck={false}
+                value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
+            ))}
             {codeCheck && (
               <p className={`auth__code${codeCheck.ok ? ' is-ok' : ''}`}>{codeCheck.text}</p>
             )}
@@ -584,7 +602,10 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 audio addresses you, not who you are. */}
             <div className="auth__addressed" role="group" aria-label={t('How the audio addresses you')} ref={hold('addressedAs')}>
               <span className="auth__addressed__q">{t('How should the audio address you?')}</span>
-              <div className="auth__kind">
+              {/* Two words, so two columns: `--pair` is what tells the door
+                  to put them side by side rather than stacking them like
+                  the three account cards. */}
+              <div className="auth__kind auth__kind--pair">
                 <button type="button" className={`auth__kindbtn${addressedAs === 'f' ? ' is-on' : ''}`}
                   aria-pressed={addressedAs === 'f'} onClick={() => setAddressedAs('f')}>
                   <b>{t('Feminine')}</b>
@@ -596,13 +617,18 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                   <small>{t('masculine form')}</small>
                 </button>
               </div>
-              <small className="auth__fine">{t('You can change this any time in Profile.')}</small>
+              {/* What the form is waiting for FIRST, then the footnote: the
+                  same order the country question uses, and the order the two
+                  are urgent in. */}
               {bad('addressedAs') && <p className="auth__bad" role="alert">{bad('addressedAs')}</p>}
+              <small className="auth__fine">{t('You can change this any time in Profile.')}</small>
             </div>
             {offersPromo && <>
-              <input className="auth__input" type="text" placeholder={t('Promo code (optional)')}
-                autoCapitalize="characters" spellCheck={false}
-                value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} />
+              {labelled(hero, t('Promo code (optional)'), (
+                <input className="auth__input" type="text" placeholder={hero ? '' : t('Promo code (optional)')}
+                  autoCapitalize="characters" spellCheck={false}
+                  value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} />
+              ))}
               {promoCheck && (
                 <p className={`auth__code${promoCheck.ok ? ' is-ok' : ''}`}>{promoCheck.text}</p>
               )}
