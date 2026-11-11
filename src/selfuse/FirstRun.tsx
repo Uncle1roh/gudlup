@@ -379,18 +379,20 @@ export function FirstRun({
   return (
     <div className="app-frame su-studio">
       <div className="screen fr">
-        {/* ---- the desktop half ----------------------------------------------
+        {/* ---- the mark ------------------------------------------------------
 
-            There is no picture on this side any more and no orb either (POs,
-            2026-11-11): the background does not change for the whole of
-            making an account, and nothing is drawn over it. Above 1000px the
-            left half is simply the photograph, and the words take the column
-            on the right — the side the sign-up card itself stands on, so the
-            flow does not jump across the window at the moment somebody has
-            just handed over their details. */}
+            OUTSIDE the card, where the site header keeps it on the door —
+            72 from the left, 28 from the top. It used to be the first thing
+            inside the column, which read as a second header belonging to a
+            different screen (POs, 2026-11-11). Nothing else is drawn here:
+            the photograph is the ground for the whole flow and it does not
+            change from the first field of the form to the last card. */}
+        <div className="fr__mark" aria-hidden="true">
+          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} />
+        </div>
+
         <div className="fr__col">
         <div className="fr__top">
-          <BrandLogo variant={theme === 'light' ? 'green' : 'cream'} className="fr__brand" />
           <span className="fr__step">{t('Step {n} of {total}', { n: i + 1, total: steps.length })}</span>
           {/* The explainer can be skipped; a legal screen cannot. */}
           {!onLegal && <button className="fr__skip" onClick={onDone}>{t('Skip')}</button>}

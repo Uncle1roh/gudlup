@@ -101,18 +101,21 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
 }
 
-/* The sign-up form is twice the card and has more to hold apart, so it gets
-   the width the room can spare. Two steps rather than one: 1100px is where
-   the photograph still has to be seen beside it, and above 1440 there is
-   room for the card to be wide without crowding the person in the picture
-   (POs, 2026-11-11 — "mais largo a caixa no total"). */
-@media (min-width: 1100px) {
-  .auth.auth--hero.su-studio .auth__card { width: 496px; }
-  .auth.auth--hero.su-studio .auth__card--signup { width: 536px; }
-}
+/* HALF THE WINDOW, from the right (POs, 2026-11-11). Not a fixed width that
+   happens to look narrow on a wide screen: the card's left edge is the
+   middle of the window, and it ends at the door's own right gutter. The
+   photograph keeps the other half, with the person in it on the left where
+   the framing puts them.
 
-@media (min-width: 1440px) {
-  .auth.auth--hero.su-studio .auth__card--signup { width: 580px; padding: 38px 40px; }
+   Below 1100px there is no half to take — the picture would have nothing
+   left — so the card goes back to its own width and then, on a phone, to
+   the full screen. */
+@media (min-width: 1100px) {
+  .auth.auth--hero.su-studio .auth__card,
+  .auth.auth--hero.su-studio .auth__card--signup {
+    width: calc(50vw - 72px);
+    padding: 38px 40px;
+  }
 }
 
 /* ------------------------------------------------------------ the heading --
@@ -453,4 +456,377 @@
   -webkit-backdrop-filter: blur(7px);
   mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 100%);
+}
+
+
+/* ============================================================================
+   …AND THE SCREENS THAT FOLLOW IT
+
+   Making an account is ONE flow: the form, the two legal screens, the cards
+   that say what Good Loop is. It was three rooms. The form stood on the
+   photograph in a glass card; the screens after it dropped the card, printed
+   their words straight onto the water behind a blurred veil, and put a
+   second header with the wordmark inside the column — so the moment somebody
+   handed over their details the furniture changed under them (POs,
+   2026-11-11: "it shouldn't feel like we are changing environments").
+
+   Everything below is the door's own furniture, applied to the first run:
+   the same glass card in the same place at the same width, the same ink, the
+   same wells and choices, the same cream pill. Only the content changes.
+
+   Keyed on `html[data-gl-amb='login']`, which is the stage the first run
+   claims — so this reaches the door's flow and nothing else. On the library
+   the attribute reads `home` and `.fr` is not on screen at all.
+   ============================================================================ */
+
+html[data-gl-amb='login'] .screen.fr {
+  /* ---- the same scale as the card above, because it IS the card above --- */
+  --door-ink: #faf8df;
+  --door-ink-2: #e8edd6;
+  --door-muted: #c6d4bd;
+  --door-accent: #b7dbad;
+  --door-accent-2: #d6e6b6;
+  --door-hair: rgba(250, 248, 223, 0.16);
+  --door-edge: rgba(250, 248, 223, 0.28);
+  --door-well: rgba(4, 20, 14, 0.38);
+  --door-choice: rgba(250, 248, 223, 0.07);
+  --door-on: rgba(183, 219, 173, 0.20);
+  --door-r-field: 12px;
+  --door-r-card: 14px;
+  --door-gap: 20px;
+  --door-gap-s: 7px;
+  --door-gap-xs: 6px;
+
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0;
+  text-align: left;
+  /* 100, not the door's 150: this frame hangs under the app shell's own
+     50px strip (the one carrying the crisis pill), so the card lands at the
+     same 150 from the top of the window as the form it follows. Measured,
+     not guessed — `legal.css`, `.su-shell__bar`. */
+  padding: 100px 72px 72px;
+  /* The screen is the scroller, as the door is, so the bottom padding is
+     part of what scrolls and the last line of a long card is never welded
+     to the edge of the window. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* The screen'''s own entry animation leaves a transform behind, and a
+     transform makes this box the containing block of anything fixed inside
+     it — which is where the mark above was landing. Nothing on this flow
+     moves anyway (POs, 2026-11-11). */
+  animation: none;
+  transform: none;
+}
+
+@media (max-height: 860px) {
+  html[data-gl-amb='login'] .screen.fr { padding-top: 62px; }
+}
+
+@media (max-height: 720px) {
+  html[data-gl-amb='login'] .screen.fr { padding-top: 38px; padding-bottom: 48px; }
+}
+
+/* ---- the card ------------------------------------------------------------
+   `.fr__col` was `display: contents` on a phone and a flex column above
+   1000px. It is the card now, at every width, and the two-column grid that
+   used to hold a drawing beside it is gone with the drawing. */
+html[data-gl-amb='login'] .fr__col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: 448px;
+  max-width: 100%;
+  gap: var(--door-gap);
+  padding: 34px 36px;
+  border-radius: 24px;
+  background: rgba(10, 32, 24, 0.52);
+  border: 1px solid var(--door-hair);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  /* The card grows; the window scrolls. A scroller inside a scroller is what
+     put a sticky, opaque slab under the button. */
+  overflow: visible;
+  min-height: 0;
+  /* The veil and the blur the words used to be read through: gone. They were
+     compensating for words lying directly on a photograph, which is what the
+     card is for. */
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (min-width: 1100px) {
+  html[data-gl-amb='login'] .fr__col {
+    width: calc(50vw - 72px);
+    padding: 38px 40px;
+  }
+}
+
+/* ---- the mark, where the door keeps it ----------------------------------
+   The wordmark used to be the first thing INSIDE the column, which made a
+   second header on a page that already has one. It stands where the site
+   header stands — 72 from the left, 28 from the top, 28px tall — so walking
+   from the form into the first run moves nothing on the screen but the
+   words in the card. */
+html[data-gl-amb='login'] .fr__mark {
+  /* FIXED, not absolute: the screen under it scrolls and clips, and the
+     mark belongs to the window rather than to the card. `--pvw-h` is the
+     demo preview's own strip — zero in production, where this lands at
+     exactly the 28px the site header uses. */
+  position: fixed;
+  top: calc(var(--pvw-h, 0px) + 28px);
+  left: 72px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+html[data-gl-amb='login'] .fr__mark .gl-logo { height: 28px; width: auto; }
+
+/* ---- where you are ------------------------------------------------------- */
+html[data-gl-amb='login'] .fr__top {
+  justify-content: flex-end;
+  gap: 14px;
+  margin-bottom: calc(var(--door-gap-s) - var(--door-gap));
+}
+
+html[data-gl-amb='login'] .fr__step,
+html[data-gl-amb='login'] .fr__skip {
+  font-size: 13px;
+  color: var(--door-muted);
+}
+
+html[data-gl-amb='login'] .fr__skip { text-decoration: underline; }
+
+html[data-gl-amb='login'] .fr__bar { gap: 6px; }
+html[data-gl-amb='login'] .fr__bar span { background: var(--door-hair); }
+html[data-gl-amb='login'] .fr__bar span.is-on { background: var(--door-accent); }
+
+/* ---- the words ----------------------------------------------------------- */
+html[data-gl-amb='login'] .fr__words {
+  max-width: none;
+  gap: 12px;
+  text-align: left;
+}
+
+html[data-gl-amb='login'] .fr__words .fr__title,
+html[data-gl-amb='login'] .fr__words .fr__title--left {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.12;
+  text-align: left;
+  color: var(--door-ink);
+}
+
+html[data-gl-amb='login'] .fr__body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--door-ink-2);
+}
+
+html[data-gl-amb='login'] .fr__fine,
+html[data-gl-amb='login'] .fr__optional,
+html[data-gl-amb='login'] .fr__words .small,
+html[data-gl-amb='login'] .fr__words .muted {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--door-muted);
+}
+
+html[data-gl-amb='login'] .fr__eyebrow {
+  background: var(--door-choice);
+  border-color: var(--door-edge);
+  color: var(--door-accent);
+}
+
+/* ---- the figures, the lengths, the techniques: all one kind of tile ------ */
+html[data-gl-amb='login'] .fr__stats > li,
+html[data-gl-amb='login'] .fr__durs li,
+html[data-gl-amb='login'] .fr__points--grid li {
+  background: var(--door-well);
+  border: 1px solid var(--door-edge);
+  border-radius: var(--door-r-card);
+}
+
+html[data-gl-amb='login'] .fr__stats b { color: var(--door-accent); }
+html[data-gl-amb='login'] .fr__stats span,
+html[data-gl-amb='login'] .fr__durs__h { color: var(--door-muted); }
+html[data-gl-amb='login'] .fr__durs b { color: var(--door-ink); }
+html[data-gl-amb='login'] .fr__durs span { color: var(--door-accent); }
+
+html[data-gl-amb='login'] .fr__points b { color: var(--door-ink); }
+html[data-gl-amb='login'] .fr__points span { color: var(--door-muted); }
+
+html[data-gl-amb='login'] .fr__quote {
+  background: var(--door-choice);
+  border: 1px solid var(--door-hair);
+  border-radius: var(--door-r-card);
+}
+html[data-gl-amb='login'] .fr__quote blockquote { color: var(--door-ink); }
+html[data-gl-amb='login'] .fr__quote figcaption { border-top-color: var(--door-hair); color: var(--door-muted); }
+html[data-gl-amb='login'] .fr__quote figcaption b { color: var(--door-ink-2); }
+
+/* ---- the legal screens --------------------------------------------------- */
+html[data-gl-amb='login'] .fr__ess {
+  background: var(--door-choice);
+  border: 1px solid var(--door-hair);
+  border-radius: var(--door-r-card);
+}
+html[data-gl-amb='login'] .fr__ess__h { color: var(--door-muted); }
+html[data-gl-amb='login'] .fr__esslist li > span { color: var(--door-ink-2); }
+html[data-gl-amb='login'] .fr__esslist li > svg { color: var(--door-accent); }
+html[data-gl-amb='login'] .fr__esslinks { border-top-color: var(--door-hair); }
+html[data-gl-amb='login'] .fr__opth { color: var(--door-ink); text-align: left; }
+
+html[data-gl-amb='login'] .legal-link,
+html[data-gl-amb='login'] .fr__essmore .legal-link {
+  color: var(--door-accent-2);
+  /* Underlined, because on this card a line of accent-coloured type that
+     is not underlined is indistinguishable from a line of type. */
+  text-decoration: underline;
+}
+
+html[data-gl-amb='login'] .fr__accept {
+  padding: 13px 14px;
+  border-radius: var(--door-r-card);
+  background: var(--door-choice);
+  border: 1px solid var(--door-edge);
+}
+html[data-gl-amb='login'] .fr__accept span { font-size: 14px; color: var(--door-ink-2); }
+html[data-gl-amb='login'] .fr__accept input { accent-color: var(--door-accent); }
+
+html[data-gl-amb='login'] .consent-row {
+  background: var(--door-well);
+  border: 1px solid var(--door-edge);
+  border-radius: var(--door-r-card);
+}
+html[data-gl-amb='login'] .consent-row__title { font-size: 14.5px; color: var(--door-ink); }
+html[data-gl-amb='login'] .consent-row__note { font-size: 12.5px; color: var(--door-muted); }
+html[data-gl-amb='login'] .consent-row__foot { border-top-color: var(--door-hair); }
+html[data-gl-amb='login'] .consent-row__state { color: var(--door-muted); }
+html[data-gl-amb='login'] .consent-row__more > summary { color: var(--door-accent-2); }
+html[data-gl-amb='login'] .switch { background: var(--door-well); border: 1px solid var(--door-edge); }
+html[data-gl-amb='login'] .switch.is-on { background: var(--door-accent); border-color: var(--door-accent); }
+
+html[data-gl-amb='login'] .ob-field__label { color: var(--door-ink-2); }
+html[data-gl-amb='login'] .ob-input {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--door-r-field);
+  border: 1px solid var(--door-edge);
+  background: var(--door-well);
+  color: var(--door-ink);
+  font-size: 16px;
+}
+
+/* ---- the last screen: which recording the voice reads from -------------- */
+html[data-gl-amb='login'] .adr__choices {
+  max-width: none;
+  gap: 10px;
+}
+
+html[data-gl-amb='login'] .adr__choice {
+  padding: 13px 15px;
+  border: 1px solid var(--door-edge);
+  border-radius: var(--door-r-card);
+  background: var(--door-choice);
+}
+html[data-gl-amb='login'] .adr__choice b { font-size: 14.5px; color: var(--door-ink); }
+html[data-gl-amb='login'] .adr__choice span { font-size: 13px; color: var(--door-muted); }
+html[data-gl-amb='login'] .adr__choice:hover {
+  border-color: var(--door-accent);
+  background: var(--door-on);
+}
+html[data-gl-amb='login'] .adr .fr__fine { max-width: none; }
+
+/* ---- the foot ------------------------------------------------------------
+   NOT STICKY, and not a slab. It used to be `position: sticky` with an
+   opaque near-black fill and a gradient above it — on a flat ground that is
+   a shelf, but over the photograph, inside a glass card, it was a dark
+   rectangle blending into nothing at the one place a person is deciding. The
+   card simply ends with its button, as the sign-up form does. */
+html[data-gl-amb='login'] .fr__foot {
+  position: static;
+  max-width: none;
+  margin: calc(var(--door-gap-s) - var(--door-gap)) 0 0;
+  padding: 18px 0 0;
+  gap: 10px;
+  background: none;
+  border-top: 1px solid var(--door-hair);
+  z-index: auto;
+}
+
+html[data-gl-amb='login'] .fr__foot::before { display: none; }
+
+html[data-gl-amb='login'] .fr__foot .btn--primary {
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--door-ink);
+  color: #0b3d31;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+html[data-gl-amb='login'] .fr__foot .btn--primary.is-waiting { opacity: 0.5; }
+
+html[data-gl-amb='login'] .fr__foot .btn--quiet {
+  min-height: 0;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  font-size: 14px;
+  color: var(--door-ink-2);
+  text-decoration: underline;
+}
+
+html[data-gl-amb='login'] .fr__need,
+html[data-gl-amb='login'] .fr__error {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: #f2c29a;
+}
+
+/* ---- the phone -----------------------------------------------------------
+   The same card, the full width of the screen less the gutter the mark
+   stands on, under the mark rather than beside it. The door's own phone
+   rule, to the pixel. */
+@media (max-width: 767px) {
+  html[data-gl-amb='login'] .screen.fr {
+    justify-content: center;
+    /* 104 less the shell's 50px strip, as above. */
+    padding: 54px 24px 56px;
+  }
+
+  /* Three lengths across a 390px screen breaks "Immersione profonda" mid
+     word. One per line, name and minutes at the two ends of it. */
+  html[data-gl-amb='login'] .fr__durs ul { grid-template-columns: 1fr; gap: 7px; }
+  html[data-gl-amb='login'] .fr__durs li {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  html[data-gl-amb='login'] .fr__col {
+    width: 100%;
+    padding: 26px 22px;
+    border-radius: 20px;
+  }
+  html[data-gl-amb='login'] .fr__mark { top: calc(var(--pvw-h, 0px) + 18px); left: 20px; }
+  html[data-gl-amb='login'] .fr__mark .gl-logo { height: 22px; }
+  html[data-gl-amb='login'] .fr__words .fr__title,
+  html[data-gl-amb='login'] .fr__words .fr__title--left { font-size: 27px; }
 }

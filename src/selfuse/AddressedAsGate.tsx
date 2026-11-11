@@ -36,30 +36,36 @@ export function AddressedAsGate({ onChoose }: { onChoose: (to: Addressee) => voi
 
   return (
     <div className="app-frame su-studio">
-      <div className="su-page fr adr">
-        <div className="fr__top"><BrandLogo variant="cream" /></div>
+      {/* The same card as the form and the first run before it: this is the
+          last screen of making an account, and it used to be the one place
+          the furniture changed back — words straight on the photograph, the
+          mark adrift on the right (POs, 2026-11-11). */}
+      <div className="screen fr adr">
+        <div className="fr__mark" aria-hidden="true"><BrandLogo variant="cream" /></div>
 
-        <div className="fr__words">
-          <h1 className="display fr__title">{t('One question before you start')}</h1>
-          <p className="fr__body">
-            {t('The sessions speak to you directly, and the words change with how you are addressed. Which should we use?')}
+        <div className="fr__col">
+          <div className="fr__words">
+            <h1 className="display fr__title fr__title--left">{t('One question before you start')}</h1>
+            <p className="fr__body">
+              {t('The sessions speak to you directly, and the words change with how you are addressed. Which should we use?')}
+            </p>
+          </div>
+
+          <div className="adr__choices">
+            <button className="adr__choice" disabled={!!busy} onClick={() => choose('f')}>
+              <b>{t('Feminine')}</b>
+              <span>{t('“Find a comfortable position, when you are ready.” — feminine')}</span>
+            </button>
+            <button className="adr__choice" disabled={!!busy} onClick={() => choose('m')}>
+              <b>{t('Masculine')}</b>
+              <span>{t('“Find a comfortable position, when you are ready.” — masculine')}</span>
+            </button>
+          </div>
+
+          <p className="fr__fine">
+            {t('It chooses which recording you hear — nothing else. You can change it any time in Profile → Session preferences.')}
           </p>
         </div>
-
-        <div className="adr__choices">
-          <button className="adr__choice" disabled={!!busy} onClick={() => choose('f')}>
-            <b>{t('Feminine')}</b>
-            <span>{t('“Find a comfortable position, when you are ready.” — feminine')}</span>
-          </button>
-          <button className="adr__choice" disabled={!!busy} onClick={() => choose('m')}>
-            <b>{t('Masculine')}</b>
-            <span>{t('“Find a comfortable position, when you are ready.” — masculine')}</span>
-          </button>
-        </div>
-
-        <p className="fr__fine">
-          {t('It chooses which recording you hear — nothing else. You can change it any time in Profile → Session preferences.')}
-        </p>
       </div>
     </div>
   )

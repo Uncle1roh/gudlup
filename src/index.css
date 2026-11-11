@@ -3716,27 +3716,11 @@ html[data-gl-amb='login'] .app-frame.su-studio::before { display: none; }
    rule it needs is the one above, which takes the near-black sheet off the
    frame. */
 
-/* The words sit straight on the frame, which is now a photograph — and a
-   photograph is not an even ground. The right-hand column carries a veil
-   of its own so a paragraph is read against one colour whether it happens
-   to fall on the dark cliff or on the lit moss beside it. A blur rather
-   than a flat fill, so the picture is still there behind the text. */
-html[data-gl-amb='login'] .fr__col {
-  position: relative;
-  background: linear-gradient(
-    90deg,
-    rgba(5, 18, 14, 0) 0%,
-    rgba(5, 18, 14, 0.55) 12%,
-    rgba(5, 18, 14, 0.72) 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-/* …and the faint grades of ink were drawn for a flat near-black. Over the
-   picture the quietest of them stops being quiet and starts being absent. */
-html[data-gl-amb='login'] .fr__body,
-html[data-gl-amb='login'] .fr__foot,
-html[data-gl-amb='login'] .fr__need { color: #e8edd6; }
+/* What the words are read against is no longer this file's business. The
+   first run wears the door's own card now (`auth/door.css`, the section
+   after the door itself): one glass panel on the right half of the
+   photograph, the same one the form stands in. The veil and the 8px blur
+   that used to go under the bare words went with it. */
 
 /* ===========================================================================
    Admin — Avvisi legali
