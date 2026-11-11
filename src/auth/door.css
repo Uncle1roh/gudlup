@@ -65,20 +65,23 @@
 }
 
 /* ----------------------------------------------------------------- layout --
-   In FLOW, not absolute. The card keeps the position it had — 150px down,
-   140px in from the right — except that those are now the door's padding,
-   so a form taller than the window makes the page longer instead of running
-   off the bottom of it. */
+   In FLOW, not absolute, and CENTRED (POs, 2026-11-11). It stood against the
+   right edge of the window, which was where it had always been drawn; the
+   card is half the window wide now, and half the window held against one
+   side is a column, not a composition. In the middle it has the photograph
+   on both sides of it.
+
+   In flow is the other half of this: a form taller than the window makes the
+   page longer instead of running off the bottom of it. */
 .auth.auth--hero.su-studio {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: flex-start;
-  /* The right gutter is the site header's own (72px): the mark stands 72
-     from the left edge, so the card now ends 72 from the right one and the
-     two are on one grid. It used to be 140, which lined up with nothing.
-     The top is the distance the card was drawn at; it closes up as the
-     window gets shorter, because a form that does not fit should spend the
-     room on itself rather than on the air above it. */
+  /* 72px each side — the site header's own gutter, so a narrow window closes
+     on the card symmetrically. The top is the distance the card was drawn
+     at; it closes up as the window gets shorter, because a form that does
+     not fit should spend the room on itself rather than on the air above
+     it. */
   padding: 150px 72px 72px;
 }
 
@@ -101,11 +104,9 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
 }
 
-/* HALF THE WINDOW, from the right (POs, 2026-11-11). Not a fixed width that
-   happens to look narrow on a wide screen: the card's left edge is the
-   middle of the window, and it ends at the door's own right gutter. The
-   photograph keeps the other half, with the person in it on the left where
-   the framing puts them.
+/* HALF THE WINDOW (POs, 2026-11-11), in the middle of it. Not a fixed width
+   that happens to look narrow on a wide screen: it is half the window,
+   whatever the window is, with the photograph showing a quarter either side.
 
    Below 1100px there is no half to take — the picture would have nothing
    left — so the card goes back to its own width and then, on a phone, to
@@ -471,8 +472,9 @@
    2026-11-11: "it shouldn't feel like we are changing environments").
 
    Everything below is the door's own furniture, applied to the first run:
-   the same glass card in the same place at the same width, the same ink, the
-   same wells and choices, the same cream pill. Only the content changes.
+   the same glass card in the same place — the middle of the window, half of
+   it wide — the same ink, the same wells and choices, the same cream pill.
+   Only the content changes.
 
    Keyed on `html[data-gl-amb='login']`, which is the stage the first run
    claims — so this reaches the door's flow and nothing else. On the library
@@ -503,7 +505,7 @@ html[data-gl-amb='login'] .screen.fr {
   margin: 0;
   display: flex;
   flex-direction: row;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: flex-start;
   gap: 0;
   text-align: left;
