@@ -48,21 +48,35 @@ for (const name of suites) {
     skipped.push(name)
     continue
   }
-  const out = join(CACHE, `${name}.cjs`)
-  try {
-    /* esbuild's JS API rather than its binary: on Windows the shim is a .cmd
-       and execFile refuses it with EINVAL. */
-    buildSync({
-      entryPoints: [`tools/${name}.ts`],
-      bundle: true, platform: 'node', format: 'cjs',
-      define: { 'import.meta.env': '{}' },
-      outfile: out, logLevel: 'warning',
-    })
-  } catch (e) {
+  /* esbuild's JS API rather than its binary: on Windows the shim is a .cmd
+     and execFile refuses it with EINVAL.
+
+     CommonJS first, because that is what most of these suites are, and ESM
+     as the fallback: a suite that awaits at the TOP LEVEL cannot be bundled
+     to cjs at all -- esbuild answers "Top-level await is currently not
+     supported with the cjs output format" and the suite is reported as
+     FAILING. Several suites sat in that state for months, including the two
+     that cover the ElevenLabs request body, and their own header comments
+     said to build them with --format=esm. Nothing was ever wrong with the
+     tests; the runner only ever offered them one format. */
+  let out = join(CACHE, `${name}.cjs`)
+  const build = (format) => buildSync({
+    entryPoints: [`tools/${name}.ts`],
+    bundle: true, platform: 'node', format,
+    define: { 'import.meta.env': '{}' },
+    outfile: out, logLevel: 'silent',
+  })
+  const buildFailed = (err) => {
     console.log(`BUILD FAIL  ${name}`)
-    console.log(String(e.message).trim().split('\n').slice(0, 10).map((l) => '    ' + l).join('\n'))
+    console.log(String(err.message).trim().split('\n').slice(0, 10).map((l) => '    ' + l).join('\n'))
     failed.push(name)
-    continue
+  }
+  try {
+    build('cjs')
+  } catch (first) {
+    if (!/top-level await/i.test(String(first.message))) { buildFailed(first); continue }
+    out = join(CACHE, `${name}.mjs`)
+    try { build('esm') } catch (second) { buildFailed(second); continue }
   }
 
   const run = spawnSync(process.execPath, [out], { encoding: 'utf8' })

@@ -4,75 +4,57 @@
    The request used to carry only `text`, `model_id` and two voice settings, on
    the stated assumption that "the multilingual model auto-detects the language
    from the text, so no language flag is needed". That assumption is what the
-   POs heard as broken voices in GL-ANX 1.1:
+   POs heard as broken voices in GL-ANX 1.1, and then again on every Portuguese
+   protocol:
 
      · language is inferred PER REQUEST, and a protocol is one request per line.
-       A two-word Italian fragment ("pace", "calma", "profumo dentro calma") is
-       also valid Portuguese or English, so the engine placed it in the wrong
-       language — a Brazilian accent, or "pace" read as the English word.
+       A two-word fragment ("pace", "calma", "profumo dentro calma") is valid in
+       two or three languages at once, so the engine placed it wherever it
+       liked — a Brazilian accent on the Italian, English and Spanish words
+       inside the Portuguese.
      · stability 0.5 is the loose end of the range: the same voice id came back
        as an audibly different person from take to take.
      · with no seed and no stitching, every line was an isolated,
        non-deterministic generation. Nothing held the voice's identity together
        across the ~100 calls that make up one protocol.
 
-   All four levers are now used. See MODEL_CAPS for what is model-dependent —
-   notably `language_code`, which multilingual_v2 REJECTS, so on that model the
-   language is steered through the text and its neighbours instead.
+   All of those levers are used now. The last one — telling the engine the
+   language outright instead of letting it guess — needs a model that accepts
+   `language_code`, and `eleven_multilingual_v2` is the one model that does
+   not. So the model is a SETTING (tts/model.ts, chosen in the Voice engine
+   panel) rather than a constant, and the body is built from that model's
+   capabilities.
 
-   SECURITY: the key is read from a VITE_ env var and therefore ships to the
-   browser — fine for a closed test, NOT for production. Move this call behind a
-   server proxy (e.g. a Supabase Edge Function) before any public release. */
+   Nothing here trusts that table completely: a 422 that names a parameter
+   drops it, writes it down and retries, so a model whose capabilities have
+   moved costs one free round trip rather than a dead render queue.
+
+   SECURITY: the key is read from the admin-only shared row and therefore lives
+   in the browser — fine for a closed test, NOT for production. Move this call
+   behind a server proxy (e.g. a Supabase Edge Function) before any public
+   release. */
 
 import type { TtsJoinedRender, TtsOptions, TtsProvider, TtsSpan } from './types'
-import { ttsLanguage } from './settings'
+import { ttsLanguage, ttsModelId } from './settings'
 import { resolveVoiceId } from './voiceCatalog'
 import { announceElevenLabsRequest } from './requestNotice'
+import {
+  DROPPABLE, languageCodeFor, learnUnsupported, offendingParam, stabilityFor,
+  ttsModel, unsupported, type TtsModel,
+} from './model'
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech'
 
-/* ---- model -------------------------------------------------------------
-   ONE constant chooses the engine. Capabilities differ per model and the
-   request body has to match, so they are declared together: sending
-   `language_code` to multilingual_v2 is a 422, and the turbo/flash models
-   reject `apply_text_normalization: 'on'`.
-
-   Keep multilingual_v2 until the POs re-audition the archetypes: the
-   turbo/flash/v3 models DO accept a hard language flag, but they render the
-   voices with a different character than the ones already approved. */
-export const MODEL_ID = 'eleven_multilingual_v2'
-
-interface ModelCaps {
-  /** Accepts `language_code` (ISO 639-1) to ENFORCE the language rather than
-      infer it. False on multilingual_v2 — the reason the mitigations below
-      (stitching, shaped text, terminal punctuation) carry the load instead. */
-  languageCode: boolean
-  /** Accepts `apply_text_normalization: 'on'` — spells digits, dates and
-      currency out loud instead of guessing at them. Only ever REQUESTED when
-      the language is also being enforced: normalization expands "1, 2, 3" into
-      number WORDS, and asking for that while the model is still guessing the
-      language is how a counting line ends up counting in Portuguese. Left at
-      'auto' otherwise. */
-  textNormalization: boolean
-  /** Serves `/with-timestamps` (character-level alignment), which is what lets
-      a block of short lines be spoken as one utterance and cut back apart. */
-  timestamps: boolean
-  /** Accepts `previous_text`/`next_text`. v3 rejects them outright ("not yet
-      supported"), so adopting it would LOSE the stitching that fixed the
-      counting line. */
-  stitching: boolean
+/** The model in force right now — a setting, read at call time so that
+    changing it in the panel takes effect on the next line without a reload. */
+export function activeModel(): TtsModel {
+  return ttsModel(ttsModelId())
 }
 
-const MODEL_CAPS: Record<string, ModelCaps> = {
-  eleven_multilingual_v2: { languageCode: false, textNormalization: true, timestamps: true, stitching: true },
-  eleven_turbo_v2_5: { languageCode: true, textNormalization: false, timestamps: true, stitching: true },
-  eleven_flash_v2_5: { languageCode: true, textNormalization: false, timestamps: true, stitching: true },
-  eleven_v3: { languageCode: true, textNormalization: true, timestamps: false, stitching: false },
-}
-
-function caps(): ModelCaps {
-  return MODEL_CAPS[MODEL_ID] ?? { languageCode: false, textNormalization: false, timestamps: false, stitching: false }
-}
+/** Learned marker for "this model does not serve character alignment". Not a
+    body parameter — the whole `/with-timestamps` endpoint is what fails — so
+    it is kept in the same store under a name no parameter can collide with. */
+const NO_TIMESTAMPS = 'with-timestamps'
 
 /* ---- voice settings ----------------------------------------------------
    Tuned for IDENTITY, not expression. The archetype has to survive 100
@@ -86,20 +68,15 @@ const SPEED_MAX = 1.2
 
 /* ---- text shaping ------------------------------------------------------ */
 
-/** BCP-47 → ISO 639-1 ('pt-BR' → 'pt'), which is what `language_code` wants. */
-function iso639(tag: string): string {
-  return tag.toLowerCase().split(/[-_]/)[0]
-}
-
 /**
  * Normalize a line the way ElevenLabs documents, before it is spoken.
  *
  * The PLAIN sheets write pauses as the ellipsis CHARACTER: "calore … morbidezza
  * … abbandono". Passed through verbatim that is one unpunctuated run of
- * ambiguous nouns — the worst possible input for prosody and, on
- * multilingual_v2, for language inference. It is why those lines read wrong.
- * ElevenLabs' own docs use "..." as the pause-and-weight device, so the single
- * U+2026 glyph becomes three ASCII dots with consistent spacing.
+ * ambiguous nouns — the worst possible input for prosody and for language
+ * inference. It is why those lines read wrong. ElevenLabs' own docs use "..."
+ * as the pause-and-weight device, so the single U+2026 glyph becomes three
+ * ASCII dots with consistent spacing.
  *
  * Deliberately NOT `<break time=.../>` tags: the docs warn that break tags make
  * the model "speed up, or introduce additional noises or audio artifacts" —
@@ -196,8 +173,11 @@ function seedFrom(parts: (string | undefined)[]): number {
  * about the request. Both of the ones this project hit — a voice belonging to
  * another workspace, and a key whose own credit cap is exhausted while the
  * account still shows plenty — read as nonsense until you know that.
+ *
+ * `dropped` names a parameter that was already removed and retried, so the
+ * message can say the model refused it twice rather than blaming the body.
  */
-function explainError(status: number, detail: string): string {
+function explainError(status: number, detail: string, model: TtsModel, dropped: string | null): string {
   const body = detail.toLowerCase()
   if (status === 404 && body.includes('voice_not_found')) {
     return `ElevenLabs 404: questa voce non esiste per la chiave in uso — appartiene a un altro account o workspace. Controlla il pannello Voce: l’account mostrato è quello che possiede la voce? (${detail.slice(0, 120)})`
@@ -208,10 +188,11 @@ function explainError(status: number, detail: string): string {
   if (status === 429 || body.includes('quota') || body.includes('credit') || body.includes('character_limit')) {
     return `ElevenLabs ${status}: credito esaurito PER QUESTA CHIAVE. Se l’account ha ancora crediti, la chiave ha un tetto proprio (impostato alla creazione) oppure è di un altro account — il pannello Voce mostra quale account e quanti caratteri restano. (${detail.slice(0, 120)})`
   }
+  if (dropped) {
+    return `ElevenLabs ${status}: il modello "${model.id}" ha rifiutato la richiesta anche senza "${dropped}". Prova un altro modello dal pannello Voce — Flash v2.5 è quello su cui questo catalogo è stato verificato. (${detail.slice(0, 160)})`
+  }
   if (status === 422) {
-    // the shape of the body is model-dependent; say so, because this is the
-    // error a model swap produces first
-    return `ElevenLabs 422: il modello "${MODEL_ID}" ha rifiutato un parametro della richiesta. Se il modello è stato cambiato di recente, controlla MODEL_CAPS in src/tts/elevenlabs.ts — language_code non è accettato da multilingual_v2, e apply_text_normalization:'on' non è accettato dai modelli turbo/flash. (${detail.slice(0, 160)})`
+    return `ElevenLabs 422: il modello "${model.id}" ha rifiutato un parametro della richiesta, e il nome del parametro non compare nella risposta — quindi non è stato possibile toglierlo e riprovare da soli. Cambia modello dal pannello Voce. (${detail.slice(0, 160)})`
   }
   return `ElevenLabs ${status}: ${detail.slice(0, 180)}`
 }
@@ -238,16 +219,17 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     return resolveVoiceId(chosen).voice?.id ?? chosen
   }
 
-  async function fetchBytes(text: string, opts?: TtsOptions): Promise<ArrayBuffer> {
-    const c = caps()
-    const voice = resolveVoice(opts)
-    const lang = (opts?.lang ?? ttsLanguage()).trim()
-    const shaped = shapeTtsText(text)
+  /**
+   * Build the part of the body that is the same for a single line and for a
+   * joined block, with every model-dependent field decided by the model.
+   */
+  function bodyFor(model: TtsModel, text: string, lang: string, seedParts: (string | undefined)[], opts?: TtsOptions): Record<string, unknown> {
+    const c = model.caps
     const prev = opts?.previousText?.trim() ? shapeTtsText(opts.previousText) : undefined
     const next = opts?.nextText?.trim() ? shapeTtsText(opts.nextText) : undefined
 
     const settings: Record<string, unknown> = {
-      stability: STABILITY,
+      stability: stabilityFor(model, STABILITY),
       similarity_boost: SIMILARITY_BOOST,
       style: 0, // >0 trades identity for drama — not what these protocols want
       use_speaker_boost: true,
@@ -260,41 +242,83 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     }
 
     const body: Record<string, unknown> = {
-      text: shaped,
-      model_id: MODEL_ID,
+      text,
+      model_id: model.id,
       voice_settings: settings,
-      seed: opts?.seed ?? seedFrom([voice, lang, shaped, prev, next]),
+      seed: opts?.seed ?? seedFrom(seedParts),
+      /* Normalization is only ever asked for once the language is ENFORCED.
+         It expands "1, 2, 3" into number words, and asking for that while the
+         model is still guessing the language is how a counting line ends up
+         counting in Portuguese. */
       apply_text_normalization: c.languageCode && c.textNormalization ? 'on' : 'auto',
     }
-    // Only when the model accepts it — otherwise this is a 422.
-    if (c.languageCode && lang) body.language_code = iso639(lang)
-    // Request stitching. Two jobs: it keeps prosody continuous across the many
-    // separate generations of one protocol, AND it lends a short fragment the
-    // surrounding words it needs to be placed in the right language.
+    /* THE LINE THIS WHOLE FILE IS ABOUT. On every model but multilingual_v2
+       the language is stated instead of inferred, so "calma" in a Portuguese
+       protocol is Portuguese and "pace" in an Italian one is Italian. */
+    if (c.languageCode && lang) body.language_code = languageCodeFor(lang)
+    /* Request stitching. Two jobs: it keeps prosody continuous across the many
+       separate generations of one protocol, AND it lends a short fragment the
+       surrounding words it needs to be placed in the right language. */
     if (c.stitching && prev) body.previous_text = prev
     if (c.stitching && next) body.next_text = next
+    return body
+  }
+
+  /**
+   * POST, and treat a 422 that names a parameter as information.
+   *
+   * The capability table in tts/model.ts is a reading of ElevenLabs' docs,
+   * and those have been wrong about this project's own models before. Rather
+   * than let a stale row stop a render, the named parameter is dropped,
+   * written down for next time, and the request goes again. A 422 costs no
+   * credits, so the whole recovery is free; it happens once per browser per
+   * model, and after that the parameter is simply never sent.
+   */
+  async function post(url: string, body: Record<string, unknown>, model: TtsModel, accept?: string): Promise<Response> {
+    const sent: Record<string, unknown> = { ...body }
+    for (const p of DROPPABLE) if (unsupported(model.id, p)) delete sent[p]
+
+    const headers: Record<string, string> = { 'xi-api-key': apiKey, 'Content-Type': 'application/json' }
+    if (accept) headers.Accept = accept
+    const send = (b: Record<string, unknown>) => fetch(url, { method: 'POST', headers, body: JSON.stringify(b) })
+
+    let res = await send(sent)
+    if (res.ok) return res
+
+    const detail = await res.text().catch(() => '')
+    if (res.status === 422) {
+      const bad = offendingParam(detail, sent)
+      if (bad) {
+        learnUnsupported(model.id, bad)
+        delete sent[bad]
+        res = await send(sent)
+        if (res.ok) return res
+        throw new Error(explainError(res.status, await res.text().catch(() => ''), model, bad))
+      }
+    }
+    throw new Error(explainError(res.status, detail, model, null))
+  }
+
+  async function fetchBytes(text: string, opts?: TtsOptions): Promise<ArrayBuffer> {
+    const model = activeModel()
+    const voice = resolveVoice(opts)
+    const lang = (opts?.lang ?? ttsLanguage()).trim()
+    const shaped = shapeTtsText(text)
+    const prev = opts?.previousText?.trim() ? shapeTtsText(opts.previousText) : undefined
+    const next = opts?.nextText?.trim() ? shapeTtsText(opts.nextText) : undefined
+    const body = bodyFor(model, shaped, lang, [voice, lang, shaped, prev, next], opts)
 
     announceElevenLabsRequest(shaped.length)
-    const res = await fetch(`${ENDPOINT}/${voice}`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': apiKey,
-        'Content-Type': 'application/json',
-        Accept: 'audio/mpeg',
-      },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      throw new Error(explainError(res.status, detail))
-    }
+    const res = await post(`${ENDPOINT}/${voice}`, body, model, 'audio/mpeg')
     return res.arrayBuffer()
   }
 
   /** Speak a block of lines as ONE utterance and report where each landed. */
   async function fetchJoined(texts: string[], opts?: TtsOptions): Promise<TtsJoinedRender> {
-    const c = caps()
-    if (!c.timestamps) throw new Error(`Model "${MODEL_ID}" has no character alignment — cannot render a joined block.`)
+    const model = activeModel()
+    if (!model.caps.timestamps || unsupported(model.id, NO_TIMESTAMPS)) {
+      throw new Error(`Il modello "${model.id}" non restituisce i tempi per carattere, quindi un blocco non si può tagliare. Scegli un altro modello dal pannello Voce (Flash v2.5 lo fa).`)
+    }
     const shaped = texts.map(shapeTtsText).filter((t) => t.length > 0)
     if (shaped.length !== texts.length) throw new Error('A line in the block is empty.')
     const voice = resolveVoice(opts)
@@ -302,35 +326,21 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     const combined = shaped.join(JOIN)
     const prev = opts?.previousText?.trim() ? shapeTtsText(opts.previousText) : undefined
     const next = opts?.nextText?.trim() ? shapeTtsText(opts.nextText) : undefined
-
-    const body: Record<string, unknown> = {
-      text: combined,
-      model_id: MODEL_ID,
-      voice_settings: {
-        stability: STABILITY,
-        similarity_boost: SIMILARITY_BOOST,
-        style: 0,
-        use_speaker_boost: true,
-        ...(opts?.rate && Math.abs(opts.rate - 1) > 0.001
-          ? { speed: +Math.min(SPEED_MAX, Math.max(SPEED_MIN, opts.rate)).toFixed(2) }
-          : {}),
-      },
-      seed: opts?.seed ?? seedFrom([voice, lang, combined, prev, next]),
-      apply_text_normalization: c.languageCode && c.textNormalization ? 'on' : 'auto',
-    }
-    if (c.languageCode && lang) body.language_code = iso639(lang)
-    if (c.stitching && prev) body.previous_text = prev
-    if (c.stitching && next) body.next_text = next
+    const body = bodyFor(model, combined, lang, [voice, lang, combined, prev, next], opts)
 
     announceElevenLabsRequest(combined.length, shaped.length)
-    const res = await fetch(`${ENDPOINT}/${voice}/with-timestamps`, {
-      method: 'POST',
-      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      throw new Error(explainError(res.status, detail))
+    let res: Response
+    try {
+      res = await post(`${ENDPOINT}/${voice}/with-timestamps`, body, model, undefined)
+    } catch (e) {
+      /* The endpoint itself refused, not one parameter of it. If the model is
+         the reason, remember that: the Studio reads canRenderJoined and will
+         stop grouping lines into blocks, which is slower and costs more but
+         at least renders. It is said out loud because a protocol whose
+         one-word lines are rendered alone is the defect the POs reported. */
+      const m = (e as Error).message
+      if (/404|405|422|not supported|alignment/i.test(m)) learnUnsupported(model.id, NO_TIMESTAMPS)
+      throw new Error(`${m} — il modello "${model.id}" non sembra servire i tempi per carattere. Scegli Flash v2.5 dal pannello Voce.`)
     }
     const json = (await res.json()) as { audio_base64?: string; alignment?: Alignment }
     if (!json.audio_base64) throw new Error('ElevenLabs returned no audio for the joined block.')
@@ -345,7 +355,13 @@ export function createElevenLabsTts(apiKey: string, voiceId: string, voiceIdSeco
     label: 'ElevenLabs',
     canRender: true,
     hasSecondaryVoice: Boolean(secondary),
-    canRenderJoined: caps().timestamps,
+    /* A getter, not a value: the model is a setting now, and a provider made
+       before the operator changed it must not keep promising what the old
+       model could do. */
+    get canRenderJoined() {
+      const m = activeModel()
+      return m.caps.timestamps && !unsupported(m.id, NO_TIMESTAMPS)
+    },
     async render(text: string, opts?: TtsOptions) {
       return fetchBytes(text, opts)
     },

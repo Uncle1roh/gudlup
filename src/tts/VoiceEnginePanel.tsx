@@ -14,9 +14,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getTtsProvider } from './index'
 import {
-  getTtsSettings, saveTtsSettings, elevenLabsSource,
+  getTtsSettings, saveTtsSettings, elevenLabsSource, ttsModelId, setTtsModelId,
   hydrateTtsSettings, saveSharedTtsSettings, loadAccountKeys, saveAccountKey, type SharedState,
 } from './settings'
+import { TTS_MODELS, ttsModel, learnedFor, type TtsModelId } from './model'
 import { ARCHETYPES, defaultPrimary, defaultSecondary, resolveVoiceId, VOICE_CATALOG, voicesByArchetype, voiceLangOf } from './voiceCatalog'
 import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
 import { VOICE_ACCOUNTS, accountForKey } from './voiceAccounts'
@@ -80,6 +81,11 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /* WHICH model speaks. Was a constant in the code until the Portuguese
+     protocols made it urgent: multilingual_v2 is the one model that refuses
+     to be told the language, and every wrong-language line came out of that.
+     See tts/model.ts. */
+  const [model, setModel] = useState<TtsModelId>(() => ttsModelId())
   /* bumped whenever the live catalog changes, so the pickers re-render */
   const [syncTick, setSyncTick] = useState(0)
   const [syncing, setSyncing] = useState(false)
@@ -142,6 +148,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
           setApiKey(s.apiKey)
           if (s.voiceId) setVoiceId(s.voiceId)
           if (s.voiceIdSecondary) setVoiceIdM(s.voiceIdSecondary)
+          if (s.model) { setModel(s.model); setTtsModelId(s.model) }
           setStatus('Chiave ElevenLabs recuperata dalle impostazioni condivise — non serve reinserirla.')
         }
       }
@@ -180,6 +187,10 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
      by the same archetype here, so the panel says which voice is speaking now
      instead of showing an id that belongs to an account nobody is using. */
   const remapped = [pRes, mRes].filter((r) => r.remappedFrom)
+  /* Parameters this model has answered 422 over, here, so a model that is
+     quietly doing less than its description says is visible instead of just
+     sounding wrong. */
+  const refused = learnedFor(model)
 
   /**
    * Write the settings down. Called by the Salva button AND by every change.
@@ -189,10 +200,14 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
    * dropdown change would hammer the API for nothing.
    */
   const persist = useCallback(async (
-    next: { apiKey: string; voiceId: string; voiceIdSecondary?: string },
+    next: { apiKey: string; voiceId: string; voiceIdSecondary?: string; model?: TtsModelId },
     opts: { resync?: boolean; loud?: boolean } = {},
   ) => {
     const payload = { ...next, savedAt: Date.now() }
+    /* The model has its own setter because the provider reads it at call time
+       and must see the change before the debounce finishes — otherwise the
+       next line still renders on the old model. */
+    if (next.model) setTtsModelId(next.model)
     /* Local first, always. Whatever happens to the network, the operator's
        choice survives the next reload of this browser. */
     saveTtsSettings(payload)
@@ -241,10 +256,10 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     const id = window.setTimeout(() => {
       lastSavedKey.current = key
       setDirty(false)
-      void persist({ apiKey: key, voiceId, voiceIdSecondary: voiceIdM || undefined }, { resync: keyChanged })
+      void persist({ apiKey: key, voiceId, voiceIdSecondary: voiceIdM || undefined, model }, { resync: keyChanged })
     }, keyChanged ? 900 : 250)
     return () => clearTimeout(id)
-  }, [dirty, hydrated, apiKey, voiceId, voiceIdM, persist])
+  }, [dirty, hydrated, apiKey, voiceId, voiceIdM, model, persist])
 
   /** Make an account the one in force: its key becomes the shared key, its
       22 voices the catalog, and the chosen voices move to their twins there. */
@@ -259,7 +274,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setVoiceId(p)
     setVoiceIdM(m)
     setSyncTick((n) => n + 1)
-    await persist({ apiKey: key, voiceId: p, voiceIdSecondary: m }, { loud: true })
+    await persist({ apiKey: key, voiceId: p, voiceIdSecondary: m, model }, { loud: true })
   }
 
   async function chooseAccount(id: string) {
@@ -350,6 +365,29 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
           <button className="voice-panel__btn voice-panel__btn--quiet" onClick={() => { setPasteFor(null); setError(null) }}>Annulla</button>
         </div>
       )}
+      {/* WHICH MODEL SPEAKS. The one setting on this panel that is not about
+          an account: it decides whether the request may SAY what language the
+          line is in. multilingual_v2 cannot be told, and that is where the
+          Brazilian accent on the Italian lines and the stray English and
+          Spanish words inside the Portuguese ones come from. */}
+      <div className="voice-panel__fields">
+        <select
+          className="voice-panel__input"
+          value={model}
+          onChange={(e) => { setModel(e.target.value as TtsModelId); setDirty(true) }}
+          aria-label="Modello ElevenLabs"
+        >
+          {TTS_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+      </div>
+      <p className="voice-panel__fine" style={{ marginTop: 2 }}>
+        <b>Modello:</b> {ttsModel(model).what}{' '}
+        {ttsModel(model).caps.languageCode
+          ? 'Ogni richiesta dichiara la lingua della battuta (it / pt): il modello non deve più indovinarla riga per riga.'
+          : '⚠ Questo modello non accetta la lingua: ogni battuta viene indovinata da sola, ed è da lì che vengono gli accenti sbagliati.'}
+        {refused.length > 0 && ` — su questo browser ha già rifiutato: ${refused.join(', ')} (tolti dalle richieste successive).`}
+      </p>
+
       <p className="voice-panel__fine" style={{ marginTop: 2 }}>
         Il primo menu sceglie l’account ElevenLabs; gli altri due mostrano solo le sue {VOICE_CATALOG.length} voci.
         Voce principale: ogni battuta [F] o non marcata (predefinita {defaultPrimary().name}).

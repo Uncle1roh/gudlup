@@ -27,6 +27,57 @@ Reminder: a key used in the browser is visible to the browser. That's acceptable
 for a closed PO test; before a public release the ElevenLabs call moves behind a
 server proxy (e.g. a Supabase Edge Function) so the key never leaves the server.
 
+## Which model speaks, and why it is a dropdown
+
+Admin -> Dettagli -> motore vocale, under the two voice pickers. It is stored
+beside the key and shared the same way, because two operators on two different
+models render the same protocol differently.
+
+The setting exists because of one request parameter. ElevenLabs infers the
+language **per request**, and a protocol is one request per line, so a line
+like `calma` -- Italian, Portuguese and Spanish at once -- is placed by guess.
+`language_code` is how you stop the guessing, and
+**`eleven_multilingual_v2` is the one model in the catalogue that rejects it**
+(422). That model was hard-coded here for a year. It is where the Brazilian
+accent on the Italian lines came from, and the stray English and Spanish words
+inside the Portuguese ones.
+
+| Model | Tells it the language | Character timings | Stability |
+|---|---|---|---|
+| `eleven_flash_v2_5` (default) | yes | yes | a dial |
+| `eleven_v4`, `eleven_v4_turbo` | yes | yes | 0 / 0.5 / 1 only |
+| `eleven_v3` | yes | yes | 0 / 0.5 / 1 only |
+| `eleven_multilingual_v2` | **no** | yes | a dial |
+
+Flash v2.5 is the default because it fits this catalogue: the lines are very
+short (`pace`, `calma`, `sono al sicuro`), it takes a hard `language_code`, it
+serves the character timings the Studio needs to speak a block as one utterance
+and cut it apart, and its stability is a continuous dial -- which is what holds
+one archetype together over the ~100 generations of a protocol.
+
+v3 and v4 are offered because they are more expressive and may well win a
+re-audition, but two of their properties are a poor fit and should be heard
+before anything is published: stability is three positions rather than a dial
+(0.8 is rounded to 1.0 in `tts/model.ts`, deliberately and visibly), and
+ElevenLabs' own guidance is that prompts under ~250 characters come out less
+consistently. Every voice line here is far under 250 characters.
+
+**Portuguese is `pt`, not `pt-BR`.** ElevenLabs' language list has one
+Portuguese entry, and an unrecognised code is silently ignored -- i.e. back to
+guessing. The Brazilian accent comes from the **voice**, which is why the
+catalogue carries an Italian and a Brazilian voice for every archetype and the
+Studio picks by language.
+
+### If a model refuses something
+
+ElevenLabs does not advertise these differences -- `GET /v1/models` says
+nothing about `language_code`, alignment or stitching -- so the table in
+`src/tts/model.ts` is this project's reading, and it has been wrong before. A
+422 that names a parameter therefore drops that parameter, writes it down
+(`gl.tts.unsupported` in localStorage) and retries. A 422 costs no credits, so
+a stale row costs one free round trip per browser instead of a dead render
+queue. Whatever a model has refused is listed under the dropdown.
+
 ## Azure neural voices
 
 1. Create a *Speech* resource in the Azure portal; copy a **Key** and the

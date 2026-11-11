@@ -43,4 +43,5 @@ export function getTtsProvider(): TtsProvider {
 }
 
 export type { TtsProvider, TtsOptions, TtsSpan, TtsJoinedRender } from './types'
-export { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, ttsLanguage } from './settings'
+export { getTtsSettings, saveTtsSettings, clearTtsSettings, elevenLabsSource, ttsLanguage, ttsModelId, setTtsModelId } from './settings'
+export { TTS_MODELS, DEFAULT_TTS_MODEL, ttsModel, languageCodeFor, type TtsModelId, type TtsModel } from './model'

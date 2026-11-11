@@ -2,8 +2,8 @@
 
    For every line the POs reported as wrong, this synthesizes TWICE — once with
    the request the app used to send, once through the real shipped code path —
-   then sends each result to ElevenLabs' speech-to-text, which auto-detects the
-   language. That turns "the voice has a Brazilian accent" into a number.
+   then sends each result to ElevenLabs' speech-to-text (Scribe v3), which
+   auto-detects the language. That turns "the voice has a Brazilian accent" into a number.
 
    The counting line also reports per-word timings, so "a little too fast when
    it says 1, 2, 3, 4, 5" becomes seconds instead of an impression.
@@ -83,12 +83,23 @@ async function renderOld(text: string, voiceId: string): Promise<ArrayBuffer> {
   return res.arrayBuffer()
 }
 
-/* ---- speech-to-text: the objective judge ---- */
+/* ---- speech-to-text: the objective judge ----
+
+   scribe_v3 is ElevenLabs' current batch transcription model and the
+   successor to scribe_v2; scribe_v1, which this used to name, is deprecated.
+   Its realtime twin is scribe_v3_live, which belongs on the streaming
+   endpoint - this tool has a finished mp3 in hand, so batch is the right one.
+
+   Deliberately NO language hint on the request. The whole job of this file is
+   to ask which language the audio is IN; telling the transcriber what to
+   expect would make the judge agree with the defendant. */
+const SCRIBE_MODEL = 'scribe_v3'
+
 interface Stt { language_code?: string; language_probability?: number; text?: string; words?: { text: string; start?: number; end?: number; type?: string }[] }
 async function transcribe(bytes: ArrayBuffer): Promise<Stt | { error: string }> {
   const fd = new FormData()
   fd.append('file', new Blob([bytes], { type: 'audio/mpeg' }), 'clip.mp3')
-  fd.append('model_id', 'scribe_v1')
+  fd.append('model_id', SCRIBE_MODEL)
   const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
     method: 'POST', headers: { 'xi-api-key': key! }, body: fd,
   })
@@ -140,7 +151,7 @@ for (const c of CASES) {
   rows.push('')
 }
 
-console.log('=== detected language per line (ElevenLabs scribe_v1, no language hint) ===\n')
+console.log(`=== detected language per line (ElevenLabs ${SCRIBE_MODEL}, no language hint) ===\n`)
 console.log(rows.join('\n'))
 console.log('=== summary ===')
 console.log(`lines tested                       : ${counted}`)
@@ -153,6 +164,9 @@ console.log('')
    isolated "pace"/"calma" came back non-Italian on 0-of-3 takes across
    multilingual_v2 (short and long stitching), turbo_v2_5 and flash_v2_5 with
    language_code=it, and v3. The fix is not to ask for one word at a time.
+   Re-run this against whichever model the Voice panel is set to before
+   believing that is still true of it: the measurement is from the models of
+   the time, and both the models and their parameters have moved since.
    This renders the block through the shipped renderJoined() and checks that
    each line's spoken words really do fall inside the span we cut for it. */
 console.log('=== LOOP block as ONE utterance, then cut apart ===')

@@ -19,6 +19,7 @@
    ============================================================================ */
 
 import { getSupabaseClient, hasSupabaseEnv } from '../auth/supabaseClient'
+import { DEFAULT_TTS_MODEL, type TtsModelId } from './model'
 
 const STORAGE_KEY = 'gl.tts.elevenlabs'
 /** Row key in `app_settings` holding the shared ElevenLabs credentials. */
@@ -31,6 +32,10 @@ export interface TtsSettings {
   /** Optional second voice (male archetype) — used for the [M] rows of the
       Deep double-induction. Absent → [M] rows render with the primary voice. */
   voiceIdSecondary?: string
+  /** Which ElevenLabs model speaks (tts/model.ts). Shared like the key is,
+      because two operators on different models render the same protocol
+      differently — and one of those models cannot be told the language. */
+  model?: TtsModelId
   /** When this copy was written (epoch ms) — decides who wins against the
       shared row, so a key changed on another machine is not overwritten by an
       older local one. */
@@ -50,6 +55,7 @@ export function getTtsSettings(): TtsSettings | null {
         apiKey: parsed.apiKey.trim(),
         voiceId: (parsed.voiceId ?? '').trim(),
         voiceIdSecondary: sec || undefined,
+        model: typeof parsed.model === 'string' ? parsed.model as TtsModelId : undefined,
         savedAt: typeof parsed.savedAt === 'number' ? parsed.savedAt : undefined,
         shared: parsed.shared === true,
       }
@@ -67,6 +73,7 @@ export function saveTtsSettings(s: TtsSettings): void {
       apiKey: s.apiKey.trim(),
       voiceId: (s.voiceId ?? '').trim(),
       ...(sec ? { voiceIdSecondary: sec } : {}),
+      ...(s.model ? { model: s.model } : {}),
       savedAt: s.savedAt ?? Date.now(),
       ...(s.shared ? { shared: true } : {}),
     }))
@@ -95,7 +102,7 @@ function sb() {
   return getSupabaseClient(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_ANON_KEY as string)
 }
 
-interface SharedRow { apiKey: string; voiceId: string; voiceIdSecondary?: string }
+interface SharedRow { apiKey: string; voiceId: string; voiceIdSecondary?: string; model?: TtsModelId }
 
 export type SharedState = 'ok' | 'unavailable' | 'no-table' | 'forbidden'
 
@@ -123,6 +130,7 @@ export async function loadSharedTtsSettings(): Promise<{ settings: TtsSettings |
         apiKey: v.apiKey.trim(),
         voiceId: (v.voiceId ?? '').trim(),
         voiceIdSecondary: v.voiceIdSecondary?.trim() || undefined,
+        model: typeof v.model === 'string' ? v.model as TtsModelId : undefined,
         savedAt: data.updated_at ? Date.parse(data.updated_at as string) : Date.now(),
         shared: true,
       },
@@ -141,6 +149,7 @@ export async function saveSharedTtsSettings(s: TtsSettings): Promise<SharedResul
     apiKey: s.apiKey.trim(),
     voiceId: (s.voiceId ?? '').trim(),
     ...(s.voiceIdSecondary?.trim() ? { voiceIdSecondary: s.voiceIdSecondary.trim() } : {}),
+    ...(s.model ? { model: s.model } : {}),
   }
   try {
     const { data, error } = await c.from('app_settings')
@@ -204,6 +213,32 @@ export async function hydrateTtsSettings(): Promise<{ changed: boolean; state: S
 export function ttsLanguage(): string {
   const env = (import.meta.env.VITE_TTS_LANG as string | undefined)?.trim()
   return env || 'it'
+}
+
+/* ---- which model speaks -------------------------------------------------
+   Deliberately NOT read through getTtsSettings(): that returns null until a
+   key is saved, and the Voice panel has to be able to show and change the
+   model before anybody has connected an account. The model is not a secret,
+   so reading the raw row is enough. */
+export function ttsModelId(): TtsModelId {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const m = (JSON.parse(raw) as Partial<TtsSettings>).model
+      if (typeof m === 'string' && m.trim()) return m as TtsModelId
+    }
+  } catch { /* no storage (a node tool, a test), or nonsense in it */ }
+  return DEFAULT_TTS_MODEL
+}
+
+/** Change the model in this browser. The panel then pushes it to the shared
+    row with the rest of the settings, so everyone ends up on the same one. */
+export function setTtsModelId(model: TtsModelId): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const prev = raw ? (JSON.parse(raw) as Partial<TtsSettings>) : {}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...prev, model, savedAt: Date.now() }))
+  } catch { /* storage unavailable */ }
 }
 
 /* ---- the keys of OUR accounts ------------------------------------------
