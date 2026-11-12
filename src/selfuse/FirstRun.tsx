@@ -14,6 +14,15 @@
      3  Not belief. Neuroscience. — the nine techniques, the quote.
      4  Your data, your control. — EVERYTHING legal, in one screen.
 
+   THE FOURTH SCREEN IS NOT THE WIZARD'S (POs, 2026-11-12). The wizard was
+   drawn when the app had no legal corpus, so its last screen is a short
+   paragraph and one tick box — a summary of documents that did not exist
+   yet. The screen that stands here is the one this flow already had, with
+   every notice, every acknowledgement and every optional purpose on it;
+   only the ground and the furniture are the wizard's. The wizard's own
+   paragraph is gone with this change: it is legal copy with no id in the
+   registered corpus, standing on the screen where the corpus is accepted.
+
    NO PHOTOGRAPH. The door's picture is the ground for the form; from the
    moment the account exists the flow stands on the dark ground this surface
    paints for itself, with the wizard's two blurred lights on it and nothing
@@ -482,12 +491,6 @@ export function FirstRun({
                 <p>{t('Good Loop is built to LGPD and GDPR standards from day one.')}</p>
               </div>
 
-              {/* The wizard's own paragraph: what this is and what it is not,
-                  in one card, before anything is asked. */}
-              <div className="frw__card">
-                <p>{t('By continuing, you agree to our Terms and Privacy Policy. Good Loop provides self-directed wellbeing content or professionally guided sessions, per your selection, and is not a substitute for medical or psychological treatment.')}</p>
-              </div>
-
               {/* ---- what it is for, and what it is not for (ONB-2) ------
                   Its own box and its own record: this is not the Terms, and
                   somebody who accepts the Terms has not thereby said they
@@ -518,10 +521,12 @@ export function FirstRun({
                     </li>
                   ))}
                 </ul>
-                {/* ONB-3.2 lives here: the privacy notice, named once. The
-                    Terms themselves are linked under the box that accepts
-                    them, where the wizard puts them. */}
                 <div className="frw__links">
+                  <button type="button" className="frw__link" onClick={() => setSheet('terms')}>{t('Read the full Terms of Use')}</button>
+                  {/* ONB-3.2 lives here. It used to be a second, centred
+                      line under the tick box saying the same thing as this
+                      link — the privacy notice announced twice on one
+                      screen, which reads as neither being the real one. */}
                   <button type="button" className="frw__link" onClick={() => setSheet('privacy')}>{legal.m('ONB-3.2')}</button>
                 </div>
                 {/* The rest of what the Terms incorporate (D-01). */}
@@ -537,9 +542,6 @@ export function FirstRun({
                 <input type="checkbox" checked={termsAck} onChange={(e) => setTermsAck(e.target.checked)} />
                 <span>{legal.m('ONB-3.1')}</span>
               </label>
-              <div className="frw__links">
-                <button type="button" className="frw__link" onClick={() => setSheet('terms')}>{t('Read full terms')}</button>
-              </div>
 
               {/* ---- the optional purposes (ONB-3.3) ---------------------
                   Each row is what it is — a thing, and a switch — with its

@@ -437,10 +437,12 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 /* ============================================================================
    THE LAST STEP: EVERYTHING LEGAL
 
-   The wizard's screen 4 is a heading, a paragraph in a card, one tick box
-   and a link. What the legal framework requires is more than that, and all
-   of it is now on this one screen (POs, 2026-11-12): the emergency
-   acknowledgement, which is its own record and its own box (ONB-2.2,
+   NOT the wizard's screen 4, which is a heading, a paragraph and one tick
+   box: it was drawn before the legal corpus existed and summarises
+   documents that were not written yet (POs, 2026-11-12). The screen this
+   flow already had is the one that stands here, and it carries all of it in
+   one step: the emergency acknowledgement, which is its own record and its
+   own box (ONB-2.2,
    LEG-02); the essentials and every notice the Terms incorporate (D-01);
    the acceptance itself (ONB-3.1); the optional purposes, none pre-ticked
    (ONB-3.3, LEG-04); and, for somebody whose employer is paying, what that
@@ -495,6 +497,9 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   border: none;
   background: none;
   padding: 0;
+  /* A button centres its label; the privacy link is a whole sentence and
+     wrapped to two centred lines in the middle of a left-ranged column. */
+  text-align: left;
   font-family: var(--sans);
   font-size: 12.5px;
   color: var(--su-accent);
