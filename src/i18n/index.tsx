@@ -73,6 +73,13 @@ export interface I18n {
   setLocale: (l: Locale) => void
   t: (key: string, vars?: Record<string, string | number>) => string
   /**
+   * An OPERATOR-written label -- a library shelf's title -- in this language.
+   *
+   * Not for product copy: use `t()` there, so the string stays a key a
+   * translator can find. See the note on `translateContent`.
+   */
+  tc: (text: string) => string
+  /**
    * A date in the INTERFACE language.
    *
    * `toLocaleDateString(undefined, …)` reads the browser's locale, not the
@@ -87,6 +94,76 @@ export interface I18n {
 
 /** The default shape: "29 ago" — enough to place a day, short enough for a
     list row on the narrowest phone. */
+/* ----------------------------------------------------------------------------
+   OPERATOR-WRITTEN content
+
+   The strings above are the product's own: English source, one key, one
+   reviewed translation per locale. The library shelves (`src/data/rails.ts`)
+   are not -- an analyst names them in the console, which is pinned to
+   Italian. `t()` cannot help there: it looks a string up as an ENGLISH key,
+   and "Sei minuti" is not one, so the Portuguese app printed the Italian
+   back unchanged.
+
+   `tc()` is `t()` for that content, with one extra step: a reverse index over
+   every dictionary VALUE, so an Italian (or Portuguese) title that matches a
+   string the product already knows is resolved to its key first and then
+   translated into the language being read. Text the dictionaries have never
+   seen is left exactly as written -- a shelf called by a name only its author
+   could have chosen is shown in that name, not in a guess.
+
+   Built once, lazily: the dictionaries are large and most screens never ask.
+   First key wins on a collision, which is why this is for short editorial
+   labels and never for prose.
+   -------------------------------------------------------------------------- */
+
+let byTranslation: Map<string, string> | null = null
+
+function sourceKeyOf(text: string): string | null {
+  if (!byTranslation) {
+    byTranslation = new Map()
+    for (const dict of Object.values(DICTS)) {
+      if (!dict) continue
+      for (const [key, value] of Object.entries(dict)) {
+        const v = value.trim()
+        if (!v || byTranslation.has(v)) continue
+        byTranslation.set(v, key)
+      }
+    }
+  }
+  return byTranslation.get(text.trim()) ?? null
+}
+
+/**
+ * The English key an operator-written label resolves to, or null when the
+ * dictionaries have never seen it.
+ *
+ * The console shows this: a shelf whose name resolves to a key will read in
+ * every language, and one that does not will reach everyone as typed.
+ */
+export function contentKey(text: string): string | null {
+  const raw = (text ?? '').trim()
+  if (!raw) return null
+  for (const dict of Object.values(DICTS)) if (dict && dict[raw]) return raw
+  return sourceKeyOf(raw)
+}
+
+/**
+ * An operator-written label in the given language.
+ *
+ * In order: the string as an English key, then the string as some locale's
+ * translation (resolved to its key, then translated), then the string itself.
+ */
+export function translateContent(locale: Locale, text: string): string {
+  const raw = (text ?? '').trim()
+  if (!raw) return text
+  const dict = DICTS[locale]
+  if (dict && dict[raw]) return dict[raw]
+  const key = sourceKeyOf(raw)
+  if (!key) return text
+  if (key === raw) return text
+  return (dict && dict[key]) ?? key
+}
+
 const DATE_DEFAULT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
 
 /**
@@ -134,6 +211,7 @@ const FALLBACK: I18n = {
   locale: 'en',
   setLocale: () => {},
   t: interpolate,
+  tc: (text) => translateContent('en', text),
   d: (ms, opts) => formatDate('en', ms, opts),
 }
 
@@ -167,6 +245,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const dict = DICTS[locale]
       return interpolate((dict && dict[key]) ?? key, vars)
     },
+    tc: (text) => translateContent(locale, text),
     d: (ms, opts) => formatDate(locale, ms, opts),
   }), [locale])
 
@@ -190,6 +269,7 @@ export function FixedLocale({ locale, children }: { locale: Locale; children: Re
       const dict = DICTS[locale]
       return interpolate((dict && dict[key]) ?? key, vars)
     },
+    tc: (text) => translateContent(locale, text),
     d: (ms, opts) => formatDate(locale, ms, opts),
   }), [locale])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

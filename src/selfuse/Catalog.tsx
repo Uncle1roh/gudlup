@@ -425,7 +425,7 @@ function RailRow({ rail, onOpen, saved = [], onToggleSave }: {
   saved?: string[]
   onToggleSave?: (slug: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, tc } = useI18n()
   const track = useRef<HTMLDivElement>(null)
 
   /* Arrows appear on pointer devices only — a touch screen already has the
@@ -440,8 +440,9 @@ function RailRow({ rail, onOpen, saved = [], onToggleSave }: {
     <section className="cat-rail">
       <header className="cat-rail__head">
         <div>
-          <h3 className="cat__railtitle">{t(rail.title)}</h3>
-          {rail.subtitle && <p className="small muted">{t(rail.subtitle)}</p>}
+          {/* A shelf's name is the analyst's, not the product's: tc(). */}
+          <h3 className="cat__railtitle">{tc(rail.title)}</h3>
+          {rail.subtitle && <p className="small muted">{tc(rail.subtitle)}</p>}
         </div>
         <div className="cat-rail__arrows">
           <button onClick={() => nudge(-1)} aria-label={t('Scroll left')}>‹</button>

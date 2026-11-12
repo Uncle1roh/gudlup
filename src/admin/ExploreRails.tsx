@@ -21,16 +21,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useLiveCatalog } from '../data/liveCatalog'
-import { useI18n } from '../i18n'
+import { LOCALES, contentKey, translateContent, useI18n } from '../i18n'
 import { newRail, railsFromDefaults, resolveRails, type ExploreRail } from '../data/rails'
 
 export function ExploreRails({ actor }: { actor: string }) {
   const dp = useDataProvider()
-  /* The console is pinned to Italian (FixedLocale), so t() here gives the
-     Italian name of a built-in shelf. Only the DISPLAY is translated: an
-     untouched default keeps its English key in the data, so the app still
-     shows each person the shelf in their own language. */
-  const { locale, t } = useI18n()
+  /* LANGUAGE. A shelf's title is stored once and read by people in Italian
+     and in Portuguese, so what is stored has to be translatable: the product
+     dictionaries key off the ENGLISH source string.
+
+     The title field used to DISPLAY the Italian translation while writing
+     back whatever it held, so the first edit of a built-in shelf replaced
+     `Six minutes` with `Sei minuti` and the Portuguese reader got Italian.
+     The field now shows exactly what is stored, and the line underneath
+     shows how each language will read it -- including when the name is one
+     the dictionaries have never seen, which is the operator's to decide, not
+     ours to hide. tc() is that lookup, for the preview at the bottom. */
+  const { locale, t, tc } = useI18n()
   const catalog = useLiveCatalog(locale)
   const sessions = catalog.browsable
 
@@ -163,18 +170,22 @@ export function ExploreRails({ actor }: { actor: string }) {
               return (
                 <section key={r.id} className={`adm-rail${r.enabled ? '' : ' is-off'}`}>
                   <div className="adm-rail__head">
-                    <input
-                      className="b2b-input adm-rail__title"
-                      value={t(r.title)}
-                      placeholder="Titolo dello scaffale — es. Sei minuti"
-                      onChange={(e) => patch(r.id, (x) => ({ ...x, title: e.target.value }))}
-                    />
-                    <input
-                      className="b2b-input"
-                      value={r.subtitle ? t(r.subtitle) : ''}
-                      placeholder="Sottotitolo (facoltativo)"
-                      onChange={(e) => patch(r.id, (x) => ({ ...x, subtitle: e.target.value }))}
-                    />
+                    <div className="adm-rail__names">
+                      <input
+                        className="b2b-input adm-rail__title"
+                        value={r.title}
+                        placeholder="Titolo dello scaffale — es. Sei minuti"
+                        onChange={(e) => patch(r.id, (x) => ({ ...x, title: e.target.value }))}
+                      />
+                      <LangHint text={r.title} />
+                      <input
+                        className="b2b-input"
+                        value={r.subtitle ?? ''}
+                        placeholder="Sottotitolo (facoltativo)"
+                        onChange={(e) => patch(r.id, (x) => ({ ...x, subtitle: e.target.value }))}
+                      />
+                      <LangHint text={r.subtitle ?? ''} />
+                    </div>
                     <div className="adm-rail__acts">
                       <button className="b2b-btn" disabled={i === 0} onClick={() => move(r.id, -1)} title="Sposta su">↑</button>
                       <button className="b2b-btn" disabled={i === rails.length - 1} onClick={() => move(r.id, 1)} title="Sposta giù">↓</button>
@@ -259,8 +270,8 @@ export function ExploreRails({ actor }: { actor: string }) {
           <ol className="adm-rail__preview">
             {preview.map((r) => (
               <li key={r.id}>
-                <b>{t(r.title)}</b>
-                {r.subtitle && <span className="adm-muted"> · {t(r.subtitle)}</span>}
+                <b>{tc(r.title)}</b>
+                {r.subtitle && <span className="adm-muted"> · {tc(r.subtitle)}</span>}
                 <span className="adm-muted"> — {r.items.length} session{r.items.length === 1 ? 'e' : 'i'}</span>
               </li>
             ))}
@@ -268,5 +279,41 @@ export function ExploreRails({ actor }: { actor: string }) {
         </>
       )}
     </div>
+  )
+}
+
+/**
+ * How one shelf name will read in every language a person can choose.
+ *
+ * The console is Italian, so whoever names a shelf here cannot otherwise see
+ * what a Brazilian reader gets. A name the dictionaries know is shown in each
+ * language; a name they do not know is shown once, with the plain warning
+ * that it will reach everyone exactly as typed -- which is sometimes right
+ * (a campaign, a partner's name) and sometimes an oversight.
+ */
+function LangHint({ text }: { text: string }) {
+  /* The console's own language first -- an Italian reader checking an Italian
+     console should not have to read past Portuguese to find it. */
+  const { locale } = useI18n()
+  const order = [...LOCALES].sort((a, b) => Number(b.code === locale) - Number(a.code === locale))
+  const raw = text.trim()
+  if (!raw) return null
+  const key = contentKey(raw)
+  if (!key) {
+    return (
+      <p className="adm-rail__hint adm-rail__hint--raw">
+        Nessuna traduzione per «{raw}» — tutte le lingue lo leggeranno così com’è.
+      </p>
+    )
+  }
+  return (
+    <p className="adm-rail__hint">
+      {order.map((l, i) => (
+        <span key={l.code}>
+          {i > 0 ? ' · ' : ''}
+          {l.label}: «{translateContent(l.code, raw)}»
+        </span>
+      ))}
+    </p>
   )
 }
