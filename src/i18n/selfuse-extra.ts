@@ -223,6 +223,14 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'Your data, your control.': 'I tuoi dati, il tuo controllo.',
   'Good Loop is built to LGPD and GDPR standards from day one.': 'Good Loop è progettato secondo gli standard GDPR e LGPD fin dal primo giorno.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'La Metodologia GL completa, condotta da uno psicologo abilitato o da un professionista della salute sul lavoro che guida il tuo percorso. Disponibile con il piano esteso della tua azienda.',
+  /* The wizard's own buttons, and the paragraph its last screen opens
+     with. Both translations are the POs' (v08's dictionary). */
+  'Begin →': 'Inizia →',
+  'Continue →': 'Continua →',
+  'See how it works →': 'Scopri come funziona →',
+  'Accept & Continue': 'Accetta e continua',
+  'By continuing, you agree to our Terms and Privacy Policy. Good Loop provides self-directed wellbeing content or professionally guided sessions, per your selection, and is not a substitute for medical or psychological treatment.': 'Continuando, accetti i nostri Termini e l’Informativa sulla Privacy. Good Loop offre contenuti di benessere autoguidati o sessioni guidate da un professionista, secondo la tua selezione, e non sostituisce un trattamento medico o psicologico.',
+  'Read full terms': 'Leggi i termini completi',
 }
 
 export const PT_SELFUSE_EXTRA: Record<string, string> = {
@@ -505,4 +513,12 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Your data, your control.': 'Seus dados, seu controle.',
   'Good Loop is built to LGPD and GDPR standards from day one.': 'O Good Loop foi construído segundo os padrões da LGPD e do GDPR desde o primeiro dia.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'A Metodologia GL completa, conduzida por um psicólogo habilitado ou profissional de saúde ocupacional que guia a sua jornada. Disponível no plano estendido da sua empresa.',
+  /* The wizard's own buttons, and the paragraph its last screen opens
+     with. Both translations are the POs' (v08's dictionary). */
+  'Begin →': 'Começar →',
+  'Continue →': 'Continuar →',
+  'See how it works →': 'Veja como funciona →',
+  'Accept & Continue': 'Aceitar e continuar',
+  'By continuing, you agree to our Terms and Privacy Policy. Good Loop provides self-directed wellbeing content or professionally guided sessions, per your selection, and is not a substitute for medical or psychological treatment.': 'Ao continuar, você concorda com os nossos Termos e com a Política de Privacidade. O Good Loop oferece conteúdo autoguiado de bem-estar ou sessões guiadas por profissional, conforme a sua seleção, e não substitui tratamento médico ou psicológico.',
+  'Read full terms': 'Ler os termos completos',
 }

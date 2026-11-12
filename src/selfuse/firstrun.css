@@ -1,0 +1,607 @@
+/* ============================================================================
+   THE FIRST RUN IS THE POs' WIZARD
+
+   `Good Loop Visual ID/goodloop-onboarding-wizard-v08.html` (POs, 2026-11-12),
+   ported block by block: the header row with the dots and the language pill,
+   the wordmark centred under it, the eyebrow, the two headline sizes, the
+   four stat cards, the three duration chips, the two module cards, the nine
+   technique chips, the quote and the credit line, the legal card and the
+   consent row, and the gradient bar at the foot with the accent pill in it.
+   The numbers below are the wizard's own, not approximations of it.
+
+   TWO DEPARTURES, both deliberate:
+
+   1  THE GROUND. The wizard's phone is `#0A1211` with two blurred orbs on
+      it, and that is exactly what this surface already paints: `.su-studio`
+      sets `--su-ground: #0a1211`, and the first run no longer claims the
+      door's photograph (POs, 2026-11-12: no picture behind the tutorial or
+      the legal screen — dark only). So the ground comes from the app's own
+      tokens and the two orbs are drawn here.
+
+   2  THE TYPE. The wizard asks for Manrope and Inter from Google. This app
+      serves its own faces and fetches none (see the note in `index.html`:
+      a <link> there would announce every visitor's address to a third
+      party before the first word is drawn). So the Manrope roles take
+      `--display` and the Inter roles `--sans` — both Roboto — at the
+      wizard's own weights and sizes.
+
+   Palette: `--su-*` where the app already has the wizard's value (ground,
+   raised, accent #1fbf94, ink #ecf2ef), and the app's AA-checked
+   equivalents for the two the wizard rounds differently — cream (#f2eec4
+   against #F4F0BE) and faint (#9aada5 against #9FB0A8, which is 3.2:1 on
+   the raised cards and reads as absent).
+   ============================================================================ */
+
+.frw.app-frame {
+  /* The frame is already 100dvh, flex-column and clipped (`index.css`); the
+     wizard needs it to be the positioning context for the two orbs. */
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---- the strip above the frame -----------------------------------------
+   Help now is one tap from every screen, the first run included (CRS-01),
+   so the 50px strip carrying it stands above this frame. Under the UI2
+   ground both it and the shell are transparent on purpose — "the ground
+   runs behind it" (`ui2/shell.css`) — which on this flow meant a band of
+   the cream page, and a slice of the Home photograph in it, across the top
+   of an otherwise dark wizard. While the first run is what the shell holds,
+   the shell wears the wizard's ground. Same mechanism as the session and
+   the call, which are night whatever the theme (`legal/legal.css`).
+
+   The three selectors are the three that already claim this shell — the
+   plain one, UI2's, and UI2's Day theme — each matched one class deeper, so
+   the ground is decided by what the shell HOLDS rather than by which sheet
+   loaded last. */
+.su-shell:has(> .frw),
+html.gl2 .su-shell:has(> .frw.app-frame),
+html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
+  /* Written out, not `var(--su-ground)`: the token lives on `.su-studio`,
+     which is the shell's CHILD, so the variable is undefined here and the
+     declaration would be dropped at computed-value time — transparent
+     again, silently. `legal.css` names its colour on this element for the
+     same reason. */
+  background: #0a1211;
+}
+
+/* ---- the two lights on the ground --------------------------------------- */
+.frw__orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.frw__orb--a {
+  top: -90px; right: -110px; width: 300px; height: 300px;
+  background: var(--su-accent);
+  opacity: 0.16;
+  filter: blur(80px);
+}
+.frw__orb--b {
+  bottom: -100px; left: -80px; width: 220px; height: 220px;
+  background: var(--su-cream);
+  opacity: 0.06;
+  filter: blur(90px);
+}
+
+/* ---- the column ---------------------------------------------------------
+   The wizard is a 390px phone. The frame it lives in here is 460px on a
+   phone and widens to 740/860 on a desktop (`index.css`), so the wizard's
+   own width is held and centred rather than stretched: a 30px headline set
+   across 860px is not the design the POs drew. */
+.frw__inner {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 430px;
+  /* 844 is the wizard's own height. On a desk the window is taller than
+     that, and `auto` on all four sides holds the phone's proportions and
+     centres them instead of stretching the gap between the last chip and
+     the button to half a screen. */
+  max-height: 844px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the scroller, and the bar that does not scroll --------------------- */
+.frw__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* A dark screen with a desktop scrollbar down the middle of it is the one
+     piece of furniture the wizard does not have. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--su-fill-2) transparent;
+}
+.frw__content::-webkit-scrollbar { width: 6px; }
+.frw__content::-webkit-scrollbar-track { background: transparent; }
+.frw__content::-webkit-scrollbar-thumb { background: var(--su-fill-2); border-radius: 3px; }
+
+/* The legal step is the long one: the essentials, the two acceptances, the
+   optional choices and — for somebody whose employer is paying — what that
+   employer never sees. It scrolls; the pill stays where the thumb is. */
+.frw__content--legal { gap: 20px; }
+
+/* Screen 3 carries nine chips plus the quote and the credit line, and the
+   Italian and Portuguese run longer than the English — the wizard's own
+   compact pass for that screen, kept. */
+.frw__content--science { gap: 13px; padding-top: 22px; padding-bottom: 10px; }
+
+.frw__cta-bar {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  padding: 14px 24px max(26px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--su-ground) 55%, rgba(10, 18, 17, 0));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.frw__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--su-accent);
+  color: var(--su-on-accent);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: opacity 160ms var(--ease), transform 160ms var(--ease);
+}
+.frw__cta:hover { opacity: 0.92; }
+.frw__cta:active { transform: translateY(1px); }
+/* The wizard greys its button out until the box is ticked. Here it stays
+   PRESSABLE and greyed: on the one screen nobody can go round, a dead
+   button is indistinguishable from a broken app, so pressing it takes the
+   person to the box it is waiting for and makes it move. */
+.frw__cta.is-waiting { opacity: 0.35; }
+.frw__cta[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+.frw__need,
+.frw__error {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+.frw__need { color: var(--su-muted); }
+.frw__error { color: #ffb4a8; }
+
+/* ---- the head: back, dots, language — then the mark --------------------- */
+.frw__head { display: flex; flex-direction: column; gap: 14px; }
+.frw__headrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.frw__spacer { width: 32px; height: 32px; }
+.frw__back {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: var(--su-raised);
+  color: var(--su-fg);
+  cursor: pointer;
+}
+.frw__back:hover { background: var(--su-well); }
+
+.frw__dots { display: flex; gap: 6px; justify-self: center; }
+.frw__dots span {
+  width: 20px; height: 4px; border-radius: 2px;
+  background: var(--su-fill);
+  transition: background 220ms var(--ease);
+}
+.frw__dots span.is-on { background: var(--su-accent); }
+
+/* The language pill is the wizard's; the control inside it is the app's own
+   <select>, laid over the pill at zero opacity. One real select, so the
+   keyboard, the screen reader and the phone's native list all work, and
+   the choice lands in `gl.locale` like every other language control. */
+.frw__lang {
+  position: relative;
+  justify-self: end;
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  border-radius: 999px;
+  background: var(--su-raised);
+  border: 1px solid var(--su-hair-2);
+  color: var(--su-fg);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+.frw__lang svg { opacity: 0.7; flex: none; }
+.frw__lang__sel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  cursor: pointer;
+  /* iOS will not let a zero-opacity select be invisible AND tappable unless
+     it has a real size; it has one. */
+  -webkit-appearance: none;
+  appearance: none;
+}
+.frw__lang:focus-within {
+  outline: 2px solid var(--su-accent);
+  outline-offset: 2px;
+}
+
+.frw__brand { display: flex; align-items: center; justify-content: center; }
+.frw__brand .gl-logo { height: 26px; width: auto; }
+
+/* ---- the eyebrow -------------------------------------------------------- */
+.frw__eyebrow {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(31, 191, 148, 0.12);
+  border: 1px solid rgba(31, 191, 148, 0.35);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--su-accent);
+}
+
+/* ---- the headline ------------------------------------------------------- */
+.frw__headline { display: flex; flex-direction: column; gap: 10px; }
+.frw__headline h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--su-cream);
+}
+.frw__headline h1.is-small { font-size: 28px; }
+.frw__headline p {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--su-muted);
+}
+
+/* ---- the four figures --------------------------------------------------- */
+.frw__stats {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.frw__stats li {
+  background: var(--su-raised);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.frw__stats b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--su-accent);
+}
+.frw__stats span {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--su-muted);
+}
+
+/* ---- the three lengths -------------------------------------------------- */
+.frw__pickerlabel {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--su-muted);
+  margin-bottom: 10px;
+}
+.frw__durs { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; }
+.frw__durs li {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 13px 12px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: var(--su-raised);
+}
+.frw__durs b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--su-cream);
+}
+.frw__durs span {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--su-muted);
+}
+
+/* ---- the two ways of using it ------------------------------------------- */
+.frw__modules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.frw__module {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.07);
+  background: var(--su-raised);
+}
+.frw__module__icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(31, 191, 148, 0.12);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--su-accent);
+}
+.frw__module__body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.frw__module__name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15.5px;
+  color: var(--su-cream);
+}
+.frw__module p {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--su-muted);
+}
+
+/* ---- the nine techniques ------------------------------------------------ */
+.frw__chips {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+}
+.frw__chips li {
+  background: var(--su-raised);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 13px;
+  padding: 9px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.frw__chips b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--su-cream);
+}
+.frw__chips span {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  line-height: 1.3;
+  color: var(--su-accent);
+}
+
+/* ---- the quote and who wrote the method --------------------------------- */
+.frw__quote { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.frw__quote__mark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--su-accent);
+}
+.frw__quote blockquote {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--su-cream);
+}
+.frw__credit { display: flex; align-items: center; gap: 12px; padding-top: 2px; }
+.frw__credit img {
+  width: 44px; height: 44px; flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.frw__credit b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--su-cream);
+}
+.frw__credit span {
+  display: block;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--su-muted);
+}
+
+/* ============================================================================
+   THE LAST STEP: EVERYTHING LEGAL
+
+   The wizard's screen 4 is a heading, a paragraph in a card, one tick box
+   and a link. What the legal framework requires is more than that, and all
+   of it is now on this one screen (POs, 2026-11-12): the emergency
+   acknowledgement, which is its own record and its own box (ONB-2.2,
+   LEG-02); the essentials and every notice the Terms incorporate (D-01);
+   the acceptance itself (ONB-3.1); the optional purposes, none pre-ticked
+   (ONB-3.3, LEG-04); and, for somebody whose employer is paying, what that
+   employer never sees (ONB-4).
+
+   So the blocks below are the wizard's furniture — the raised card, the
+   faint 12.5px paragraph, the accent-coloured tick — applied to the
+   material the framework puts on this screen.
+   ============================================================================ */
+
+.frw__card {
+  background: var(--su-raised);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.frw__card p {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--su-muted);
+}
+.frw__card h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--su-cream);
+}
+
+/* The three lines the notices are about: what the service is, what it is
+   not, who sees it. */
+.frw__ess { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.frw__ess li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--su-fg-2);
+}
+.frw__ess li svg { flex: none; color: var(--su-accent); }
+
+.frw__links { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.frw__links--fine { gap: 6px 12px; }
+.frw__link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--su-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.frw__links--fine .frw__link { font-size: 11.5px; color: var(--su-muted); }
+.frw__link:hover { color: var(--su-accent-2); }
+
+/* The two acceptances. The wizard's own row, 20px box in accent, 13.5px
+   text in full ink — these are the two sentences on the screen that are
+   being agreed to, so they are not faint. */
+.frw__ack {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--su-raised);
+  cursor: pointer;
+}
+.frw__ack input {
+  width: 20px; height: 20px; flex-shrink: 0; margin: 1px 0 0;
+  accent-color: var(--su-accent);
+}
+.frw__ack span {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--su-fg);
+}
+.frw__ack.is-on { border-color: rgba(31, 191, 148, 0.45); }
+/* What a refused button points at. */
+.frw__ack.is-nudge {
+  animation: frw-nudge 1.2s var(--ease) 1;
+}
+@keyframes frw-nudge {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(31, 191, 148, 0); }
+  20%, 60% { box-shadow: 0 0 0 3px rgba(31, 191, 148, 0.45); }
+  40%, 80% { box-shadow: 0 0 0 0 rgba(31, 191, 148, 0.12); }
+}
+
+.frw__sub {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--su-faint);
+}
+
+/* ---- the optional purposes ---------------------------------------------
+   The app's own consent rows and switch, which carry the behaviour and the
+   wording the consent record stores — re-grounded for this screen, because
+   the base rule paints them white for the cream surfaces. */
+.frw .consent-row {
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--su-raised);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.frw .consent-row__title { font-family: var(--display); font-weight: 800; font-size: 13.5px; color: var(--su-cream); }
+.frw .consent-row__note { font-size: 12px; line-height: 1.5; color: var(--su-muted); }
+.frw .consent-row__foot { border-top-color: var(--su-hair); }
+.frw .consent-row__state { font-size: 11.5px; color: var(--su-muted); }
+.frw .consent-row__more > summary { color: var(--su-accent); font-size: 11.5px; }
+.frw .legal-consent__hint { display: block; margin-top: 6px; font-size: 11.5px; line-height: 1.5; color: var(--su-muted); }
+.frw .switch { background: var(--su-fill-2); }
+.frw .switch.is-on { background: var(--su-accent); }
+.frw__consents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.frw__consents .consent-row + .consent-row { margin-top: 0; }
+
+/* ---- the personal e-mail (sponsored accounts) --------------------------- */
+.frw__field { display: flex; flex-direction: column; gap: 6px; }
+.frw__field > span {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--su-muted);
+}
+.frw__field input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--su-hair-2);
+  background: var(--su-well);
+  color: var(--su-fg);
+  font-family: var(--sans);
+  font-size: 15px;
+}
+.frw__field input::placeholder { color: var(--su-faint); }
+.frw__field input:focus {
+  outline: none;
+  border-color: var(--su-accent);
+  box-shadow: 0 0 0 3px rgba(31, 191, 148, 0.18);
+}
+
+/* ---- the narrowest phone ------------------------------------------------
+   390 is the wizard's own width; below it the three-up chip grid is the
+   first thing to give. */
+@media (max-width: 374px) {
+  .frw__content { padding-left: 18px; padding-right: 18px; }
+  .frw__cta-bar { padding-left: 18px; padding-right: 18px; }
+  .frw__chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Short windows — a laptop at 1280×720 with the browser chrome on — are
+   where the science screen stops fitting; it scrolls, like the legal one. */
+@media (max-height: 760px) {
+  .frw__content { padding-top: 20px; }
+  .frw__head { gap: 10px; }
+}
