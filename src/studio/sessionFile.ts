@@ -116,7 +116,7 @@ function safePart(raw: string): string {
 export type ParseFailure =
   /** Not JSON at all — the wrong file was picked. */
   | 'not-json'
-  /** Valid JSON, but not a Good Loop session file. */
+  /** Valid JSON, but not a goodloop session file. */
   | 'not-ours'
   /** Written by a newer Studio than this one. */
   | 'too-new'

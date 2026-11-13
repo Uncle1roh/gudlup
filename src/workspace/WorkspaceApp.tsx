@@ -557,7 +557,7 @@ function TooSmall() {
   return (
     <div className="w-toosmall">
       <div className="w-toosmall__card">
-        <span className="w-brand">Good Loop</span>
+        <span className="w-brand">goodloop</span>
         <h2 className="w-h2">{t('Please use a desktop')}</h2>
         <p className="w-lead">
           {t('The therapist workspace runs a live video call, a clinical panel and audio controls at once. It needs a screen at least 1024px wide.')}
@@ -593,7 +593,7 @@ function Sidebar({
   return (
     <aside className={`w-sidebar${collapsed ? ' is-collapsed' : ''}`}>
       <div className="w-sidebar__top">
-        <span className="w-brand">Good Loop</span>
+        <span className="w-brand">goodloop</span>
         <div className="w-sidebar__me">
           <span className="w-avatar" aria-hidden="true">{initials(account.fullName)}</span>
           <span className="w-sidebar__name">

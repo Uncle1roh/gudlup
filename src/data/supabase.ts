@@ -1887,7 +1887,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         p_tag_ids: b.tagIds,
       })
       if (error) {
-        if ((error as { hint?: string }).hint === 'BENEFIT_NEEDS_TAG') throw new Error('Un beneficio Good Loop ha bisogno di almeno un tag.')
+        if ((error as { hint?: string }).hint === 'BENEFIT_NEEDS_TAG') throw new Error('Un beneficio goodloop ha bisogno di almeno un tag.')
         throw error
       }
       return String(data)

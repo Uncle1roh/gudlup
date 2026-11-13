@@ -61,13 +61,13 @@ export function buildCorporateReportPdf({ state, agg, name, periodFrom, periodTo
 
   const doc = new PdfDoc({
     title: `${name} — ${company}`,
-    author: 'Good Loop',
+    author: 'goodloop',
     subject: 'Aggregate wellbeing report',
     /* The exact footer the spec dictates, on every page. */
     footer: (page, total) =>
-      `Confidential - ${company} - Good Loop Aggregate Wellbeing Report - Generated ${fmtDate(generated)}  ·  page ${page} of ${total}`,
+      `Confidential - ${company} - goodloop Aggregate Wellbeing Report - Generated ${fmtDate(generated)}  ·  page ${page} of ${total}`,
     header: (d, page) => {
-      d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
+      d.drawText('goodloop', d.margin, d.height - 30, 10, 'bold', 0.35)
       if (page > 1) {
         d.drawText(company, d.width - d.margin - 160, d.height - 30, 8.5, 'regular', 0.5)
       }
@@ -261,7 +261,7 @@ export function buildCorporateReportPdf({ state, agg, name, periodFrom, periodTo
         ]),
       )
       doc.paragraph(
-        'Industry average is aggregated across all Good Loop companies and covers adoption and ' +
+        'Industry average is aggregated across all goodloop companies and covers adoption and ' +
           'efficacy only. It is informational; it is not a ranking.',
         8.5,
         0.45,

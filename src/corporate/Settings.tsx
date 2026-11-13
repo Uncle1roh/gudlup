@@ -225,7 +225,7 @@ function Admins({ state, update }: { state: CorporateState; update: SettingsProp
         <div>
           <div className="c-field__label">{t('Owner')}</div>
           <p className="c-small">
-            {t('Full access. Cannot be removed (transferred only by Good Loop support). Can invite and remove admins.')}
+            {t('Full access. Cannot be removed (transferred only by goodloop support). Can invite and remove admins.')}
           </p>
         </div>
         <div>
@@ -353,7 +353,7 @@ function Privacy({ state, registered }: { state: CorporateState; registered: num
 
       <div className="c-actions c-actions--left">
         <a className="c-link" href="#legal/D-08" target="_blank" rel="noreferrer">{t('What your people’s employer never sees')}</a>
-        <a className="c-link" href="#legal/D-09" target="_blank" rel="noreferrer">{t('Good Loop and your obligations as an employer')}</a>
+        <a className="c-link" href="#legal/D-09" target="_blank" rel="noreferrer">{t('goodloop and your obligations as an employer')}</a>
         <a className="c-link" href="#legal/privacy" target="_blank" rel="noreferrer">{t('Privacy Notice')}</a>
       </div>
     </>

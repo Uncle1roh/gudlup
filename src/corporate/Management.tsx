@@ -113,7 +113,7 @@ function UsersTab({ state, agg }: { state: CorporateState; agg: Aggregates }) {
           </div>
         </dl>
         {days <= RENEWAL_NOTICE_DAYS && days > 0 && (
-          <p className="c-alertbox">{t('Renewal approaching — contact your Good Loop representative.')}</p>
+          <p className="c-alertbox">{t('Renewal approaching — contact your goodloop representative.')}</p>
         )}
       </section>
     </>
@@ -160,10 +160,10 @@ function CodeTab({ state, agg, update }: ManagementProps) {
 
   function shareByEmail() {
     const company = state.profile.name
-    const subject = encodeURIComponent(t('Your Good Loop access code — {company}', { company }))
+    const subject = encodeURIComponent(t('Your goodloop access code — {company}', { company }))
     const body = encodeURIComponent(
       [
-        t('Good Loop is now available to you through {company}.', { company }),
+        t('goodloop is now available to you through {company}.', { company }),
         '',
         t('Company code: {code}', { code: state.companyCode }),
         '',
@@ -181,7 +181,7 @@ function CodeTab({ state, agg, update }: ManagementProps) {
           <button className="c-btn c-btn--ghost" onClick={copy}>{copied ? t('Copied') : t('Copy')}</button>
         </div>
         <p className="c-small">
-          {t('Shared with employees to link their Good Loop account to {company}.', { company: state.profile.name })}
+          {t('Shared with employees to link their goodloop account to {company}.', { company: state.profile.name })}
         </p>
         <div className="c-actions c-actions--left">
           <button className="c-btn c-btn--ghost" onClick={() => setConfirm(true)}>{t('Regenerate code')}</button>
@@ -238,13 +238,13 @@ function LicensesTab({ state, agg }: { state: CorporateState; agg: Aggregates })
         {high && (
           <>
             <p className="c-alertbox">
-              {t('License utilization is high. Contact your Good Loop representative to expand your plan.')}
+              {t('License utilization is high. Contact your goodloop representative to expand your plan.')}
             </p>
             <a
               className="c-btn c-btn--primary"
               href={`mailto:Suporte@goodloop.com.br?subject=${encodeURIComponent(t('Licence expansion — {company}', { company: state.profile.name }))}`}
             >
-              {t('Contact Good Loop')}
+              {t('Contact goodloop')}
             </a>
           </>
         )}

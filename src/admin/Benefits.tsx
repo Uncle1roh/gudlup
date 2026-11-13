@@ -64,7 +64,7 @@ export function Benefits({ actor }: { actor: string }) {
   async function save(b: Benefit) {
     setBusy(true); setError(null); setNote(null)
     try {
-      if (b.companyId === null && b.status !== 'draft' && b.tagIds.length === 0) throw new Error(st('Serve almeno un tag per pubblicare un beneficio Good Loop.'))
+      if (b.companyId === null && b.status !== 'draft' && b.tagIds.length === 0) throw new Error(st('Serve almeno un tag per pubblicare un beneficio goodloop.'))
       const id = await dp.adminSaveBenefit(b)
       await dp.logAudit({ actor, action: b.id ? 'benefit.updated' : 'benefit.created', target: b.title, detail: STATUS_IT[b.status] }).catch(() => undefined)
       setNote(b.id ? 'Beneficio salvato.' : 'Beneficio creato.')
@@ -101,7 +101,7 @@ export function Benefits({ actor }: { actor: string }) {
         <div>
           <h1 className="b2b-h1">{st('Benefici')}</h1>
           <p className="b2b-sub">
-            {st('Cura che torna alla persona, scambiata con i Loops. {n} benefici Good Loop, {active} attivi.', { n: goodloop.length, active: goodloop.filter((b) => b.status === 'active').length })}
+            {st('Cura che torna alla persona, scambiata con i Loops. {n} benefici goodloop, {active} attivi.', { n: goodloop.length, active: goodloop.filter((b) => b.status === 'active').length })}
           </p>
         </div>
         {!draft && view === 'catalog' && <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blank())}>{st('+ Nuovo beneficio')}</button>}
@@ -272,7 +272,7 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
           <textarea className="b2b-textarea" rows={2} value={draft.terms ?? ''} onChange={(e) => patch({ terms: e.target.value || null })} />
         </label>
         <fieldset className="adm-partner-form__wide adm-benefit__tags">
-          <legend className="b2b-label">{st('Tag')} {draft.companyId === null && '*'} {st('— almeno uno per un beneficio Good Loop')}</legend>
+          <legend className="b2b-label">{st('Tag')} {draft.companyId === null && '*'} {st('— almeno uno per un beneficio goodloop')}</legend>
           {(['partner_segment', 'benefit_type'] as const).map((g) => (
             <div key={g} className="adm-spec__chips">
               <span className="adm-muted">{g === 'partner_segment' ? st('Segmento del partner') : st('Tipo di beneficio')}</span>

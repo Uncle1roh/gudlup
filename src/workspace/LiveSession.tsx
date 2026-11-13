@@ -430,7 +430,7 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
 
           {gl.stage === 'running' && (
             <div className="w-video__glbadge">
-              {t('GOOD LOOP ACTIVE')} · {fmtClock(gl.elapsed)} / {fmtClock(gl.total)}
+              {t('goodloop ACTIVE')} · {fmtClock(gl.elapsed)} / {fmtClock(gl.total)}
             </div>
           )}
           {gl.stage === 'running' && gl.intervening && (
@@ -461,7 +461,7 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
             <nav className="w-panel__tabs" role="tablist">
               {(['notes', 'goodloop', 'reference'] as Tab[]).map((x) => (
                 <button key={x} role="tab" aria-selected={tab === x} onClick={() => setTab(x)}>
-                  {t(x === 'notes' ? 'Notes' : x === 'goodloop' ? 'Good Loop' : 'Reference')}
+                  {t(x === 'notes' ? 'Notes' : x === 'goodloop' ? 'goodloop' : 'Reference')}
                 </button>
               ))}
             </nav>
@@ -708,7 +708,7 @@ function GoodLoopTab({
     return (
       <div className="w-panel__body w-panel__empty">
         <BrandIcon className="w-glmark" />
-        <h3>{t('Play Good Loop audio')}</h3>
+        <h3>{t('Play goodloop audio')}</h3>
         <p className="w-small">{t('Choose content to play during this call.')}</p>
         <p className="w-note">{m('PRO-4')}</p>
         <button className="w-btn w-btn--primary" onClick={() => setState({ stage: 'wizard' })}>{t('Choose content')}</button>

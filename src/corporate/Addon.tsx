@@ -151,7 +151,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
       {draft && (
         <div className="c-card c-form">
           <h3 className="c-h3">{draft.id ? t('Edit company challenge') : t('New company challenge')}</h3>
-          <p className="c-small">{t('Start from a template. Its name and text are what your people read — they are written by Good Loop, so every company challenge speaks the same careful language.')}</p>
+          <p className="c-small">{t('Start from a template. Its name and text are what your people read — they are written by goodloop, so every company challenge speaks the same careful language.')}</p>
           <div className="c-addon-templates">
             {templates.filter((x) => !draft.id || x.slug === draft.templateSlug).map((x) => (
               <button key={x.slug} className={`c-card c-addon-template${draft.templateSlug === x.slug ? ' is-on' : ''}`}
@@ -184,7 +184,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
             )}
           </div>
           <div className="c-addon-check">
-            <strong>{t('Good Loop check')}</strong>
+            <strong>{t('goodloop check')}</strong>
             <ul>{rules.map((r) => <li key={r.id} className={r.ok ? 'is-ok' : 'is-bad'}>{r.ok ? '✓' : '✗'} {t(RULE_TEXT[r.id])}</li>)}</ul>
           </div>
           <div className="c-actions">
@@ -269,7 +269,7 @@ function TagFilter() {
   if (!rows) return <p className="c-small">{t('Loading…')}</p>
   return (
     <>
-      <p className="c-small">{t('Every Good Loop benefit carries tags. Switch a tag off and every benefit carrying it disappears for your people — for example a food company switching off “Alimentos e bebidas” to avoid a conflict of interest.')}</p>
+      <p className="c-small">{t('Every goodloop benefit carries tags. Switch a tag off and every benefit carrying it disappears for your people — for example a food company switching off “Alimentos e bebidas” to avoid a conflict of interest.')}</p>
       {error && <p className="c-err">{error}</p>}
       {(['partner_segment', 'benefit_type'] as const).map((g) => (
         <div key={g}>

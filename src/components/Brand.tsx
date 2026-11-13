@@ -18,7 +18,30 @@
    Both files carry real transparency, so there is no white box to hide.
    ============================================================================ */
 
+import type { ReactNode } from 'react'
+
 export type BrandVariant = 'green' | 'cream'
+
+/** The name, as it is written: one word, lowercase, always. */
+export const BRAND = 'goodloop'
+
+/**
+ * A sentence with the name in it, with the name kept as the name.
+ *
+ * Two surfaces would otherwise re-case it: a label whose CSS sets everything
+ * in capitals (`.eyebrow` and the rest of the uppercased furniture), and a
+ * card that wants it bold. The dictionaries hold plain text — markup in a
+ * translation is a thing a translator can break — so the sentence is split
+ * on the word here and the word is given a span of its own.
+ *
+ * `className` is for a surface that wants more of it: the first-run cards
+ * pass `frw__brandword`, which is the POs' bold.
+ */
+export function brandText(text: string, className?: string): ReactNode[] {
+  return text.split(BRAND).flatMap((part, i) => (
+    i === 0 ? [part] : [<span key={i} className={cx('gl-brandword', className)}>{BRAND}</span>, part]
+  ))
+}
 
 const BASE = import.meta.env.BASE_URL
 

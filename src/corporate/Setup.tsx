@@ -88,7 +88,7 @@ export function SetupWizard({ state, onDone }: SetupProps) {
 
         {step === 1 && (
           <>
-            <h1 className="c-h1">{t('Welcome to Good Loop for {company}', { company: state.profile.name })}</h1>
+            <h1 className="c-h1">{t('Welcome to goodloop for {company}', { company: state.profile.name })}</h1>
             <p className="c-lead">
               {t("Your company's wellbeing program is ready to configure. This setup takes about 5 minutes.")}
             </p>
@@ -112,7 +112,7 @@ export function SetupWizard({ state, onDone }: SetupProps) {
           <>
             <h1 className="c-h1">{t('Your company code')}</h1>
             <p className="c-lead">
-              {t('Employees use this code when registering in the Good Loop app to link their account to {company}.', { company: state.profile.name })}
+              {t('Employees use this code when registering in the goodloop app to link their account to {company}.', { company: state.profile.name })}
             </p>
             <div className="c-code">
               <span className="c-code__value">{code}</span>
@@ -186,7 +186,7 @@ export function SetupWizard({ state, onDone }: SetupProps) {
             <div className="c-panel">
               <div className="c-panel__label">{t('What happens next')}</div>
               <p className="c-small">
-                {t('Existing Good Loop therapists receive a notification to accept. New ones get an email to register and complete credential verification. Status updates appear in Management.')}
+                {t('Existing goodloop therapists receive a notification to accept. New ones get an email to register and complete credential verification. Status updates appear in Management.')}
               </p>
             </div>
             <div className="c-actions">
@@ -203,7 +203,7 @@ export function SetupWizard({ state, onDone }: SetupProps) {
           <>
             <div className="c-success" aria-hidden="true">✓</div>
             <h1 className="c-h1">{t('Setup complete')}</h1>
-            <p className="c-lead">{t("Your Good Loop wellbeing program is ready. Here's your summary:")}</p>
+            <p className="c-lead">{t("Your goodloop wellbeing program is ready. Here's your summary:")}</p>
             <dl className="c-summary">
               <div><dt>{t('Convention')}</dt><dd>{t(conventionLabel(state.conventionType))}</dd></div>
               <div><dt>{t('Employee licenses')}</dt><dd>{state.licences}</dd></div>

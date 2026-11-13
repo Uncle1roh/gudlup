@@ -26,10 +26,8 @@
 
    THE BRAND IS ONE WORD. v12 writes it `goodloop`, lowercase, bold inside
    a sentence. The dictionaries hold no markup — a translation is text — so
-   the word is bold here instead (`brandish`), on the three cards only. The
-   legal screen below still reads "Good Loop" wherever the REGISTERED corpus
-   says so: that wording is filed, versioned and accepted under those words,
-   and it is not ours to restyle.
+   the word is set apart at render (`brandText`, `components/Brand.tsx`) and
+   this surface asks for the POs' bold with `frw__brandword`.
 
    NO PHOTOGRAPH. The door's picture is the ground for the form; from the
    moment the account exists the flow stands on the dark ground this surface
@@ -71,9 +69,9 @@
    written down in it.
    ============================================================================ */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n, LOCALES, type Locale } from '../i18n'
-import { BrandLogo } from '../components/Brand'
+import { BrandLogo, brandText } from '../components/Brand'
 import { Icon, type IconName } from './icons'
 import { useDataProvider } from '../data/provider'
 import { useLegal } from '../legal/LegalContext'
@@ -89,20 +87,6 @@ type Step = 'welcome' | 'modes' | 'science' | 'legal'
    The figures are the POs' own count of what the method is made of; the
    three lengths are the three time signatures the catalogue publishes
    (6 / 12 / 24), under the names the wizard gives them. */
-/**
- * The brand inside a sentence, as v12 sets it: one lowercase word, bold.
- *
- * The dictionaries keep it as plain text — markup in a translation is a
- * thing a translator can break — so the sentence is split on the word and
- * the word is given its own element here.
- */
-const BRAND = 'goodloop'
-function brandish(text: string): ReactNode[] {
-  return text.split(BRAND).flatMap((part, i) => (
-    i === 0 ? [part] : [<b key={i} className="frw__brandword">{BRAND}</b>, part]
-  ))
-}
-
 const STATS: { num: string; label: string }[] = [
   { num: '9', label: 'Integrated Tools' },
   { num: '6', label: 'Phases per Session' },
@@ -449,7 +433,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('One platform. Two ways to transform.')}</h1>
-                <p>{brandish(t('Two ways to experience goodloop: Self-Guided Use for everyday wellbeing and Professionally Guided Use* with a licensed professional.'))}</p>
+                <p>{brandText(t('Two ways to experience goodloop: Self-Guided Use for everyday wellbeing and Professionally Guided Use* with a licensed professional.'), 'frw__brandword')}</p>
               </div>
 
               <ul className="frw__modules">
@@ -485,7 +469,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('Not belief. Neuroscience.')}</h1>
-                <p>{brandish(t('goodloop doesn’t invent new science — it orchestrates the best of what already works.'))}</p>
+                <p>{brandText(t('goodloop doesn’t invent new science — it orchestrates the best of what already works.'), 'frw__brandword')}</p>
               </div>
 
               <ul className="frw__chips">
@@ -499,7 +483,7 @@ export function FirstRun({
 
               <figure className="frw__quote">
                 <span className="frw__quote__mark" aria-hidden="true">&ldquo;</span>
-                <blockquote>{brandish(t('goodloop speaks directly to the nervous system, using the language it truly understands.'))}</blockquote>
+                <blockquote>{brandText(t('goodloop speaks directly to the nervous system, using the language it truly understands.'), 'frw__brandword')}</blockquote>
               </figure>
 
               <div className="frw__credit">
@@ -517,7 +501,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('Your data, your control.')}</h1>
-                <p>{brandish(t('goodloop is built to LGPD and GDPR standards from day one.'))}</p>
+                <p>{brandText(t('goodloop is built to LGPD and GDPR standards from day one.'), 'frw__brandword')}</p>
               </div>
 
               {/* ---- what it is for, and what it is not for (ONB-2) ------
@@ -525,7 +509,7 @@ export function FirstRun({
                   somebody who accepts the Terms has not thereby said they
                   understand that Good Loop is not an emergency service. */}
               <div className="frw__card">
-                <h2>{t('How Good Loop works')}</h2>
+                <h2>{t('How goodloop works')}</h2>
                 <p>{legal.m('ONB-2.1')}</p>
               </div>
               <label ref={crisisRef} className={`frw__ack${crisisAck ? ' is-on' : ''}${nudge === 'crisis' ? ' is-nudge' : ''}`}>

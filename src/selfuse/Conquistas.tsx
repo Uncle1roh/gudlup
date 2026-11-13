@@ -200,7 +200,7 @@ function AchievementSheet({ a, part, onClose, onGoRankings }: { a: AchievementVi
                     </p>
                   </>
                 ) : part.unit === 'company' ? (
-                  <p className="small muted">{t('This one belongs to companies with the Good Loop add-on.')}</p>
+                  <p className="small muted">{t('This one belongs to companies with the goodloop add-on.')}</p>
                 ) : (
                   <>
                     <p className="small muted">{t('To count toward your city, state and region, take part in the rankings.')}</p>

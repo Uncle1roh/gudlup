@@ -1254,7 +1254,7 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     adminListBenefits: async () => delay(benefits.catalog.map((b) => ({ ...b, tagIds: [...b.tagIds] })), 40),
     adminSaveBenefit: async (b) => {
       await wait(80)
-      if (b.companyId === null && b.status !== 'draft' && !b.tagIds.length) throw new Error('Un beneficio Good Loop ha bisogno di almeno un tag.')
+      if (b.companyId === null && b.status !== 'draft' && !b.tagIds.length) throw new Error('Un beneficio goodloop ha bisogno di almeno un tag.')
       const id = b.id || `ben-${Date.now()}`
       const i = benefits.catalog.findIndex((x) => x.id === id)
       const row = { ...b, id, tagIds: [...b.tagIds] }

@@ -50,7 +50,7 @@ export function Empresas() {
         <i className="pub-em">{t('in your team’s routine.')}</i>
       </h1>
       <p className="pub-sub">
-        {t('Good Loop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.')}
+        {t('goodloop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.')}
       </p>
 
       {/* The one outward link on the site. It is a `mailto:` to the address
@@ -85,9 +85,9 @@ export function Empresas() {
       </ol>
 
       <section className="pub-card pub-card--wide">
-        <h2 className="pub-card__h pub-card__h--lg">{t('What Good Loop does not do')}</h2>
+        <h2 className="pub-card__h pub-card__h--lg">{t('What goodloop does not do')}</h2>
         <p className="pub-card__t">
-          {t('Good Loop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.')}
+          {t('goodloop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.')}
         </p>
       </section>
     </article>

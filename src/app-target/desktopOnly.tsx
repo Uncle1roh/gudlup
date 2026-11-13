@@ -22,7 +22,7 @@ export function NotInApp() {
       <div className="su-page">
         <h1 className="display su-h1">Disponibile sul web</h1>
         <p className="lead">
-          Questa parte di Good Loop — lo Studio, la console, lo spazio del terapeuta —
+          Questa parte di goodloop — lo Studio, la console, lo spazio del terapeuta —
           si usa dal browser su un computer. L’app contiene le sessioni da ascoltare.
         </p>
       </div>

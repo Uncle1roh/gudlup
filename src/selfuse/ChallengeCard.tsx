@@ -7,6 +7,7 @@
    ============================================================================ */
 
 import { useI18n } from '../i18n'
+import { brandText } from '../components/Brand'
 import { Badge } from '../gamification/ui/Badge'
 import { displayLoops } from '../gamification/economy'
 import { fmtMinutes } from '../gamification/achievements'
@@ -32,7 +33,7 @@ export function challengeRewardText(t: ReturnType<typeof useI18n>['t'], c: Chall
 }
 
 export function challengeEyebrow(t: ReturnType<typeof useI18n>['t'], c: ChallengeView, now: number): string {
-  const owner = c.companyId ? t('Your company’s challenge') : t('Good Loop challenge')
+  const owner = c.companyId ? t('Your company’s challenge') : t('goodloop challenge')
   if (c.startsAt > now) return `${owner} · ${t('starts in {n} days', { n: String(daysLeft(c.startsAt, now)) })}`
   const n = daysLeft(c.endsAt, now)
   return `${owner} · ${n === 1 ? t('1 day to go') : t('{n} days to go', { n: String(n) })}`
@@ -49,7 +50,8 @@ export function ChallengeCard({ c, onOpen, now = Date.now() }: { c: ChallengeVie
       <Badge icon={asIcon(c.badgeIcon)} tier={c.companyId ? 'empresa' : c.format === 'collective' ? 'coletiva' : 'broto'}
              shape={c.format === 'collective' ? 'hexagon' : 'circle'} size={56} />
       <span className="gam-challenge__body">
-        <span className="eyebrow">{challengeEyebrow(t, c, now)}</span>
+        {/* `.eyebrow` is set in capitals; the name is not. */}
+        <span className="eyebrow">{brandText(challengeEyebrow(t, c, now))}</span>
         <span className="gam-challenge__title">{c.title}</span>
         <span className="gam-bar" aria-hidden="true"><span style={{ width: `${share * 100}%` }} /></span>
         <span className="small">{challengeProgressText(t, c)}</span>

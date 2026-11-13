@@ -66,7 +66,7 @@ export function CompanyTherapists({ companyId, actor }: { companyId?: string; ac
     <section className="c-panel">
       <h2 className="c-h2">{t('Therapists')}</h2>
       <p className="c-small">
-        {t('These are the professionals your people can book. A therapist joins by entering an activation code you give them — you never add someone by name, because only a Good Loop credential review makes a clinician bookable.')}
+        {t('These are the professionals your people can book. A therapist joins by entering an activation code you give them — you never add someone by name, because only a goodloop credential review makes a clinician bookable.')}
       </p>
 
       {error && <p className="c-err">{error}</p>}

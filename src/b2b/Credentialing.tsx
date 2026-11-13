@@ -33,7 +33,7 @@ const BANNER: Record<Therapist['status'], { cls: string; title: string; body: st
   approved: { cls: 'ok', title: '✓ Approvato', body: 'Il tuo account è verificato e attivo.' },
   pending: {
     cls: 'pending', title: '⏳ In attesa di verifica',
-    body: 'Un amministratore Good Loop verifica i documenti. Fino ad allora non vedrai pazienti.',
+    body: 'Un amministratore goodloop verifica i documenti. Fino ad allora non vedrai pazienti.',
   },
   more_info: {
     cls: 'pending', title: '📄 Servono altri documenti',

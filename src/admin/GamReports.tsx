@@ -95,7 +95,7 @@ export function GamReports() {
             <div className="adm-tr adm-tr--head"><div>Origine</div><div>Pagati da</div><div>Movimenti</div><div className="adm-tr__right">Loops</div></div>
             {r.loopsBySource.map((x) => (
               <div className="adm-tr" key={`${x.entryType}|${x.fundingSource}`}>
-                <div>{ENTRY_IT[x.entryType] ?? x.entryType}</div><div>{x.fundingSource === 'company' ? 'Azienda' : 'Good Loop'}</div>
+                <div>{ENTRY_IT[x.entryType] ?? x.entryType}</div><div>{x.fundingSource === 'company' ? 'Azienda' : 'goodloop'}</div>
                 <div>{x.entries}</div><div className="adm-tr__right">{loops(x.centi)}</div>
               </div>
             ))}

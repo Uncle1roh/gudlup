@@ -396,8 +396,8 @@ export const IT_SELF_USE: Record<string, string> = {
 
   /* ---- therapist tab ---- */
   'Professional support': 'Supporto professionale',
-  "Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.":
-    'Good Loop offre anche sessioni guidate con professionisti abilitati, disponibili con il piano esteso della tua azienda.',
+  "goodloop also offers guided sessions with licensed professionals, available through your company's extended plan.":
+    'goodloop offre anche sessioni guidate con professionisti abilitati, disponibili con il piano esteso della tua azienda.',
   'In the meantime, your Self Use sessions are always here for you.':
     'Nel frattempo, le sessioni in autonomia restano sempre a tua disposizione.',
   'Go to Self Use': 'Vai alle sessioni in autonomia',
@@ -481,7 +481,7 @@ export const IT_SELF_USE: Record<string, string> = {
   'Therapist video feed': 'Video del terapeuta',
   'Self view': 'La tua immagine',
   'End': 'Termina',
-  'Therapist starts the Good Loop protocol': 'Il professionista avvia l’audio Good Loop',
+  'Therapist starts the goodloop protocol': 'Il professionista avvia l’audio goodloop',
   'Debrief with your therapist': 'Debriefing con il tuo terapeuta',
   'Leave the session? This ends the call with your therapist.':
     'Vuoi uscire dalla sessione? La chiamata con il tuo professionista si chiuderà.',
@@ -505,8 +505,8 @@ export const IT_SELF_USE: Record<string, string> = {
   "We've noticed things have felt heavier lately. That's completely okay. If it would help, support is here whenever you're ready.":
     'Abbiamo notato che nelle ultime settimane è stato più pesante. È del tutto normale. Se può servirti, il supporto è qui quando te la senti.',
   'Not now': 'Non adesso',
-  'Good Loop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
-    'Good Loop è un programma personale di benessere e sviluppo. Non sostituisce il supporto professionale per la salute mentale. Se ti serve un’assistenza specialistica, parlane con il tuo medico o con il servizio di supporto della tua azienda.',
+  'goodloop is a personal wellbeing and development program. It does not replace professional mental health support. If you need specialized assistance, talk to your doctor or your company’s support service.':
+    'goodloop è un programma personale di benessere e sviluppo. Non sostituisce il supporto professionale per la salute mentale. Se ti serve un’assistenza specialistica, parlane con il tuo medico o con il servizio di supporto della tua azienda.',
 
   /* ---- night or day ---- */
   'Appearance': 'Aspetto',
@@ -525,15 +525,15 @@ export const IT_SELF_USE: Record<string, string> = {
   'For me': 'Per me',
   'Sessions to listen to on my own': 'Sessioni da ascoltare per conto mio',
   'I am a therapist': 'Sono un terapeuta',
-  'I see people through Good Loop': 'Seguo persone con Good Loop',
+  'I see people through goodloop': 'Seguo persone con goodloop',
   'Create the account for your company': 'Crea l’account della tua azienda',
   'Company code (required)': 'Codice azienda (obbligatorio)',
   'Taking you to your app': 'Ti porto nella tua app',
   'This account belongs to {surface}.': 'Questo account appartiene a {surface}.',
   'Sign in with another account': 'Accedi con un altro account',
   'This account is not set up yet': 'Questo account non è ancora configurato',
-  'It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.':
-    'Non ha un profilo, quindi non ha un’app da aprire. Chiedi al team Good Loop di completarne la configurazione.',
+  'It has no profile, so it has no app to open. Ask the goodloop team to finish setting it up.':
+    'Non ha un profilo, quindi non ha un’app da aprire. Chiedi al team goodloop di completarne la configurazione.',
 
   /* ---- the company code, at registration ---- */
   'A company code looks like ACME-2026-K7. Check it with whoever gave it to you.':
@@ -554,7 +554,7 @@ export const IT_SELF_USE: Record<string, string> = {
 
   /* ---- Partner (admin accounts only for now) ---- */
   'Partners': 'Partner',
-  'Offers and discounts from Good Loop partners.': 'Offerte e sconti dei partner di Good Loop.',
+  'Offers and discounts from goodloop partners.': 'Offerte e sconti dei partner di goodloop.',
   'No partner offers yet.': 'Ancora nessuna offerta dei partner.',
   'The offers could not be loaded just now. Try again in a moment.': 'Non è stato possibile caricare le offerte. Riprova tra poco.',
   'Copy the code': 'Copia il codice',
@@ -570,8 +570,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Step {n} of {total}': 'Passo {n} di {total}',
   /* ---- the first run: two wizards (with / without a company code) ---- */
   'Your data, your control.': 'I tuoi dati, sotto il tuo controllo.',
-  'Good Loop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.':
-    'Good Loop è costruito secondo gli standard LGPD e GDPR. Quello che ascolti e come dici di stare è tuo: non viene mai venduto, non viene mostrato alla tua azienda e non viene condiviso con un terapeuta se non lo chiedi tu.',
+  'goodloop is built to LGPD and GDPR standards. What you listen to and how you say you feel is yours: it is never sold, never shown to your employer, and never shared with a therapist unless you ask for it.':
+    'goodloop è costruito secondo gli standard LGPD e GDPR. Quello che ascolti e come dici di stare è tuo: non viene mai venduto, non viene mostrato alla tua azienda e non viene condiviso con un terapeuta se non lo chiedi tu.',
   'What we keep': 'Cosa conserviamo',
   'Your account, the sessions you play and the check-ins you fill in — nothing else.':
     'Il tuo account, le sessioni che ascolti e i check-in che compili. Nient’altro.',
@@ -587,8 +587,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Your sessions together will be listed here.': 'Le sessioni che farete insieme compariranno qui.',
   'Goals you agree on with your therapist appear here.': 'Gli obiettivi che concordi con il tuo terapeuta compaiono qui.',
   'One method, two ways to use it': 'Un metodo, due modi di usarlo',
-  'Your company gives you both. Most days you open Good Loop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
-    'La tua azienda te li dà entrambi. Quasi sempre apri Good Loop da solo; quando vuoi qualcuno accanto, lo stesso metodo te lo porta un professionista abilitato.',
+  'Your company gives you both. Most days you open goodloop on your own; when you want someone with you, the same method is delivered by a licensed professional.':
+    'La tua azienda te li dà entrambi. Quasi sempre apri goodloop da solo; quando vuoi qualcuno accanto, lo stesso metodo te lo porta un professionista abilitato.',
   'On your own': 'Da solo',
   'Short guided audio sessions for the day you are having — 6, 12 or 24 minutes, whenever you want them, with nobody to ask.':
     'Brevi sessioni audio guidate per la giornata che hai — 6, 12 o 24 minuti, quando vuoi, senza chiedere niente a nessuno.',
@@ -617,8 +617,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'A scene to picture in detail.': 'Una scena da immaginare nei dettagli.',
   'A sound that moves from one ear to the other, at a steady rhythm.': 'Un suono che passa da un orecchio all\'altro, con un ritmo regolare.',
   'Different frequencies in each ear. That is why you need headphones.': 'Frequenze diverse in ogni orecchio. Per questo servono le cuffie.',
-  'On your own, Good Loop supports your wellbeing, but it is not medical or psychological care and does not replace that care.':
-    'Per conto tuo, Good Loop sostiene il tuo benessere, ma non è assistenza medica o psicologica e non la sostituisce.',
+  'On your own, goodloop supports your wellbeing, but it is not medical or psychological care and does not replace that care.':
+    'Per conto tuo, goodloop sostiene il tuo benessere, ma non è assistenza medica o psicologica e non la sostituisce.',
   'Put your headphones on, choose a length and listen — the voice and the sound around it do the work. Nothing to read, nothing to answer, and nobody is told what you chose.':
     'Metti le cuffie, scegli una durata e ascolta: la voce e il suono intorno fanno il lavoro. Niente da leggere, niente a cui rispondere, e nessuno sa cosa hai scelto.',
   'Before': 'Prima',
@@ -629,8 +629,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Closing the day so it does not follow you home.': 'Chiudere la giornata perché non ti segua a casa.',
 
   'Not belief. Neuroscience.': 'Non è una credenza. È neuroscienza.',
-  'Good Loop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.':
-    'Good Loop non inventa nuova scienza: mette insieme ciò che già funziona. Sei fasi, costruite su tecniche cliniche consolidate e consegnate come suono.',
+  'goodloop does not invent new science — it orchestrates what already works. Six phases, built from established clinical techniques and delivered as sound.':
+    'goodloop non inventa nuova scienza: mette insieme ciò che già funziona. Sei fasi, costruite su tecniche cliniche consolidate e consegnate come suono.',
   'bilateral stimulation': 'stimolazione bilaterale',
   'Polyvagal theory': 'Teoria polivagale',
   'nervous-system regulation': 'regolazione del sistema nervoso',
@@ -644,14 +644,14 @@ export const IT_SELF_USE: Record<string, string> = {
   'The body knows how to process — when given the space.': 'Il corpo sa come elaborare, quando gli si dà lo spazio.',
   'Giampiero Varetti · Clinical psychologist · Creator of the methodology · 30+ years of practice':
     'Giampiero Varetti · Psicologo clinico · Creatore della metodologia · 30+ anni di pratica',
-  'Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
-    'Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
+  'goodloop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'goodloop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
   'Press play and listen': 'Premi play e ascolta',
-  'Good Loop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
-    'Good Loop è una libreria di brevi sessioni audio guidate per il tuo benessere. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Sei, dodici o ventiquattro minuti, quanto sta nella giornata che hai.',
+  'goodloop is a library of short guided audio sessions for your wellbeing. Put your headphones on, choose one, and listen — a voice and the sound around it do the work. Six, twelve or twenty-four minutes, whichever fits the day you are having.':
+    'goodloop è una libreria di brevi sessioni audio guidate per il tuo benessere. Metti le cuffie, scegline una e ascolta: la voce e il suono intorno fanno il lavoro. Sei, dodici o ventiquattro minuti, quanto sta nella giornata che hai.',
   'Your therapist, inside the app': 'Il tuo terapeuta, dentro l’app',
-  'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. Good Loop supports your wellbeing — it is not medical or psychological care and never replaces it.':
-    'Se stai lavorando con un terapeuta, qui vi incontrate: le sessioni che ti assegna compaiono in Terapeuta, e lì avvengono anche le vostre videochiamate. Good Loop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
+  'If you are working with a therapist, this is where you meet: the sessions they assign you appear under Therapist, and your video appointments happen there too. goodloop supports your wellbeing — it is not medical or psychological care and never replaces it.':
+    'Se stai lavorando con un terapeuta, qui vi incontrate: le sessioni che ti assegna compaiono in Terapeuta, e lì avvengono anche le vostre videochiamate. goodloop sostiene il tuo benessere: non è una cura medica o psicologica e non la sostituisce mai.',
   'The science behind the listening': 'La scienza dietro l’ascolto',
   'Phases, frequencies and voice are built on research in psychology and the neuroscience of sound, and tuned session by session by Giampiero. Nothing you hear is there by accident.':
     'Fasi, frequenze e voce sono costruite su ricerca in psicologia e neuroscienze del suono, e messe a punto sessione per sessione da Giampiero. Niente di ciò che senti è lì per caso.',
@@ -660,9 +660,9 @@ export const IT_SELF_USE: Record<string, string> = {
   'Account Settings': 'Impostazioni dell’account',
   'Session Preferences': 'Preferenze delle sessioni',
   'Privacy & Data': 'Privacy e dati',
-  'How Good Loop Works': 'Come funziona Good Loop',
+  'How goodloop Works': 'Come funziona goodloop',
   'Help & Support': 'Aiuto e assistenza',
-  'About Good Loop': 'Informazioni su Good Loop',
+  'About goodloop': 'Informazioni su goodloop',
   'Log Out': 'Esci',
   'Linked company': 'Azienda collegata',
   'Not linked': 'Nessuna azienda',
@@ -695,8 +695,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Delete account': 'Elimina l’account',
   'Skip': 'Salta',
   'Why headphones matter': 'Perché le cuffie contano',
-  'Good Loop uses stereo audio technology. Always use wired stereo headphones for the full experience.':
-    'Good Loop usa una tecnologia audio stereo. Usa sempre cuffie stereo con filo per l’esperienza completa.',
+  'goodloop uses stereo audio technology. Always use wired stereo headphones for the full experience.':
+    'goodloop usa una tecnologia audio stereo. Usa sempre cuffie stereo con filo per l’esperienza completa.',
   'What happens during a session': 'Che cosa succede durante una sessione',
   'The screen goes dark by design. Close your eyes, listen, and let the audio do the work.':
     'Lo schermo si oscura di proposito. Chiudi gli occhi, ascolta e lascia lavorare l’audio.',
@@ -711,8 +711,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Contact support': 'Contatta l’assistenza',
   'Report a problem': 'Segnala un problema',
   'Version': 'Versione',
-  'Good Loop combines guided voice, stereo sound design and structured session phases into short audio practices you can fit into a working day.':
-    'Good Loop unisce voce guidata, progettazione sonora stereo e fasi strutturate in pratiche audio brevi, da inserire in una giornata di lavoro.',
+  'goodloop combines guided voice, stereo sound design and structured session phases into short audio practices you can fit into a working day.':
+    'goodloop unisce voce guidata, progettazione sonora stereo e fasi strutturate in pratiche audio brevi, da inserire in una giornata di lavoro.',
   /* --- Therapist tab: scheduling, questionnaires, messages --------------- */
   'No session is scheduled yet.': 'Nessuna sessione fissata.',
   'Your therapist will propose a time.': 'Sarà il tuo terapeuta a proporti un orario.',
@@ -752,8 +752,8 @@ export const IT_SELF_USE: Record<string, string> = {
     'Non è stato possibile riprodurre l’audio registrato: senti il tappeto sonoro.',
   'The check you tap before and after each session is shared with your therapist.':
     'Il check che tocchi prima e dopo ogni sessione viene condiviso con il tuo terapeuta.',
-  'This session is not available at the moment. Your therapist or the Good Loop team can restore it.':
-    'Questa sessione non è disponibile al momento. Il tuo terapeuta o il team Good Loop possono ripristinarla.',
+  'This session is not available at the moment. Your therapist or the goodloop team can restore it.':
+    'Questa sessione non è disponibile al momento. Il tuo terapeuta o il team goodloop possono ripristinarla.',
 
   /* ---- the library's own words ------------------------------------------
 

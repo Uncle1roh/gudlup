@@ -38,7 +38,7 @@ export interface ExportInput {
   gamification: { wallet: Wallet; loops: LoopsEntry[] } | null
 }
 
-const NIL = 'none — Good Loop holds no data in this domain for you'
+const NIL = 'none — goodloop holds no data in this domain for you'
 
 export function buildDataExport(i: ExportInput) {
   const bySlug = new Map(i.sessions.map((s) => [s.slug, s]))
@@ -69,7 +69,7 @@ export function buildDataExport(i: ExportInput) {
       },
       C_subscription_and_billing: NIL,
       D_usage_records: {
-        note: 'Which sessions you opened, when and for how long. Where a professional selected content for you, it is recorded as selected by that named professional — Good Loop selects, orders and adapts nothing.',
+        note: 'Which sessions you opened, when and for how long. Where a professional selected content for you, it is recorded as selected by that named professional — goodloop selects, orders and adapts nothing.',
         sessions: nil(i.state.logs.map((l) => ({
           at: iso(l.at), session: bySlug.get(l.slug)?.name ?? l.slug, durationMin: l.duration,
           selectedByProfessional: !!l.prescriptionId, feedback: l.feedback ?? null,
@@ -101,7 +101,7 @@ export function buildDataExport(i: ExportInput) {
       },
       H_sponsorship_and_eligibility: i.companyCode
         ? {
-            note: 'This data came from your sponsor, not from you. Your sponsor has received no information identifying you and none about whether, when or how you have used Good Loop.',
+            note: 'This data came from your sponsor, not from you. Your sponsor has received no information identifying you and none about whether, when or how you have used goodloop.',
             companyCode: i.companyCode,
             fieldsSuppliedBySponsor: i.profile?.sponsorFields ?? ['company code'],
           }
@@ -112,12 +112,12 @@ export function buildDataExport(i: ExportInput) {
       J_clinical_record: i.therapy
         ? {
             heldBy: i.therapy.therapistName,
-            note: 'The clinical record of your work with this professional — notes, observations and any questionnaire you completed for them — is kept by that professional, who is independently responsible for it under the rules of their profession. Good Loop does not hold it and cannot provide it; ask the professional directly, and tell us if you have any difficulty reaching them. The professional may be required to retain it even after a deletion request.',
+            note: 'The clinical record of your work with this professional — notes, observations and any questionnaire you completed for them — is kept by that professional, who is independently responsible for it under the rules of their profession. goodloop does not hold it and cannot provide it; ask the professional directly, and tell us if you have any difficulty reaching them. The professional may be required to retain it even after a deletion request.',
           }
         : NIL,
       K_automated_features: {
-        automatedDecisions: 'none — Good Loop does not use artificial intelligence and takes no decision about you by automated means',
-        scoresOrClassifications: 'none — Good Loop holds no score, rating, severity level, risk classification or clinical assessment about you',
+        automatedDecisions: 'none — goodloop does not use artificial intelligence and takes no decision about you by automated means',
+        scoresOrClassifications: 'none — goodloop holds no score, rating, severity level, risk classification or clinical assessment about you',
       },
       L_marketing_and_communication_preferences: {
         marketing: i.consents.filter((c) => c.purpose === 'marketing').map((c) => ({ granted: c.granted, at: iso(c.at) })),

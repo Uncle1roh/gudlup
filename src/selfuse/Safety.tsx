@@ -61,7 +61,7 @@ export function SafetyLevel3({ eap, onClose }: GatewayProps) {
               />
             ))}
           </div>
-          <p className="small muted">{t('Good Loop can’t respond to emergencies. Good Loop is a wellbeing service and does not replace professional care.')}</p>
+          <p className="small muted">{t('goodloop can’t respond to emergencies. goodloop is a wellbeing service and does not replace professional care.')}</p>
         </div>
         <div className="screen__footer">
           <button className="btn btn--primary" onClick={onClose}>{t('Back to Home')}</button>
@@ -76,7 +76,7 @@ export function SafetyLevel1() {
   const { t } = useI18n()
   return (
     <p className="small muted safety-l1">
-      {t('Good Loop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.')}
+      {t('goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.')}
     </p>
   )
 }

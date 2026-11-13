@@ -57,7 +57,7 @@ const account = (id: string, label: string, fingerprint: string, rows: Row[]): V
 })
 
 export const VOICE_ACCOUNTS: VoiceAccount[] = [
-  account('mattia', 'Good Loop — Mattia Volpe', '7a6e3c331b6e5d1ad5036fac', [
+  account('mattia', 'goodloop — Mattia Volpe', '7a6e3c331b6e5d1ad5036fac', [
     ['pt-BR', 'M', 'ritual', 'smo2FZxpDzhClRoz96Ai'],
     ['it', 'M', 'ritual', 'BO2jrTp9rZq5PAFFKFkY'],
     ['pt-BR', 'M', 'whisper', 'nNbLaZY6EgDO8foLdve2'],
@@ -81,7 +81,7 @@ export const VOICE_ACCOUNTS: VoiceAccount[] = [
     ['pt-BR', 'F', 'maternal', 'esolwfQMJakk5IMnRLnW'],
     ['it', 'F', 'maternal', 'aYBXyupCnZqrSVuPsR5i'],
   ]),
-  account('giovanni', 'Good Loop — Giovanni Bartegno', '17acff0d7372be969934250a', [
+  account('giovanni', 'goodloop — Giovanni Bartegno', '17acff0d7372be969934250a', [
     ['pt-BR', 'M', 'ritual', 'h0DmKj0V07XbagTwk7R7'],
     ['it', 'M', 'ritual', 'dfEeRSEY7d1F7CF8Gf2z'],
     ['pt-BR', 'M', 'whisper', 'AxeDqIUOBuQ4iIK8Y7vx'],

@@ -90,7 +90,7 @@ export const ACHIEVEMENT_COPY: Record<string, AchievementCopy> = {
   },
   first_challenge: {
     name: 'First challenge',
-    rule: 'Complete a challenge — a Good Loop one or your company’s.',
+    rule: 'Complete a challenge — a goodloop one or your company’s.',
     unlocked: 'You completed your first challenge, at your own pace.',
   },
   challenger: {

@@ -161,7 +161,7 @@ export function warnIfUndeclared(): void {
   if (warned || appEnv() !== 'unknown') return
   warned = true
   console.warn(
-    `[Good Loop] VITE_APP_ENV is not set on this deployment (database ${databaseRef() ?? 'none'}). ` +
+    `[goodloop] VITE_APP_ENV is not set on this deployment (database ${databaseRef() ?? 'none'}). ` +
     'Set it to production, staging or demo — see docs/ENVIRONMENTS.md.',
   )
 }

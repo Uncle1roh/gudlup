@@ -288,7 +288,7 @@ export function ConsultationRoom({ patient, config, demoSeconds, roomId = null, 
           <div className="dock__body">
             {dock === 'library' && (
               <>
-                <h3 className="monitor__h">Libreria Good Loop</h3>
+                <h3 className="monitor__h">Libreria goodloop</h3>
                 <p className="dock__hint">
                   Prima parlate. Quando sei pronto, scegli un protocollo e mandalo in seduta — il paziente lo ascolta, tu resti in video.
                 </p>

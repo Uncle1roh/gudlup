@@ -91,7 +91,7 @@ function fresh(): MockLegalState {
           remote: 'Ci vediamo in videochiamata: tu scegli un luogo tranquillo e riservato, io faccio lo stesso dal mio studio.',
           medium: 'Se la connessione cade, ti richiamo entro cinque minuti; se non riusciamo a riprendere, recuperiamo il tempo perso in un altro appuntamento.',
           confidentiality: 'Quello che ci diciamo resta riservato. Le eccezioni sono quelle previste dalla legge e dal codice deontologico, e te le spiego se si presentano.',
-          records: 'Tengo note cliniche essenziali nell’area riservata di Good Loop per la durata prevista dalla legge; le vedo solo io, e puoi chiederne una copia.',
+          records: 'Tengo note cliniche essenziali nell’area riservata di goodloop per la durata prevista dalla legge; le vedo solo io, e puoi chiederne una copia.',
           risk: 'Se ti trovi in pericolo, ti chiedo dove sei all’inizio di ogni seduta per poter attivare i soccorsi della tua zona, e ti indico i numeri di emergenza.',
           fees: 'Il costo della seduta è concordato prima di iniziare. Puoi disdire gratuitamente fino a 24 ore prima.',
           alternatives: 'Se il lavoro a distanza non fa per te, possiamo valutare incontri in presenza o indirizzarti a un altro professionista.',

@@ -454,7 +454,7 @@ export class PdfDoc {
     if (this.setup.title) meta.push(`/Title ${pdfString(this.setup.title)}`)
     if (this.setup.author) meta.push(`/Author ${pdfString(this.setup.author)}`)
     if (this.setup.subject) meta.push(`/Subject ${pdfString(this.setup.subject)}`)
-    meta.push('/Producer (Good Loop)')
+    meta.push('/Producer (goodloop)')
     const infoId = add(`<< ${meta.join(' ')} >>`)
 
     objects[catalogId - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`

@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
+import { brandText } from '../components/Brand'
 import { useDataProvider } from '../data/provider'
 import { Badge } from '../gamification/ui/Badge'
 import { displayLoops } from '../gamification/economy'
@@ -54,7 +55,7 @@ export function ChallengesTab({ hasCompany, onStartSession }: { hasCompany: bool
         <h2 id="gam-ch-live" className="home__sect">{t('Active challenges')}</h2>
         {publicLive.length
           ? <ul className="gam-list">{publicLive.map((c) => <li key={c.id}><ChallengeCard c={c} onOpen={() => setOpen(c.id)} now={now} /></li>)}</ul>
-          : <p className="small muted">{t('No Good Loop challenge right now. New ones appear here.')}</p>}
+          : <p className="small muted">{t('No goodloop challenge right now. New ones appear here.')}</p>}
       </section>
 
       <section className="gam-section" aria-labelledby="gam-ch-past">
@@ -71,7 +72,7 @@ export function ChallengesTab({ hasCompany, onStartSession }: { hasCompany: bool
                     <Badge icon={asIcon(c.badgeIcon)} tier={c.companyId ? 'empresa' : c.format === 'collective' ? 'coletiva' : 'broto'}
                            shape={c.format === 'collective' ? 'hexagon' : 'circle'} size={48} locked={!done} />
                     <span className="gam-history__body">
-                      <span className="eyebrow">{c.companyId ? t('Your company’s challenge') : t('Good Loop challenge')} · {d(c.endsAt, { month: 'long', year: 'numeric' })}</span>
+                      <span className="eyebrow">{brandText(c.companyId ? t('Your company’s challenge') : t('goodloop challenge'))} · {d(c.endsAt, { month: 'long', year: 'numeric' })}</span>
                       <span className="gam-history__title">{c.title}</span>
                       <span className="small">
                         {done

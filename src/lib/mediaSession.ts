@@ -116,7 +116,7 @@ function session(): MediaSession | undefined {
 export function showNowPlaying(now: NowPlaying): void {
   if (onNative((p) => p.setMetadata({
     title: now.title,
-    artist: now.artist ?? 'Good Loop',
+    artist: now.artist ?? 'goodloop',
     artwork: now.artworkUrl ? [{ src: now.artworkUrl, sizes: '512x512', type: 'image/png' }] : undefined,
   }))) {
     setPlaybackState('playing')
@@ -127,7 +127,7 @@ export function showNowPlaying(now: NowPlaying): void {
   try {
     ms.metadata = new MediaMetadata({
       title: now.title,
-      artist: now.artist ?? 'Good Loop',
+      artist: now.artist ?? 'goodloop',
       artwork: now.artworkUrl
         ? [{ src: now.artworkUrl, sizes: '512x512', type: 'image/png' }]
         : undefined,

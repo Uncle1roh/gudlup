@@ -114,7 +114,7 @@ export function ProfileTab(props: ProfileProps) {
      screen, which is both the odd one out and the first thing a new person
      looks for. It is a box like the others now, and it says what it is. */
   const about: { id: Page; label: string }[] = [
-    { id: 'tutorial', label: 'How Good Loop Works' },
+    { id: 'tutorial', label: 'How goodloop Works' },
     { id: 'help', label: 'Help & Support' },
     { id: 'about', label: 'Legal information' },
   ]
@@ -184,7 +184,7 @@ export function ProfileTab(props: ProfileProps) {
         </article>
 
         <article className="glass pf2-card">
-          <h2 className="call2-pane__h">{t('Good Loop')}</h2>
+          <h2 className="call2-pane__h">{t('goodloop')}</h2>
           <ul className="pf2-rows">
             {about.map((r) => (
               <li key={r.id}>
@@ -469,7 +469,7 @@ const PURPOSES: { purpose: ConsentPurpose; label: string; note: string; local?: 
   { purpose: 'aggregate', label: 'Aggregate programme figures', note: 'Counted in totals for groups of 25 or more. Never shared individually.', local: 'aggregate' },
   { purpose: 'notifications', label: 'Reminders on this device', note: 'Reminders never contain health information.', local: 'notifications' },
   { purpose: 'therapist_bridge', label: 'Share Self Use history with your therapist', note: 'Your linked professional may see which sessions you listened to. Revocable anytime.', local: 'therapistBridge' },
-  { purpose: 'marketing', label: 'News from Good Loop', note: 'Occasional product news by e-mail.' },
+  { purpose: 'marketing', label: 'News from goodloop', note: 'Occasional product news by e-mail.' },
   { purpose: 'testimonial', label: 'Testimonials', note: 'An account of your experience may be published, with your name only if you say so.' },
   { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.' },
   /* Gamification, SPEC §4.1: a separate purpose, so withdrawing it stops the
@@ -740,7 +740,7 @@ function ReportForm({ onDone }: { onDone: () => void }) {
 const TUTORIAL = [
   {
     title: 'Why headphones matter',
-    body: 'Good Loop uses stereo audio. Always use wired stereo headphones for the full experience.',
+    body: 'goodloop uses stereo audio. Always use wired stereo headphones for the full experience.',
   },
   {
     title: 'What happens during a session',
@@ -758,7 +758,7 @@ const TUTORIAL = [
 
 const TUTORIAL_THERAPIST = {
   title: 'Professional support',
-  body: 'Where your plan includes it, a licensed professional can work with you in a video session and may select sessions for you to listen to on your own. They decide what is used and when; Good Loop provides the content and the tools.',
+  body: 'Where your plan includes it, a licensed professional can work with you in a video session and may select sessions for you to listen to on your own. They decide what is used and when; goodloop provides the content and the tools.',
 }
 
 export function Tutorial({
@@ -840,7 +840,7 @@ function WriteToUs({ kind }: { kind: 'support' | 'suggestion' }) {
       <p className="lead">
         {kind === 'support'
           ? t('Write to us and tell us what is happening. We answer within two working days.')
-          : t('Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.')}
+          : t('Tell us what would make goodloop better for you. We read everything, and it is not a support request — nothing is broken on your side.')}
       </p>
       <p className="profile__mail"><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
       <div className="profile__acts">
@@ -872,10 +872,10 @@ function About() {
   ]
   return (
     <>
-      <h2 className="display su-h1">{t('About Good Loop')}</h2>
+      <h2 className="display su-h1">{t('About goodloop')}</h2>
       <p className="small muted">{t('Version')} 1.0 · {t('Legal texts')} {LEGAL_VERSION}</p>
       <p className="lead">
-        {t('Good Loop combines guided voice, stereo sound design and structured audio segments into short relaxation sessions you can fit into a working day.')}
+        {t('goodloop combines guided voice, stereo sound design and structured audio segments into short relaxation sessions you can fit into a working day.')}
       </p>
       <a href="https://goodloop.health">goodloop.health</a>
 
@@ -887,7 +887,7 @@ function About() {
         <li><a className="menu__row" href="#legal" target="_blank" rel="noreferrer"><span>{t('All notices and previous versions')}</span><span aria-hidden="true">↗</span></a></li>
       </ul>
       {/* D-16 — the footer notice on every surface. */}
-      <p className="small muted">{t('The Good Loop platform, its content and the GL Methodology are protected by copyright and other intellectual property rights.')}</p>
+      <p className="small muted">{t('The goodloop platform, its content and the GL Methodology are protected by copyright and other intellectual property rights.')}</p>
       {sheet && <LegalSheet id={sheet} onClose={() => setSheet(null)} />}
     </>
   )

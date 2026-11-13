@@ -94,8 +94,8 @@ export const PT_SALES: Record<string, string> = {
   'Copia il codice': 'Copiar o código',
   'Codice terapeuta': 'Código do terapeuta',
   'Copia l’invito': 'Copiar o convite',
-  'Il codice della vostra azienda su Good Loop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
-    'O código da sua empresa na Good Loop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
+  'Il codice della vostra azienda su goodloop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
+    'O código da sua empresa na goodloop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
   'Sospendi': 'Pausar',
   'Riattiva': 'Reativar',
   'Attiva': 'Ativa',
@@ -264,19 +264,19 @@ export const PT_SALES: Record<string, string> = {
   'Nessun riscatto ancora.': 'Ainda não há resgates.',
   '{n} codici nuovi caricati.': '{n} códigos novos carregados.',
   'Carica {n} codici': 'Carregar {n} códigos',
-  '— almeno uno per un beneficio Good Loop': '— ao menos uma para um benefício Good Loop',
+  '— almeno uno per un beneficio goodloop': '— ao menos uma para um benefício goodloop',
   'Senza tag si può salvare solo come bozza.': 'Sem tag só é possível salvar como rascunho.',
   'Solo come premio di una sfida (lo collega la sfida)':
     'Apenas como prêmio de uma campanha (a campanha faz o vínculo)',
   'Perché si prende cura della persona (in portoghese, come la legge la persona)':
     'Por que cuida da pessoa (em português, como a pessoa lê)',
-  'Serve almeno un tag per pubblicare un beneficio Good Loop.':
-    'É preciso ao menos uma tag para publicar um benefício Good Loop.',
+  'Serve almeno un tag per pubblicare un beneficio goodloop.':
+    'É preciso ao menos uma tag para publicar um benefício goodloop.',
   'Rimborsare «{title}» a {who}?': 'Estornar «{title}» para {who}?',
   'I Loops tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.':
     'Os Loops voltam para o saldo da pessoa e a unidade fica disponível de novo. Um código já exibido não é reatribuído.',
-  'Cura che torna alla persona, scambiata con i Loops. {n} benefici Good Loop, {active} attivi.':
-    'Cuidado que volta para a pessoa, trocado por Loops. {n} benefícios Good Loop, {active} ativos.',
+  'Cura che torna alla persona, scambiata con i Loops. {n} benefici goodloop, {active} attivi.':
+    'Cuidado que volta para a pessoa, trocado por Loops. {n} benefícios goodloop, {active} ativos.',
   'Un codice per riga (o un CSV: conta la prima colonna). I doppioni si saltano. Dopo il caricamento i codici non si rileggono: li vedrà solo chi li riceve.':
     'Um código por linha (ou um CSV: vale a primeira coluna). Duplicados são ignorados. Depois do envio os códigos não são mais legíveis: só quem recebe os vê.',
   'Nessun conto alla rovescia, nessun prezzo barrato, nessun «ultime unità»: l’app non li mostra e il testo non deve suggerirli.':
@@ -300,7 +300,7 @@ export const PT_SALES: Record<string, string> = {
   'archiviato': 'arquivado',
 
   /* ---- Campagne ---- */
-  'Sfide Good Loop': 'Campanhas Good Loop',
+  'Sfide goodloop': 'Campanhas goodloop',
   'Sfida': 'Campanha',
   '+ Nuova sfida': '+ Nova campanha',
   'Modifica sfida': 'Editar campanha',

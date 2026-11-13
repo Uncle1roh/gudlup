@@ -182,8 +182,8 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
   return (
     <div className="w-auth">
       <div className="w-auth__card">
-        <div className="w-brand">Good Loop</div>
-        <h1 className="w-h1">{t('Welcome to Good Loop')}</h1>
+        <div className="w-brand">goodloop</div>
+        <h1 className="w-h1">{t('Welcome to goodloop')}</h1>
         <p className="w-lead">{t('Complete your professional registration to get started.')}</p>
 
         <div className="w-form">
@@ -354,7 +354,7 @@ function VerificationPending({ account, cred, onCredChanged }: {
         </button>
 
         <p className="w-small">
-          {t('A reviewer at Good Loop decides this. You will not see patients until they do.')}
+          {t('A reviewer at goodloop decides this. You will not see patients until they do.')}
         </p>
       </div>
     </div>

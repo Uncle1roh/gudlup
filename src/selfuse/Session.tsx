@@ -585,7 +585,7 @@ function ImmersiveSession({
          not "GL-ANX 1.1". */
       nowPlaying: {
         title: t(session.name),
-        artist: 'Good Loop',
+        artist: 'goodloop',
         durationSec: total,
       },
     })
@@ -675,7 +675,7 @@ function ImmersiveSession({
         <div className="player">
           <div className="fade-in player__ready">
             <p className="lead player__readytext">
-              {t('This session is not available at the moment. Your therapist or the Good Loop team can restore it.')}
+              {t('This session is not available at the moment. Your therapist or the goodloop team can restore it.')}
             </p>
             <button className="btn btn--light player__begin" onClick={() => onEnd(false, 0)}>{t('Back')}</button>
           </div>

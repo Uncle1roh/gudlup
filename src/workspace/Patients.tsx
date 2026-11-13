@@ -174,7 +174,7 @@ function BookingsPanel({ bookings, onAccept }: { bookings: Booking[]; onAccept?:
         <span className="w-count">{t('{n} new', { n: bookings.length })}</span>
       </div>
       <p className="w-small">
-        {t('Sessions people booked in the Good Loop app. Accepting one adds them to your patient list with the session already on it.')}
+        {t('Sessions people booked in the goodloop app. Accepting one adds them to your patient list with the session already on it.')}
       </p>
       <ul className="w-bookings__list">
         {bookings.map((b) => (
@@ -260,7 +260,7 @@ export function Roster({ state, update, onOpen, onCall, bookings = [], onAcceptB
         <div className="w-empty">
           <h2>{t('No patients yet')}</h2>
           <p className="w-lead">
-            {t("Generate a connection code and share it with a patient to get started. They'll enter the code in their Good Loop app to link with you.")}
+            {t("Generate a connection code and share it with a patient to get started. They'll enter the code in their goodloop app to link with you.")}
           </p>
           <button className="w-btn w-btn--primary" onClick={() => setAddOpen(true)}>{t('Add patient')}</button>
         </div>
@@ -401,7 +401,7 @@ export function AddPatientModal({
       <div className="w-modal" onClick={(e) => e.stopPropagation()}>
         <h2 className="w-h2">{t('Add patient')}</h2>
         <p className="w-lead">
-          {t('A single-use connection code will be generated. Share it with the patient, who will enter it in their Good Loop app within 72 hours.')}
+          {t('A single-use connection code will be generated. Share it with the patient, who will enter it in their goodloop app within 72 hours.')}
         </p>
 
         <div className="w-code">
@@ -943,7 +943,7 @@ function AssessmentModal({
             licence: t(chosen.licence),
           })}
         </p>
-        <p className="w-small">{t('Which instrument, and when, is your decision. Good Loop proposes nothing.')}</p>
+        <p className="w-small">{t('Which instrument, and when, is your decision. goodloop proposes nothing.')}</p>
 
         <p className="w-lead">
           {t('The patient completes the questionnaire in their own app, at their own pace. It is never administered during a call.')}

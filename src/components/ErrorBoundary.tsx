@@ -46,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // No telemetry service in this build; the console is what a tester can copy
     // out of the browser, and the folded panel below shows the same text.
-    console.error(`[Good Loop] ${this.props.label ?? 'render'} failed:`, error, info.componentStack)
+    console.error(`[goodloop] ${this.props.label ?? 'render'} failed:`, error, info.componentStack)
     this.setState({ info: info.componentStack ?? '' })
   }
 

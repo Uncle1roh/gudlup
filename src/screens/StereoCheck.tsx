@@ -21,7 +21,7 @@ export function StereoCheck({ onContinue }: StereoCheckProps) {
           <span className="eyebrow">{t('Headphones')}</span>
           <h2 className="display">{t('Put on your headphones')}</h2>
           <p className="lead">
-            {t('Good Loop uses sound that moves between your ears. Tap each side to check it reaches the right one.')}
+            {t('goodloop uses sound that moves between your ears. Tap each side to check it reaches the right one.')}
           </p>
         </div>
 

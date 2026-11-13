@@ -144,7 +144,7 @@ export function Challenges({ actor }: { actor: string }) {
     <div className="adm-page">
       <header className="adm-page__head adm-page__head--row">
         <div>
-          <h1 className="b2b-h1">{st('Sfide Good Loop')}</h1>
+          <h1 className="b2b-h1">{st('Sfide goodloop')}</h1>
           <p className="b2b-sub">{st('Eventi a tempo, individuali o collettivi di massa, per tutto il Brasile o per una regione, uno stato, una città.')}</p>
         </div>
         <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blankChallenge(Date.now()))}>{st('+ Nuova sfida')}</button>

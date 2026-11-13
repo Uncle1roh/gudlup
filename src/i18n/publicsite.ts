@@ -103,8 +103,8 @@ export const IT_PUBLIC: Record<string, string> = {
   /* ------------------------------------------------------ for companies --- */
   'Pauses that find room': 'Pause che trovano spazio',
   'in your team’s routine.': 'nella routine del tuo team.',
-  'Good Loop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.':
-    'Good Loop offre sessioni audio guidate ai tuoi collaboratori e sostiene le iniziative di benessere della tua azienda.',
+  'goodloop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.':
+    'goodloop offre sessioni audio guidate ai tuoi collaboratori e sostiene le iniziative di benessere della tua azienda.',
   'Book a demo': 'Prenota una demo',
   'For the people using it': 'Per chi le usa',
   'Audio sessions of 6, 12 or 24 minutes, to listen to whenever and wherever they like.':
@@ -126,9 +126,9 @@ export const IT_PUBLIC: Record<string, string> = {
     'Materiali di comunicazione interna e onboarding guidato nell’app.',
   'Follow-up': 'Monitoraggio',
   'Regular reports, with anonymous and aggregate data only.': 'Report periodici solo con dati anonimi e aggregati.',
-  'What Good Loop does not do': 'Cosa Good Loop non fa',
-  'Good Loop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.':
-    'Good Loop non effettua la valutazione dei rischi psicosociali e non sostituisce il DVR né un percorso psicologico o medico. È uno strumento di cura che integra queste azioni.',
+  'What goodloop does not do': 'Cosa goodloop non fa',
+  'goodloop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.':
+    'goodloop non effettua la valutazione dei rischi psicosociali e non sostituisce il DVR né un percorso psicologico o medico. È uno strumento di cura che integra queste azioni.',
 
   /* -------------------------------------------------------- the method --- */
   'Many layers.': 'Tanti strati.',
@@ -217,8 +217,8 @@ export const PT_PUBLIC: Record<string, string> = {
   /* ------------------------------------------------------ for companies --- */
   'Pauses that find room': 'Pausas que cabem',
   'in your team’s routine.': 'na rotina da sua equipe.',
-  'Good Loop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.':
-    'A Good Loop oferece sessões de áudio guiadas para seus colaboradores e apoia as ações de bem-estar da sua empresa no contexto da NR-1.',
+  'goodloop gives your people guided audio sessions, and supports your company’s wellbeing work in the context of NR-1.':
+    'A goodloop oferece sessões de áudio guiadas para seus colaboradores e apoia as ações de bem-estar da sua empresa no contexto da NR-1.',
   'Book a demo': 'Agendar demonstração',
   'For the people using it': 'Para quem usa',
   'Audio sessions of 6, 12 or 24 minutes, to listen to whenever and wherever they like.':
@@ -240,9 +240,9 @@ export const PT_PUBLIC: Record<string, string> = {
     'Materiais de comunicação interna e onboarding guiado no app.',
   'Follow-up': 'Acompanhamento',
   'Regular reports, with anonymous and aggregate data only.': 'Relatórios periódicos só com dados anônimos e agregados.',
-  'What Good Loop does not do': 'O que a Good Loop não faz',
-  'Good Loop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.':
-    'A Good Loop não faz avaliação de riscos psicossociais e não substitui o PGR, nem acompanhamento psicológico ou médico. Ela é uma ferramenta de cuidado que complementa essas ações.',
+  'What goodloop does not do': 'O que a goodloop não faz',
+  'goodloop does not assess psychosocial risk and does not replace the PGR, nor psychological or medical care. It is a tool for care that complements that work.':
+    'A goodloop não faz avaliação de riscos psicossociais e não substitui o PGR, nem acompanhamento psicológico ou médico. Ela é uma ferramenta de cuidado que complementa essas ações.',
 
   /* -------------------------------------------------------- the method --- */
   'Many layers.': 'Muitas camadas.',

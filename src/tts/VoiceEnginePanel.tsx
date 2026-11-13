@@ -346,7 +346,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
           aria-label="Account ElevenLabs"
         >
           {!accountId && !pasteFor && <option value="" disabled>Scegli l’account ElevenLabs…</option>}
-          {accountId === '?' && <option value="?" disabled>Chiave attuale — non è un account Good Loop</option>}
+          {accountId === '?' && <option value="?" disabled>Chiave attuale — non è un account goodloop</option>}
           {VOICE_ACCOUNTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
         </select>
         <VoiceSelect key={`p-${syncTick}`} value={voiceId} onChange={(v) => { setVoiceId(v); setDirty(true) }} />

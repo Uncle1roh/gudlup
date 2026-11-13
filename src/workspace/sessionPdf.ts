@@ -48,11 +48,11 @@ export function buildSessionReportPdf({ patient, account, rows, batchTitle }: Op
   const doc = new PdfDoc({
     title: batchTitle ?? `${wt('Session report')} — ${patient.name}`,
     author: account.fullName,
-    subject: wt('Good Loop session report'),
+    subject: wt('goodloop session report'),
     footer: (page, total) =>
       `${wt('Confidential clinical record')}  ·  ${patient.name}  ·  ${account.fullName} (${account.licenceNumber})  ·  ${wt('page {page} of {total}', { page, total })}`,
     header: (d) => {
-      d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
+      d.drawText('goodloop', d.margin, d.height - 30, 10, 'bold', 0.35)
       d.drawText(
         wt('Session report'),
         d.width - d.margin - textWidth(wt('Session report'), 8.5),
@@ -84,11 +84,11 @@ export function buildBatchReportPdf(
   const doc = new PdfDoc({
     title: `${wt('Session reports')} — ${account.fullName}`,
     author: account.fullName,
-    subject: wt('Good Loop session reports'),
+    subject: wt('goodloop session reports'),
     footer: (page, pages) =>
       `${wt('Confidential clinical records')}  ·  ${account.fullName} (${account.licenceNumber})  ·  ${wt('page {page} of {total}', { page, total: pages })}`,
     header: (d) => {
-      d.drawText('Good Loop', d.margin, d.height - 30, 10, 'bold', 0.35)
+      d.drawText('goodloop', d.margin, d.height - 30, 10, 'bold', 0.35)
       d.drawLine(d.margin, d.height - 38, d.width - d.margin, d.height - 38, 0.85)
       d.cursor = d.height - 56
     },
@@ -154,7 +154,7 @@ function appendReport(
   doc.section(wt('Session'))
   doc.keyValue(wt('Date & time'), fmtDateTime(row.at))
   doc.keyValue(wt('Call duration'), `${row.minutes} min`)
-  doc.keyValue(wt('Good Loop audio'), row.kind === 'gl-video' ? wt('Yes') : wt('No'))
+  doc.keyValue(wt('goodloop audio'), row.kind === 'gl-video' ? wt('Yes') : wt('No'))
   if (row.kind === 'gl-video') {
     if (row.protocolCode) doc.keyValue(wt('Content'), row.protocolCode)
     if (row.version) doc.keyValue(wt('Version'), `${versionShort(row.version)} (${row.version} min)`)

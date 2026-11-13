@@ -502,9 +502,9 @@ export function WorkspaceSettings({
                   Multi-factor sign-in for professionals is enabled in the
                   authentication service (DAT-10); until it is, this says so. */}
               <p className="w-lead">
-                {t('Encryption in transit and at rest, access limited to your own account, and every access logged — built so you can meet your own duty of confidentiality. Good Loop holds no certification or clearance for this and claims none: the duty is yours, and these are the tools for it.')}
+                {t('Encryption in transit and at rest, access limited to your own account, and every access logged — built so you can meet your own duty of confidentiality. goodloop holds no certification or clearance for this and claims none: the duty is yours, and these are the tools for it.')}
               </p>
-              <p className="w-small">{t('Two-factor sign-in for professional accounts is enabled by the Good Loop team in the authentication service; ask support if it is not yet active on yours.')}</p>
+              <p className="w-small">{t('Two-factor sign-in for professional accounts is enabled by the goodloop team in the authentication service; ask support if it is not yet active on yours.')}</p>
 
               <div className="w-field__label">{t('Active sessions')}</div>
               <ul className="w-reflist">

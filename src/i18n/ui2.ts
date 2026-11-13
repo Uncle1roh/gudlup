@@ -20,8 +20,8 @@ export const IT_UI2: Record<string, string> = {
   'Send a suggestion': 'Manda un suggerimento',
   'Write to us and tell us what is happening. We answer within two working days.':
     'Scrivici e raccontaci che cosa succede. Rispondiamo entro due giorni lavorativi.',
-  'Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
-    'Raccontaci che cosa renderebbe Good Loop migliore per te. Leggiamo tutto, e non è una richiesta di assistenza — non c’è niente di rotto da parte tua.',
+  'Tell us what would make goodloop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
+    'Raccontaci che cosa renderebbe goodloop migliore per te. Leggiamo tutto, e non è una richiesta di assistenza — non c’è niente di rotto da parte tua.',
   'Copy the address': 'Copia l’indirizzo',
   'Open my e-mail program': 'Apri il mio programma di posta',
   'If something is not working, use “Report a problem” instead — that one reaches us with a case number.':
@@ -115,8 +115,8 @@ export const IT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× questa settimana',
-  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
-    'Il percorso è fatto di tracciati pensati per accompagnare la tua terapia. Parlane con le Risorse Umane della tua azienda e prova Good Loop per le aziende, con il supporto professionale.',
+  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try goodloop for companies, with professional support.':
+    'Il percorso è fatto di tracciati pensati per accompagnare la tua terapia. Parlane con le Risorse Umane della tua azienda e prova goodloop per le aziende, con il supporto professionale.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sedute',
@@ -159,7 +159,7 @@ export const IT_UI2: Record<string, string> = {
   /* ---- una sola porta: la terza scheda ---- */
   'You have given {time} to yourself so far': 'Finora hai dedicato {time} a te',
   'For my company': 'Per la mia azienda',
-  'I manage Good Loop where I work': 'Gestisco Good Loop dove lavoro',
+  'I manage goodloop where I work': 'Gestisco goodloop dove lavoro',
 }
 
 export const PT_UI2: Record<string, string> = {
@@ -178,8 +178,8 @@ export const PT_UI2: Record<string, string> = {
   'Send a suggestion': 'Uma sugestão',
   'Write to us and tell us what is happening. We answer within two working days.':
     'Escreva para nós e conte o que está acontecendo. Respondemos em até dois dias úteis.',
-  'Tell us what would make Good Loop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
-    'Conte o que deixaria a Good Loop melhor para você. A gente lê tudo — e não é um chamado de suporte, nada está quebrado do seu lado.',
+  'Tell us what would make goodloop better for you. We read everything, and it is not a support request — nothing is broken on your side.':
+    'Conte o que deixaria a goodloop melhor para você. A gente lê tudo — e não é um chamado de suporte, nada está quebrado do seu lado.',
   'Copy the address': 'Copiar o endereço',
   'Open my e-mail program': 'Abrir meu programa de e-mail',
   'If something is not working, use “Report a problem” instead — that one reaches us with a case number.':
@@ -270,8 +270,8 @@ export const PT_UI2: Record<string, string> = {
 
   /* percurso */
   '{n}× this week': '{n}× esta semana',
-  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.':
-    'O acompanhamento são trilhas desenhadas para andar junto com a sua terapia. Fale com o RH da sua empresa e experimente a Good Loop para empresas, com o apoio profissional.',
+  'Paths are trails designed to go alongside your therapy. Talk to your HR team and try goodloop for companies, with professional support.':
+    'O acompanhamento são trilhas desenhadas para andar junto com a sua terapia. Fale com o RH da sua empresa e experimente a goodloop para empresas, com o apoio profissional.',
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sessões',
@@ -314,5 +314,5 @@ export const PT_UI2: Record<string, string> = {
   /* ---- uma porta só: o terceiro card ---- */
   'You have given {time} to yourself so far': 'Até agora você dedicou {time} a você',
   'For my company': 'Para a minha empresa',
-  'I manage Good Loop where I work': 'Eu cuido da Good Loop onde trabalho',
+  'I manage goodloop where I work': 'Eu cuido da goodloop onde trabalho',
 }

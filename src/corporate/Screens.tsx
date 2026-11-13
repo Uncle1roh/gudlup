@@ -276,7 +276,7 @@ export function Engagement({ agg }: { agg: A }) {
         <section className="c-card">
           <header className="c-card__head">
             <h2>{t('Session Frequency')}</h2>
-            <span className="c-small">{t('How frequently active employees use Good Loop')}</span>
+            <span className="c-small">{t('How frequently active employees use goodloop')}</span>
           </header>
           <BarList rows={e.frequency.map((f) => ({ label: f.label, value: f.pct }))} />
         </section>
@@ -446,7 +446,7 @@ export function Wellbeing({ agg }: { agg: A }) {
           </tbody>
         </table>
         <p className="c-note">
-          {t('Industry average aggregated across all Good Loop companies. Adoption & efficacy only — never risk levels. Purely informational.')}
+          {t('Industry average aggregated across all goodloop companies. Adoption & efficacy only — never risk levels. Purely informational.')}
         </p>
       </section>
 
@@ -554,7 +554,7 @@ export function Reports({ state, agg, onGenerate, onView }: ReportsProps) {
           </table>
         )}
         <p className="c-note">
-          {t('PDF footer: "Confidential — {company} — Good Loop Aggregate Wellbeing Report — Generated [date]". No individual data can be reverse-engineered.', { company: state.profile.name })}
+          {t('PDF footer: "Confidential — {company} — goodloop Aggregate Wellbeing Report — Generated [date]". No individual data can be reverse-engineered.', { company: state.profile.name })}
         </p>
       </section>
 

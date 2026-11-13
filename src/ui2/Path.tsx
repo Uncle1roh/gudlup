@@ -67,7 +67,7 @@ export function Path({ name, therapistName, prescriptions, onStart }: {
           professional support that fills it, so it says that. */}
       {!prescriptions.length && (
         <section className="glass path2-empty">
-          <p className="path2-empty__text">{t('Paths are trails designed to go alongside your therapy. Talk to your HR team and try Good Loop for companies, with professional support.')}</p>
+          <p className="path2-empty__text">{t('Paths are trails designed to go alongside your therapy. Talk to your HR team and try goodloop for companies, with professional support.')}</p>
         </section>
       )}
 

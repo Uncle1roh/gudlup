@@ -56,7 +56,7 @@ export function Achievements({ actor }: { actor: string }) {
       <header className="adm-page__head adm-page__head--row">
         <div>
           <h1 className="b2b-h1">Traguardi</h1>
-          <p className="b2b-sub">Permanenti e una volta sola: nessuno perde una conquista. Il bonus si paga una volta, da Good Loop, mai moltiplicato.</p>
+          <p className="b2b-sub">Permanenti e una volta sola: nessuno perde una conquista. Il bonus si paga una volta, da goodloop, mai moltiplicato.</p>
         </div>
         <button className="b2b-btn b2b-btn--ghost" disabled={busy} onClick={() => void evaluate()}>Rivaluta tutti</button>
       </header>

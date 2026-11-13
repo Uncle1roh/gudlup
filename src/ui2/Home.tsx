@@ -317,7 +317,7 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3">
               <circle cx="12" cy="12" r="8" />
             </svg>
-            GOOD LOOP
+            goodloop
           </span>
 
           {/* The NAME, large on the picture. Hidden from a screen reader:

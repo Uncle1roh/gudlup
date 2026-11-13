@@ -295,7 +295,7 @@ export function ImportProtocol({ actor, onBack }: { actor: string; onBack: () =>
       <header className="adm-page__head adm-page__head--row">
         <div>
           <h1 className="b2b-h1">Importa protocolli</h1>
-          <p className="b2b-sub">Trasforma una specifica scritta in protocolli Good Loop ascoltabili e pubblicabili.</p>
+          <p className="b2b-sub">Trasforma una specifica scritta in protocolli goodloop ascoltabili e pubblicabili.</p>
         </div>
         <button className="b2b-btn b2b-btn--ghost" onClick={onBack}>← Torna al catalogo</button>
       </header>

@@ -224,7 +224,7 @@ export function TherapistTab(props: TherapistTabProps) {
           <div className="thr-art" aria-hidden="true"><BreathingOrb size={150} /></div>
           <h2 className="thr-info__h">{t('Professional support')}</h2>
           <p className="lead">
-            {t("Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.")}
+            {t("goodloop also offers guided sessions with licensed professionals, available through your company's extended plan.")}
           </p>
           <p className="lead">{t('In the meantime, your Self Use sessions are always here for you.')}</p>
           <button className="btn btn--primary" onClick={props.onGoSelfUse}>{t('Go to Self Use')}</button>

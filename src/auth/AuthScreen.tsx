@@ -539,7 +539,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 <button type="button" className={`auth__kindbtn${kind === 'therapist' ? ' is-on' : ''}`}
                   aria-pressed={kind === 'therapist'} onClick={() => setKind('therapist')}>
                   <b>{t('I am a therapist')}</b>
-                  <small>{t('I see people through Good Loop')}</small>
+                  <small>{t('I see people through goodloop')}</small>
                 </button>
                 {/* The third one (POs, 2026-11-06). It used to be a door of its
                     own at #hr, which meant the code in the invitation e-mail
@@ -548,7 +548,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 <button type="button" className={`auth__kindbtn${kind === 'company' ? ' is-on' : ''}`}
                   aria-pressed={kind === 'company'} onClick={() => setKind('company')}>
                   <b>{t('For my company')}</b>
-                  <small>{t('I manage Good Loop where I work')}</small>
+                  <small>{t('I manage goodloop where I work')}</small>
                 </button>
               </div>
             </div>
@@ -748,11 +748,11 @@ const HOME_FOR_ROLE: Record<Role, string> = {
 }
 
 const SURFACE_NAME: Record<Role, string> = {
-  b2c_user: 'Good Loop',
-  therapist: 'Good Loop clinic',
-  hr_admin: 'Good Loop for employers',
-  admin: 'Good Loop admin',
-  sales: 'Good Loop commerciale',
+  b2c_user: 'goodloop',
+  therapist: 'goodloop clinic',
+  hr_admin: 'goodloop for employers',
+  admin: 'goodloop admin',
+  sales: 'goodloop commerciale',
 }
 
 export type GateMode = 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales'
@@ -880,7 +880,7 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
           <div className="auth__brand"><BrandLogo variant="green" /></div>
           <h1 className="auth__title">{t('This account is not set up yet')}</h1>
           <p className="auth__sub">
-            {t('It has no profile, so it has no app to open. Ask the Good Loop team to finish setting it up.')}
+            {t('It has no profile, so it has no app to open. Ask the goodloop team to finish setting it up.')}
           </p>
           {/* Not a dead end any more. The usual reason to land here is that
               the profile row arrived a moment after the gate looked for it —

@@ -100,8 +100,8 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'Re-establish an evening wind-down routine': 'Ristabilire una routine serale per staccare',
 
   /* ---- the tutorial and Profile → How Good Loop works ---- */
-  'Good Loop uses stereo audio. Always use wired stereo headphones for the full experience.':
-    'Good Loop usa l’audio stereo. Usa sempre cuffie stereo con filo per l’esperienza completa.',
+  'goodloop uses stereo audio. Always use wired stereo headphones for the full experience.':
+    'goodloop usa l’audio stereo. Usa sempre cuffie stereo con filo per l’esperienza completa.',
 
   /* ---- the before/after faces (their spoken names) ---- */
   'Very distressed': 'Molto in difficoltà',
@@ -130,7 +130,7 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   /* ---- the progress reports (PDF) ---- */
   'Personal wellbeing summary': 'Riepilogo personale di benessere',
   'Monthly summary': 'Riepilogo mensile',
-  'Your Good Loop summary  ·  {label}  ·  page {page} of {total}': 'Il tuo riepilogo Good Loop  ·  {label}  ·  pagina {page} di {total}',
+  'Your goodloop summary  ·  {label}  ·  page {page} of {total}': 'Il tuo riepilogo goodloop  ·  {label}  ·  pagina {page} di {total}',
   'Generated {date}': 'Creato il {date}',
   'This is your own record of what you did and how you rated your weeks. It is a wellbeing summary, not a clinical assessment, and no one else receives it.':
     'È il tuo registro di cosa hai fatto e di come hai valutato le tue settimane. È un riepilogo di benessere, non una valutazione clinica, e nessun altro lo riceve.',
@@ -370,8 +370,8 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Free, confidential support line': 'Linha de apoio gratuita e confidencial',
 
   /* ---- the Therapist tab ---- */
-  "Good Loop also offers guided sessions with licensed professionals, available through your company's extended plan.":
-    'A Good Loop também oferece sessões guiadas com profissionais habilitados, disponíveis pelo plano estendido da sua empresa.',
+  "goodloop also offers guided sessions with licensed professionals, available through your company's extended plan.":
+    'A goodloop também oferece sessões guiadas com profissionais habilitados, disponíveis pelo plano estendido da sua empresa.',
   'Pick a time above': 'Escolha um horário acima',
   "You'll receive a notification when your therapist confirms.": 'Você receberá uma notificação quando seu terapeuta confirmar.',
   "You're all set.": 'Tudo pronto.',
@@ -397,8 +397,8 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
 
   /* ---- Profile ---- */
   'High': 'Alta',
-  'Good Loop uses stereo audio. Always use wired stereo headphones for the full experience.':
-    'A Good Loop usa áudio estéreo. Use sempre fones estéreo com fio para a experiência completa.',
+  'goodloop uses stereo audio. Always use wired stereo headphones for the full experience.':
+    'A goodloop usa áudio estéreo. Use sempre fones estéreo com fio para a experiência completa.',
 
   /* ---- the before/after faces (their spoken names) ---- */
   'Very distressed': 'Muito mal',
@@ -427,7 +427,7 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   /* ---- the progress reports (PDF) ---- */
   'Personal wellbeing summary': 'Resumo pessoal de bem-estar',
   'Monthly summary': 'Resumo mensal',
-  'Your Good Loop summary  ·  {label}  ·  page {page} of {total}': 'Seu resumo Good Loop  ·  {label}  ·  página {page} de {total}',
+  'Your goodloop summary  ·  {label}  ·  page {page} of {total}': 'Seu resumo goodloop  ·  {label}  ·  página {page} de {total}',
   'Generated {date}': 'Gerado em {date}',
   'This is your own record of what you did and how you rated your weeks. It is a wellbeing summary, not a clinical assessment, and no one else receives it.':
     'Este é o seu próprio registro do que você fez e de como avaliou suas semanas. É um resumo de bem-estar, não uma avaliação clínica, e ninguém mais o recebe.',

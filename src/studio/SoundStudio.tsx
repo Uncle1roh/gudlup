@@ -430,7 +430,7 @@ function StudioTooSmall({ languagePicker }: { languagePicker: boolean }) {
       <div className="mt-gate__card">
         <div className="mt-gate__icon">🎛️</div>
         <h1>{lt('The Sound Studio is desktop only')}</h1>
-        <p>{lt('The multitrack editor needs a wider screen. Open Good Loop on a laptop or desktop to compose and render sessions.')}</p>
+        <p>{lt('The multitrack editor needs a wider screen. Open goodloop on a laptop or desktop to compose and render sessions.')}</p>
         {languagePicker && (
           <div className="mt-gate__lang"><LanguagePicker label={false} className="mt-lang mt-lang--gate" /></div>
         )}
@@ -679,7 +679,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
 
   const RESTORE_ERROR: Record<ParseFailure, string> = {
     'not-json': 'That file is not readable: check you picked a Studio session file.',
-    'not-ours': 'That is not a Good Loop session file.',
+    'not-ours': 'That is not a goodloop session file.',
     'too-new': 'That file was written by a newer Studio than this one. Reload the page and open it again — opening it here would silently drop what this version does not know about.',
     empty: 'That session file has no tracks in it.',
   }

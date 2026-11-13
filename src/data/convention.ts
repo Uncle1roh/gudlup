@@ -198,7 +198,7 @@ export function looksLikeCompanyCode(raw: string): boolean {
 export const BUILT_IN_CONVENTIONS: Convention[] = [
   {
     companyId: 'goodloop-demo',
-    companyName: 'Good Loop Demo',
+    companyName: 'goodloop Demo',
     code: 'DEMO-2026-GL',
     /* The point of the demo code: Professional Support is what puts the
        therapist-led treatment — booking, video sessions, prescriptions — in
@@ -206,7 +206,7 @@ export const BUILT_IN_CONVENTIONS: Convention[] = [
     type: 'self-use-plus',
     licences: 999,
     eap: {
-      provider: 'Good Loop Demo EAP',
+      provider: 'goodloop Demo EAP',
       phone: '+39 800 000 000',
       email: 'demo@goodloop.health',
       info: 'Demo contact · not a real support line',

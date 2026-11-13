@@ -16,6 +16,7 @@ import { Badge } from '../gamification/ui/Badge'
 import { fmtMinutes } from '../gamification/achievements'
 import { shareOf, type ChallengeView } from '../gamification/challenges'
 import { asIcon, challengeEyebrow, challengeProgressText, challengeRewardText } from './ChallengeCard'
+import { brandText } from '../components/Brand'
 
 export function ChallengeDetail({ c, onBack, onStart, now = Date.now() }: { c: ChallengeView; onBack: () => void; onStart: () => void; now?: number }) {
   const { t, d } = useI18n()
@@ -37,7 +38,7 @@ export function ChallengeDetail({ c, onBack, onStart, now = Date.now() }: { c: C
         <span className={`gam-chip${live ? ' gam-chip--live' : ''}`}>{status}</span>
         {c.companyId && c.companyName && <span className="gam-chip gam-chip--company">{c.companyName}</span>}
       </div>
-      <p className="eyebrow">{challengeEyebrow(t, c, now)} · {range}</p>
+      <p className="eyebrow">{brandText(challengeEyebrow(t, c, now))} · {range}</p>
       <h1 className="display su-h1">{c.title}</h1>
       {c.description && <p className="lead">{c.description}</p>}
 

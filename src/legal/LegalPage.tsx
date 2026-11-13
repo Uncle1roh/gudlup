@@ -76,7 +76,7 @@ export function LegalPage() {
   return (
     <div className="legal-page su-studio su-scrolls">
       <header className="legal-page__top">
-        <a className="legal-page__brand" href="#app" aria-label="Good Loop"><BrandLogo /></a>
+        <a className="legal-page__brand" href="#app" aria-label="goodloop"><BrandLogo /></a>
         <div className="legal-page__controls">
           <label className="legal-page__select">
             {/* Visible, not `visually-hidden`. Two unlabelled dropdowns side

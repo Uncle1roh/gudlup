@@ -38,7 +38,7 @@ const SURFACES: { id: Which; title: string; what: string; ringLabel: string; rin
   {
     id: 'landing',
     title: 'Pagina pubblica e accesso',
-    what: 'Dietro la landing, le tre pagine pubbliche e la schermata di accesso. È la prima cosa che vede chi non conosce ancora Good Loop.',
+    what: 'Dietro la landing, le tre pagine pubbliche e la schermata di accesso. È la prima cosa che vede chi non conosce ancora goodloop.',
     ringLabel: 'Anelli attorno al soggetto',
     ringWhat: 'Il alone di anelli sottili al centro dell’immagine. Ha senso solo se la foto ha un soggetto lì.',
   },

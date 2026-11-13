@@ -81,7 +81,7 @@ export const IT: Record<string, string> = {
   /* ---- stereo check ---- */
   'Headphones': 'Cuffie',
   'Put on your headphones': 'Indossa le cuffie',
-  'Good Loop uses sound that moves between your ears. Tap each side to check it reaches the right one.': 'Good Loop usa un suono che si muove tra le tue orecchie. Tocca ciascun lato per verificare che arrivi a quello giusto.',
+  'goodloop uses sound that moves between your ears. Tap each side to check it reaches the right one.': 'goodloop usa un suono che si muove tra le tue orecchie. Tocca ciascun lato per verificare che arrivi a quello giusto.',
   'Left ear': 'Orecchio sinistro',
   'Right ear': 'Orecchio destro',
   'For the full effect, wired headphones work best. You can continue either way.': 'Per l’effetto completo, le cuffie con filo funzionano meglio. Puoi continuare in ogni caso.',
@@ -425,7 +425,7 @@ export const IT: Record<string, string> = {
   'Upload document': 'Carica un documento',
   'Submit': 'Invia',
   'Sending…': 'Invio…',
-  'A reviewer at Good Loop decides this. You will not see patients until they do.': 'La decisione spetta a chi revisiona in Good Loop. Fino ad allora non vedrai pazienti.',
+  'A reviewer at goodloop decides this. You will not see patients until they do.': 'La decisione spetta a chi revisiona in goodloop. Fino ad allora non vedrai pazienti.',
   'One moment': 'Un momento',
   'Confirming your registration…': 'Sto confermando la tua iscrizione…',
   'We could not check your credentials': 'Non è stato possibile verificare le tue credenziali',

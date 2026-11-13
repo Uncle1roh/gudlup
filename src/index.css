@@ -143,6 +143,10 @@ a { color: var(--aura-deep); }
 /* ----------------------------------------------------------------------------
    Typography helpers
    ---------------------------------------------------------------------------- */
+/* The name is one lowercase word, always — including inside a label that
+   sets everything else in capitals. `components/Brand.tsx` wraps it. */
+.gl-brandword { text-transform: none; font-variant-caps: normal; }
+
 .eyebrow {
   font-size: 12px;
   letter-spacing: 0.18em;

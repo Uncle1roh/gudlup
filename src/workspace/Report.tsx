@@ -89,7 +89,7 @@ export function SessionReport({ patient, account, row, quickNotes = [], onSave, 
               <dd>{fmtDate(draft.at, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd>
             </div>
             <div><dt>{t('Call duration')}</dt><dd>{draft.minutes} min</dd></div>
-            <div><dt>{t('Good Loop audio')}</dt><dd>{draft.kind === 'gl-video' ? `${t('Yes')} · ${draft.protocolCode}` : t('No')}</dd></div>
+            <div><dt>{t('goodloop audio')}</dt><dd>{draft.kind === 'gl-video' ? `${t('Yes')} · ${draft.protocolCode}` : t('No')}</dd></div>
             {draft.kind === 'gl-video' && (
               <>
                 <div><dt>{t('Version · played')}</dt><dd>{versionShort(draft.version)} · {fmtClock((draft.version ?? 0) * 60)}</dd></div>
