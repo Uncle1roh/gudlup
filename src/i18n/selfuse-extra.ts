@@ -173,40 +173,49 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'in progress': 'in corso',
 
 /* ---- the first-run cards, in the POs' own words -------------------------
-   `Good Loop Visual ID/goodloop-onboarding-wizard-v08.html`, 2026-11-11:
+   `Good Loop Visual ID/goodloop-onboarding-wizard-v12.html`, 2026-11-13:
    the English on the cards, and BOTH translations, are the POs' own, lifted
    from that file's dictionary rather than written here. v08 added the
-   Italian and Portuguese; v07 had only the English.
+   Italian and Portuguese; v12 revised the copy.
 
-   The one line not in it is the plan qualifier on "With a Professional" —
-   Professionally Guided Use is a plan an employer either bought or did not,
-   and the wizard does not have to say so. `selfuse/FirstRun.tsx`. */
+   WHAT v12 CHANGED. The brand is one lowercase word, `goodloop`, bold inside
+   a sentence (`selfuse/FirstRun.tsx` bolds it; a dictionary holds no markup).
+   Wellbeing comes before health in the first headline. The six are phases
+   PER SESSION, not of a process. The three lengths are Quick / Standard /
+   Deep — which is what the rest of the app already calls them, so the wizard
+   now shares those keys instead of carrying three of its own. Professionally
+   Guided Use carries an asterisk and the footnote that answers it. And two
+   technique names were corrected in translation.
+
+   The one line not in the file is the plan qualifier on "With a
+   Professional*" — the footnote says "corporate contracts only" to everyone,
+   and this says to THIS person whether their own employer bought it. */
   'Proprietary Methodology': 'Metodologia Proprietaria',
-  'Mental health and wellbeing, reimagined through listening.': 'Salute mentale e benessere, ripensati attraverso l’ascolto.',
+  'Mental wellbeing and health, reimagined through listening.': 'Benessere e salute mentale, ripensati attraverso l’ascolto.',
   'A proprietary, science-validated audio methodology that speaks directly to your nervous system.': 'Una metodologia audio proprietaria, validata dalla scienza, che parla direttamente al tuo sistema nervoso.',
   'Integrated Tools': 'Strumenti Integrati',
-  'Process Phases': 'Fasi del Processo',
+  'Phases per Session': 'Fasi per Sessione',
   'Validated Techniques': 'Tecniche Validate',
   'Years Clinical Practice': 'Anni di Pratica Clinica',
   'Session lengths': 'Durata delle sessioni',
-  'Quick Reset': 'Reset Rapido',
-  'Full Session': 'Sessione Completa',
-  'Deep Immersion': 'Immersione Profonda',
+  /* The three lengths are the app's own keys now (Quick / Standard / Deep,
+     `data/selfuse.ts`), translated once in `it-selfuse.ts`. */
   'One platform. Two ways to transform.': 'Una piattaforma. Due modi di trasformarsi.',
-  'Two ways to experience Good Loop: Self-Guided Use for everyday wellbeing and Professionally Guided Use with a licensed professional.': 'Due modi di vivere Good Loop: Uso Autoguidato per il benessere di ogni giorno e Uso Guidato da un Professionista, con un professionista abilitato.',
+  'Two ways to experience goodloop: Self-Guided Use for everyday wellbeing and Professionally Guided Use* with a licensed professional.': 'Due modi di vivere goodloop: Uso Autoguidato per il benessere di ogni giorno e Uso Guidato da un Professionista*, con un professionista abilitato.',
   'For You': 'Per Te',
   'Self-directed sessions for everyday wellbeing — stress, sleep, focus. Available anytime, on the go.': 'Sessioni autoguidate per il benessere quotidiano — stress, sonno, concentrazione. Disponibili in qualsiasi momento, ovunque tu sia.',
-  'With a Professional': 'Con un Professionista',
+  'With a Professional*': 'Con un Professionista*',
+  '* for corporate contracts only': '* solo per contratti aziendali',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.': 'La Metodologia GL completa, condotta da uno psicologo abilitato o da un professionista della salute sul lavoro che guida il tuo percorso.',
   'Not belief. Neuroscience.': 'Non serve crederci. È neuroscienza.',
-  'Good Loop doesn’t invent new science — it orchestrates the best of what already works.': 'Good Loop non inventa una nuova scienza: orchestra il meglio di ciò che già funziona.',
+  'goodloop doesn’t invent new science — it orchestrates the best of what already works.': 'goodloop non inventa una nuova scienza: orchestra il meglio di ciò che già funziona.',
   'Dichotic Listening': 'Ascolto Dicotico',
   'Bilateral stimulation, EMDR-style': 'Stimolazione bilaterale, stile EMDR',
   'Imagery Rehearsal': 'Ripetizione Immaginativa',
   'Guided imagery in a safe space': 'Immaginazione guidata in uno spazio sicuro',
   'Binaural Beats': 'Battiti Binaurali',
   'Calibrated frequencies for state': 'Frequenze calibrate per ogni stato',
-  'Voice Morphing': 'Morphing Vocale',
+  'Voice Morphing': 'Archetipi Vocali',
   'Shifting tones, deeper reach': 'Toni che cambiano, portata più profonda',
   'Music & Ambient Sounds': 'Musica e Suoni Ambientali',
   'Builds a safe inner space': 'Crea uno spazio interiore sicuro',
@@ -218,10 +227,10 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'Slow, paced breathing for calm': 'Respirazione lenta e ritmata per calmarsi',
   'Sensory Stimulation': 'Stimolazione Sensoriale',
   'Grounds you in the here and now': 'Ti riporta al qui e ora',
-  'Good Loop speaks directly to the nervous system, using the language it truly understands.': 'Good Loop parla direttamente al sistema nervoso, usando il linguaggio che davvero comprende.',
+  'goodloop speaks directly to the nervous system, using the language it truly understands.': 'goodloop parla direttamente al sistema nervoso, usando il linguaggio che davvero comprende.',
   'Clinical Psychologist · Methodology Creator · 30+ yrs of clinical practice': 'Psicologo Clinico · Ideatore della Metodologia · 30+ anni di pratica clinica',
   'Your data, your control.': 'I tuoi dati, il tuo controllo.',
-  'Good Loop is built to LGPD and GDPR standards from day one.': 'Good Loop è progettato secondo gli standard GDPR e LGPD fin dal primo giorno.',
+  'goodloop is built to LGPD and GDPR standards from day one.': 'goodloop è progettata secondo gli standard GDPR e LGPD fin dal primo giorno.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'La Metodologia GL completa, condotta da uno psicologo abilitato o da un professionista della salute sul lavoro che guida il tuo percorso. Disponibile con il piano esteso della tua azienda.',
   /* The wizard's own buttons. Both translations are the POs'
      (v08's dictionary). */
@@ -461,41 +470,52 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'in progress': 'em andamento',
 
 /* ---- the first-run cards, in the POs' own words -------------------------
-   `Good Loop Visual ID/goodloop-onboarding-wizard-v08.html`, 2026-11-11:
+   `Good Loop Visual ID/goodloop-onboarding-wizard-v12.html`, 2026-11-13:
    the English on the cards, and BOTH translations, are the POs' own, lifted
    from that file's dictionary rather than written here. v08 added the
-   Italian and Portuguese; v07 had only the English.
+   Italian and Portuguese; v12 revised the copy.
 
-   The one line not in it is the plan qualifier on "With a Professional" —
-   Professionally Guided Use is a plan an employer either bought or did not,
-   and the wizard does not have to say so. `selfuse/FirstRun.tsx`. */
+   WHAT v12 CHANGED. The brand is one lowercase word, `goodloop`, bold inside
+   a sentence (`selfuse/FirstRun.tsx` bolds it; a dictionary holds no markup).
+   Wellbeing comes before health in the first headline. The six are phases
+   PER SESSION, not of a process. The three lengths are Quick / Standard /
+   Deep — which is what the rest of the app already calls them, so the wizard
+   now shares those keys instead of carrying three of its own. Professionally
+   Guided Use carries an asterisk and the footnote that answers it. And two
+   technique names were corrected in translation.
+
+   The one line not in the file is the plan qualifier on "With a
+   Professional*" — the footnote says "corporate contracts only" to everyone,
+   and this says to THIS person whether their own employer bought it. */
   'Proprietary Methodology': 'Metodologia Proprietária',
-  'Mental health and wellbeing, reimagined through listening.': 'Saúde mental e bem-estar, reimaginados pela escuta.',
+  /* The non-breaking hyphen in «Bem‑estar» is the POs' own no-wrap span,
+     carried over without markup: the word never breaks across lines. */
+  'Mental wellbeing and health, reimagined through listening.': 'Bem‑estar e saúde mental, reimaginados pela escuta.',
   'A proprietary, science-validated audio methodology that speaks directly to your nervous system.': 'Uma metodologia de áudio proprietária, validada pela ciência, que fala diretamente com o seu sistema nervoso.',
   'Integrated Tools': 'Ferramentas Integradas',
-  'Process Phases': 'Fases do Processo',
+  'Phases per Session': 'Fases por Sessão',
   'Validated Techniques': 'Técnicas Validadas',
   'Years Clinical Practice': 'Anos de Prática Clínica',
   'Session lengths': 'Duração das sessões',
-  'Quick Reset': 'Reset Rápido',
-  'Full Session': 'Sessão Completa',
-  'Deep Immersion': 'Imersão Profunda',
+  /* The three lengths are the app's own keys now (Quick / Standard / Deep,
+     `data/selfuse.ts`), translated once in `pt.ts`. */
   'One platform. Two ways to transform.': 'Uma plataforma. Duas formas de se transformar.',
-  'Two ways to experience Good Loop: Self-Guided Use for everyday wellbeing and Professionally Guided Use with a licensed professional.': 'Duas formas de viver o Good Loop: Uso Autoguiado para o bem-estar do dia a dia e Uso Guiado por Profissional, com um profissional habilitado.',
+  'Two ways to experience goodloop: Self-Guided Use for everyday wellbeing and Professionally Guided Use* with a licensed professional.': 'Duas formas de viver a goodloop: Uso Autoguiado para o bem-estar do dia a dia e Uso Guiado por Profissional*, com um profissional habilitado.',
   'For You': 'Para Você',
   'Self-directed sessions for everyday wellbeing — stress, sleep, focus. Available anytime, on the go.': 'Sessões autoguiadas para o bem-estar do dia a dia — estresse, sono, foco. Disponíveis a qualquer hora, onde você estiver.',
-  'With a Professional': 'Com um Profissional',
+  'With a Professional*': 'Com um Profissional*',
+  '* for corporate contracts only': '* apenas para contratos corporativos',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.': 'A Metodologia GL completa, conduzida por um psicólogo habilitado ou profissional de saúde ocupacional que guia a sua jornada.',
   'Not belief. Neuroscience.': 'Não é preciso acreditar. É neurociência.',
-  'Good Loop doesn’t invent new science — it orchestrates the best of what already works.': 'O Good Loop não inventa uma nova ciência — ele orquestra o melhor do que já funciona.',
+  'goodloop doesn’t invent new science — it orchestrates the best of what already works.': 'A goodloop não inventa uma nova ciência — ela orquestra o melhor do que já funciona.',
   'Dichotic Listening': 'Escuta Dicótica',
   'Bilateral stimulation, EMDR-style': 'Estimulação bilateral, estilo EMDR',
-  'Imagery Rehearsal': 'Ensaio Imagético',
+  'Imagery Rehearsal': 'Ensaio de Imagens',
   'Guided imagery in a safe space': 'Imagens guiadas em um espaço seguro',
   'Binaural Beats': 'Batidas Binaurais',
   'Calibrated frequencies for state': 'Frequências calibradas para cada estado',
-  'Voice Morphing': 'Morphing de Voz',
-  'Shifting tones, deeper reach': 'Tons que mudam, alcance mais profundo',
+  'Voice Morphing': 'Modulação Vocal',
+  'Shifting tones, deeper reach': 'Mudança de tons, alcance mais profundo',
   'Music & Ambient Sounds': 'Música e Sons Ambientes',
   'Builds a safe inner space': 'Cria um espaço interno seguro',
   'Dual Voice Immersion': 'Imersão em Dupla Voz',
@@ -506,10 +526,10 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Slow, paced breathing for calm': 'Respiração lenta e ritmada para acalmar',
   'Sensory Stimulation': 'Estimulação Sensorial',
   'Grounds you in the here and now': 'Traz você para o aqui e agora',
-  'Good Loop speaks directly to the nervous system, using the language it truly understands.': 'O Good Loop fala diretamente com o sistema nervoso, na linguagem que ele realmente entende.',
+  'goodloop speaks directly to the nervous system, using the language it truly understands.': 'A goodloop fala diretamente com o sistema nervoso, na linguagem que ele realmente entende.',
   'Clinical Psychologist · Methodology Creator · 30+ yrs of clinical practice': 'Psicólogo Clínico · Criador da Metodologia · 30+ anos de prática clínica',
   'Your data, your control.': 'Seus dados, seu controle.',
-  'Good Loop is built to LGPD and GDPR standards from day one.': 'O Good Loop foi construído segundo os padrões da LGPD e do GDPR desde o primeiro dia.',
+  'goodloop is built to LGPD and GDPR standards from day one.': 'A goodloop foi construída segundo os padrões da LGPD e do GDPR desde o primeiro dia.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'A Metodologia GL completa, conduzida por um psicólogo habilitado ou profissional de saúde ocupacional que guia a sua jornada. Disponível no plano estendido da sua empresa.',
   /* The wizard's own buttons. Both translations are the POs'
      (v08's dictionary). */

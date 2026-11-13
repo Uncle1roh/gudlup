@@ -2,14 +2,15 @@
    Self Use — the first run: the POs' onboarding wizard, and then everything
    legal on the last screen
 
-   THE SHAPE IS THE WIZARD'S (POs, 2026-11-12). `Good Loop Visual ID/
-   goodloop-onboarding-wizard-v08.html` is drawn screen by screen, in order,
+   THE SHAPE IS THE WIZARD'S (POs, 2026-11-12), the words are v12's
+   (2026-11-13). `Good Loop Visual ID/goodloop-onboarding-wizard-v12.html`
+   is drawn screen by screen, in order,
    with its own furniture: the dots and the language pill, the wordmark
    centred under them, the eyebrow, the figures, the session lengths, the two
    ways of using it, the nine techniques, the quote and the man who wrote the
    method. Four screens, four dots, and the fourth is the legal one.
 
-     1  The methodology — what Good Loop is, in figures and in lengths.
+     1  The methodology — what goodloop is, in figures and in lengths.
      2  One platform, two ways to transform.
      3  Not belief. Neuroscience. — the nine techniques, the quote.
      4  Your data, your control. — EVERYTHING legal, in one screen.
@@ -22,6 +23,13 @@
    only the ground and the furniture are the wizard's. The wizard's own
    paragraph is gone with this change: it is legal copy with no id in the
    registered corpus, standing on the screen where the corpus is accepted.
+
+   THE BRAND IS ONE WORD. v12 writes it `goodloop`, lowercase, bold inside
+   a sentence. The dictionaries hold no markup — a translation is text — so
+   the word is bold here instead (`brandish`), on the three cards only. The
+   legal screen below still reads "Good Loop" wherever the REGISTERED corpus
+   says so: that wording is filed, versioned and accepted under those words,
+   and it is not ours to restyle.
 
    NO PHOTOGRAPH. The door's picture is the ground for the form; from the
    moment the account exists the flow stands on the dark ground this surface
@@ -63,7 +71,7 @@
    written down in it.
    ============================================================================ */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useI18n, LOCALES, type Locale } from '../i18n'
 import { BrandLogo } from '../components/Brand'
 import { Icon, type IconName } from './icons'
@@ -81,17 +89,33 @@ type Step = 'welcome' | 'modes' | 'science' | 'legal'
    The figures are the POs' own count of what the method is made of; the
    three lengths are the three time signatures the catalogue publishes
    (6 / 12 / 24), under the names the wizard gives them. */
+/**
+ * The brand inside a sentence, as v12 sets it: one lowercase word, bold.
+ *
+ * The dictionaries keep it as plain text — markup in a translation is a
+ * thing a translator can break — so the sentence is split on the word and
+ * the word is given its own element here.
+ */
+const BRAND = 'goodloop'
+function brandish(text: string): ReactNode[] {
+  return text.split(BRAND).flatMap((part, i) => (
+    i === 0 ? [part] : [<b key={i} className="frw__brandword">{BRAND}</b>, part]
+  ))
+}
+
 const STATS: { num: string; label: string }[] = [
   { num: '9', label: 'Integrated Tools' },
-  { num: '6', label: 'Process Phases' },
+  { num: '6', label: 'Phases per Session' },
   { num: '112', label: 'Validated Techniques' },
   { num: '30+', label: 'Years Clinical Practice' },
 ]
 
+/* The three lengths, under the names the rest of the app already gives them
+   (`data/selfuse.ts`) — which is what v12 renamed the wizard's chips to. */
 const DURATIONS: { label: string; mins: string }[] = [
-  { label: 'Quick Reset', mins: '6 min' },
-  { label: 'Full Session', mins: '12 min' },
-  { label: 'Deep Immersion', mins: '24 min' },
+  { label: 'Quick', mins: '6 min' },
+  { label: 'Standard', mins: '12 min' },
+  { label: 'Deep', mins: '24 min' },
 ]
 
 /* ---- screen 3: where it comes from --------------------------------------
@@ -387,7 +411,7 @@ export function FirstRun({
               <span className="frw__eyebrow">{t('Proprietary Methodology')}</span>
 
               <div className="frw__headline">
-                <h1>{t('Mental health and wellbeing, reimagined through listening.')}</h1>
+                <h1>{t('Mental wellbeing and health, reimagined through listening.')}</h1>
                 <p>{t('A proprietary, science-validated audio methodology that speaks directly to your nervous system.')}</p>
               </div>
 
@@ -425,7 +449,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('One platform. Two ways to transform.')}</h1>
-                <p>{t('Two ways to experience Good Loop: Self-Guided Use for everyday wellbeing and Professionally Guided Use with a licensed professional.')}</p>
+                <p>{brandish(t('Two ways to experience goodloop: Self-Guided Use for everyday wellbeing and Professionally Guided Use* with a licensed professional.'))}</p>
               </div>
 
               <ul className="frw__modules">
@@ -439,7 +463,7 @@ export function FirstRun({
                 <li className="frw__module">
                   <span className="frw__module__icon">{IcoShield}</span>
                   <div className="frw__module__body">
-                    <span className="frw__module__name">{t('With a Professional')}</span>
+                    <span className="frw__module__name">{t('With a Professional*')}</span>
                     <p>
                       {professional
                         ? t('The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.')
@@ -448,6 +472,11 @@ export function FirstRun({
                   </div>
                 </li>
               </ul>
+
+              {/* What the asterisk answers. v12 puts it under the two cards,
+                  for everybody; the line inside the card above says whether
+                  THIS person's own employer bought it. */}
+              <p className="frw__foot">{t('* for corporate contracts only')}</p>
             </>
           )}
 
@@ -456,7 +485,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('Not belief. Neuroscience.')}</h1>
-                <p>{t('Good Loop doesn’t invent new science — it orchestrates the best of what already works.')}</p>
+                <p>{brandish(t('goodloop doesn’t invent new science — it orchestrates the best of what already works.'))}</p>
               </div>
 
               <ul className="frw__chips">
@@ -470,7 +499,7 @@ export function FirstRun({
 
               <figure className="frw__quote">
                 <span className="frw__quote__mark" aria-hidden="true">&ldquo;</span>
-                <blockquote>{t('Good Loop speaks directly to the nervous system, using the language it truly understands.')}</blockquote>
+                <blockquote>{brandish(t('goodloop speaks directly to the nervous system, using the language it truly understands.'))}</blockquote>
               </figure>
 
               <div className="frw__credit">
@@ -488,7 +517,7 @@ export function FirstRun({
             <>
               <div className="frw__headline">
                 <h1 className="is-small">{t('Your data, your control.')}</h1>
-                <p>{t('Good Loop is built to LGPD and GDPR standards from day one.')}</p>
+                <p>{brandish(t('goodloop is built to LGPD and GDPR standards from day one.'))}</p>
               </div>
 
               {/* ---- what it is for, and what it is not for (ONB-2) ------

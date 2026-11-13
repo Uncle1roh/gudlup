@@ -260,7 +260,9 @@ export const PT: Record<string, string> = {
   'Length': 'Duração',
   'Quick': 'Breve',
   'Standard': 'Padrão',
-  'Deep': 'Profundo',
+  /* Feminine: it qualifies «sessão», and it is how the POs write it
+     (wizard v12). Italian already reads «Profonda» on these screens. */
+  'Deep': 'Profunda',
   'Soundscape': 'Paisagem sonora',
   'Lake': 'Lago',
   'Air': 'Ar',

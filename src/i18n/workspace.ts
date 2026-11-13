@@ -171,7 +171,9 @@ const ROWS: Row[] = [
   ['Tomorrow', 'Domani', 'Amanhã'],
   ['Quick', 'Breve', 'Breve'],
   ['Std', 'Std', 'Padrão'],
-  ['Deep', 'Profonda', 'Profundo'],
+  /* Feminine in both: it qualifies «sessione» / «sessão», and it is how the
+     POs write the three lengths (onboarding wizard v12). */
+  ['Deep', 'Profonda', 'Profunda'],
 
   /* ---- calendar & availability ---------------------------------------- */
   ['Week', 'Settimana', 'Semana'],
