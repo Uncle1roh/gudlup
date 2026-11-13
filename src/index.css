@@ -3229,6 +3229,13 @@ td, th { overflow-wrap: anywhere; }
   display: flex; justify-content: flex-end; gap: 10px;
   margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
 }
+/* Why a write was refused. It sits above the buttons, where the person is
+   already looking after pressing one, and the form keeps what was typed. */
+.adm-form__error {
+  margin: 18px 0 0; padding: 10px 12px; border-radius: var(--r-sm, 8px);
+  background: rgba(178, 59, 59, 0.08); border: 1px solid rgba(178, 59, 59, 0.3);
+  color: #8d2f1e; font-size: 13px; line-height: 1.5;
+}
 
 /* The prize step: two ways to reward, side by side, each saying what it is. */
 .adm-prize { display: flex; flex-direction: column; gap: 16px; }

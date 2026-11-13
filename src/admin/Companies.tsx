@@ -11,11 +11,21 @@
    (`data/convention.ts`). One string does all three jobs: it identifies the
    company row, it is what HR registers with to open the company panel, and it
    is what an employee types to be linked to their employer.
+
+   WHEN IT FAILS, IT SAYS SO. The two writes used to be awaited bare: a
+   database that refused the row — row-level security on an account that is
+   neither admin nor sales, a column a migration never added — threw into an
+   unhandled rejection, `busy` stayed true, and the Crea button was dead for
+   the rest of the session without a word on screen. The audit entry was
+   awaited the same way, so a company that HAD been created could still end in
+   silence. The company is the act; the audit line and the plan are records of
+   it, and neither may take it down.
    ============================================================================ */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { st } from '../sales/i18n'
 import { ConsoleModal } from './ConsoleModal'
+import { explainWriteError } from './writeError'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -49,6 +59,7 @@ export function Companies({ actor }: { actor: string }) {
   const [busy, setBusy] = useState(false)
   const [made, setMade] = useState<Company | null>(null)
   const [copied, setCopied] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   /* ---- the plan, at the moment the company is created --------------------
 
@@ -69,10 +80,25 @@ export function Companies({ actor }: { actor: string }) {
   useEffect(loadPlans, [loadPlans])
   const chosenPlan = plans.find((p) => p.id === planId) ?? null
 
-  /* Minted from the name as it is typed, and editable: two companies whose
-     names start with the same word would otherwise be handed codes that differ
-     only in a checksum pair, and the admin is the person who should decide. */
-  const suggested = name.trim() ? generateCompanyCode(name) : ''
+  /* Minted from the name as it is typed, and editable: the admin is the
+     person who should decide what a customer's code reads like.
+
+     ROTATED past what is taken. The mint is deterministic on the first word of
+     the name, so two customers called "Teste ..." are handed the same code and
+     the second one met a disabled button under a line of small print.
+     `rotation` exists for exactly this; the suggestion now walks it until the
+     code is free, and only falls back to the plain mint if everything is. */
+  const suggested = useMemo(() => {
+    const n = name.trim()
+    if (!n) return ''
+    const taken = new Set((data ?? []).map((c) => c.id))
+    const year = new Date().getFullYear()
+    for (let rotation = 0; rotation < 40; rotation++) {
+      const minted = generateCompanyCode(n, year, rotation)
+      if (!taken.has(minted)) return minted
+    }
+    return generateCompanyCode(n, year)
+  }, [name, data])
   const finalCode = normalizeCode(code || suggested)
   const codeTaken = (data ?? []).some((c) => c.id === finalCode)
   const codeBad = !!finalCode && !looksLikeCompanyCode(finalCode)
@@ -92,8 +118,19 @@ export function Companies({ actor }: { actor: string }) {
       createdAt: Date.now(),
     }
     setBusy(true)
-    await dp.saveCompany(company)
+    setSaveError(null)
+    try {
+      await dp.saveCompany(company)
+    } catch (e) {
+      /* The row is the whole act. It did not happen: say why, keep the form
+         as it was typed, and let the button work again. */
+      setSaveError(explainWriteError(e))
+      setBusy(false)
+      return
+    }
+    /* A record OF the creation, never a condition for it. */
     await dp.logAudit({ actor, action: 'company.created', target: company.name, detail: `${company.id} · ${company.seats} postazioni` })
+      .catch(() => undefined)
     /* The plan second, and never fatally: the company exists either way, and
        a subscription that did not take is fixable on the plans screen. A
        company that was not created because its plan failed is not. */
@@ -107,7 +144,7 @@ export function Companies({ actor }: { actor: string }) {
       }
     }
     setBusy(false)
-    setName(''); setSeats('100'); setCode(''); setPlanId(''); setContact(''); setAdding(false)
+    setName(''); setSeats('100'); setCode(''); setPlanId(''); setContact(''); setAdding(false); setSaveError(null)
     setMade(company)
     refetch()
   }
@@ -121,8 +158,14 @@ export function Companies({ actor }: { actor: string }) {
 
   async function toggleStatus(c: Company) {
     const next: Company = { ...c, status: c.status === 'active' ? 'paused' : 'active' }
-    await dp.saveCompany(next)
+    try {
+      await dp.saveCompany(next)
+    } catch (e) {
+      window.alert(explainWriteError(e))
+      return
+    }
     await dp.logAudit({ actor, action: next.status === 'paused' ? 'company.paused' : 'company.resumed', target: c.name })
+      .catch(() => undefined)
     refetch()
   }
 
@@ -142,7 +185,7 @@ export function Companies({ actor }: { actor: string }) {
         <ConsoleModal
           title={st('+ Nuova azienda')}
           note={st('Il codice è l’accesso. Creare l’azienda non crea nessun login: l’HR si registra da sé, dalla pagina di accesso, scegliendo «Per la mia azienda» e inserendo questo codice; i dipendenti lo inseriscono alla registrazione.')}
-          onClose={() => setAdding(false)}
+          onClose={() => { setAdding(false); setSaveError(null) }}
         >
           <div className="adm-form">
             <label className="adm-form__field">
@@ -196,8 +239,9 @@ export function Companies({ actor }: { actor: string }) {
               </span>
             </label>
           </div>
+          {saveError && <p className="adm-form__error">{saveError}</p>}
           <div className="adm-form__acts">
-            <button className="b2b-btn b2b-btn--ghost" onClick={() => setAdding(false)}>{st('Annulla')}</button>
+            <button className="b2b-btn b2b-btn--ghost" onClick={() => { setAdding(false); setSaveError(null) }}>{st('Annulla')}</button>
             <button
               className="b2b-btn b2b-btn--primary"
               disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad}

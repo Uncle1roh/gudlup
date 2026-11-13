@@ -105,6 +105,16 @@ export const PT_SALES: Record<string, string> = {
   'Forma non valida: serve NOME-ANNO-XX.': 'Formato inválido: precisa ser NOME-ANO-XX.',
   '{name} creata. Codice azienda:': '{name} criada. Código da empresa:',
   'Impossibile generare il codice: {err}': 'Não foi possível gerar o código: {err}',
+  /* Why the database refused the row. A commercial person reads this and
+     knows whether to call support, call the developer, or change a field. */
+  'Il database ha rifiutato la scrittura: questo account non ha il permesso di creare aziende. Serve un profilo con ruolo admin o sales.':
+    'O banco recusou a gravação: esta conta não tem permissão para criar empresas. É preciso um perfil com papel admin ou sales.',
+  'Manca una colonna nella tabella «companies»: {err}. Su questo ambiente non è stata eseguita una migrazione (16-sales-role.sql).':
+    'Falta uma coluna na tabela «companies»: {err}. Neste ambiente uma migração não foi executada (16-sales-role.sql).',
+  'Esiste già un’azienda con questo codice.': 'Já existe uma empresa com este código.',
+  'Il database non ha accettato la scrittura e non ha detto perché.':
+    'O banco não aceitou a gravação e não disse por quê.',
+  'Azienda non creata: {err}': 'Empresa não criada: {err}',
   'Azienda creata, ma il piano non è stato applicato: {err}':
     'Empresa criada, mas o plano não foi aplicado: {err}',
   'Assegnalo da “Piani e moltiplicatori”.': 'Atribua em “Planos e multiplicadores”.',
