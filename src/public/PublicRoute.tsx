@@ -12,10 +12,10 @@
    whether anybody is signed in. The router above it has no idea; the pages
    below it do not need one.
 
-   THE THREE INNER PAGES ARE PUBLIC TO EVERYONE, signed in or not. They are
+   THE FIVE INNER PAGES ARE PUBLIC TO EVERYONE, signed in or not. They are
    marketing pages about the product, and an HR manager who follows a link
-   to "O método" from an e-mail should read it rather than be bounced into
-   their dashboard.
+   to "Metodologia" from an e-mail should read it rather than be bounced
+   into their dashboard.
    ============================================================================ */
 
 import { useEffect, type ReactNode } from 'react'
@@ -23,6 +23,7 @@ import { useAuth } from '../auth/auth'
 import { useI18n } from '../i18n'
 import { navigate, R_LANDING, type Stage } from '../components/ambient/stage'
 import { PublicSite } from './PublicSite'
+import { Site } from './Site'
 
 export function PublicRoute({ stage, children }: { stage: Stage; children: ReactNode }) {
   const { ready, user } = useAuth()
@@ -55,20 +56,20 @@ export function PublicRoute({ stage, children }: { stage: Stage; children: React
     )
   }
 
-  /* The three pages anybody may read. */
-  if (stage === 'como' || stage === 'empresas' || stage === 'metodo') {
-    return <PublicSite stage={stage} />
+  /* The five pages anybody may read. */
+  if (stage !== 'landing' && stage !== 'login') {
+    return <Site stage={stage} />
   }
 
   if (stage === 'login') {
     /* `children` is the gate. Signed out, it renders the door — which is
        styled for this shell (`auth--hero`, in index.css) and shares the
        photograph and the breathing rings with the landing. */
-    return <PublicSite stage="login" door={children} />
+    return <PublicSite door={children} />
   }
 
   /* The empty hash. */
-  return user ? <>{children}</> : <PublicSite stage="landing" />
+  return user ? <>{children}</> : <Site stage="landing" />
 }
 
 export { R_LANDING }

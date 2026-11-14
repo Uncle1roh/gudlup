@@ -55,8 +55,10 @@ export function heroSrc(): string {
     which is not a fraction of anything. */
 const CENTRE: Partial<Record<Stage, { x: number; y: number }>> = {
   como: { x: 0.1042, y: 0.600 },
-  empresas: { x: 0.9444, y: 0.8444 },
   metodo: { x: 0.9653, y: 0.4778 },
+  modulos: { x: 0.9444, y: 0.8444 },
+  sobre: { x: 0.1042, y: 0.2600 },
+  contato: { x: 0.8600, y: 0.7200 },
   home: { x: 0.7083, y: 0.2622 },
 }
 
@@ -64,8 +66,10 @@ const SCALE: Partial<Record<Stage, number>> = {
   landing: 0.04,
   login: 0.04,
   como: 0.50,
-  empresas: 0.55,
   metodo: 0.50,
+  modulos: 0.55,
+  sobre: 0.50,
+  contato: 0.55,
   home: 1.00,
 }
 
@@ -100,7 +104,7 @@ export function AmbientBackground() {
 
   /* One picture per surface. The public pages and the door share the
      landing's; everything signed in shares the app's. */
-  const onHeroStage = stage === 'landing' || stage === 'login' || stage === 'como' || stage === 'empresas' || stage === 'metodo'
+  const onHeroStage = stage !== 'home' && stage !== 'off'
   const photoSrc = stage === 'home' ? bg.app : bg.landing
   const wantRings = stage === 'home' ? bg.appRings : bg.landingRings
 

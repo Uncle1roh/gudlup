@@ -25,15 +25,22 @@
          face, which every screen needs, to avoid a flash of fallback text. -->
     <link rel="preload" href="/fonts/Roboto-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-    <!-- Instrument Sans, for the public pages and the door only (the app keeps
-         Roboto). Self-hosted exactly like the rest: the spec for this round
-         asked for a fonts.googleapis.com <link>, and that is the one line of
-         it we did not do. A <link> there makes every visitor's browser
-         announce its IP to a third party before the first word is drawn, and
-         the landing page is the FIRST thing a stranger loads. See
-         README_FONTS.md. Preloaded because the landing's headline is set in
-         it and nothing else on that page is. -->
+    <!-- Instrument Sans, for the DOOR (the app keeps Roboto). -->
     <link rel="preload" href="/fonts/InstrumentSans-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Manrope and Inter, for the public site: the POs' two faces in
+         `Good Loop Visual ID/Website goodloop_v19.html` — Manrope sets every
+         heading, Inter everything else. Self-hosted exactly like the rest:
+         v19 links fonts.googleapis.com and that is the one line of it we did
+         not take. A <link> there makes every visitor's browser announce its
+         IP to a third party before the first word is drawn, and the landing
+         page is the FIRST thing a stranger loads. See README_FONTS.md.
+
+         Preloaded because the landing is a headline and a sentence and
+         nothing else: with `font-display: swap` and no preload, the one
+         thing on the page arrives twice, in two different faces. -->
+    <link rel="preload" href="/fonts/Manrope-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Inter-Roman-latin.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- The landing and the door stand on this photograph, full-viewport. It
          is the largest thing either page loads and the only one that matters

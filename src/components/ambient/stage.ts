@@ -27,10 +27,10 @@
 import { useEffect } from 'react'
 import { useSyncExternalStore } from 'react'
 
-export type Stage = 'landing' | 'como' | 'empresas' | 'metodo' | 'login' | 'home' | 'off'
+export type Stage = 'landing' | 'como' | 'metodo' | 'modulos' | 'sobre' | 'contato' | 'login' | 'home' | 'off'
 
 /** The stages that are the public site: dark palette, photograph and all. */
-export const PUBLIC_STAGES: Stage[] = ['landing', 'como', 'empresas', 'metodo', 'login']
+export const PUBLIC_STAGES: Stage[] = ['landing', 'como', 'metodo', 'modulos', 'sobre', 'contato', 'login']
 
 /* ---------------------------------------------------------------- routes ---
    The project's hashes carry no slash (`#admin`, `#legal`, `#studio`), so
@@ -41,8 +41,10 @@ export const PUBLIC_STAGES: Stage[] = ['landing', 'como', 'empresas', 'metodo', 
 export const R_LANDING = ''
 export const R_LOGIN = '#entrar'
 export const R_COMO = '#como-funciona'
-export const R_EMPRESAS = '#para-empresas'
 export const R_METODO = '#metodo'
+export const R_MODULOS = '#modulos'
+export const R_SOBRE = '#sobre'
+export const R_CONTATO = '#contato'
 
 /** The hash reduced to a bare name: no `#`, no leading slash, no query, and
     lower case. `'#/Metodo?lang=it'` and `'#metodo'` are one route. */
@@ -55,8 +57,18 @@ const PUBLIC_ROUTE: Record<string, Stage> = {
   'entrar': 'login',
   'login': 'login',
   'como-funciona': 'como',
-  'para-empresas': 'empresas',
   'metodo': 'metodo',
+  'modulos': 'modulos',
+  'sobre': 'sobre',
+  'contato': 'contato',
+  /* v19 dropped "Para empresas" as a page of its own: what a company needs
+     to read is the Modules page, and who it writes to is the commercial
+     half of Contato. Links to the old hash are in e-mails and in a deck, so
+     the hash still answers — it lands on Contato rather than on nothing. */
+  'para-empresas': 'contato',
+  /* The POs' file routes its own home as `#home`. Ours is the empty hash,
+     which it shares with a signed-in person's library, so both answer. */
+  'home': 'landing',
 }
 
 /**
@@ -76,8 +88,10 @@ export const HASH_FOR_STAGE: Partial<Record<Stage, string>> = {
   landing: R_LANDING,
   login: R_LOGIN,
   como: R_COMO,
-  empresas: R_EMPRESAS,
   metodo: R_METODO,
+  modulos: R_MODULOS,
+  sobre: R_SOBRE,
+  contato: R_CONTATO,
 }
 
 /* ------------------------------------------------------------ navigating ---
