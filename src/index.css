@@ -3338,7 +3338,7 @@ td, th { overflow-wrap: anywhere; }
    The person's door, on the landing page
 
    This is `.auth--hero`: the b2c door, and only that one, once it moved onto
-   the public site. The window behind it is the waterfall — dimmed, softened,
+   the public site. The window behind it is the landing photograph — dimmed,
    with the brand's rings breathing around the person in it — drawn by
    `components/ambient/`, which also draws the landing page the visitor
    clicked Entrar on. The door and the landing are one place now, and the
@@ -3359,7 +3359,7 @@ td, th { overflow-wrap: anywhere; }
    =========================================================================== */
 
 /* The soft green bloom `su-studio` floats above its own ground. Over the
-   waterfall it is a smudge, and the ground it was lighting is not there. */
+   photograph it is a smudge, and the ground it was lighting is not there. */
 .auth.auth--hero.su-studio::before { display: none; }
 
 .auth.auth--hero.su-studio {
@@ -3588,7 +3588,7 @@ td, th { overflow-wrap: anywhere; }
 /* ---- the ink on the hero door ------------------------------------------
    `.auth--b2c.su-studio` (above) re-declares the whole Self Use token set in
    DAYLIGHT values, because the person's door used to be a cream screen. On
-   the waterfall it is a dark screen again, and every widget the sign-up
+   the photograph it is a dark screen again, and every widget the sign-up
    form is built from — the account cards, the age and country fields, the
    voice choice, the company-code note, the language picker — reads those
    tokens. They were resolving to #11241e on dark glass: 1.09:1, which is
@@ -3703,7 +3703,7 @@ td, th { overflow-wrap: anywhere; }
 
 /* ---- the screens between the form and the library ----------------------
    Creating an account is one flow with four screens. The form stands on the
-   waterfall; the three after it — the terms, the optional choices, the
+   photograph; the three after it — the terms, the optional choices, the
    cards explaining what Good Loop is — are `.app-frame.su-studio`, and
    `.su-studio` paints its own near-black ground across the whole window. So
    the photograph ended at the top of the second screen and the flow changed

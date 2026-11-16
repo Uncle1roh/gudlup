@@ -79,7 +79,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   /* THE PUBLIC DOOR STANDS ON THE LANDING PAGE NOW (POs, 2026-11-06). It is
      the same component and the same handlers; what it no longer carries is a
      photograph of its own, because the window behind it already has one —
-     the waterfall, dimmed and softened, with the rings breathing around the
+     the landing's, dimmed and softened, with the rings breathing around the
      person in it (`components/ambient/`). `hero` is that door; the four
      others are unchanged. */
   const hero = mode === 'b2c'
@@ -415,7 +415,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
           autoplay and nothing to switch off for a person who has asked not
           to be animated. */}
       {/* NOT on the public door any more: the window behind it carries the
-          waterfall full-bleed, and a second cropped photograph beside the
+          landing photograph full-bleed, and a second cropped one beside the
           card was two pictures with a seam between them. The element and its
           CSS are untouched for the clinician, employer, admin and commercial
           doors, which still open on it. */}

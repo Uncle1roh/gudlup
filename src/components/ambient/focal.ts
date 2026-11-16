@@ -2,16 +2,23 @@
    Where the person in the photograph is, once the browser has cropped it
 
    The landing and the door draw ten concentric rings around the seated
-   figure in the waterfall photograph. The figure is at a fixed place in the
+   figure in the landing photograph. The figure is at a fixed place in the
    IMAGE; `object-fit: cover` then scales and offsets that image to fill a
    window of any shape, so the figure is at a different place on every
    screen. This module is the arithmetic that turns the one into the other.
 
    It is deliberately pure and takes the image's own size as an argument
-   rather than the constant 2061×2576 the file happens to be today: the POs
-   may replace the photograph with a higher-resolution version of the same
+   rather than the constant the file happens to be today: the POs may
+   replace the photograph with a higher-resolution version of the same
    framing, and that must not be a code change. Callers read `naturalWidth`
    and `naturalHeight` off the loaded <img> and pass them in.
+
+   WHAT IS STILL ABOUT ONE PARTICULAR PICTURE is `HERO_FOCUS` and `heroPos`
+   below, and those two moved when the POs sent v19.5: the landing's
+   photograph went from a tall waterfall at night, figure right of centre,
+   to a wide sea at first light, figure a little right of centre and low in
+   the frame. A new photograph from the commercial console is still worth
+   looking at on a narrow screen, which is what `heroPos` exists for.
    ============================================================================ */
 
 export interface CoverPoint {
@@ -55,24 +62,25 @@ export function coverPoint(
   }
 }
 
-/** The seated person, as fractions of the photograph. */
-export const HERO_FOCUS = { fx: 0.50, fy: 0.644 }
+/** The seated person — head and shoulders — as fractions of the photograph. */
+export const HERO_FOCUS = { fx: 0.60, fy: 0.55 }
 
 /**
- * `object-position` on a desk.
- *
- * The vertical was 0.388 and it put the seated figure at ~90% of the window
- * height: on a 900px screen they were at y=810, under the fold on anything
- * shorter, and the whole point of the page is that somebody is sitting
- * there. At 0.60 they land at ~69% of the window at every shape we check —
- * 1280x800, 1440x900, 1920x1080 and a short 1440x700 all put them within a
- * couple of percent of each other — which is below the subtitle and clear
- * of the bottom edge.
+ * `object-position` on a desk: the middle of the picture, which is what
+ * v19.5 asks for (`background-position:50% 50%`) and what the wide
+ * photograph wants — at every desktop shape the crop is vertical only, and
+ * the figure sits low and right where the hero's type is not.
  */
-export const HERO_POS_DESKTOP = { x: 0.50, y: 0.60 }
+export const HERO_POS_DESKTOP = { x: 0.50, y: 0.50 }
 
-/** …and on a phone, where the window is taller than the picture is wide. */
-export const HERO_POS_MOBILE = { x: 0.30, y: 0.50 }
+/**
+ * …and on a phone, where the window is taller than the picture is wide and
+ * the crop is the other way about: a 16:9 photograph in a 390px window
+ * shows about a quarter of its width, and centring that quarter puts the
+ * listener's shoulder against the right edge. 0.58 is the figure's own
+ * middle, so they sit in the frame instead of leaving it.
+ */
+export const HERO_POS_MOBILE = { x: 0.58, y: 0.50 }
 
 /** The width the ring radii were drawn against. `displayedWidth / this` is
     the factor every radius is multiplied by. */

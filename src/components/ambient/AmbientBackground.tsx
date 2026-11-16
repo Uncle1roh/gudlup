@@ -2,7 +2,7 @@
    One background, mounted once, for seven places
 
    WHAT IT IS. Five fixed layers behind everything: a flat base colour, the
-   brand's rings filled and stacked, the waterfall photograph with a scrim,
+   brand's rings filled and stacked, the landing photograph with a scrim,
    ten thin rings drawn around the person in it, and — on the library only —
    a fade at the foot of the window so cards stay legible over the picture.
 
@@ -28,7 +28,6 @@ import { FilledRings, OutlineRings, type Palette } from './rings'
 import {
   HERO_BASE_WIDTH,
   HERO_FOCUS,
-  WIDE,
   coverPoint,
   heroPos,
   type CoverPoint,
@@ -303,16 +302,21 @@ export function AmbientBackground() {
           alt=""
           aria-hidden="true"
           decoding="async"
-          /* Centred, except on a phone where the landing's picture is
-             portrait and its subject sits right of centre: cropping that
-             one from the middle cuts the listener's head off at the edge.
+          /* THE SAME TWO NUMBERS THE RING MATHS USES. They were written
+             twice — once here as a percentage and once in `focal.ts` as a
+             fraction — and the two copies had drifted apart, so the rings
+             were being placed against a crop the picture was not actually
+             drawn with. One source now; `focal.ts` says why they are what
+             they are, and why a photograph changed from the commercial
+             console is worth a look on a narrow screen.
 
-             This is the one number in here that is about a particular
-             photograph rather than about the layout, which is why it is
-             written down rather than derived — and why it is worth looking
-             at the landing on a narrow screen after changing that image
-             from the console. */
-          style={{ objectPosition: stage !== 'home' && vp.w < WIDE ? '78% 50%' : '50% 50%' }}
+             The app's own picture is centred and is not the landing's: it
+             has its own framing and no rings on a person. */
+          style={{
+            objectPosition: stage === 'home'
+              ? '50% 50%'
+              : `${pos.x * 100}% ${pos.y * 100}%`,
+          }}
           onLoad={(e) => {
             const el = e.currentTarget
             setImg({ w: el.naturalWidth, h: el.naturalHeight })
