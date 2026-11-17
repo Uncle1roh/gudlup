@@ -741,11 +741,19 @@ function ImmersiveSession({
             >
               <Icon name="close" size={18} />
             </button>
-            {/* A person reads the PART of the audio they are in, never the
-                phase's clinical name: "Processing" and "Integration" are the
+            {/* A person reads WHICH PHASE they are in and never the phase's
+                clinical NAME: "Processing" and "Integration" are the
                 therapeutic-arc framing Path A strips from anything
-                client-facing (Lexicon_Avoid 16). */}
-            <span className="hud__phase">{t('Part {n} of {total}', { n: phaseIdx + 1, total: session.entry?.phases.length ?? 6 })}</span>
+                client-facing (Lexicon_Avoid 16).
+
+                The word is "phase" and it used to be "part". Everything the
+                methodology says out loud is already phases — "sei fasi in
+                ogni sessione" on the public page, "fasi per sessione" in the
+                numbers, "fases estruturadas" in the app's own science card —
+                so a player that counted PARTS was the one surface using a
+                second word for the thing the whole product is built on. The
+                number it counts is unchanged. */}
+            <span className="hud__phase">{t('Phase {n} of {total}', { n: phaseIdx + 1, total: session.entry?.phases.length ?? 6 })}</span>
             <span className="hud__spacer" aria-hidden="true" />
           </div>
 

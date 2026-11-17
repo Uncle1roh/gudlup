@@ -136,7 +136,7 @@ export const IT_LEGAL: Record<string, string> = {
 
   /* ---- player ---- */
   'How settled do you feel? — optional.': 'Quanto ti senti disteso? — facoltativo.',
-  'Part {n} of {total}': 'Parte {n} di {total}',
+  'Phase {n} of {total}': 'Fase {n} di {total}',
 
   /* ---- profile ---- */
   'Personal email': 'Email personale',
@@ -492,7 +492,7 @@ export const PT_LEGAL: Record<string, string> = {
 
   /* ---- player ---- */
   'How settled do you feel? — optional.': 'Quão tranquilo você se sente? — opcional.',
-  'Part {n} of {total}': 'Parte {n} de {total}',
+  'Phase {n} of {total}': 'Fase {n} de {total}',
 
   /* ---- profile ---- */
   'Personal email': 'E-mail pessoal',
