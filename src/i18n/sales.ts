@@ -19,6 +19,7 @@ export const PT_SALES: Record<string, string> = {
   'commerciale': 'comercial',
   'Sezioni della console': 'Seções do console',
   'Fare una demo': 'Fazer uma demo',
+  'Azienda del cliente': 'Empresa do cliente',
   'Dati dimostrativi: niente di reale viene letto o scritto.':
     'Dados fictícios: nada real é lido ou gravado.',
   'Utente': 'Usuário',
