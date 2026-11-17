@@ -71,12 +71,18 @@ export function SafetyLevel3({ eap, onClose }: GatewayProps) {
   )
 }
 
-/** The static line at the foot of Profile. */
+/** The static line at the foot of Profile.
+
+    "(quando aplicável)" is not padding: this line is read by somebody who
+    came through a company AND by somebody who signed up on their own, and
+    the second has no employer support service to be sent to. Pointing a
+    person with no company at their company's service is the kind of dead
+    end a safety line cannot afford. */
 export function SafetyLevel1() {
   const { t } = useI18n()
   return (
     <p className="small muted safety-l1">
-      {t('goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.')}
+      {t('goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service (where applicable).')}
     </p>
   )
 }

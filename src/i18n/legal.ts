@@ -200,8 +200,8 @@ export const IT_LEGAL: Record<string, string> = {
   'All notices and previous versions': 'Tutte le informative e le versioni precedenti',
   'The goodloop platform, its content and the GL Methodology are protected by copyright and other intellectual property rights.':
     'La piattaforma goodloop, i suoi contenuti e la Metodologia GL sono protetti dal diritto d’autore e da altri diritti di proprietà intellettuale.',
-  'goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.':
-    'goodloop è un servizio di benessere. Non è un trattamento e non sostituisce il supporto professionale per la salute mentale. Se ti serve un aiuto specialistico, parla con il tuo medico o con il servizio di supporto della tua azienda.',
+  'goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service (where applicable).':
+    'goodloop è un servizio di benessere. Non è un trattamento e non sostituisce il supporto professionale per la salute mentale. Se ti serve un aiuto specialistico, parla con il tuo medico o con il servizio di supporto della tua azienda (quando applicabile).',
   'goodloop can’t respond to emergencies. goodloop is a wellbeing service and does not replace professional care.':
     'goodloop non risponde alle emergenze. goodloop è un servizio di benessere e non sostituisce le cure di un professionista.',
   'Emergency and support lines': 'Linee di emergenza e di ascolto',
@@ -556,8 +556,8 @@ export const PT_LEGAL: Record<string, string> = {
   'All notices and previous versions': 'Todos os avisos e versões anteriores',
   'The goodloop platform, its content and the GL Methodology are protected by copyright and other intellectual property rights.':
     'A plataforma goodloop, o seu conteúdo e a Metodologia GL são protegidos por direitos autorais e outros direitos de propriedade intelectual.',
-  'goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service.':
-    'A goodloop é um serviço de bem-estar. Não é tratamento e não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com o seu médico ou com o serviço de apoio da sua empresa.',
+  'goodloop is a wellbeing service. It is not treatment and does not replace professional mental health support. If you need specialised help, talk to your doctor or your company’s support service (where applicable).':
+    'A goodloop é um serviço de bem-estar. Não é tratamento e não substitui o apoio profissional em saúde mental. Se você precisa de ajuda especializada, fale com o seu médico ou com o serviço de apoio da sua empresa (quando aplicável).',
   'goodloop can’t respond to emergencies. goodloop is a wellbeing service and does not replace professional care.':
     'A goodloop não atende emergências. A goodloop é um serviço de bem-estar e não substitui o cuidado profissional.',
   'Emergency and support lines': 'Linhas de emergência e apoio',
