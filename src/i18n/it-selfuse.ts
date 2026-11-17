@@ -544,6 +544,26 @@ export const IT_SELF_USE: Record<string, string> = {
   'Type your password again.': 'Scrivi di nuovo la password.',
   'The two passwords are not the same.': 'Le due password non coincidono.',
   'Repeat the password': 'Ripeti la password',
+  'Choose a new password':
+    'Scegli una nuova password',
+  'You opened a link from your email, so you do not need the old password.':
+    'Hai aperto un link dalla tua email, quindi non serve la password precedente.',
+  'New password':
+    'Nuova password',
+  'Save the new password':
+    'Salva la nuova password',
+  'Saving…':
+    'Salvataggio…',
+  'Your password is changed.':
+    'La tua password è stata cambiata.',
+  'You are signed in. Use the new password next time.':
+    'Hai già effettuato l’accesso. Usa la nuova password la prossima volta.',
+  'This link has expired.':
+    'Questo link è scaduto.',
+  'Ask for a new one from the sign-in page.':
+    'Richiedine uno nuovo dalla pagina di accesso.',
+  'Go to sign in':
+    'Vai all’accesso',
   'This address already has an account. Sign in instead, or ask for a new password if you have forgotten it.':
     'Questo indirizzo ha già un account. Accedi, oppure richiedi una nuova password se l’hai dimenticata.',
   'That email and password do not match an account.':

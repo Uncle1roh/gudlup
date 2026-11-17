@@ -77,6 +77,20 @@ export interface AuthApi {
    * say which field is wrong instead of showing one vague failure.
    */
   updatePassword(current: string, next: string): Promise<void>
+  /**
+   * ARRIVED HERE FROM A RESET LINK, and therefore allowed to set a password
+   * without proving the old one.
+   *
+   * True from the moment Supabase reports `PASSWORD_RECOVERY` — which it
+   * does after consuming the token in the link — until a new password is
+   * set or the tab is closed. The whole reason it exists: the link signed a
+   * person in, and the only way to change a password from inside the app
+   * asks for the CURRENT one, which is the thing they have forgotten. So
+   * the link worked and led nowhere, which is how it was reported.
+   */
+  recovering: boolean
+  /** Set a new password on the strength of the recovery link alone. */
+  completeRecovery(next: string): Promise<void>
 }
 
 /** Thrown by `updatePassword` when the current password is not right. */
@@ -126,6 +140,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supa) // demo is ready immediately
   const [user, setUser] = useState<AuthUser | null>(demoSession)
   const [role, setRole] = useState<Role | null>(demoSession?.role ?? null)
+  /* ---- arrived from a reset link ----------------------------------------
+
+     Supabase's client consumes the token in the link and signs the person
+     in, then reports `PASSWORD_RECOVERY`. Without that flag the app simply
+     opened — signed in, on the library, with no way to set a password,
+     because the only screen that changes one asks for the CURRENT password
+     and that is exactly what was forgotten. The link worked and led
+     nowhere.
+
+     Seeded from the URL as well as from the event: the fragment is already
+     in the address bar on the first render, and the event can arrive after
+     it, so reading both means the recovery screen is there from the first
+     frame rather than flashing the library first. */
+  const [recovering, setRecovering] = useState(() => {
+    try {
+      return /(^|[#&])type=recovery(&|$)/.test(window.location.hash)
+    } catch {
+      return false
+    }
+  })
 
   /* ---- the role of an account THIS tab has just created --------------------
 
@@ -179,7 +213,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     void sb.auth.getSession().then(({ data }) => { void apply(data.session?.user) })
-    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => { void apply(session?.user) })
+    const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+      void apply(session?.user)
+    })
     return () => { active = false; sub.subscription.unsubscribe() }
   }, [supa])
 
@@ -200,6 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {
         ready: true, user, role, mode: 'demo',
+        /* No mailbox, so no link, so never recovering. */
+        recovering: false,
+        async completeRecovery() { /* demo mode has no password to set */ },
         async signIn(email, _password, r) { enter(email, r ?? demoRoleFor(email)) },
         async resetPassword() { /* demo mode has no mailbox to send to */ },
         async updatePassword() { /* demo mode has no password to change */ },
@@ -222,6 +262,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
     return {
       ready, user, role, mode: 'supabase',
+      recovering,
+      async completeRecovery(next: string) {
+        /* No `current` here, and that is the whole point: the person proved
+           who they are by opening a link sent to their own address, and the
+           password they would be asked for is the one they have forgotten.
+           Supabase authorises this on the recovery session alone. */
+        const { error } = await sb.auth.updateUser({ password: next })
+        if (error) throw error
+        setRecovering(false)
+        /* Take the token out of the address bar: it is spent, and a URL
+           carrying one does not belong in history or in a paste. */
+        try {
+          window.history.replaceState(null, '', `${window.location.origin}${window.location.pathname}`)
+        } catch { /* sandboxed: the bar keeps it, which costs tidiness */ }
+      },
       async signIn(email, password) {
         const { error } = await sb.auth.signInWithPassword({ email, password })
         if (error) throw error

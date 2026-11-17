@@ -974,6 +974,26 @@ export const PT: Record<string, string> = {
   'Type your password again.': 'Digite a senha novamente.',
   'The two passwords are not the same.': 'As duas senhas não são iguais.',
   'Repeat the password': 'Repita a senha',
+  'Choose a new password':
+    'Escolha uma nova senha',
+  'You opened a link from your email, so you do not need the old password.':
+    'Você abriu um link do seu e-mail, então não precisa da senha antiga.',
+  'New password':
+    'Nova senha',
+  'Save the new password':
+    'Salvar a nova senha',
+  'Saving…':
+    'Salvando…',
+  'Your password is changed.':
+    'A sua senha foi alterada.',
+  'You are signed in. Use the new password next time.':
+    'Você já está conectado. Use a nova senha na próxima vez.',
+  'This link has expired.':
+    'Este link expirou.',
+  'Ask for a new one from the sign-in page.':
+    'Peça um novo na página de acesso.',
+  'Go to sign in':
+    'Ir para o acesso',
   'This address already has an account. Sign in instead, or ask for a new password if you have forgotten it.':
     'Este endereço já tem uma conta. Entre com ela, ou peça uma nova senha se tiver esquecido.',
   'That email and password do not match an account.':

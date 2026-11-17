@@ -6,9 +6,10 @@ import { CorporateApp } from './corporate/CorporateApp'
 import { AdminApp } from './admin/AdminApp'
 import { SalesApp } from './sales/SalesApp'
 import { DataLayerProvider } from './data/provider'
-import { AuthProvider } from './auth/auth'
+import { AuthProvider, useAuth } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
-import { I18nProvider, FixedLocale, currentLocale, pinLocale } from './i18n'
+import { I18nProvider, FixedLocale, currentLocale, pinLocale, useI18n } from './i18n'
+import { NewPassword } from './auth/NewPassword'
 import { Hub } from './hub/Hub'
 import { initVoiceSync } from './tts/voiceSync'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -40,6 +41,51 @@ function noteStudioOrigin(prev: string, next: string): void {
 }
 function studioFromAdmin(): boolean {
   try { return sessionStorage.getItem(STUDIO_FROM_ADMIN) === '1' } catch { return false }
+}
+
+/**
+ * The recovery screen, once the session the link carries has landed.
+ *
+ * `ready` is what says Supabase has finished reading the token out of the
+ * URL. Showing the form before that would let somebody submit a password
+ * against no session at all, which fails in a way nobody could act on.
+ */
+function RecoveryGate() {
+  const { ready, recovering, user } = useAuth()
+  /* An expired or already-used link carries an error instead of a token.
+     Nothing to wait for, so this is answered before `ready`. */
+  const spent = /(^|[#&])error(_code)?=/.test(window.location.hash)
+  if (spent) return <LinkExpired />
+  if (!ready) {
+    return (
+      <div className="auth auth--loading auth--b2c su-studio">
+        <div className="auth__spin" aria-label="Loading" />
+      </div>
+    )
+  }
+  /* A token that bought no session and no recovery event: same dead end,
+     same answer. A link that silently did nothing is the thing being fixed
+     here. */
+  if (!recovering && !user) return <LinkExpired />
+  return <NewPassword />
+}
+
+function LinkExpired() {
+  const { t } = useI18n()
+  return (
+    <div className="auth auth--b2c su-studio">
+      <div className="auth__card">
+        <h1 className="auth__title">{t('This link has expired.')}</h1>
+        <p className="auth__sub">{t('Ask for a new one from the sign-in page.')}</p>
+        <button
+          className="auth__btn"
+          onClick={() => { window.location.href = `${window.location.origin}${window.location.pathname}#entrar` }}
+        >
+          {t('Go to sign in')}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function App() {
@@ -126,6 +172,20 @@ export default function App() {
      the person's own language again. */
   const pinnedIt = isAdmin || (route === '#studio' && studioFromAdmin())
 
+  /* A recovery link arrives as `#access_token=…&type=recovery`, which is
+     not a route this app has — so it used to fall through to whatever the
+     empty hash renders. Recognised here, as a route, because that is where
+     every other "which screen is this" decision in this file is made.
+
+     AND THE SPENT ONE COUNTS TOO. A link that has expired or been used
+     already comes back with no token at all: Supabase puts
+     `error=access_denied&error_code=otp_expired` in the same fragment. That
+     is the likelier half of "the link inside the email doesn't work", and
+     it used to open the app as if nothing had happened. It belongs on the
+     same screen, which says so and offers the door. */
+  const recoveryRoute =
+    /(^|[#&])type=recovery(&|$)/.test(route) || /(^|[#&])error(_code)?=/.test(route)
+
   /* AND SO ARE THE READERS THAT ARE NOT REACT. `FixedLocale` replaces the
      context, which is all that `useI18n()` sees; `st()`, `fmtDate()`,
      `fmtDateTime()` and `relWhen()` run outside React and ask
@@ -145,6 +205,26 @@ export default function App() {
   }, [pinnedIt])
 
   function content() {
+    /* ---- a reset link, before anything else -----------------------------
+
+       The link in the mail signs the person in and then Supabase reports
+       `PASSWORD_RECOVERY`. Until this existed the app simply opened: signed
+       in, on the library, with nowhere to set a password — because the one
+       screen that changes one asks for the CURRENT password, which is what
+       they had forgotten. So the link worked and led nowhere, which is how
+       it was reported.
+
+       In front of every route, because the recovery session is the one
+       thing they came to spend and any other screen is a way to lose it.
+       The auth provider has to be above it to be asked at all. */
+    if (recoveryRoute) {
+      return (
+        <AuthProvider>
+          <RecoveryGate />
+        </AuthProvider>
+      )
+    }
+
     /* ---- inside the app, there is one surface ---------------------------
 
        The downloadable app is the Self Use app: sessions to listen to. The

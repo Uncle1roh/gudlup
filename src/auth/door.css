@@ -336,7 +336,10 @@
    the quiet ink rather than the warm one: this says what a password needs
    while somebody is still typing it, and a sentence that looks like an error
    before anything is wrong reads as one. */
-.auth.auth--hero.su-studio .auth__hint {
+/* `.auth--hero` is dropped from the selector: the recovery screen
+   (`auth/NewPassword.tsx`) is the same card without the landing behind it,
+   and it carries the same hint. */
+.auth.su-studio .auth__hint {
   margin: calc(var(--door-gap-xs) - var(--door-gap)) 0 0;
   font-size: 12.5px;
   line-height: 1.45;
