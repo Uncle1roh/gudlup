@@ -158,7 +158,14 @@ export function MoodCalendar({ moods }: { moods: MoodEntry[] }) {
           disabled={!canBack}
           aria-label={t('Previous month')}
         >‹</button>
-        <b className="cal__month">{fmt(first.getTime(), { month: 'long', year: 'numeric' })}</b>
+        {/* "novembro/2026", not "novembro de 2026" (POs). Every language
+            joins a month to a year with a word of its own — "de", "di",
+            "of" — and that word is the one thing in this header that a
+            translation can get wrong; `text-transform: capitalize` was
+            already printing the Portuguese one as "Novembro De 2026". A
+            slash belongs to no language, so the month name is the only part
+            that has to be localized. */}
+        <b className="cal__month">{`${fmt(first.getTime(), { month: 'long' })}/${shown.y}`}</b>
         <button
           type="button"
           className="cal__nav"
