@@ -1158,6 +1158,21 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
   .gl-nav__btn.is-on { background: var(--act-bg); color: var(--act-fg); }
 
   .gl-main { gap: 20px; padding-bottom: 112px; }
+
+  /* A BOTTOM SHEET HAS TO STOP ABOVE THE RAIL.
+
+     On a phone the rail is a floating pill — fixed, 12px off the bottom,
+     62px tall — and a sheet that fills the bottom of the window puts its
+     last button, which is always the one that closes it, underneath it. The
+     page body already keeps clear of the rail (`padding-bottom: 112px`
+     above); the sheets did not, because they are fixed to the window rather
+     than laid out in the page.
+
+     So the scrim reserves the rail's footprint: 12 + 62 for the pill, and
+     12 again so the sheet does not touch it. Only inside `.gl-root`, which
+     is the one surface that has a floating rail — the console's and the
+     clinic's dialogs are centred and are not affected. */
+  .gl-root .sheet-scrim { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
 }
 
 /* ------------------------------------------------------- the session ---
