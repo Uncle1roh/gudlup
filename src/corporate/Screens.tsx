@@ -20,7 +20,7 @@
 import { useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
 import { BarList, Donut, GroupedBars, LineChart, NotEnoughData, PairedBars, StackedArea } from './Charts'
-import { cellValue, movement, movementText, suppressed, MIN_CELL } from './metrics'
+import { cellValue, movement, movementText, pct, suppressed, MIN_CELL } from './metrics'
 import { useLegal } from '../legal/LegalContext'
 import type { Aggregates } from './data'
 import type { CorporateState, ReportRow } from './metrics'
@@ -113,7 +113,10 @@ export function Overview({ admin, agg, state, onOpenReports, onOpenManagement }:
                 {t('Registered: {r} of {l} ({p}%) · Active 7d: {a}', {
                   r: registered ?? 0,
                   l: k.licences,
-                  p: Math.round(((registered ?? 0) / k.licences) * 100),
+                  /* `pct`, not a bare division: a tenant whose licence
+                     count cannot be read arrives here as 0, and dividing by
+                     it printed "Infinity%" on a company's own dashboard. */
+                  p: pct(registered ?? 0, k.licences),
                   a: active ?? 0,
                 })}
               </p>
@@ -251,7 +254,7 @@ export function Engagement({ agg }: { agg: A }) {
           {t('Registered: {r} of {l} licenses ({p}%)', {
             r: registered,
             l: k.licences,
-            p: Math.round((registered / k.licences) * 100),
+            p: pct(registered, k.licences),
           })}
         </p>
       </section>

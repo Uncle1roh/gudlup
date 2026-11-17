@@ -852,6 +852,18 @@ on conflict (key) do nothing;
 drop policy if exists companies_admin on companies;
 create policy companies_admin on companies
   for all using (is_admin()) with check (is_admin());
+
+-- …and a company may READ its own row: its name and how many seats it was
+-- sold. Without this an hr_admin had no policy on this table at all, which
+-- under row-level security is not an error but ZERO ROWS — so the company
+-- dashboard found no row for its own code and fell back to printing the code
+-- as the name and 0 licences, after the commercial team had sold it 88.
+-- See supabase/34-a-company-reads-its-own-row.sql for the whole story.
+-- Select only: a tenant that could raise its own seat count is a billing
+-- hole, and seats are sold by the commercial team.
+drop policy if exists companies_own_read on companies;
+create policy companies_own_read on companies
+  for select using (is_hr() and id = my_company_id());
 drop policy if exists audit_admin on audit_events;
 create policy audit_admin on audit_events
   for all using (is_admin()) with check (is_admin());
