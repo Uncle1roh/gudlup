@@ -85,10 +85,18 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 }
 
 /* ---- the column ---------------------------------------------------------
-   The wizard is a 390px phone. The frame it lives in here is 460px on a
-   phone and widens to 740/860 on a desktop (`index.css`), so the wizard's
-   own width is held and centred rather than stretched: a 30px headline set
-   across 860px is not the design the POs drew. */
+   The wizard is a 390px phone, and on a phone that is what this is. The
+   frame it lives in here is 460px on a phone and widens to 740/860 on a
+   desktop (`index.css`).
+
+   ON A DESK IT IS NOT A PHONE ANY MORE. Holding 430px on a 1440px window
+   put a phone in the middle of a dark screen with nothing either side of
+   it, and the longest screen — the legal one — scrolled 1693px of text
+   through a 695px slot with a thin scrollbar down the middle of it. The
+   desktop block at the foot of this file widens the column and lets it
+   take the height the window actually has; it is still a held, centred
+   column and not a stretch to the full 860, because a 30px headline set
+   across 860px is not the design the POs drew either. */
 .frw__inner {
   position: relative;
   z-index: 1;
@@ -621,4 +629,52 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 @media (max-height: 760px) {
   .frw__content { padding-top: 20px; }
   .frw__head { gap: 10px; }
+}
+
+/* ---- a desk is not a phone ----------------------------------------------
+   1100 is the width the door already calls a desk (`auth/door.css`), so the
+   sign-up card and the screens that follow it change shape at the same
+   place rather than one at a time on the way out of a window.
+
+   WIDTH. 640, not 860: the column keeps a measure a line of text can be
+   read across in one go, and the two-up stat cards, the three duration
+   chips and the nine technique chips all keep proportions close to the
+   ones the wizard was drawn with. The gutters grow with it — 24px of
+   padding inside a 640 column is a margin a phone would be proud of and a
+   desk reads as none at all.
+
+   HEIGHT. The 844 cap was the phone's own height and it was holding the
+   legal screen to a 695px slot on a window with 1158 to give. It takes the
+   window now, less what the frame already spends, so the one screen
+   somebody has to READ before they can agree to it shows about twice as
+   much at a time. The cap stays for a very tall window, where a column
+   taller than this stops being one column.
+
+   THE BUTTON stops being the full width of the card. At 430 a full-width
+   pill is the phone's own; at 640 it is a slab, and the thing it is next
+   to — "tick the box above to carry on" — is one line of 12.5px type. */
+@media (min-width: 1100px) {
+  .frw__inner {
+    max-width: 640px;
+    max-height: min(1040px, 100%);
+    /* …and only as TALL as what it holds. On a phone the column is the
+       window and the button sits on the bottom edge of it, which is where a
+       thumb is. On a desk the same rule left the three short screens with
+       the button a hundred and fifty pixels below the last chip, alone at
+       the foot of the window. `auto` here lets `margin: auto` above do what
+       it was written for: the card is the size of its own screen, centred,
+       and only the long one grows to the cap and scrolls. */
+    flex: 0 1 auto;
+  }
+
+  .frw__content { padding: 32px 36px 22px; }
+  .frw__content--science { padding-top: 26px; padding-bottom: 12px; }
+  .frw__cta-bar { padding: 16px 36px 28px; }
+
+  .frw__cta {
+    width: auto;
+    min-width: 320px;
+    max-width: 420px;
+    align-self: center;
+  }
 }

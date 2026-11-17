@@ -50,7 +50,7 @@ import {
   useStageClaim,
   type Stage,
 } from '../components/ambient/stage'
-import { heroSrc } from '../components/ambient/AmbientBackground'
+import { useBackgrounds } from '../app/backgrounds'
 import { SITE_LANGS, type CopyKey, type SiteLang } from './copy'
 import { SiteLangProvider, useSite } from './lang'
 import { SiteHome } from './SiteHome'
@@ -124,10 +124,13 @@ function SiteBody({ stage }: { stage: Stage }) {
   useEffect(() => { window.scrollTo(0, 0) }, [stage])
 
   /* `--bg` is the photograph, and the one place the site prints it as a
-     frame rather than as a background is the method page's waterfall. It is
-     a setting (`app/backgrounds.ts`), so it is read here rather than
-     written into the stylesheet. */
-  const style = { '--bg': `url(${heroSrc()})` } as CSSProperties
+     frame rather than as a background is the methodology page. It is a
+     setting the commercial console writes (`app/backgrounds.ts`), so it is
+     read through the hook rather than written into the stylesheet — read
+     as a plain call it was a snapshot of whatever the cache held at the
+     first paint, and the frame stayed on the shipped picture while the
+     window behind it moved to the new one. */
+  const style = { '--bg': `url(${useBackgrounds().landing})` } as CSSProperties
 
   return (
     <div className="glw" style={style}>

@@ -25,6 +25,7 @@
    background does not flash the old one and then swap.
    ============================================================================ */
 
+import { useEffect, useState } from 'react'
 import { getSupabaseClient, hasSupabaseEnv } from '../auth/supabaseClient'
 
 export interface BackgroundSet {
@@ -149,4 +150,21 @@ export function initBackgrounds(): void {
       if (e.key === CACHE_KEY) apply(readCache())
     })
   } catch { /* no window: a test or a worker */ }
+}
+
+/**
+ * The setting, as React state: it arrives from the network a moment after
+ * the first paint, and anything drawn from it has to be told.
+ *
+ * IT LIVES HERE, not in whichever component happened to need it first. It
+ * was written once inside `AmbientBackground` and the public site read the
+ * value straight out of `backgrounds()` instead — so the photograph behind
+ * the site followed a change made in the commercial console and the FRAME
+ * on the methodology page, which prints the same picture, kept the one the
+ * build shipped with until the next reload.
+ */
+export function useBackgrounds(): BackgroundSet {
+  const [bg, setBg] = useState<BackgroundSet>(() => backgrounds())
+  useEffect(() => subscribeBackgrounds(() => setBg(backgrounds())), [])
+  return bg
 }

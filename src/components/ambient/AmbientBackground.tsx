@@ -33,21 +33,9 @@ import {
   type CoverPoint,
 } from './focal'
 import { clearArrival, useArrived, useStage, type Stage } from './stage'
-import { backgrounds, subscribeBackgrounds, type BackgroundSet } from '../../app/backgrounds'
+import { useBackgrounds } from '../../app/backgrounds'
 import { useGround } from '../../ui2/groundChoice'
 import './ambient.css'
-
-/**
- * The landing's picture, for the one screen that prints it as a FRAME
- * rather than as a background (`public/Metodo.tsx`).
- *
- * It is a function and not a constant now: the picture is a setting, and a
- * page that quoted the old constant would have shown last month's photograph
- * beside this month's one.
- */
-export function heroSrc(): string {
-  return backgrounds().landing
-}
 
 /** Where the rings sit, as fractions of the window, per stage. The landing
     and the door are not here: on those two they are centred on the person,
@@ -83,14 +71,6 @@ interface Geometry {
   cx: number
   cy: number
   k: number
-}
-
-/** The setting, as React state: it arrives from the network a moment after
-    the first paint, and every layer below depends on it. */
-function useBackgrounds(): BackgroundSet {
-  const [bg, setBg] = useState<BackgroundSet>(() => backgrounds())
-  useEffect(() => subscribeBackgrounds(() => setBg(backgrounds())), [])
-  return bg
 }
 
 export function AmbientBackground() {
