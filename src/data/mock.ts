@@ -877,6 +877,14 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     },
 
     // --- Companies (tenants) ---
+    /* The fixtures ARE the registry here, so a code created in a demo is
+       recognised in the same tab — which is what a walkthrough needs. */
+    lookupCompanyCode: async (code: string) => {
+      await wait(120)
+      const asked = code.trim().toUpperCase()
+      const found = companies.find((c) => c.id.toUpperCase() === asked)
+      return found ? { name: found.name, active: found.status === 'active' } : null
+    },
     listCompanies: () => delay(companies.map((c) => ({ ...c }))),
     saveCompany: async (company) => {
       const i = companies.findIndex((c) => c.id === company.id)

@@ -163,6 +163,19 @@ export interface DataProvider {
    * own crisis contacts) then silently resolved to nothing.
    */
   getMyCompanyCode(): Promise<string | null>
+  /**
+   * What a company code opens, asked by somebody who may have no account.
+   *
+   * The registration form needs to tell a person whether the code they were
+   * given is real and which company it belongs to — before they commit to
+   * it, because the code is what ties the account to the company. The
+   * answer is deliberately two fields and no more: a name to show and
+   * whether the contract is live. Null for a code nothing claims.
+   *
+   * See supabase/37-a-code-can-be-looked-up.sql for why this is a narrow
+   * function and not a policy on the companies table.
+   */
+  lookupCompanyCode(code: string): Promise<{ name: string; active: boolean } | null>
   /** How the audio should address the signed-in person, or null if unasked.
       It chooses a recording; it is not an identity field and nothing else
       reads it. */

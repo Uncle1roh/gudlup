@@ -1245,6 +1245,18 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
 
     // --- Companies (tenants) ---
+    async lookupCompanyCode(code: string) {
+      const asked = code.trim().toUpperCase()
+      if (!asked) return null
+      const { data, error } = await sb.rpc('company_by_code', { p_code: asked })
+      /* The function is not there yet (37-a-code-can-be-looked-up.sql not
+         run): the form falls back to the built-in registry, which is the
+         behaviour it had before, rather than refusing the code outright. */
+      if (error) return null
+      const row = Array.isArray(data) ? data[0] : data
+      if (!row || typeof row.name !== 'string') return null
+      return { name: row.name, active: row.active !== false }
+    },
     async listCompanies(): Promise<Company[]> {
       const { data, error } = await sb.from('companies').select('*').order('name')
       if (error) throw error

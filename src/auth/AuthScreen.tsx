@@ -19,8 +19,19 @@ import { navigate, noteArrival, publicStage, R_LOGIN } from '../components/ambie
 
 /** Every field that can be missing, in the order the eye meets them — which
     is the order the button walks when it refuses. */
-type FieldKey = 'email' | 'password' | 'birth' | 'country' | 'name' | 'crp' | 'companyCode' | 'addressedAs'
-const FIELD_ORDER: FieldKey[] = ['email', 'password', 'birth', 'country', 'name', 'crp', 'companyCode', 'addressedAs']
+type FieldKey = 'email' | 'password' | 'password2' | 'birth' | 'country' | 'name' | 'crp' | 'companyCode' | 'addressedAs'
+const FIELD_ORDER: FieldKey[] = ['email', 'password', 'password2', 'birth', 'country', 'name', 'crp', 'companyCode', 'addressedAs']
+
+/**
+ * The shortest password this form will CHOOSE. Eight, which is the ordinary
+ * floor and twice what Supabase Auth enforces on its own.
+ *
+ * Checked only while a password is being chosen, never while one is being
+ * typed to get in: an account created before this rule existed still opens.
+ * That is not a courtesy, it is the difference between a password policy and
+ * a lockout.
+ */
+const PASSWORD_MIN = 8
 
 /** Whole years between a date of birth and today. */
 export function ageAt(birthDate: string, now = new Date()): number | null {
@@ -91,6 +102,14 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   const role: Role = isAdmin ? 'admin' : isSales ? 'sales' : asCompany ? 'hr_admin' : asTherapist ? 'therapist' : 'b2c_user'
   const [email, setEmail] = useState(demo ? (isAdmin ? 'admin@goodloop.app' : isSales ? 'comercial@goodloop.app' : isHr ? 'camila@aurora.co' : isB2b ? 'helena@clinic.demo' : 'demo@goodloop.app') : '')
   const [password, setPassword] = useState(demo ? 'demo' : '')
+  /* TYPED TWICE, when it is being CHOSEN (POs). A password typed once and
+     wrong is not discovered at sign-up — the account is created with it,
+     the person is signed in, and they find out days later when they come
+     back and nothing works. The only way out is the reset mail, which is a
+     long way round from a typo. Sign-up only: on the sign-in form there is
+     nothing to confirm, and asking would be asking somebody to type their
+     own password twice to get in. */
+  const [password2, setPassword2] = useState(demo ? 'demo' : '')
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
   const [companyCode, setCompanyCode] = useState('')
@@ -294,6 +313,42 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     return () => { alive = false; window.clearTimeout(id) }
   }, [companyCode, email, signup, asCompany, dp])
 
+  /**
+   * WHAT THE CODE OPENS, asked of the database.
+   *
+   * `resolveCompanyCode()` below reads a registry built from an environment
+   * variable and a list written in TypeScript — four demo tenants. Every
+   * company sold through the commercial console was unknown to it by
+   * construction, so the form told people their real code did not exist and
+   * they registered with no company behind them. That is the whole of
+   * "company codes are not being recognized".
+   *
+   * So the code is looked up for real, and the company's NAME is shown
+   * (POs): a person about to tie their account to a contract should be able
+   * to see which one before they do it. Narrow by design — a name and
+   * whether the contract is live, nothing else (see
+   * supabase/37-a-code-can-be-looked-up.sql).
+   *
+   * `undefined` is "not asked or still asking"; `null` is "asked, nothing
+   * claims it". The built-in registry is checked first and synchronously,
+   * so the demo tenants answer with no round trip.
+   */
+  const [codeCo, setCodeCo] = useState<{ name: string; active: boolean } | null | undefined>(undefined)
+  useEffect(() => {
+    const code = normalizeCode(companyCode)
+    if (!signup || !code || !looksLikeCompanyCode(code) || resolveCompanyCode(code)) {
+      setCodeCo(undefined)
+      return
+    }
+    let alive = true
+    const id = window.setTimeout(() => {
+      dp.lookupCompanyCode(code)
+        .then((co) => { if (alive) setCodeCo(co) })
+        .catch(() => { if (alive) setCodeCo(undefined) })
+    }, 400)
+    return () => { alive = false; window.clearTimeout(id) }
+  }, [companyCode, signup, dp])
+
   const promoCheck = useMemo(() => {
     // nothing to say about the first couple of characters
     if (!offersPromo || promo.trim().length < 3) return null
@@ -352,8 +407,16 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     if (!looksLikeCompanyCode(raw)) {
       return { ok: false, text: t('A company code looks like ACME-2026-K7. Check it with whoever gave it to you.') }
     }
+    /* The database's answer, for every company the built-in registry has
+       never heard of — which is all of them. The NAME is the point: it is
+       how a person checks they are joining the company they think they are. */
+    if (codeCo === undefined) return null
+    if (codeCo && codeCo.active) return { ok: true, text: codeCo.name }
+    if (codeCo && !codeCo.active) {
+      return { ok: false, text: t('{company} is paused on goodloop right now. Ask your HR contact, or create your account without the code and add it later.', { company: codeCo.name }) }
+    }
     return { ok: false, text: t('We do not know this code yet. You can create your account without it and add it later.') }
-  }, [companyCode, email, rosterOk, t])
+  }, [companyCode, email, rosterOk, codeCo, t])
 
   /* ---- what is missing, and where ----------------------------------------
 
@@ -385,6 +448,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   if (!email.trim()) problems.email = t('Enter your email address.')
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) problems.email = t('That does not look like an email address.')
   if (!password) problems.password = t('Enter your password.')
+  else if (signup && !demo && password.length < PASSWORD_MIN) {
+    problems.password = t('A password needs at least {n} characters.', { n: PASSWORD_MIN })
+  }
+  if (signup && !problems.password) {
+    if (!password2) problems.password2 = t('Type your password again.')
+    else if (password2 !== password) problems.password2 = t('The two passwords are not the same.')
+  }
   if (signup) {
     if (partialDate) problems.birth = t('Finish your date of birth — day, month and year.')
     else if (!birthDate) problems.birth = t('Enter your date of birth.')
@@ -418,7 +488,14 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
     if (!problems[k]) return null
     const immediate =
       (k === 'birth' && (underAge || impossibleAge)) ||
-      (k === 'country' && unsupported)
+      (k === 'country' && unsupported) ||
+      /* Two passwords that DISAGREE, like the two above it, are things that
+         are definitively wrong rather than merely unfinished — and this one
+         is only knowable once both have been typed. Waiting for the button
+         to say it means letting somebody commit to a password they did not
+         mean to choose, and the only way back from that is the reset mail.
+         An empty second field is still just unfinished, and says nothing. */
+      (k === 'password2' && !!password2 && password2 !== password)
     return tried || immediate ? problems[k]! : null
   }
 
@@ -531,6 +608,21 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
           ))}
           {bad('password') && <p className="auth__bad" role="alert">{bad('password')}</p>}
+          {/* What makes a password acceptable, said BEFORE it is refused.
+              Only while one is being chosen, and only while it is still
+              short — a rule a person has already met is noise. */}
+          {signup && !demo && !bad('password') && password.length > 0 && password.length < PASSWORD_MIN && (
+            <p className="auth__hint">{t('A password needs at least {n} characters.', { n: PASSWORD_MIN })}</p>
+          )}
+          {signup && labelled(hero, t('Repeat the password'), (
+            <input className="auth__input" type="password"
+              placeholder={t('Repeat the password')}
+              autoComplete="new-password"
+              value={password2} onChange={(e) => setPassword2(e.target.value)}
+              ref={hold('password2')}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy) go() }} />
+          ))}
+          {bad('password2') && <p className="auth__bad" role="alert">{bad('password2')}</p>}
           {/* Above the button on this door, not below it: the brief's order,
               and the order a person reads in — the thing you do when the
               password will not come to you belongs beside the password. */}

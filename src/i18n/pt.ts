@@ -970,6 +970,12 @@ export const PT: Record<string, string> = {
     'Um código de empresa tem esta forma: ACME-2026-K7. Confira com quem te passou.',
   'We do not know this code yet. You can create your account without it and add it later.':
     'Ainda não conhecemos este código. Você pode criar a conta sem ele e adicioná-lo depois.',
+  'A password needs at least {n} characters.': 'A senha precisa de pelo menos {n} caracteres.',
+  'Type your password again.': 'Digite a senha novamente.',
+  'The two passwords are not the same.': 'As duas senhas não são iguais.',
+  'Repeat the password': 'Repita a senha',
+  '{company} is paused on goodloop right now. Ask your HR contact, or create your account without the code and add it later.':
+    'A {company} está pausada na goodloop neste momento. Fale com o seu contato de RH, ou crie a conta sem o código e adicione depois.',
   'This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.':
     'Esta empresa só aceita os endereços que aprovou, e {email} não é um deles. Peça ao RH para incluí-lo — ou deixe o código em branco e crie sua conta por conta própria.',
   'This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.':

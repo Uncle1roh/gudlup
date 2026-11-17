@@ -332,6 +332,17 @@
    above it. */
 .auth.auth--hero.su-studio .auth__addressed .auth__bad { margin-top: 0; }
 
+/* A RULE, not a refusal. Same place as `.auth__bad` and the same size, in
+   the quiet ink rather than the warm one: this says what a password needs
+   while somebody is still typing it, and a sentence that looks like an error
+   before anything is wrong reads as one. */
+.auth.auth--hero.su-studio .auth__hint {
+  margin: calc(var(--door-gap-xs) - var(--door-gap)) 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.8;
+}
+
 /* ------------------------------------------------------------- the button --
    Flush against the form, like the sign-in card: the gap above it is the
    form's own rhythm and not a second one. */
