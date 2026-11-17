@@ -7,6 +7,7 @@ import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n, localeForCountry, localeWasChosen } from '../i18n'
 import { readInvite, clearInvite } from './invite'
+import { authErrorKey } from './authError'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
 import { useDataProvider } from '../data/provider'
@@ -258,7 +259,13 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
         }
       }
     } catch (e) {
-      setError((e as Error).message)
+      /* Supabase answers in English, in sentences written for a console.
+         `authErrorKey` maps the refusals a person can actually reach onto
+         keys the dictionaries carry, and passes anything else through as it
+         came — a message nobody wrote for a human beats a shrug, and
+         inventing a friendly sentence for a failure we have not understood
+         is how a real cause gets hidden. */
+      setError(t(authErrorKey(e)))
     } finally {
       setBusy(false)
     }

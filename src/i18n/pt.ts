@@ -974,6 +974,18 @@ export const PT: Record<string, string> = {
   'Type your password again.': 'Digite a senha novamente.',
   'The two passwords are not the same.': 'As duas senhas não são iguais.',
   'Repeat the password': 'Repita a senha',
+  'This address already has an account. Sign in instead, or ask for a new password if you have forgotten it.':
+    'Este endereço já tem uma conta. Entre com ela, ou peça uma nova senha se tiver esquecido.',
+  'That email and password do not match an account.':
+    'Este e-mail e esta senha não correspondem a uma conta.',
+  'This account still has to be confirmed. Open the link in the email we sent you.':
+    'Esta conta ainda precisa ser confirmada. Abra o link do e-mail que enviamos.',
+  'That password is too short.':
+    'Esta senha é curta demais.',
+  'Too many attempts just now. Wait a minute and try again.':
+    'Muitas tentativas agora há pouco. Espere um minuto e tente de novo.',
+  'We could not reach goodloop. Check your connection and try again.':
+    'Não conseguimos alcançar a goodloop. Verifique a sua conexão e tente de novo.',
   '{company} is paused on goodloop right now. Ask your HR contact, or create your account without the code and add it later.':
     'A {company} está pausada na goodloop neste momento. Fale com o seu contato de RH, ou crie a conta sem o código e adicione depois.',
   'This company only accepts addresses it has approved, and {email} is not one of them. Ask your HR contact to add it — or leave the code out and create your account on your own.':
