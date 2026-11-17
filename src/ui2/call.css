@@ -540,21 +540,37 @@
 
 .pf2-stats { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* A STAT IS A FIGURE WITH A WORD UNDER IT.
+
+   The figure and the word used to sit side by side on one baseline, and
+   three of these share the width of a phone: 95px each, inside which "198
+   minutos" measured 98 and spilled past its own border. `min-width: 90px`
+   was holding the box open while the content was wider than it — so the
+   box could not grow and the word could not wrap.
+
+   Stacked and centred (POs), the word has the whole width of the box to
+   itself and `min-width: 0` lets the three divide the row evenly. */
 .pf2-stat {
   flex: 1 1 0;
-  min-width: 90px;
+  min-width: 0;
   border-radius: var(--gl-inset-r);
-  padding: 10px 12px;
+  padding: 10px 8px;
   background: var(--inset);
   border: 1px solid var(--line);
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  text-align: center;
   font-size: 12px;
   color: var(--ink-2);
 }
 
-.pf2-stat b { font-family: 'Outfit', system-ui, sans-serif; font-size: 24px; font-weight: 500; color: var(--ink); }
+.pf2-stat b { font-family: 'Outfit', system-ui, sans-serif; font-size: 24px; font-weight: 500; color: var(--ink); line-height: 1.1; }
+/* `break-word` and not `anywhere`: a long label should break between words
+   first and only cut one open when a single word is wider than the box. */
+.pf2-stat__of { line-height: 1.2; overflow-wrap: break-word; max-width: 100%; }
 
 .pf2-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 

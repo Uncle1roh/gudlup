@@ -146,10 +146,25 @@ export function ProfileTab(props: ProfileProps) {
               around three ones, on the screen that is supposed to tell them
               they have started. Italian and Portuguese inflect; so does the
               English these keys are written in. */}
+          {/* THE NUMBER OVER THE WORD, not beside it (POs). Side by side, each
+              box had to hold a figure and a word on one line in 95px, and
+              "198 minutos" did not fit: the word ran out past the border of
+              its own box. The label is a span rather than a bare text node
+              so it can be given a line height and allowed to wrap — "dias
+              seguidos" takes two lines and the three boxes stay level. */}
           <div className="pf2-stats">
-            <span className="pf2-stat"><b>{sessions}</b>{t(sessions === 1 ? 'session' : 'sessions')}</span>
-            <span className="pf2-stat"><b>{minutes}</b>{t(minutes === 1 ? 'minute' : 'minutes')}</span>
-            <span className="pf2-stat"><b>{streak}</b>{t(streak === 1 ? 'day in a row' : 'days in a row')}</span>
+            <span className="pf2-stat">
+              <b>{sessions}</b>
+              <span className="pf2-stat__of">{t(sessions === 1 ? 'session' : 'sessions')}</span>
+            </span>
+            <span className="pf2-stat">
+              <b>{minutes}</b>
+              <span className="pf2-stat__of">{t(minutes === 1 ? 'minute' : 'minutes')}</span>
+            </span>
+            <span className="pf2-stat">
+              <b>{streak}</b>
+              <span className="pf2-stat__of">{t(streak === 1 ? 'day in a row' : 'days in a row')}</span>
+            </span>
           </div>
 
           <div style={{ flex: 1 }} />
