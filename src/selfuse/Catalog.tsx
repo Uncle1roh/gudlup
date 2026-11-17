@@ -35,7 +35,7 @@ import {
 } from '../data/selfuse'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { formatOffer, offerActive } from '../data/catalog'
-import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
+import { railSubtitle, railTitle, resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { coverFor, coverStyle } from './artwork'
 import type { Duration } from '../types/domain'
 import { Icon } from './icons'
@@ -425,7 +425,7 @@ function RailRow({ rail, onOpen, saved = [], onToggleSave }: {
   saved?: string[]
   onToggleSave?: (slug: string) => void
 }) {
-  const { t, tc } = useI18n()
+  const { t, locale } = useI18n()
   const track = useRef<HTMLDivElement>(null)
 
   /* Arrows appear on pointer devices only — a touch screen already has the
@@ -440,9 +440,11 @@ function RailRow({ rail, onOpen, saved = [], onToggleSave }: {
     <section className="cat-rail">
       <header className="cat-rail__head">
         <div>
-          {/* A shelf's name is the analyst's, not the product's: tc(). */}
-          <h3 className="cat__railtitle">{tc(rail.title)}</h3>
-          {rail.subtitle && <p className="small muted">{tc(rail.subtitle)}</p>}
+          {/* A shelf's name is the analyst's, not the product's. What they
+              wrote for THIS language wins; a built-in shelf, whose name is a
+              dictionary key, still comes from the dictionary. */}
+          <h3 className="cat__railtitle">{railTitle(rail, locale)}</h3>
+          {railSubtitle(rail, locale) && <p className="small muted">{railSubtitle(rail, locale)}</p>}
         </div>
         <div className="cat-rail__arrows">
           <button onClick={() => nudge(-1)} aria-label={t('Scroll left')}>‹</button>

@@ -236,8 +236,17 @@ create table if not exists explore_rails (
   slugs      jsonb not null default '[]',
   position   integer not null default 0,
   enabled    boolean not null default true,
+  -- What each language reads, where whoever runs the library wrote it:
+  --   { "pt-BR": { "title": …, "subtitle": … }, "it": { "title": … } }
+  -- Every part optional; a language with nothing written falls back to the
+  -- product dictionaries, which is how the built-in shelf names translate.
+  -- See supabase/33-rail-titles.sql for why this is not a dictionary job.
+  i18n       jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+-- …and on a database created before this column existed.
+alter table explore_rails
+  add column if not exists i18n jsonb not null default '{}'::jsonb;
 alter table explore_rails enable row level security;
 drop policy if exists explore_rails_read on explore_rails;
 create policy explore_rails_read on explore_rails

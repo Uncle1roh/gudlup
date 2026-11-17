@@ -842,13 +842,16 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
       return roster.some((m) => m.email === addr && m.enabled) ? ('ok' as const) : ('denied' as const)
     },
 
-    listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs] })) },
+    /* `i18n` is copied with the slugs: the editor holds the same shape it
+       edits, and a store that handed out its own objects would be changed
+       by somebody typing. */
+    listExploreRails: async () => { await wait(); return exploreRails.map((r) => ({ ...r, slugs: [...r.slugs], i18n: r.i18n ? { ...r.i18n } : undefined })) },
     /* The fixtures have no cross-user history to count, and inventing a
        chart would make the demo look like it had real usage behind it. */
     topSessions: async () => { await wait(); return [] },
     saveExploreRails: async (rails) => {
       await wait()
-      exploreRails = rails.map((r) => ({ ...r, slugs: [...r.slugs] }))
+      exploreRails = rails.map((r) => ({ ...r, slugs: [...r.slugs], i18n: r.i18n ? { ...r.i18n } : undefined }))
       persist('rails', exploreRails)
     },
 

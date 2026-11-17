@@ -1196,6 +1196,10 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         slugs: Array.isArray(r.slugs) ? (r.slugs as string[]) : [],
         position: Number(r.position ?? 0),
         enabled: r.enabled !== false,
+        /* What each language reads, where somebody wrote it. Absent on every
+           row written before 33-rail-titles.sql, and absent is the right
+           answer: the dictionaries still answer for the built-in names. */
+        i18n: (r.i18n && typeof r.i18n === 'object' ? (r.i18n as ExploreRail['i18n']) : undefined),
       }))
     },
     async saveExploreRails(rails: ExploreRail[]): Promise<void> {
@@ -1216,10 +1220,22 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         slugs: r.slugs,
         position: i,
         enabled: r.enabled,
+        i18n: r.i18n ?? {},
         updated_at: toIso(Date.now()),
       }))
       const { error } = await sb.from('explore_rails').upsert(rows, { onConflict: 'id' })
-      if (error) throw error
+      if (error) {
+        /* The column is not there yet (33-rail-titles.sql not run). The
+           shelf itself must still save: write it again without the
+           translations rather than refusing the whole page. */
+        if (/i18n|schema cache|column/i.test(error.message)) {
+          const plain = rows.map(({ i18n: _drop, ...rest }) => rest)
+          const retry = await sb.from('explore_rails').upsert(plain, { onConflict: 'id' })
+          if (retry.error) throw retry.error
+          return
+        }
+        throw error
+      }
     },
 
     // --- Companies (tenants) ---

@@ -21,23 +21,34 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { useLiveCatalog } from '../data/liveCatalog'
-import { LOCALES, contentKey, translateContent, useI18n } from '../i18n'
-import { newRail, railsFromDefaults, resolveRails, type ExploreRail } from '../data/rails'
+import { LOCALES, contentKey, translateContent, useI18n, type Locale } from '../i18n'
+import {
+  newRail, railSubtitle, railTitle, railsFromDefaults, resolveRails, withRailText,
+  type ExploreRail, type RailI18n, type RailText,
+} from '../data/rails'
 
 export function ExploreRails({ actor }: { actor: string }) {
   const dp = useDataProvider()
-  /* LANGUAGE. A shelf's title is stored once and read by people in Italian
-     and in Portuguese, so what is stored has to be translatable: the product
-     dictionaries key off the ENGLISH source string.
+  /* LANGUAGE, and why this page could stop translating.
 
-     The title field used to DISPLAY the Italian translation while writing
-     back whatever it held, so the first edit of a built-in shelf replaced
-     `Six minutes` with `Sei minuti` and the Portuguese reader got Italian.
-     The field now shows exactly what is stored, and the line underneath
-     shows how each language will read it -- including when the name is one
-     the dictionaries have never seen, which is the operator's to decide, not
-     ours to hide. tc() is that lookup, for the preview at the bottom. */
-  const { locale, t, tc } = useI18n()
+     A shelf's title is stored once and read by people in Italian and in
+     Portuguese. For a long time the only way it could reach both was the
+     product DICTIONARIES, which key off the English source string -- so the
+     shelves this app ships with ("Six minutes", "Calm") read in every
+     language, and the lines underneath each field showed them doing it.
+
+     A shelf somebody INVENTS cannot work that way. "Pausas para a tarde" is
+     a string no dictionary has ever seen, so the page could only say there
+     was no translation for it and that every language would read it as
+     typed. From the operator's side that is a feature which works for the
+     first few shelves and then stops, exactly when they make a new one.
+
+     So a rail carries its own translations now (`RailI18n`), the way a
+     protocol carries `publicTitle` per language, and the preview lines
+     became FIELDS: what you write for a language is what that language
+     reads, and a language left blank still falls back to the dictionary --
+     which is what keeps the built-in shelves working untouched. */
+  const { locale, t } = useI18n()
   const catalog = useLiveCatalog(locale)
   const sessions = catalog.browsable
 
@@ -50,9 +61,18 @@ export function ExploreRails({ actor }: { actor: string }) {
   const [filter, setFilter] = useState('')
 
   /* Open on what the app is actually serving: the stored rails when there are
-     any, otherwise the built-in ones written out as editable rows. */
+     any, otherwise the built-in ones written out as editable rows.
+
+     WAIT FOR THE CATALOGUE TO FINISH, not for it to be non-empty. The guard
+     here used to be `!sessions.length`, which is true both while the
+     protocols are still arriving AND when there are none — so on a tenant
+     whose catalogue is empty this page sat on "Caricamento degli scaffali…"
+     for ever, with no shelves, no buttons and nothing to say why. `loading`
+     distinguishes the two: the defaults are still written out from a
+     catalogue that HAS loaded, and an empty one now gives an empty editor
+     that an operator can actually use. */
   useEffect(() => {
-    if (rails || !sessions.length) return
+    if (rails || catalog.loading) return
     let alive = true
     void dp.listExploreRails()
       .then((rows) => {
@@ -62,7 +82,7 @@ export function ExploreRails({ actor }: { actor: string }) {
       })
       .catch(() => { if (alive) setRails(railsFromDefaults(sessions)) })
     return () => { alive = false }
-  }, [dp, sessions, rails])
+  }, [dp, sessions, rails, catalog.loading])
 
   const bySlug = useMemo(() => new Map(sessions.map((s) => [s.slug, s])), [sessions])
   const dirty = useMemo(() => JSON.stringify(rails ?? []) !== JSON.stringify(stored), [rails, stored])
@@ -94,6 +114,8 @@ export function ExploreRails({ actor }: { actor: string }) {
     setBusy(true); setError(null); setStatus(null)
     try {
       const ordered = named.map((r, i) => ({ ...r, title: r.title.trim(), position: i }))
+      /* `withRailText` already prunes as it goes, so nothing more is needed
+         here: what reaches the database is what somebody wrote. */
       await dp.saveExploreRails(ordered)
       /* Read back: a write that row-level security refused must not look like
          a published shelf (the same rule the catalog publish follows). */
@@ -177,14 +199,24 @@ export function ExploreRails({ actor }: { actor: string }) {
                         placeholder="Titolo dello scaffale — es. Sei minuti"
                         onChange={(e) => patch(r.id, (x) => ({ ...x, title: e.target.value }))}
                       />
-                      <LangHint text={r.title} />
+                      <LangFields
+                        field="title"
+                        source={r.title}
+                        i18n={r.i18n}
+                        onChange={(code, v) => patch(r.id, (x) => withRailText(x, code, 'title', v))}
+                      />
                       <input
                         className="b2b-input"
                         value={r.subtitle ?? ''}
                         placeholder="Sottotitolo (facoltativo)"
                         onChange={(e) => patch(r.id, (x) => ({ ...x, subtitle: e.target.value }))}
                       />
-                      <LangHint text={r.subtitle ?? ''} />
+                      <LangFields
+                        field="subtitle"
+                        source={r.subtitle ?? ''}
+                        i18n={r.i18n}
+                        onChange={(code, v) => patch(r.id, (x) => withRailText(x, code, 'subtitle', v))}
+                      />
                     </div>
                     <div className="adm-rail__acts">
                       <button className="b2b-btn" disabled={i === 0} onClick={() => move(r.id, -1)} title="Sposta su">↑</button>
@@ -270,8 +302,8 @@ export function ExploreRails({ actor }: { actor: string }) {
           <ol className="adm-rail__preview">
             {preview.map((r) => (
               <li key={r.id}>
-                <b>{tc(r.title)}</b>
-                {r.subtitle && <span className="adm-muted"> · {tc(r.subtitle)}</span>}
+                <b>{railTitle(r, locale)}</b>
+                {railSubtitle(r, locale) && <span className="adm-muted"> · {railSubtitle(r, locale)}</span>}
                 <span className="adm-muted"> — {r.items.length} session{r.items.length === 1 ? 'e' : 'i'}</span>
               </li>
             ))}
@@ -283,37 +315,73 @@ export function ExploreRails({ actor }: { actor: string }) {
 }
 
 /**
- * How one shelf name will read in every language a person can choose.
+ * How one shelf name reads in every language — and where that is written.
  *
- * The console is Italian, so whoever names a shelf here cannot otherwise see
- * what a Brazilian reader gets. A name the dictionaries know is shown in each
- * language; a name they do not know is shown once, with the plain warning
- * that it will reach everyone exactly as typed -- which is sometimes right
- * (a campaign, a partner's name) and sometimes an oversight.
+ * THIS USED TO BE A READ-ONLY LINE, and it was the right idea with no way to
+ * act on it. It printed the dictionary lookup for each language, so a
+ * built-in shelf showed three good translations and a shelf somebody had
+ * just invented showed one red sentence saying there were none. There was
+ * nothing an operator could do about that from here: the only fix was a
+ * developer adding the string to a dictionary and deploying.
+ *
+ * The lines are FIELDS now. The placeholder is still the lookup — so a
+ * built-in shelf shows "Sei minuti" and "Seis minutos" greyed out, exactly
+ * what it showed before, and still reads from the dictionary if nobody
+ * touches it. Typing one in stores it on the rail, and that is what the
+ * language reads.
+ *
+ * The console's own language goes first: an Italian reader checking an
+ * Italian console should not have to read past Portuguese to find it.
  */
-function LangHint({ text }: { text: string }) {
-  /* The console's own language first -- an Italian reader checking an Italian
-     console should not have to read past Portuguese to find it. */
+function LangFields({ field, source, i18n, onChange }: {
+  field: keyof RailText
+  source: string
+  i18n?: RailI18n
+  onChange(locale: Locale, value: string): void
+}) {
   const { locale } = useI18n()
   const order = [...LOCALES].sort((a, b) => Number(b.code === locale) - Number(a.code === locale))
-  const raw = text.trim()
+  const raw = source.trim()
+  /* Nothing typed in the field above: there is nothing to translate yet, and
+     three empty boxes under an empty box is noise. */
   if (!raw) return null
-  const key = contentKey(raw)
-  if (!key) {
-    return (
-      <p className="adm-rail__hint adm-rail__hint--raw">
-        Nessuna traduzione per «{raw}» — tutte le lingue lo leggeranno così com’è.
-      </p>
-    )
-  }
+
+  /* Whether the DICTIONARIES know this string. They do for the shelves the
+     app ships with, and they never will for a name somebody invents — which
+     is the whole reason these fields exist. */
+  const known = contentKey(raw) !== null
+  /* The languages with nothing written for them — the ones the warning is
+     actually about. */
+  const blank = order.filter((l) => !(i18n?.[l.code]?.[field] ?? '').trim()).map((l) => l.label)
+
   return (
-    <p className="adm-rail__hint">
-      {order.map((l, i) => (
-        <span key={l.code}>
-          {i > 0 ? ' · ' : ''}
-          {l.label}: «{translateContent(l.code, raw)}»
-        </span>
-      ))}
-    </p>
+    <div className="adm-rail__langs">
+      {order.map((l) => {
+        const own = i18n?.[l.code]?.[field] ?? ''
+        const fallback = translateContent(l.code, raw)
+        return (
+          <label className="adm-rail__lang" key={l.code}>
+            <span className="adm-rail__lang-tag">{l.label}</span>
+            <input
+              className="b2b-input adm-rail__lang-in"
+              value={own}
+              placeholder={fallback}
+              aria-label={`${l.label} — ${field === 'title' ? 'titolo' : 'sottotitolo'}`}
+              onChange={(e) => onChange(l.code, e.target.value)}
+            />
+          </label>
+        )
+      })}
+      {/* Only about the languages STILL falling back. Saying "every
+          language will read it as typed" stops being true the moment one
+          field is filled, and a warning that is wrong is worse than none;
+          with every language written there is nothing left to warn about. */}
+      {!known && blank.length > 0 && (
+        <p className="adm-rail__hint adm-rail__hint--raw">
+          «{raw}» non è nei dizionari: {blank.length === order.length ? 'tutte le lingue' : blank.join(' e ')}
+          {' '}lo legger{blank.length === 1 ? 'à' : 'anno'} così com’è. Scrivilo qui sopra.
+        </p>
+      )}
+    </div>
   )
 }

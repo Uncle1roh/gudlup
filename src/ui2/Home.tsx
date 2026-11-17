@@ -22,7 +22,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
-import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
+import { railSubtitle, railTitle, resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { SELF_USE_THEMES, type SelfUseTheme } from '../data/selfuse'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_TINT, tilePosition } from './theme'
@@ -48,7 +48,7 @@ interface HomeProps {
 }
 
 export function Home({ name, catalog, storedRails, recent = [], saved = [], onToggleSave, top = [], query, onQuery, onOpen, noticeSlot, footSlot }: HomeProps) {
-  const { t, tc } = useI18n()
+  const { t, locale } = useI18n()
   const [theme, setTheme] = useState<SelfUseTheme | 'all'>('all')
 
 
@@ -215,9 +215,11 @@ export function Home({ name, catalog, storedRails, recent = [], saved = [], onTo
         shown.map((r) => (
           <Rail
             key={r.id}
-            /* A shelf's name is the analyst's, not the product's: tc(). */
-            title={tc(r.title)}
-            subtitle={r.subtitle ? tc(r.subtitle) : undefined}
+            /* A shelf's name is the analyst's, not the product's. What
+                they wrote for THIS language wins; a built-in shelf, whose
+                name is a dictionary key, still comes from the dictionary. */
+            title={railTitle(r, locale)}
+            subtitle={railSubtitle(r, locale)}
             items={r.items}
             onOpen={onOpen}
             saved={saved}
