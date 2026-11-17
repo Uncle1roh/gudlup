@@ -938,7 +938,7 @@ function ToTheDoor({ to = R_LOGIN }: { to?: string }) {
 }
 
 export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
-  const { ready, user, role, signOut } = useAuth()
+  const { ready, user, role, deactivated, signOut } = useAuth()
   const { t } = useI18n()
   /* The waiting and the dead ends wear the door's own ground, or the pause
      before the door is a flash of a different colour. `auth--b2c` travels
@@ -997,6 +997,40 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
        where there is no landing and the hash means nothing. */
     if (mode === 'b2c' && !__GL_APP__ && publicStage(window.location.hash) === null) return <ToTheDoor to={R_LOGIN} />
     return <AuthScreen mode={mode} />
+  }
+
+  /* ---- turned off ---------------------------------------------------------
+
+     An admin switching an account off in console → Utenti e ruoli wrote
+     `profiles.active = false`, and nothing read it: the account signed in
+     and opened its surface exactly as before, so the one control for cutting
+     somebody loose did nothing. Reported as "I deactivated a User and I can
+     still access the app and login without a problem and no error message
+     to show me it's deactivated."
+
+     BEFORE the misplaced check and before the no-role one: a switched-off
+     account has no surface to be in the wrong one of. It is offered the
+     door, because the person at the keyboard may simply have the wrong
+     account open.
+
+     Worth saying plainly: this is the APP refusing, not the database. A
+     deactivated account's session is still a session, and the row policies
+     still see it as itself. Closing that gap means `and active` on the
+     person's own policies, which is a wider change than a gate and belongs
+     to the hardening pass. */
+  if (deactivated === true) {
+    return (
+      <div className={`auth${ground}`}>
+        <div className="auth__card">
+          <div className="auth__brand"><BrandLogo variant="green" /></div>
+          <h1 className="auth__title">{t('This account is switched off')}</h1>
+          <p className="auth__sub">
+            {t('Someone at goodloop has deactivated it. If you think that is a mistake, write to support.')}
+          </p>
+          <button className="auth__toggle" onClick={() => void signOut()}>{t('Sign in with another account')}</button>
+        </div>
+      </div>
+    )
   }
 
   if (misplaced && role) {

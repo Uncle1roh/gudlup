@@ -65,6 +65,10 @@ export interface Tenant {
       whose row does not carry one — the built-in demo conventions, and any
       company sold before the commercial console asked for it. */
   country: string | null
+  /** PAUSED IN THE COMMERCIAL CONSOLE. Suspending a company wrote
+      `companies.status` and nothing read it, so the panel opened exactly as
+      before — the one control for stopping a contract did nothing. */
+  paused: boolean
   conventionType: ConventionType
   licences: number
   eap: EapContact | null
@@ -80,6 +84,9 @@ export function tenantFromConvention(c: Convention): Tenant {
     /* A built-in convention carries no country of its own; the demo profile
        below still supplies one for the four tenants that have one. */
     country: null,
+    /* The built-ins are the demo tenants and the pilots; their life is the
+       convention's own dates, which `conventionStatus` already reads. */
+    paused: false,
     conventionType: c.type,
     licences: c.licences,
     eap: c.eap,
@@ -94,7 +101,7 @@ export const FALLBACK_TENANT: Tenant = (() => {
   if (acme) return tenantFromConvention(acme)
   const now = Date.now()
   return {
-    companyId: 'acme', name: 'Acme Corporation', code: 'ACME-2026', country: null, conventionType: 'self-use-plus',
+    companyId: 'acme', name: 'Acme Corporation', code: 'ACME-2026', country: null, paused: false, conventionType: 'self-use-plus',
     licences: 250, eap: null, startsAt: now - 328 * DAY, endsAt: now + 37 * DAY,
   }
 })()
@@ -102,7 +109,7 @@ export const FALLBACK_TENANT: Tenant = (() => {
 /** A code on the account that the registry does not (yet) know. */
 export function tenantFromCode(
   code: string,
-  known?: { name: string; seats: number; country?: string | null } | null,
+  known?: { name: string; seats: number; country?: string | null; status?: 'active' | 'paused' } | null,
 ): Tenant {
   const now = Date.now()
   return {
@@ -110,6 +117,10 @@ export function tenantFromCode(
     name: known?.name || code,
     code,
     country: known?.country ?? null,
+    /* A row we could not read is NOT treated as paused: locking a company
+       out of its own panel because a policy refused would be the worse
+       failure of the two. */
+    paused: known?.status === 'paused',
     conventionType: 'self-use',
     licences: known?.seats ?? 0,
     eap: null,

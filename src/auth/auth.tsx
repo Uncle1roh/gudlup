@@ -91,6 +91,18 @@ export interface AuthApi {
   recovering: boolean
   /** Set a new password on the strength of the recovery link alone. */
   completeRecovery(next: string): Promise<void>
+  /**
+   * TURNED OFF by an admin (`profiles.active = false`).
+   *
+   * Deactivating somebody in console → Utenti e ruoli wrote the column and
+   * nothing read it: the account signed in and opened its surface as
+   * before. So the one control for cutting an account loose did nothing,
+   * which is how it was reported.
+   *
+   * Null until the profile has been read, so a gate can wait rather than
+   * bounce somebody off their own app for a moment.
+   */
+  deactivated: boolean | null
 }
 
 /** Thrown by `updatePassword` when the current password is not right. */
@@ -153,6 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      in the address bar on the first render, and the event can arrive after
      it, so reading both means the recovery screen is there from the first
      frame rather than flashing the library first. */
+  /** Null until the profile row has been read; see `AuthApi.deactivated`. */
+  const [deactivated, setDeactivated] = useState<boolean | null>(null)
+
   const [recovering, setRecovering] = useState(() => {
     try {
       return /(^|[#&])type=recovery(&|$)/.test(window.location.hash)
@@ -187,21 +202,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     /** The account's role, from its profile row. A missing row is not an error
         to throw at a person: it resolves to null, and the gate then says the
         account has no surface yet instead of showing a failure. */
-    async function loadRole(uid: string): Promise<Role | null> {
-      const { data, error } = await sb.from('profiles').select('role').eq('auth_uid', uid).maybeSingle()
-      if (error) return null
-      return ((data as { role?: Role } | null)?.role as Role | undefined) ?? null
+    async function loadRole(uid: string): Promise<{ role: Role | null; active: boolean | null }> {
+      /* `active` comes back with the role, in the one query the gate already
+         waits for — an account that has been turned off must not get as far
+         as a surface, and asking separately would mean a frame in which it
+         had. */
+      const { data, error } = await sb.from('profiles').select('role, active').eq('auth_uid', uid).maybeSingle()
+      if (error) return { role: null, active: null }
+      const row = data as { role?: Role; active?: boolean } | null
+      return {
+        role: (row?.role as Role | undefined) ?? null,
+        /* No row is not "turned off": it is an account with no profile yet,
+           which the gate already has its own answer for. */
+        active: row ? row.active !== false : null,
+      }
     }
 
     async function apply(u: { id: string; email?: string } | undefined) {
       if (!u) {
         if (!active) return
-        setUser(null); setRole(null); setReady(true)
+        setUser(null); setRole(null); setDeactivated(null); setReady(true)
         return
       }
-      const r = await loadRole(u.id)
+      const got = await loadRole(u.id)
+      const r = got.role
       if (!active) return
       setUser({ id: u.id, email: u.email ?? '' })
+      setDeactivated(got.active === null ? null : !got.active)
       /* `createdRole` is read HERE, when the answer is used, not when the
          query was sent: whichever of the two finishes last is right, so the
          sign-up is correct in both orders. */
@@ -237,6 +264,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {
         ready: true, user, role, mode: 'demo',
+        /* A demo has no profiles table to be switched off in. */
+        deactivated: false,
         /* No mailbox, so no link, so never recovering. */
         recovering: false,
         async completeRecovery() { /* demo mode has no password to set */ },
@@ -262,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
     return {
       ready, user, role, mode: 'supabase',
+      deactivated,
       recovering,
       async completeRecovery(next: string) {
         /* No `current` here, and that is the whole point: the person proved

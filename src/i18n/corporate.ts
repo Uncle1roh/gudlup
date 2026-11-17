@@ -14,6 +14,16 @@
 export const IT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Partecipazione',
+  '{company} is paused on goodloop.':
+    '{company} è in pausa su goodloop.',
+  'The panel opens again as soon as the contract is active. Your settings and your employee list are kept.':
+    'Il pannello si riapre appena il contratto torna attivo. Le impostazioni e l’elenco dei dipendenti restano.',
+  'Talk to your goodloop contact to reactivate it.':
+    'Parla con il tuo referente goodloop per riattivarlo.',
+  'This account is switched off':
+    'Questo account è disattivato',
+  'Someone at goodloop has deactivated it. If you think that is a mistake, write to support.':
+    'È stato disattivato da goodloop. Se pensi che sia un errore, scrivi all’assistenza.',
   'Copy the invitation': 'Copia l’invito',
   'Copied': 'Copiato',
   '{company} has given you access to goodloop. Open {url} and choose a password — the form opens with your address and the company code already in it. If the link does not work, go to {plain}, choose to create an account, and register with {email} and the code {code}.':
@@ -394,6 +404,16 @@ export const IT_CORPORATE: Record<string, string> = {
 export const PT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Participação',
+  '{company} is paused on goodloop.':
+    'A {company} está pausada na goodloop.',
+  'The panel opens again as soon as the contract is active. Your settings and your employee list are kept.':
+    'O painel abre de novo assim que o contrato voltar a estar ativo. As suas configurações e a lista de funcionários ficam guardadas.',
+  'Talk to your goodloop contact to reactivate it.':
+    'Fale com o seu contato na goodloop para reativar.',
+  'This account is switched off':
+    'Esta conta está desativada',
+  'Someone at goodloop has deactivated it. If you think that is a mistake, write to support.':
+    'Alguém na goodloop a desativou. Se achar que foi um erro, escreva para o suporte.',
   'Copy the invitation': 'Copiar o convite',
   'Copied': 'Copiado',
   '{company} has given you access to goodloop. Open {url} and choose a password — the form opens with your address and the company code already in it. If the link does not work, go to {plain}, choose to create an account, and register with {email} and the code {code}.':

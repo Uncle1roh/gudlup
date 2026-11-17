@@ -146,7 +146,35 @@ function useTenant(): Tenant | null {
 export function CorporateApp() {
   const tenant = useTenant()
   if (!tenant) return <div className="c-setup" aria-busy="true" />
+  /* A SUSPENDED CONTRACT DOES NOT OPEN. Pausing a company in the commercial
+     console wrote `companies.status` and nothing read it, so the panel
+     opened as before — reported as "I deactivate a company, I can still
+     access the company without a problem and no error message to show me
+     it's deactivated".
+
+     Here rather than inside the dashboard: a paused contract has no
+     dashboard, and rendering one to then hide its parts would be a dozen
+     decisions instead of this one. The employees' own apps are deliberately
+     untouched — whether somebody loses a wellbeing app because their
+     employer's invoice lapsed is a commercial decision, not a gate's. */
+  if (tenant.paused) return <ContractPaused tenant={tenant} />
   return <Dashboard tenant={tenant} />
+}
+
+function ContractPaused({ tenant }: { tenant: Tenant }) {
+  const { t } = useI18n()
+  return (
+    <div className="c-setup">
+      <div className="c-card">
+        <h1 className="c-h1">{t('{company} is paused on goodloop.', { company: tenant.name })}</h1>
+        <p className="c-small">
+          {t('The panel opens again as soon as the contract is active. Your settings and your employee list are kept.')}
+        </p>
+        <p className="c-small">{t('Talk to your goodloop contact to reactivate it.')}</p>
+        <SignOutButton className="c-btn" />
+      </div>
+    </div>
+  )
 }
 
 function Dashboard({ tenant }: { tenant: Tenant }) {
