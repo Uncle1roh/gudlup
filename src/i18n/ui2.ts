@@ -152,8 +152,8 @@ export const IT_UI2: Record<string, string> = {
     'La cura che torna a te: scambia i tuoi Loops con qualcosa che si prende cura del tuo corpo o della tua mente.',
   /* ---- la pastiglia dell'umore, e l'avviso quando si esce ---- */
   'No reading yet today': 'Oggi non hai ancora risposto',
-  'Each square is how you answered at the end of a session. A day you answered twice wears both.':
-    'Ogni quadrato è come hai risposto alla fine di una seduta. Un giorno con due risposte le porta entrambe.',
+  'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
+    'Il colore di ogni giorno è quello che hai risposto alla fine della seduta svolta. Un giorno con due risposte porta due colori.',
   'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
     'Se ti fermi adesso, questa seduta non dà Loops: sono per quelle che porti fino in fondo.',
   'And the last minutes are the ones that bring you back gently. Stay with it if you can.':
@@ -310,8 +310,8 @@ export const PT_UI2: Record<string, string> = {
     'O cuidado que volta para você: troque seus Loops por algo que cuide do seu corpo ou da sua mente.',
   /* ---- a pastilha do humor, e o aviso ao sair ---- */
   'No reading yet today': 'Hoje você ainda não respondeu',
-  'Each square is how you answered at the end of a session. A day you answered twice wears both.':
-    'Cada quadrado é como você respondeu no fim de uma sessão. Um dia com duas respostas carrega as duas.',
+  'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
+    'A cor de cada dia reflete o que você respondeu no fim da sessão realizada. Um dia com duas respostas carrega duas cores.',
   'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
     'Se você parar agora, esta sessão não dá Loops: eles são para as que você leva até o fim.',
   'And the last minutes are the ones that bring you back gently. Stay with it if you can.':

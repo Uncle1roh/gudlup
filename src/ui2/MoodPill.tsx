@@ -84,7 +84,7 @@ export function MoodPill() {
           <MoodCalendar moods={moods} />
           <p className="call2-note">
             {moods.length
-              ? t('Each square is how you answered at the end of a session. A day you answered twice wears both.')
+              ? t('Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.')
               : t('Finish a session and tell us how you are: the day fills itself in.')}
           </p>
           <button className="btn btn--primary" onClick={() => setOpen(false)}>{t('OK')}</button>
