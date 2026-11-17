@@ -359,6 +359,9 @@ const assessmentRows: AssessmentRecord[] = []
    record, not here, because the demo's Mariana has a month of them. */
 let moodRows: MoodEntry[] = []
 
+/* What a company has configured about itself, in a demo. */
+let companySettings: Record<string, unknown> | null = null
+
 /* B2C→therapist intake queue (one seeded open request so the roster demo shows it) */
 let sessionRequests: SessionRequest[] = [
   { id: 'sr1', requesterName: 'Mariana Alves', requesterEmail: 'mariana@aurora.co', company: 'Aurora Tech', note: 'Ansiedade no trabalho', status: 'open', createdAt: nowMs - 2 * 3_600_000 },
@@ -877,6 +880,11 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     },
 
     // --- Companies (tenants) ---
+    /* In memory, like everything else here: a demo configures a company and
+       it is forgotten with the tab, which is the point of a demo. */
+    getCompanySettings: async () => { await wait(80); return companySettings },
+    saveCompanySettings: async (settings) => { await wait(80); companySettings = { ...settings } },
+
     /* The fixtures ARE the registry here, so a code created in a demo is
        recognised in the same tab — which is what a walkthrough needs. */
     lookupCompanyCode: async (code: string) => {

@@ -20,7 +20,8 @@
    ============================================================================ */
 
 import { fmtDate as localeDate } from '../i18n'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDataProvider } from '../data/provider'
 import { resolveCompanyCode, type Convention, type ConventionType, type EapContact } from '../data/convention'
 import {
   cell,
@@ -200,7 +201,55 @@ export function saveCorporate(tenant: Tenant, s: CorporateState): void {
   try { localStorage.setItem(slotKey(tenant), JSON.stringify(s)) } catch { /* private mode */ }
 }
 
+/**
+ * WHAT IS THE COMPANY'S TO KEEP, out of everything the panel holds.
+ *
+ * The contract is not: name, country, code, licences, convention and its
+ * dates are read fresh from the company row and the registry on every load,
+ * and a stale copy of them here could show a tenant the wrong licence count
+ * or somebody else's name. Nor are the figures the dashboard derives.
+ *
+ * What is left is what the company CHOSE, and it is the list below.
+ */
+export function persistableSettings(s: CorporateState): Record<string, unknown> {
+  return {
+    setupDoneAt: s.setupDoneAt,
+    profile: {
+      industry: s.profile.industry,
+      size: s.profile.size,
+      contactName: s.profile.contactName,
+      contactEmail: s.profile.contactEmail,
+      contactPhone: s.profile.contactPhone,
+    },
+    eap: s.eap,
+    notifications: s.notifications,
+    admins: s.admins,
+  }
+}
+
+/** Lay stored settings over a state, ignoring anything that is not theirs. */
+export function withSettings(base: CorporateState, saved: Record<string, unknown> | null): CorporateState {
+  if (!saved || typeof saved !== 'object') return base
+  const p = (saved.profile ?? {}) as Partial<CorporateState['profile']>
+  return {
+    ...base,
+    setupDoneAt: typeof saved.setupDoneAt === 'number' ? saved.setupDoneAt : base.setupDoneAt,
+    profile: {
+      ...base.profile,
+      industry: p.industry ?? base.profile.industry,
+      size: p.size ?? base.profile.size,
+      contactName: p.contactName ?? base.profile.contactName,
+      contactEmail: p.contactEmail ?? base.profile.contactEmail,
+      contactPhone: p.contactPhone ?? base.profile.contactPhone,
+    },
+    eap: (saved.eap as CorporateState['eap']) ?? base.eap,
+    notifications: { ...base.notifications, ...((saved.notifications ?? {}) as object) },
+    admins: Array.isArray(saved.admins) ? (saved.admins as CorporateState['admins']) : base.admins,
+  }
+}
+
 export function useCorporateState(tenant: Tenant) {
+  const dp = useDataProvider()
   const [slot, setSlot] = useState(() => ({ code: tenant.code, state: loadCorporate(tenant) }))
   /* A different tenant (the account's code arrived, or changed) is a
      different dashboard: swap the slot during render rather than showing one
@@ -214,10 +263,62 @@ export function useCorporateState(tenant: Tenant) {
     setSlot((prev) => {
       const next = fn(prev.state)
       saveCorporate(tenant, next)
+      /* Up as well as down. Failure is silent on purpose: the change is
+         already in this browser, and a tenant whose database has not run
+         the migration must still be able to use the panel. */
+      void dp.saveCompanySettings(persistableSettings(next)).catch(() => undefined)
       return { code: prev.code, state: next }
     })
-  }, [tenant])
+  }, [tenant, dp])
   useEffect(() => { saveCorporate(tenant, slot.state) }, [tenant, slot.state])
+
+  /* ---- and the copy that is not in this browser --------------------------
+
+     THE CONFIGURATION LIVED IN `localStorage` AND NOWHERE ELSE. That is why
+     the setup wizard came back on a second device and why a company that
+     had saved its crisis line found the field empty: it was never lost, it
+     was never stored. The database has a row for it now
+     (supabase/39-a-company-remembers-its-setup.sql) and the browser becomes
+     what it should always have been — a cache, so the panel still paints
+     instantly and a dead connection does not reset anybody's settings.
+
+     Three rules, and the third is the one that matters on the day this
+     ships:
+
+       · the server's copy WINS where it has one, because another device
+         may have changed it;
+       · a failure changes nothing, so a tenant on an older database keeps
+         working exactly as before;
+       · if the server has NOTHING and this browser does, the browser's
+         copy is pushed up. Whoever configured their company before this
+         existed keeps their work instead of meeting the wizard one last
+         time. */
+  const pulled = useRef(false)
+  useEffect(() => { pulled.current = false }, [tenant.code])
+  useEffect(() => {
+    if (pulled.current) return
+    pulled.current = true
+    let alive = true
+    void dp.getCompanySettings()
+      .then((saved) => {
+        if (!alive) return
+        if (saved && Object.keys(saved).length) {
+          setSlot((prev) => ({ code: prev.code, state: withSettings(prev.state, saved) }))
+          return
+        }
+        /* Nothing up there yet. Hand it what this browser already knows,
+           but only if that is a configured company rather than a blank. */
+        setSlot((prev) => {
+          if (prev.state.setupDoneAt) {
+            void dp.saveCompanySettings(persistableSettings(prev.state)).catch(() => undefined)
+          }
+          return prev
+        })
+      })
+      .catch(() => { /* older database, or no connection: the cache stands */ })
+    return () => { alive = false }
+  }, [dp, tenant.code])
+
   return { state: current.state, update }
 }
 

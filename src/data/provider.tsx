@@ -176,6 +176,19 @@ export interface DataProvider {
    * function and not a policy on the companies table.
    */
   lookupCompanyCode(code: string): Promise<{ name: string; active: boolean } | null>
+
+  // --- The company panel's own configuration ------------------------------
+  //     What the COMPANY chooses: that the setup wizard is done, the crisis
+  //     line its people are shown, which reports it wants, its industry and
+  //     size, its contact, its admins. Never the contract (name, country,
+  //     licences, dates) — that is read fresh from the company row, because
+  //     a stale copy could show a tenant the wrong licence count. Never
+  //     anything about a person either; the roster has its own table.
+  //     See supabase/39-a-company-remembers-its-setup.sql.
+  /** The stored settings for the caller's company, or null when none. */
+  getCompanySettings(): Promise<Record<string, unknown> | null>
+  /** Replace them. The caller holds the whole object, as the screens do. */
+  saveCompanySettings(settings: Record<string, unknown>): Promise<void>
   /** How the audio should address the signed-in person, or null if unasked.
       It chooses a recording; it is not an identity field and nothing else
       reads it. */

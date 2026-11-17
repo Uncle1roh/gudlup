@@ -1245,6 +1245,36 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
 
     // --- Companies (tenants) ---
+    async getCompanySettings() {
+      const cid = await myCompanyId()
+      if (!cid) return null
+      const { data, error } = await sb
+        .from('company_settings')
+        .select('settings')
+        .eq('company_id', cid.toUpperCase())
+        .maybeSingle()
+      /* The table is not there yet (39-… not run), or the policy refused:
+         either way the panel keeps the copy this browser has, which is the
+         behaviour it had before this existed. */
+      if (error) return null
+      const row = data as { settings?: unknown } | null
+      return row && row.settings && typeof row.settings === 'object'
+        ? (row.settings as Record<string, unknown>)
+        : null
+    },
+    async saveCompanySettings(settings: Record<string, unknown>) {
+      const cid = await myCompanyId()
+      if (!cid) throw new Error('Nessuna azienda collegata a questo account.')
+      let who: string | null = null
+      try { who = (await sb.auth.getUser()).data.user?.email ?? null } catch { who = null }
+      const { error } = await sb.from('company_settings').upsert({
+        company_id: cid.toUpperCase(),
+        settings,
+        updated_at: toIso(Date.now()),
+        updated_by: who,
+      }, { onConflict: 'company_id' })
+      if (error) throw error
+    },
     async lookupCompanyCode(code: string) {
       const asked = code.trim().toUpperCase()
       if (!asked) return null
@@ -1260,7 +1290,26 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     async listCompanies(): Promise<Company[]> {
       const { data, error } = await sb.from('companies').select('*').order('name')
       if (error) throw error
-      return (data ?? []).map(mapCompany)
+      const rows = (data ?? []).map(mapCompany)
+      /* HOW MANY SEATS ARE ACTUALLY USED. `companies.active_users` is written
+         when the company is created and never again — nothing in the app or
+         the database has ever updated it — so "0 / 88" was a column nobody
+         counts reading back the zero it was born with. The count is computed
+         now (supabase/38-seats-actually-used.sql), by a function because a
+         commercial account has no policy on `profiles` and a plain join
+         would return zero and look exactly like the bug.
+
+         A failure leaves the stored column alone: a database that has not
+         run that script shows what it showed before rather than nothing. */
+      const { data: usage } = await sb.rpc('company_seat_usage')
+      if (Array.isArray(usage)) {
+        const used = new Map<string, number>()
+        for (const r of usage as { company_id: string; active_users: number }[]) {
+          if (r && typeof r.company_id === 'string') used.set(r.company_id.toUpperCase(), Number(r.active_users) || 0)
+        }
+        return rows.map((c) => ({ ...c, activeUsers: used.get(c.id.toUpperCase()) ?? 0 }))
+      }
+      return rows
     },
     async saveCompany(c: Company): Promise<void> {
       const row = { id: c.id, name: c.name, contact_email: c.contactEmail, country: c.country, seats: c.seats, active_users: c.activeUsers, status: c.status, created_at: toIso(c.createdAt) }

@@ -10606,6 +10606,59 @@ alter table companies add column if not exists contact_email text;
 -- ---------------------------------------------------------------------------
 -- The list
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- What a company has configured about itself
+-- ---------------------------------------------------------------------------
+-- The setup wizard's answers, the crisis line its people are shown, which
+-- reports it wants, its industry and size, its contact, its admins. It lived
+-- in `localStorage` and nowhere else until this existed, so the wizard came
+-- back on every new device and a saved helpline read back empty. NOT the
+-- contract (name, country, licences, dates) — that is on `companies` and is
+-- read fresh — and nothing about any person. See
+-- supabase/39-a-company-remembers-its-setup.sql.
+create table if not exists company_settings (
+  company_id text primary key references companies(id) on delete cascade,
+  settings   jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+alter table company_settings enable row level security;
+drop policy if exists company_settings_hr on company_settings;
+create policy company_settings_hr on company_settings
+  for all
+  using (is_hr() and company_id = my_company_id())
+  with check (is_hr() and company_id = my_company_id());
+drop policy if exists company_settings_admin on company_settings;
+create policy company_settings_admin on company_settings
+  for all using (is_admin()) with check (is_admin());
+
+-- …and how many seats a company is actually using. `companies.active_users`
+-- is written once at creation and never updated by anything, so the console
+-- read back the zero it was born with. Counts only, admin or commercial
+-- only; see supabase/38-seats-actually-used.sql.
+create or replace function company_seat_usage()
+  returns table (company_id text, active_users int)
+  language sql stable security definer set search_path = public as $$
+  select p.company_id, count(*)::int
+    from profiles p
+   where p.company_id is not null and p.active and p.role::text = 'b2c_user'
+     and (is_admin() or is_sales())
+   group by p.company_id
+$$;
+revoke all on function company_seat_usage() from public;
+grant execute on function company_seat_usage() to authenticated;
+
+-- …and the narrow answer about one company code, for somebody who is
+-- registering and therefore has no account yet. A name and whether the
+-- contract is live; see supabase/37-a-code-can-be-looked-up.sql.
+create or replace function company_by_code(p_code text)
+  returns table (name text, active boolean)
+  language sql stable security definer set search_path = public as $$
+  select c.name, c.status = 'active' from companies c where c.id = upper(trim(p_code))
+$$;
+revoke all on function company_by_code(text) from public;
+grant execute on function company_by_code(text) to anon, authenticated;
+
 create table if not exists company_members (
   company_id   text not null references companies(id) on delete cascade,
   -- stored folded: an address is the same person however it was typed
