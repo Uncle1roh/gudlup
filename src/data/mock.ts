@@ -12,6 +12,7 @@ import { sortPartnerProducts, type PartnerProduct } from './partners'
 import { aggregate } from '../employer/aggregate'
 import { PSYCHOSOCIAL_DIMENSIONS, OUTCOME_KEYS, type PsychosocialResponse } from '../employer/assessment'
 import type { AssessmentRecord } from './assessments'
+import { mergeMoods, type MoodEntry } from './measures'
 import { loadMockLegal, mutateMockLegal, nextMockLegalId, wipeMockLegalPerson, dueAtFrom } from './mockLegal'
 import { MIN_COHORT } from '../legal/market'
 import { demoFixturesOn } from '../app/environment'
@@ -352,6 +353,11 @@ let psychosocialResponses: PsychosocialResponse[] = buildPopulation()
 /* Clinical assessments. Empty to start: a demo that opens with somebody
    else's DASS-21 already in it is showing a score nobody took. */
 const assessmentRows: AssessmentRecord[] = []
+
+/* The mood calendar's readings. Also empty to start, for the same reason —
+   and in a walkthrough they are seeded by `admin/preview.ts` into the local
+   record, not here, because the demo's Mariana has a month of them. */
+let moodRows: MoodEntry[] = []
 
 /* B2C→therapist intake queue (one seeded open request so the roster demo shows it) */
 let sessionRequests: SessionRequest[] = [
@@ -940,6 +946,14 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     /* The demo keeps them in memory, like everything else here. The live
        provider puts them in a table the browser cannot clear. */
     listAssessments: async () => { await wait(); return [...assessmentRows] },
+
+    /* In memory, like everything else here: a demo writes its readings and
+       they die with the tab. The live provider puts them in a table. */
+    listMoods: async () => { await wait(); return [...moodRows] },
+    saveMoods: async (entries) => {
+      moodRows = mergeMoods(moodRows, entries)
+      await wait()
+    },
     saveAssessments: async (records) => {
       for (const r of records) {
         const at = assessmentRows.findIndex((x) => x.id === r.id)

@@ -224,6 +224,27 @@ export function moodDays(moods: MoodEntry[]): string[] {
   return [...new Set(moods.map((m) => m.day))].sort().reverse()
 }
 
+/**
+ * Two copies of the series into one, keyed on the instant of the reading.
+ *
+ * The calendar used to live in localStorage alone, so clearing a browser or
+ * signing in on a second device showed a person an empty month and told them
+ * they had never answered. The series is in Postgres now, with the local
+ * record kept as a cache — and a merge, never a replace, in both directions:
+ * a reading taken offline must survive the next pull, and a reading taken on
+ * the phone must survive opening the laptop.
+ *
+ * `at` is the key because that is what a reading IS — one answer, at one
+ * moment, by one person — and two of them cannot share a millisecond. The
+ * LATER argument wins a collision, so a caller passes the server second when
+ * the server is the authority and first when it is catching up.
+ */
+export function mergeMoods(a: MoodEntry[], b: MoodEntry[]): MoodEntry[] {
+  const by = new Map<number, MoodEntry>()
+  for (const m of [...a, ...b]) by.set(m.at, m)
+  return [...by.values()].sort((x, y) => x.at - y.at)
+}
+
 /* ------------------------------------------------------- the colour ------
 
    THE MOOD METER'S OWN COLOURS. A reading is a point on the circumplex, and
@@ -330,14 +351,34 @@ export function entryColor(m: MoodEntry): string {
 /** The whole day, as one fill: a flat colour for a single reading, and a
     gradient across them — in the order they happened — for a day with more
     than one. A morning that was heavy and an evening that was not should
-    look like a day that changed, not like the average of the two. */
+    look like a day that changed, not like the average of the two.
+
+    IT FADES, and it used to not. Every reading held a hard-edged band of its
+    own: a day with two answers came out as two triangles with a seam down
+    the middle, which reads as two days drawn on one square rather than as
+    one day that moved. The POs asked for "uma mescla de todos os inputs
+    coloridos feitos no dia" — a blend — so each reading now keeps its colour
+    across the middle of its share (`HOLD`) and spends the rest handing over
+    to the next one. The first and last readings stay solid out to the
+    corners, because CSS holds a gradient flat before its first stop and
+    after its last: the day still OPENS in the colour it opened in. */
+
+/** How much of a reading's share stays its own colour, per side. 0 would be
+    an edge-to-edge smear in which no answer is itself anywhere; 0.5 is the
+    hard band this replaced. */
+const HOLD = 0.3
+
 export function moodGradient(entries: MoodEntry[]): string | null {
   if (!entries.length) return null
   const stops = entries.map(entryColor)
   if (stops.length === 1) return stops[0]
-  const step = 100 / stops.length
-  const bands = stops.map((c, i) => `${c} ${(i * step).toFixed(1)}%, ${c} ${((i + 1) * step).toFixed(1)}%`)
-  return `linear-gradient(135deg, ${bands.join(', ')})`
+  const band = 100 / stops.length
+  const edge = band * HOLD
+  const parts = stops.flatMap((c, i) => [
+    `${c} ${(i * band + edge).toFixed(1)}%`,
+    `${c} ${((i + 1) * band - edge).toFixed(1)}%`,
+  ])
+  return `linear-gradient(135deg, ${parts.join(', ')})`
 }
 
 /** The day's reading as ONE point — for anything that needs a single

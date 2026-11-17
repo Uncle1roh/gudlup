@@ -73,6 +73,7 @@ import type { CredentialDoc } from '../b2b/credentials'
 import type { Nr1Report } from '../employer/types'
 import type { PsychosocialResponse } from '../employer/assessment'
 import type { AssessmentRecord } from './assessments'
+import type { MoodEntry } from './measures'
 import type {
   LegalProfile, ProfilePatch, Acceptance, AcceptanceDoc, ConsentEvent, ConsentPurpose,
   DataRequest, DataRequestKind, Report, ReportKind, LegalVersion,
@@ -339,6 +340,18 @@ export interface DataProvider {
   listAssessments(): Promise<AssessmentRecord[]>
   /** Create or update the given records. A completed one is refused. */
   saveAssessments(records: AssessmentRecord[]): Promise<void>
+
+  // --- The mood calendar (src/ui2/MoodPill.tsx) ---------------------------
+  //     The two sliders at the end of a session, one row per answer. Kept
+  //     apart from the clinical series on purpose: this is the fill of a
+  //     square on the person's own calendar, nobody else ever reads it, and
+  //     it is not append-only — a person may ask for it to be forgotten.
+  //     It is here rather than in localStorage because the calendar is a
+  //     HISTORY, and a history that a cleared browser destroys is not one.
+  /** Every reading the signed-in person has given, oldest first. */
+  listMoods(): Promise<MoodEntry[]>
+  /** Store the given readings. Writing one that is already there is a no-op. */
+  saveMoods(entries: MoodEntry[]): Promise<void>
 
   // --- Legal framework (src/legal) ---------------------------------------
   //     Who the person is for legal purposes, what they accepted, what they

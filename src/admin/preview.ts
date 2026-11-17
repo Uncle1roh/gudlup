@@ -116,8 +116,8 @@ function seedSelfUse(): void {
         therapistBridge: true, therapistBridgeAt: long,
       },
       logs: demoLogs(now),
-      moods: demoMoodPoints().map((m) =>
-        moodEntryFrom({ valence: m.valence, arousal: m.arousal }, now - m.ago * day)),
+      moods: demoMoodPoints(now).map((m) =>
+        moodEntryFrom({ valence: m.valence, arousal: m.arousal }, m.at)),
       glChecks: DEMO_CHECKINS.map((c) => ({ at: now - c.ago * day, scores: c.scores })),
       pathway: {
         id: DEMO_PATHWAY.id,

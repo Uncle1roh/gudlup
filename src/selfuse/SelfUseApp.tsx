@@ -19,7 +19,7 @@
    on every screen, for everyone, always: static, never inferred.
    ============================================================================ */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/auth'
 import { FeatureOff } from '../app/FeatureOff'
 import { useFeature } from '../app/useFeature'
@@ -48,7 +48,7 @@ import { resolveCompanyCode, hasProfessionalSupport, isDemoTenantCode } from '..
 import { LiveCatalogProvider, useCatalog, useSetListener, findPathway } from '../data/liveCatalog'
 import { weekCount, SELF_USE_SESSIONS, type PathwayId } from '../data/selfuse'
 import { useAssessments, vasRecord, SELF_USE_PATIENT_ID } from '../data/assessmentStore'
-import { addMood, dayKey, moodEntryFrom } from '../data/measures'
+import { addMood, dayKey, mergeMoods, moodEntryFrom } from '../data/measures'
 import type { Appointment } from '../data/scheduling'
 import type { Duration } from '../types/domain'
 
@@ -143,6 +143,51 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      and their form (owner's rule, 2026-10-21): tell it who is listening. */
   const setListener = useSetListener()
   useEffect(() => { setListener(state.addressedAs) }, [setListener, state.addressedAs])
+
+  /* ---- the mood calendar's history (supabase/32-mood-readings.sql) ----
+
+     The readings used to live in `localStorage` alone, and end-to-end
+     testing reported the consequence: on every account the previous days
+     were empty. Not the grid and not the colours — the only copy of a
+     person's month was the one browser profile that happened to write it,
+     so clearing site data, reinstalling, or opening the app on a second
+     device showed an empty calendar, which does not read as "we lost this"
+     but as "you never answered".
+
+     So: the same arrangement the assessment queue already has. The record
+     lives in Postgres, the local one is a CACHE — the month paints
+     instantly from it and a dead connection never blanks it — and the two
+     are MERGED, never replaced, in both directions. A reading given on a
+     plane has to survive the next pull, and one given on the phone has to
+     survive opening the laptop.
+
+     Once per mount, which is the right number: a calendar is a history, and
+     a history does not change while you are looking at it. */
+  const moodsRef = useRef(state.moods)
+  moodsRef.current = state.moods
+  useEffect(() => {
+    let active = true
+    void dp.listMoods()
+      .then((server) => {
+        if (!active) return
+        const local = moodsRef.current
+        if (server.length) {
+          update((s) => {
+            const merged = mergeMoods(s.moods, server)
+            return merged.length === s.moods.length ? s : { ...s, moods: merged }
+          })
+        }
+        /* Whatever this device has and the server does not: a reading taken
+           offline, or one written before the table existed. Pushed here
+           rather than retried on a timer, because a mount is exactly when
+           we have both lists in hand. */
+        const known = new Set(server.map((m) => m.at))
+        const unsent = local.filter((m) => !known.has(m.at))
+        if (unsent.length) void dp.saveMoods(unsent).catch(() => undefined)
+      })
+      .catch(() => { /* offline, or the table is not there yet — the cache stands */ })
+    return () => { active = false }
+  }, [dp, update])
   const { update: updateAssessments } = useAssessments()
   const { state: therapy, update: updateTherapy } = useTherapyStore(storeId)
 
@@ -571,6 +616,11 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     if (o.moodPost) {
       const entry = moodEntryFrom(o.moodPost, o.completedAt)
       update((s) => ({ ...s, moods: addMood(s.moods, entry) }))
+      /* Up it goes, so the square is still there on another device and after
+         a cleared browser. Failure is not an error path: the entry is in the
+         local record either way, and the next mount's pull finds it unsent
+         and sends it. */
+      void dp.saveMoods([entry]).catch(() => { /* offline — the next pull pushes it */ })
     }
 
     /* Ended early: the row is still recorded, and it earns NOTHING — a Loop

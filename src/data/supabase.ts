@@ -109,6 +109,7 @@ function mapProfessional(r: any): ProfessionalRecord {
 const DEFAULT_AVATAR = '👩🏻‍⚕️'
 
 import type { AssessmentRecord } from './assessments'
+import type { MoodEntry, MoodLevel } from './measures'
 import type { LegalTextOverride } from '../legal/overrides'
 
 /* ---- small converters ---- */
@@ -1398,6 +1399,62 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         if (/append-only|cannot be modified/i.test(error.message)) {
           throw new Error('Questa valutazione e completata: i record clinici non si modificano.')
         }
+        throw error
+      }
+    },
+
+    /* --- the mood calendar (supabase/32-mood-readings.sql) ---------------
+
+       One row per answer, scoped by row-level security to the person who
+       gave it: nobody else can read these, not a therapist and not an
+       employer, which is why there is no filter here and no second policy.
+
+       It is a HISTORY — the point of the calendar is the days before today —
+       so it cannot live in a browser that a person may clear, reinstall or
+       swap for a phone. That is what the bug report was: previous days with
+       no colour, on every account, because the only copy of them was the
+       one the device had thrown away. */
+    async listMoods(): Promise<MoodEntry[]> {
+      const { data, error } = await sb
+        .from('mood_readings')
+        .select('*')
+        .order('at', { ascending: true })
+      if (error) {
+        /* The table is not there yet (32-mood-readings.sql not run). The
+           calendar falls back to its local cache rather than blanking. */
+        if (/relation|does not exist|schema cache/i.test(error.message)) return []
+        throw error
+      }
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        at: toMs(r.at as string),
+        day: String(r.day),
+        level: Number(r.level) as MoodLevel,
+        valence: r.valence == null ? undefined : Number(r.valence),
+        arousal: r.arousal == null ? undefined : Number(r.arousal),
+        note: (r.note as string | null) ?? undefined,
+      }))
+    },
+
+    async saveMoods(entries: MoodEntry[]): Promise<void> {
+      if (!entries.length) return
+      const pid = await profileId()
+      const rows = entries.map((m) => ({
+        owner_profile: pid,
+        at: toIso(m.at),
+        day: m.day,
+        level: m.level,
+        valence: m.valence ?? null,
+        arousal: m.arousal ?? null,
+        note: m.note ?? null,
+      }))
+      /* `(owner_profile, at)` is the key: a reading is one answer at one
+         moment, so re-sending it is the same row and not a second one. That
+         is what makes the push-everything-unsent retry safe. */
+      const { error } = await sb
+        .from('mood_readings')
+        .upsert(rows, { onConflict: 'owner_profile,at' })
+      if (error) {
+        if (/relation|does not exist|schema cache/i.test(error.message)) return
         throw error
       }
     },

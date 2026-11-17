@@ -181,25 +181,39 @@ export function demoLogs(now = Date.now()) {
    two axes wander the way a month does: a heavy start, a better second
    week, one bad Monday. Nothing here is a score and nothing trends upward
    on purpose — a demo that draws a cure is a demo that promises one. */
-const MOOD_BY_DAYS_AGO: Record<number, { valence: number; arousal: number }> = {
-  20: { valence: -0.3, arousal: 0.5 },
-  19: { valence: -0.1, arousal: 0.2 },
-  17: { valence: 0.1, arousal: -0.2 },
-  16: { valence: 0.0, arousal: 0.3 },
-  13: { valence: 0.3, arousal: -0.3 },
-  12: { valence: 0.2, arousal: 0.1 },
-  11: { valence: 0.4, arousal: -0.4 },
-  9: { valence: 0.1, arousal: 0.0 },
-  8: { valence: 0.5, arousal: -0.5 },
-  6: { valence: -0.2, arousal: 0.6 },
-  4: { valence: 0.2, arousal: -0.1 },
-  3: { valence: 0.4, arousal: -0.2 },
-  2: { valence: 0.6, arousal: -0.4 },
-  1: { valence: 0.3, arousal: 0.0 },
-}
+/*  AND ONE DAY WITH TWO OF THEM. A day can be answered twice, and the square
+    then wears both, blended in the order they happened (`moodGradient`). A
+    month of one-reading days never shows that, so a salesperson could not
+    point at it — day 13 here is a heavy morning session and a better evening
+    one, which is the case the blend exists for. */
+const MOOD_READINGS: { ago: number; hour: number; valence: number; arousal: number }[] = [
+  { ago: 20, hour: 8, valence: -0.3, arousal: 0.5 },
+  { ago: 19, hour: 8, valence: -0.1, arousal: 0.2 },
+  { ago: 17, hour: 21, valence: 0.1, arousal: -0.2 },
+  { ago: 16, hour: 8, valence: 0.0, arousal: 0.3 },
+  { ago: 13, hour: 8, valence: -0.25, arousal: 0.45 },
+  { ago: 13, hour: 21, valence: 0.3, arousal: -0.3 },
+  { ago: 12, hour: 8, valence: 0.2, arousal: 0.1 },
+  { ago: 11, hour: 21, valence: 0.4, arousal: -0.4 },
+  { ago: 9, hour: 8, valence: 0.1, arousal: 0.0 },
+  { ago: 8, hour: 21, valence: 0.5, arousal: -0.5 },
+  { ago: 6, hour: 8, valence: -0.2, arousal: 0.6 },
+  { ago: 4, hour: 21, valence: 0.2, arousal: -0.1 },
+  { ago: 3, hour: 21, valence: 0.4, arousal: -0.2 },
+  { ago: 2, hour: 21, valence: 0.6, arousal: -0.4 },
+  { ago: 1, hour: 8, valence: 0.3, arousal: 0.0 },
+]
 
-export function demoMoodPoints(): { ago: number; valence: number; arousal: number }[] {
-  return Object.entries(MOOD_BY_DAYS_AGO).map(([ago, p]) => ({ ago: Number(ago), ...p }))
+/** Her readings as instants, at the CLOCK HOUR each one was given — local,
+    like `demoSessionStart`, because the day a square belongs to is the day
+    in the demo's own timezone and an evening session must not land on
+    tomorrow. */
+export function demoMoodPoints(now = Date.now()): { at: number; valence: number; arousal: number }[] {
+  return MOOD_READINGS.map((m) => {
+    const d = new Date(now - m.ago * DAY)
+    const at = new Date(d.getFullYear(), d.getMonth(), d.getDate(), m.hour, 10).getTime()
+    return { at, valence: m.valence, arousal: m.arousal }
+  })
 }
 
 /** Two weekly check-ins, last week and this one — so the Jornada has
