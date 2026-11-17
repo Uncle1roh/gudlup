@@ -425,7 +425,26 @@ function SessionDetail({
       <div className="sess-full__body">
         {pathway && <p className="sess-full__eyebrow">{t('Part of pathway:')} {t(pathway.name)}</p>}
         <h1 className="display sess-full__title">{t(session.name)}</h1>
-        <p className="sess-full__about">{t(session.about)}</p>
+        {/* EVERYTHING A PO WROTE, which until now was nowhere.
+
+            The catalogue carries three public fields a PO fills in console
+            → protocollo → Dettagli: the title, a short second line and a
+            description. This screen printed the title and then the
+            EDITORIAL `about` — the nineteen sessions' own copy, written in
+            this repository — so a PO's description appeared on no screen a
+            person can reach, and only in the search index. Reported as "the
+            Description is not shown. Only title and subtitle."
+
+            Now: the second line, then the description as the lead. `blurb`
+            already resolves to the PO's text where there is one and to the
+            session's own one-liner otherwise (`liveCatalog.ts`), and the
+            editorial paragraph follows only when it says something the lead
+            did not — which is every spine session and no catalogue one. */}
+        {session.subtitle && <p className="sess-full__sub">{session.subtitle}</p>}
+        <p className="sess-full__lead">{t(session.blurb)}</p>
+        {t(session.about) !== t(session.blurb) && (
+          <p className="sess-full__about">{t(session.about)}</p>
+        )}
 
         {session.expect.length > 0 && (
           <ul className="sess-full__expect" aria-label={t('What to expect')}>

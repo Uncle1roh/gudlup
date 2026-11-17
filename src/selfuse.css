@@ -1116,6 +1116,22 @@
   color: #ffffff;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
+/* THREE THINGS A PO WROTE, in the order they were written for: the short
+   second line, the description, and — for the nineteen sessions that have
+   one — the editorial paragraph underneath. The lead is the description,
+   so it carries the weight; the paragraph after it is quieter. */
+.sess-full__sub {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: rgba(244, 248, 246, 0.72);
+}
+.sess-full__lead {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: rgba(244, 248, 246, 0.95);
+}
 .sess-full__about {
   margin: 0;
   font-size: 16px;

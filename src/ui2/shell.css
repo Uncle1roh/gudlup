@@ -1386,7 +1386,17 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
      surface, and that bar is one tap from every screen by requirement
      (CRS-01, see `selfuse/SelfUseApp.tsx`). An absolutely positioned child
      is laid out against `.gl-root`'s padding box, which is exactly the area
-     below that bar — the same area the session player fills. */
+     below that bar — the same area the session player fills.
+
+     …AND THE SAME REASONING OWED THE RAIL, which this missed. `inset: 0`
+     against that padding box starts at the window's edge, so on a desk this
+     screen covered the icon rail as well — at `z-index: 30` over a rail at
+     2, which made every tab unreachable. Reported exactly so: "the lateral
+     left buttons are not working anymore. The only way for me to go back
+     from that page is to press Back or Refresh." The left edge is moved
+     past the rail at the desk breakpoint, below. A phone needs nothing: its
+     rail is a fixed pill at the foot of the screen at `z-index: 40`, which
+     already floats above this. */
   position: absolute;
   inset: 0;
   z-index: 30;
@@ -1412,6 +1422,24 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
   background-color: #07140f;
+}
+
+/* ---- …and it stops before the rail -------------------------------------
+
+   AFTER the rule above, deliberately: that one sets `inset: 0`, which is
+   `left: 0` too, and at equal specificity the later declaration wins. An
+   override written earlier in this file does nothing at all — which is how
+   the first attempt at this failed, silently.
+
+   Three numbers, and they are `.gl-root`'s own: its horizontal padding
+   (which grows past 1536px, so it is computed the same way here), the
+   rail's 64px, and the 24px flex gap between them. A screen that covers the
+   window has to know where the rail ends, and a wrong guess there costs
+   every tab on the screen. Change one, change both. */
+@media (min-width: 900px) {
+  .gl-root .sess-full {
+    left: calc(max(28px, (100% - 1480px) / 2 + 28px) + 88px);
+  }
 }
 
 /* The markup carries its own scrim element for the old surface. Here the
