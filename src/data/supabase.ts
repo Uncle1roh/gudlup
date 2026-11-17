@@ -1245,6 +1245,31 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
     },
 
     // --- Companies (tenants) ---
+    async getMySettings() {
+      const pid = await profileId().catch(() => null)
+      if (!pid) return null
+      const { data, error } = await sb
+        .from('person_settings')
+        .select('settings')
+        .eq('profile_id', pid)
+        .maybeSingle()
+      /* The table is not there yet (40-… not run), or no row: the device's
+         own copy stands, which is the behaviour before this existed. */
+      if (error) return null
+      const row = data as { settings?: unknown } | null
+      return row && row.settings && typeof row.settings === 'object'
+        ? (row.settings as Record<string, unknown>)
+        : null
+    },
+    async saveMySettings(settings: Record<string, unknown>) {
+      const pid = await profileId()
+      const { error } = await sb.from('person_settings').upsert({
+        profile_id: pid,
+        settings,
+        updated_at: toIso(Date.now()),
+      }, { onConflict: 'profile_id' })
+      if (error) throw error
+    },
     async getCompanySettings() {
       const cid = await myCompanyId()
       if (!cid) return null

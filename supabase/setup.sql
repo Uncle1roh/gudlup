@@ -10607,6 +10607,28 @@ alter table companies add column if not exists contact_email text;
 -- The list
 -- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
+-- What a PERSON has chosen about themselves
+-- ---------------------------------------------------------------------------
+-- The three first-run cards seen, how the audio addresses them, their own
+-- saved list, their session and reminder preferences. It lived in
+-- `localStorage` alone, so it was true per BROWSER and the app introduced
+-- itself again on every new device. NOT their history — sessions, pathway,
+-- check-ins are records, and what of those lives on a server is its own
+-- decision. Theirs and nobody else's: one row, one owner, one policy. See
+-- supabase/40-a-person-remembers-their-settings.sql.
+create table if not exists person_settings (
+  profile_id uuid primary key references profiles(id) on delete cascade,
+  settings   jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table person_settings enable row level security;
+drop policy if exists person_settings_own on person_settings;
+create policy person_settings_own on person_settings
+  for all
+  using (profile_id = current_profile())
+  with check (profile_id = current_profile());
+
+-- ---------------------------------------------------------------------------
 -- What a company has configured about itself
 -- ---------------------------------------------------------------------------
 -- The setup wizard's answers, the crisis line its people are shown, which

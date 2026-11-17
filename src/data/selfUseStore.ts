@@ -17,7 +17,8 @@
    than a crash (private-browsing mode simply forgets between launches).
    ============================================================================ */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDataProvider } from './provider'
 import type { Addressee } from '../tts/voiceLang'
 import type { Duration } from '../types/domain'
 import type { GlCheckEntry, Who5Entry, MoodEntry } from './measures'
@@ -287,6 +288,57 @@ export function saveState(s: SelfUseState, userId?: string): void {
   }
 }
 
+/* -------------------------------------------------- what follows the account
+
+   WHY ONLY THESE SEVEN. The three first-run cards are shown until
+   `tutorialSeenAt` is set, and that lived in `localStorage` alone — so it
+   was true per BROWSER and not per account, and the app introduced itself
+   again to somebody who had been using it for weeks, on every new device.
+   That is the reported bug, and these are the things in this record that a
+   person ANSWERED or CHOSE and that cost something to ask for twice.
+
+   Their HISTORY is deliberately not here: sessions listened, pathway
+   progress, weekly check-ins, WHO-5. Those are records rather than
+   settings, some of them feed a professional's view, and what of a person's
+   history lives on a server is a decision to make deliberately rather than
+   as a side effect of fixing a wizard. The mood calendar went up on its own
+   terms, with its own table and its own reasoning
+   (supabase/32-mood-readings.sql).
+
+   So a person changing device today still arrives with their own list,
+   their preferences and their language — and with an empty history. That
+   is a smaller surprise than being introduced to the app again, and it is
+   named here so the next person to read this knows it was a choice. */
+export function personalSettings(s: SelfUseState): Record<string, unknown> {
+  return {
+    tutorialSeenAt: s.tutorialSeenAt,
+    addressedAs: s.addressedAs,
+    saved: s.saved,
+    prefs: s.prefs,
+    notifications: s.notifications,
+    intake: s.intake,
+    companyCode: s.companyCode,
+  }
+}
+
+/** Lay stored settings over a state, ignoring anything that is not theirs. */
+export function withPersonalSettings(base: SelfUseState, saved: Record<string, unknown> | null): SelfUseState {
+  if (!saved || typeof saved !== 'object') return base
+  const num = (v: unknown) => (typeof v === 'number' ? v : null)
+  return {
+    ...base,
+    /* The LATER of the two wins: seen on another device counts as seen, and
+       seen here counts as seen there. */
+    tutorialSeenAt: num(saved.tutorialSeenAt) ?? base.tutorialSeenAt,
+    addressedAs: saved.addressedAs === 'm' || saved.addressedAs === 'f' ? saved.addressedAs : base.addressedAs,
+    saved: Array.isArray(saved.saved) ? (saved.saved as string[]) : base.saved,
+    prefs: { ...base.prefs, ...((saved.prefs ?? {}) as object) },
+    notifications: { ...base.notifications, ...((saved.notifications ?? {}) as object) },
+    intake: { ...base.intake, ...((saved.intake ?? {}) as object) },
+    companyCode: typeof saved.companyCode === 'string' ? saved.companyCode : base.companyCode,
+  }
+}
+
 /* ------------------------------------------------------------------ hook -- */
 
 export interface SelfUseStore {
@@ -296,20 +348,67 @@ export interface SelfUseStore {
 }
 
 export function useSelfUseStore(userId?: string): SelfUseStore {
+  const dp = useDataProvider()
   const [state, setState] = useState<SelfUseState>(() => loadState(userId))
 
   // Switching account mid-session (sign out → sign in) must not carry state over.
   useEffect(() => { setState(loadState(userId)) }, [userId])
+
+  /* ---- the settings that follow the ACCOUNT, not the browser -------------
+
+     `personalSettings` says which, and why only those. The device keeps its
+     copy as a cache so the app still paints instantly; the server's answer
+     is laid over it once, per mount, and anything this browser has that the
+     server does not is pushed up — so nobody loses what they chose before
+     this existed.
+
+     Not in a preview: a walkthrough's answers are seeded locally and belong
+     to the tab (`admin/preview.ts`). */
+  const pulled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!userId || pulled.current === userId) return
+    pulled.current = userId
+    let alive = true
+    void dp.getMySettings()
+      .then((saved) => {
+        if (!alive) return
+        if (saved && Object.keys(saved).length) {
+          setState((prev) => {
+            const next = withPersonalSettings(prev, saved)
+            saveState(next, userId)
+            return next
+          })
+          return
+        }
+        setState((prev) => {
+          /* Nothing up there. Hand it whatever this browser already knows —
+             but only once there is something worth keeping, or every fresh
+             account would write an empty row on its first paint. */
+          if (prev.tutorialSeenAt || prev.saved.length || prev.addressedAs) {
+            void dp.saveMySettings(personalSettings(prev)).catch(() => undefined)
+          }
+          return prev
+        })
+      })
+      .catch(() => { /* older database, or offline: the cache stands */ })
+    return () => { alive = false }
+  }, [dp, userId])
 
   const update = useCallback(
     (fn: (s: SelfUseState) => SelfUseState) => {
       setState((prev) => {
         const next = fn(prev)
         saveState(next, userId)
+        /* Up as well as down, and only when one of the seven actually
+           changed: this fires on every session logged and every mood
+           answered too, and those are not in the row. */
+        if (userId && JSON.stringify(personalSettings(next)) !== JSON.stringify(personalSettings(prev))) {
+          void dp.saveMySettings(personalSettings(next)).catch(() => undefined)
+        }
         return next
       })
     },
-    [userId],
+    [userId, dp],
   )
 
   const reset = useCallback(() => {

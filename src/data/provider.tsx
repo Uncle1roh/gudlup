@@ -189,6 +189,18 @@ export interface DataProvider {
   getCompanySettings(): Promise<Record<string, unknown> | null>
   /** Replace them. The caller holds the whole object, as the screens do. */
   saveCompanySettings(settings: Record<string, unknown>): Promise<void>
+
+  // --- A person's own settings -------------------------------------------
+  //     What they ANSWERED or CHOSE: the first-run cards seen, how the
+  //     audio should address them, their own saved list, their session and
+  //     reminder preferences. Not their history — sessions, pathway,
+  //     check-ins are records, and what of those lives on a server is its
+  //     own decision. Readable by nobody but them.
+  //     See supabase/40-a-person-remembers-their-settings.sql.
+  /** The signed-in person's stored settings, or null when none. */
+  getMySettings(): Promise<Record<string, unknown> | null>
+  /** Replace them. */
+  saveMySettings(settings: Record<string, unknown>): Promise<void>
   /** How the audio should address the signed-in person, or null if unasked.
       It chooses a recording; it is not an identity field and nothing else
       reads it. */

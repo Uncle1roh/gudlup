@@ -362,6 +362,9 @@ let moodRows: MoodEntry[] = []
 /* What a company has configured about itself, in a demo. */
 let companySettings: Record<string, unknown> | null = null
 
+/* And what the person in a demo has chosen. */
+let mySettings: Record<string, unknown> | null = null
+
 /* B2C→therapist intake queue (one seeded open request so the roster demo shows it) */
 let sessionRequests: SessionRequest[] = [
   { id: 'sr1', requesterName: 'Mariana Alves', requesterEmail: 'mariana@aurora.co', company: 'Aurora Tech', note: 'Ansiedade no trabalho', status: 'open', createdAt: nowMs - 2 * 3_600_000 },
@@ -880,6 +883,12 @@ export function createMockProvider(opts: { gamificationHistory?: boolean } = {})
     },
 
     // --- Companies (tenants) ---
+    /* In memory, like everything else here — and in a demo the person's own
+       settings are seeded by `admin/preview.ts` into the local record, so
+       there is nothing to send up. */
+    getMySettings: async () => { await wait(60); return mySettings },
+    saveMySettings: async (settings) => { await wait(60); mySettings = { ...settings } },
+
     /* In memory, like everything else here: a demo configures a company and
        it is forgotten with the tab, which is the point of a demo. */
     getCompanySettings: async () => { await wait(80); return companySettings },
