@@ -1950,13 +1950,6 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
   min-height: 1.2em;
 }
 
-/* The ink of the surface, not a fixed slate: this line sits on the ground,
-   and the ground is dark today. */
-.gl-card__meta {
-  font-size: 13px;
-  color: var(--ink-2);
-}
-
 .gl-card__hit {
   position: absolute;
   inset: 0;

@@ -24,7 +24,6 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { resolveRails, type ExploreRail, type ResolvedRail } from '../data/rails'
 import { SELF_USE_THEMES, type SelfUseTheme } from '../data/selfuse'
-import type { Duration } from '../types/domain'
 import type { LiveCatalog, ResolvedSession } from '../data/liveCatalog'
 import { THEME_TINT, tilePosition } from './theme'
 import { TopBar } from './TopBar'
@@ -243,7 +242,6 @@ function Rail({ title, subtitle, items, empty, onOpen, saved = [], onToggleSave 
   saved?: string[]
   onToggleSave?(slug: string): void
 }) {
-  const { t } = useI18n()
   if (!items.length) return empty ? <p className="small muted">{empty}</p> : null
 
   return (
@@ -265,7 +263,6 @@ function Rail({ title, subtitle, items, empty, onOpen, saved = [], onToggleSave 
             session={s}
             index={i}
             onOpen={() => onOpen(s.slug)}
-            label={t(themeLabel(s.theme))}
             saved={saved.includes(s.slug)}
             onToggleSave={onToggleSave && (() => onToggleSave(s.slug))}
           />
@@ -275,17 +272,15 @@ function Rail({ title, subtitle, items, empty, onOpen, saved = [], onToggleSave 
   )
 }
 
-function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
+function Tile({ session, index, onOpen, saved, onToggleSave }: {
   session: ResolvedSession
   index: number
   onOpen(): void
-  label: string
   saved?: boolean
   onToggleSave?(): void
 }) {
   const { t } = useI18n()
   const title = t(session.name)
-  const mins = shortestOf(session)
 
   /* A cover a PO uploaded wins; otherwise the shared photograph, moved under
      each square — which is how a shelf of covers comes out of one image. */
@@ -351,8 +346,18 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
           rather than the name again — the slot keeps its height (shell.css)
           so a shelf of covers stays aligned either way. */}
       <span className="gl-card__name">{session.subtitle ?? ''}</span>
-      {/* Where the mockup prints the protocol code, the theme goes. */}
-      <span className="gl-card__meta">{label} · {mins} min</span>
+      {/* AND NOTHING ELSE. Under the subtitle there used to be a second
+          line, "Foco · 6 min": the theme and the shortest duration. Both
+          are already answered elsewhere and neither was a reason to tap.
+          The theme is the row of chips at the top of this screen — the
+          filter the person just used to get here, printed back at them on
+          every cover — and the duration is chosen on the session's own
+          screen, where a card advertising "6 min" was quietly wrong about
+          the sessions that also have 12 and 24.
+
+          The THEME ITSELF is untouched: it still filters this shelf, still
+          tints a cover with no artwork, and is still what the catalogue
+          sorts by. What went is the printing of it. */}
 
       <button type="button" className="gl-card__hit" onClick={onOpen} aria-label={title} />
     </div>
@@ -360,14 +365,6 @@ function Tile({ session, index, onOpen, label, saved, onToggleSave }: {
 }
 
 /* --------------------------------------------------------------- bits --- */
-
-function shortestOf(s: ResolvedSession): Duration {
-  return s.durations.includes(6) ? 6 : s.durations[0]
-}
-
-function themeLabel(id: SelfUseTheme): string {
-  return SELF_USE_THEMES.find((th) => th.id === id)?.label ?? ''
-}
 
 /** Up to two letters from the name; nothing when there is no name. */
 export function initialsOf(name: string | null): string {
