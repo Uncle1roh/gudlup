@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { st } from '../sales/i18n'
 import { ConsoleModal } from './ConsoleModal'
 import { explainWriteError } from './writeError'
+import { useAuth } from '../auth/auth'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -35,8 +36,32 @@ import type { AddonPlan } from '../gamification/company'
 
 export function Companies({ actor }: { actor: string }) {
   const dp = useDataProvider()
-  /* Issuing a therapist code for a tenant. HR can do this themselves in their
-     own dashboard; this is here for the support call where they cannot. */
+  const { role } = useAuth()
+
+  /* ---- WHO MAY ISSUE A THERAPIST ACTIVATION CODE -----------------------
+
+     Two roles, and the database is where that is written:
+     `therapist_activation_codes` carries exactly two policies (setup.sql
+     §1) — `codes_hr`, which is HR for THEIR OWN company, and
+     `codes_admin`, which is a Good Loop admin for any. There is no
+     `is_sales()` policy on that table and 16-sales-role.sql does not grant
+     one: a commercial account may read and sell the company, and has no
+     business putting a clinician on its care list.
+
+     This button was written for the ADMIN console, "for the support call
+     where they cannot". Then the console split and this whole screen moved
+     to the commercial one (`src/sales/SalesApp.tsx`) — the screen moved
+     correctly, the button travelled with it, and nothing noticed it had
+     landed in the one console whose role the database refuses. So a
+     salesperson pressed it and got a row-level-security error in English,
+     which is the reported bug. In a demo it APPEARED to work, because the
+     mock provider has no roles to refuse with.
+
+     The gate is the role and not a prop, because the role is what the
+     database checks: whoever renders this screen, the button is there when
+     the account may use it and absent when it may not. */
+  const mayIssueTherapistCode = role === 'admin'
+
   const [codeFor, setCodeFor] = useState<string | null>(null)
   const [issued, setIssued] = useState<string | null>(null)
   async function issueTherapistCode(companyId: string) {
@@ -46,7 +71,9 @@ export function Companies({ actor }: { actor: string }) {
       setIssued(made.code)
       await dp.logAudit({ actor, action: 'therapist_code.issued', target: companyId, detail: made.code }).catch(() => undefined)
     } catch (e) {
-      window.alert(st('Impossibile generare il codice: {err}', { err: (e as Error).message }))
+      /* Through the same explainer the rest of this screen uses: a refusal
+         that names the missing permission beats a Postgres sentence. */
+      window.alert(st('Impossibile generare il codice: {err}', { err: explainWriteError(e) }))
       setCodeFor(null)
     }
   }
@@ -299,11 +326,14 @@ export function Companies({ actor }: { actor: string }) {
                 <div>{fmtDate(c.createdAt)}</div>
                 <div>{c.status === 'active' ? <span className="adm-pill adm-pill--ok">{st('Attiva')}</span> : <span className="adm-pill adm-pill--warn">{st('In pausa')}</span>}</div>
                 <div className="adm-tr__right">
-                  {/* The company can issue these themselves; this is for the
-                      support call where they cannot. */}
-                  <button className="b2b-btn b2b-btn--ghost" onClick={() => void issueTherapistCode(c.id)}>
-                    {codeFor === c.id && issued ? issued : st('Codice terapeuta')}
-                  </button>
+                  {/* An admin only — see `mayIssueTherapistCode`. The company
+                      issues its own in its dashboard, which is the journey
+                      this is the support-call shortcut for. */}
+                  {mayIssueTherapistCode && (
+                    <button className="b2b-btn b2b-btn--ghost" onClick={() => void issueTherapistCode(c.id)}>
+                      {codeFor === c.id && issued ? issued : st('Codice terapeuta')}
+                    </button>
+                  )}
                   <button className="b2b-btn b2b-btn--ghost" onClick={() => toggleStatus(c)}>{c.status === 'active' ? st('Sospendi') : st('Riattiva')}</button>
                 </div>
               </div>
