@@ -13,7 +13,7 @@ import { Hub } from './hub/Hub'
 import { initVoiceSync } from './tts/voiceSync'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PreviewBar } from './admin/PreviewBar'
-import { previewing } from './admin/preview'
+import { previewing, previewFrom } from './admin/preview'
 import { LegalProvider } from './legal/LegalContext'
 import { LegalPage } from './legal/LegalPage'
 import { EnvBanner } from './app/EnvBanner'
@@ -355,10 +355,17 @@ export default function App() {
       {bar || banner ? (
         <div className={`pvw-shell${banner ? ' pvw-shell--env' : ''}${bar ? ' pvw-shell--bar' : ''}`}>
           {banner && strip}
-          {/* The bar is the ADMIN's chrome, not the surface's: Italian like the
-              rest of the console, while the surface under it follows the
+          {/* The bar is the CONSOLE's chrome, not the surface's — so it
+              speaks the language of the console the walkthrough was started
+              from. The admin console is Italian by rule and its bar is too;
+              the commercial console follows whoever is signed in, and a
+              Brazilian salesperson showing a Brazilian prospect a
+              Portuguese app had ANTEPRIMA · Esci dall'anteprima across the
+              top of it. The surface under it has always followed the
               language being demonstrated. */}
-          {bar && <FixedLocale locale="it"><PreviewBar /></FixedLocale>}
+          {bar && (previewFrom() === '#admin'
+            ? <FixedLocale locale="it"><PreviewBar /></FixedLocale>
+            : <PreviewBar />)}
           <div className="pvw-shell__surface">{body}</div>
         </div>
       ) : body}

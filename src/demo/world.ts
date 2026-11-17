@@ -135,11 +135,26 @@ export const DEMO_SESSIONS: DemoSession[] = [
   [1, 12, 12, true, 'focus-clarity'],
 ]
 
-/** When a session started, as a timestamp. São Paulo is UTC−3, and the hour
-    in the table above is the local one she would say out loud. */
+/**
+ * When a session started, as a timestamp: that many days ago, at that hour,
+ * on the clock of whoever is watching the demo.
+ *
+ * IT USED TO BE PINNED TO SÃO PAULO — `Date.UTC(…, hour + 3, 5)`, because
+ * Mariana is Brazilian and the hour in the table is the one she would say
+ * out loud. Correct about her, wrong about the demo: given in Italy, four
+ * hours east, every evening session rolled over midnight into the next
+ * day. The sixteen sessions landed in pairs with holes between them, the
+ * four-day run at the end of the month became two sessions on one day, and
+ * the profile said "1 day in a row" under fourteen sessions. The mood
+ * calendar, which counts days plainly, disagreed with all of it.
+ *
+ * The table is a story, not a record of a clock. Twenty days ago at nine in
+ * the evening is twenty days ago at nine in the evening wherever the laptop
+ * is, and the days then space themselves exactly as they were written.
+ */
 export function demoSessionStart([ago, hour]: DemoSession, now = Date.now()): number {
   const day = new Date(now - ago * DAY)
-  return Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour + 3, 5)
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 5).getTime()
 }
 
 /** Seconds of audio actually heard: all of it, or 45% of an early stop. */
@@ -206,6 +221,44 @@ export const DEMO_PATHWAY = {
   id: 'stress-management' as const,
   startedAgo: 18,
   done: { 1: 5, 2: 5, 3: 2 } as Record<number, number>,
+}
+
+/* ------------------------------------------------ when the two of them meet ---
+
+   ONE APPOINTMENT, TWO SCREENS. The clinician's roster says when she next
+   sees Mariana; Mariana's own Terapia tab says the same thing, because a
+   demo whose two halves disagree about a date is a demo about two people.
+   Both read this.
+
+   A CLINIC HOUR, AND A FUTURE ONE. The appointment belongs on a weekday at
+   an hour a practice keeps, so it lands inside the calendar grid (07:00 to
+   21:00) however late in the evening somebody opens the laptop — that is
+   what `daysAhead` and the Friday clamp are for. And it belongs in the
+   FUTURE: the roster column is headed "next session", and a demo given at
+   half past eight had Mariana's next session at 14:00 today, six hours
+   after it would have ended. When the hour has gone, it is the same hour on
+   the next working day.
+*/
+export function demoClinicAt(daysAhead: number, [h, m]: [number, number], now = Date.now()): number {
+  const d = new Date(now)
+  const weekday = (d.getDay() + 6) % 7            // 0 = Monday
+  const within = Math.min(weekday + daysAhead, 4) // never past Friday
+  let day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (within - weekday))
+  const at = () => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m).getTime()
+  /* At most a week and a half of single days: enough to step over a weekend
+     from a Friday evening and stop. */
+  for (let i = 0; i < 10 && at() <= now; i += 1) {
+    day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+    while (((day.getDay() + 6) % 7) > 4) day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+  }
+  return at()
+}
+
+/** The hour Mariana and her clinician have between them, and how long for. */
+export const DEMO_APPOINTMENT = { hhmm: [14, 0] as [number, number], minutes: 50 }
+
+export function demoNextSessionAt(now = Date.now()): number {
+  return demoClinicAt(0, DEMO_APPOINTMENT.hhmm, now)
 }
 
 export { DAY as DEMO_DAY, HOUR as DEMO_HOUR }

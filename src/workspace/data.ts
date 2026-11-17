@@ -46,7 +46,7 @@ const HOUR = 3_600_000
 
 /* ------------------------------------------------------------ therapist -- */
 
-import { DEMO_CLINICIAN, DEMO_PERSON } from '../demo/world'
+import { DEMO_APPOINTMENT, DEMO_CLINICIAN, DEMO_PERSON, demoClinicAt } from '../demo/world'
 import { demoCompanyName } from '../demo/flag'
 export type VerificationState = 'pending' | 'approved' | 'rejected' | 'docs-needed'
 
@@ -291,17 +291,11 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
      ended up at 04:25 in a calendar grid that runs 07:00 to 21:00, and a
      salesperson opening the app in the evening found an empty week.
 
-     An appointment belongs at a clinic hour. `clinicAt` puts it on a real
-     day at a real time: inside the grid, always, whatever o'clock it is when
-     somebody opens the laptop. Days ahead wrap inside the SAME week, because
-     the calendar shows one week and a demo should not need the arrows. */
-  const clinicAt = (daysAhead: number, hhmm: [number, number]): number => {
-    const d = new Date(now)
-    const weekday = (d.getDay() + 6) % 7            // 0 = Monday
-    const within = Math.min(weekday + daysAhead, 4) // never past Friday
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (within - weekday))
-    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hhmm[0], hhmm[1]).getTime()
-  }
+     An appointment belongs at a clinic hour, and a NEXT one belongs in the
+     future. `demoClinicAt` (`demo/world.ts`) does both, and it lives there
+     rather than here because Mariana's hour is also printed on her own
+     Terapia tab: one appointment, two screens, one source. */
+  const clinicAt = (daysAhead: number, hhmm: [number, number]): number => demoClinicAt(daysAhead, hhmm, now)
 
   const mk = (
     id: string,
@@ -330,7 +324,7 @@ export function demoWorkspace(account: Partial<TherapistAccount> = {}): Workspac
   /* The one patient whose Self Use activity is bridged is the person the
      app surface shows — that is what makes the three screens one story. */
   const maria = mk(DEMO_PERSON.patientId, DEMO_PERSON.name, {
-    nextAt: clinicAt(0, [14, 0]),
+    nextAt: clinicAt(0, DEMO_APPOINTMENT.hhmm),
     lastAgo: 6 * DAY,
     assessmentDue: 'DASS-21 (T2)',
     bridged: true,

@@ -29,6 +29,7 @@ import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients, applyAppointments, pendingBookings, linkBooking } from './data'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
+import { demoProfile } from '../demo/world'
 import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
 import { TherapistOnboarding, WithHelp } from './Onboarding'
@@ -177,7 +178,14 @@ function WorkspaceGate({ demoSeconds = null }: WorkspaceAppProps) {
      Called ABOVE the `if (!cred)` return, with the rest of the hooks — a hook
      after an early return changes how many run between renders, which is the
      mistake this file was split into two components to avoid. */
-  useServerIdentity(cred, user?.email ?? null, update)
+  /* IN A DEMO THE CLINICIAN IS HELENA, not the salesperson signed in.
+     `useServerIdentity` copies the account's e-mail from the session, which
+     is right everywhere else and wrong in front of a prospect: the
+     workspace header read "Dra. Helena Costa" over `comercial@goodloop.app`.
+     The app surface already makes this swap (`selfuse/SelfUseApp.tsx`);
+     this is the same swap, one surface later. */
+  const identityEmail = previewing() ? demoProfile('therapist').email : user?.email ?? null
+  useServerIdentity(cred, identityEmail, update)
   /* Same rule: it was called below the `if (!cred)` return, so the first
      render after the credential arrived ran one hook more than the one before
      it (React #310) and every therapist sign-in landed on the error screen. */
@@ -240,7 +248,7 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
   /* The surface keeps its own copy of the store, so it applies the identity
      itself: the gate's correction lives in the gate's copy, and the name on
      screen is this one. */
-  useServerIdentity(cred, user?.email ?? null, update)
+  useServerIdentity(cred, previewing() ? demoProfile('therapist').email : user?.email ?? null, update)
   const [nav, setNav] = useState<Nav>(sandboxOnEntry ? 'sandbox' : 'patients')
   const [view, setView] = useState<View>(sandboxOnEntry ? { kind: 'call', id: 'sandbox', sandbox: true } : { kind: 'nav' })
   const [menu, setMenu] = useState(false)

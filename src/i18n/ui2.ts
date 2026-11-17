@@ -120,8 +120,11 @@ export const IT_UI2: Record<string, string> = {
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sedute',
+  'session': 'seduta',
   'minutes': 'minuti',
+  'minute': 'minuto',
   'days in a row': 'giorni di fila',
+  'day in a row': 'giorno di fila',
 
   /* minha jornada */
   'of {n} weeks': 'di {n} settimane',
@@ -275,8 +278,11 @@ export const PT_UI2: Record<string, string> = {
 
   /* perfil — the unit under each figure, where the number is drawn apart */
   'sessions': 'sessões',
+  'session': 'sessão',
   'minutes': 'minutos',
+  'minute': 'minuto',
   'days in a row': 'dias seguidos',
+  'day in a row': 'dia seguido',
 
   /* minha jornada */
   'of {n} weeks': 'de {n} semanas',

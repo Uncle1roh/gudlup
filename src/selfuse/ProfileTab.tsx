@@ -141,10 +141,15 @@ export function ProfileTab(props: ProfileProps) {
             </div>
           </div>
 
+          {/* ONE OF ANYTHING IS SINGULAR. Somebody's first week here reads
+              "1 sessões · 1 minutos · 1 dias seguidos" — three plurals
+              around three ones, on the screen that is supposed to tell them
+              they have started. Italian and Portuguese inflect; so does the
+              English these keys are written in. */}
           <div className="pf2-stats">
-            <span className="pf2-stat"><b>{sessions}</b>{t('sessions')}</span>
-            <span className="pf2-stat"><b>{minutes}</b>{t('minutes')}</span>
-            <span className="pf2-stat"><b>{streak}</b>{t('days in a row')}</span>
+            <span className="pf2-stat"><b>{sessions}</b>{t(sessions === 1 ? 'session' : 'sessions')}</span>
+            <span className="pf2-stat"><b>{minutes}</b>{t(minutes === 1 ? 'minute' : 'minutes')}</span>
+            <span className="pf2-stat"><b>{streak}</b>{t(streak === 1 ? 'day in a row' : 'days in a row')}</span>
           </div>
 
           <div style={{ flex: 1 }} />

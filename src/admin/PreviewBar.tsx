@@ -9,8 +9,11 @@
    of a customer, and a demo that quietly looks like production is how
    somebody ends up believing a number on it.
 
-   It speaks the language of the surface under it (t()), since it sits on top
-   of that surface — the console itself stays Italian.
+   It speaks the language of the CONSOLE the walkthrough was started from,
+   which `App.tsx` decides by wrapping it: Italian from the admin console,
+   because that console is Italian by rule, and the signed-in person's
+   language from the commercial one. The surface under it is whatever
+   language is being demonstrated, and that is not the same question.
 
    On a phone the note goes, the surface buttons scroll sideways and the exit
    stays pinned at the right edge: it is the one control that must always be

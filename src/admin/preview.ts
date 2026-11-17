@@ -33,7 +33,8 @@ import { slotKey, tenantFromConvention, FALLBACK_TENANT } from '../corporate/dat
 import { resolveCompanyCode, DEMO_TENANT_CODE } from '../data/convention'
 import { PREVIEW_KEY as KEY } from '../demo/flag'
 import {
-  DEMO_CHECKINS, DEMO_PATHWAY, DEMO_PERSON, DEMO_SAVED, demoLogs, demoMoodPoints,
+  DEMO_APPOINTMENT, DEMO_CHECKINS, DEMO_CLINICIAN, DEMO_PATHWAY, DEMO_PERSON, DEMO_SAVED,
+  demoLogs, demoMoodPoints, demoNextSessionAt,
 } from '../demo/world'
 import { moodEntryFrom } from '../data/measures'
 
@@ -130,6 +131,49 @@ function seedSelfUse(): void {
   }
 }
 
+/* ---------------------------------------------- the hour they have booked ---
+
+   THE SAME APPOINTMENT THE CLINICIAN'S ROSTER SHOWS. Her side of it is in
+   the workspace fixtures and has been all along: "Mariana Alves · next
+   session: today 14:00". Mariana's side of it was nowhere — her Terapia tab
+   said "no session booked yet", under a card naming the clinician whose
+   roster had her down for one. Two screens, one story, and they disagreed
+   about the only fact they both print.
+
+   It is written where a booking made in the demo would write it
+   (`data/mock.ts`), in the same shape, so the screen cannot tell the seeded
+   appointment from one the salesperson books in front of the prospect — and
+   so cancelling it in the demo works like cancelling any other.
+
+   WHAT IS DELIBERATELY NOT SEEDED is her acceptance of the clinician's
+   informed-consent form. The tab is supposed to show that gate: a session
+   is booked, and before the first one there is a document to read. That is
+   the product, and it is worth a minute of anybody's demo. */
+function seedTherapy(): void {
+  const KEY_MINE = 'gl.mock.myappt'
+  const KEY_ALL = 'gl.mock.thappts'
+  try {
+    if (localStorage.getItem(KEY_MINE)) return // a walkthrough in progress
+    const startsAtMs = demoNextSessionAt()
+    const appt = {
+      id: 'ap-demo-1',
+      therapistId: DEMO_CLINICIAN.id,
+      therapistName: DEMO_CLINICIAN.name,
+      patientName: DEMO_PERSON.name,
+      profileId: 'me',
+      startsAtMs,
+      durationMin: DEMO_APPOINTMENT.minutes,
+      status: 'booked' as const,
+    }
+    localStorage.setItem(KEY_MINE, JSON.stringify(appt))
+    localStorage.setItem(KEY_ALL, JSON.stringify([appt]))
+    /* The slot is taken, so the booking screen cannot offer it twice. */
+    localStorage.setItem(`gl.mock.booked.${DEMO_CLINICIAN.id}`, JSON.stringify([startsAtMs]))
+  } catch {
+    /* private mode: the tab shows an unbooked relationship, which also demos */
+  }
+}
+
 /* The company dashboard opens on a five-step setup wizard until somebody has
    finished it. That is right for a real tenant and wrong for a walkthrough,
    which came to see the figures — so the preview starts past it. Cleared on
@@ -181,20 +225,65 @@ export function openPreview(surface: PreviewSurface, from = window.location.hash
   } catch {
     /* nothing to do: without storage the gate below will not let us through */
   }
+  /* The booked hour belongs to the WORLD, not to one of its three doors:
+     the clinician's roster prints it whichever surface a demo opens on. */
+  seedTherapy()
   if (surface === 'app') seedSelfUse()
   if (surface === 'company') seedCompany()
   go(surface)
+}
+
+/* ---------------------------------------------- how a demo changes rooms ---
+
+   A DEMO MOVES BY RELOADING, and until now it only said so.
+
+   `window.location.href = '/#therapist'` looks like a navigation and is not
+   one: when the path is the same and only the fragment differs, the browser
+   changes the URL and leaves the document exactly where it was. Every
+   module stays loaded, with everything it had decided.
+
+   That is not a detail here, because three things are decided ONCE per
+   document and all three are wrong for the room you have just walked into:
+
+     · `data/provider.tsx` picks mock or Supabase when it mounts;
+     · `data/mockLegal.ts` builds its store on first read, as whichever
+       persona the hash named AT THAT MOMENT (`demo/world.ts`);
+     · the surfaces read `previewing()` as they mount.
+
+   So the demo opened on the app, and then the workspace was still Mariana —
+   who has not accepted the Professional Terms, so the clinician's surface
+   opened on a wall of them, and the dashboard after it on "Entendi, em nome
+   de ...". Both of those gates were supposed to be answered already. Worse
+   at the end: leaving the demo went back to the console the same way, so a
+   salesperson who had just given one carried the MOCK provider into a
+   console with no demo bar on it, where every company they saved went into
+   memory and died with the tab.
+
+   Setting the fragment does not reload; reloading the URL it leaves behind
+   does. `replaceState` writes the address without a hashchange event — and
+   without an entry in the history, so Back still goes where the person
+   expects — and the reload that follows is a real one. */
+function reloadAt(hash: string): void {
+  const url = `${window.location.pathname}${hash}`
+  try {
+    window.history.replaceState(null, '', url)
+  } catch {
+    /* A browser that refuses replaceState still has to arrive: the hash
+       assignment is the same address by a noisier route. */
+    window.location.hash = hash
+  }
+  window.location.reload()
 }
 
 /** Move between surfaces without leaving preview. */
 export function go(surface: PreviewSurface): void {
   const to = SURFACES.find((s) => s.id === surface)?.hash ?? ''
   resetDemoLegal()
-  if (surface === 'app') seedSelfUse()
+  if (surface === 'app') { seedSelfUse(); seedTherapy() }
   if (surface === 'company') seedCompany()
   /* A full load, not just a hash change: each surface mounts its own data
      layer, and the provider is chosen when that mounts. */
-  window.location.href = `${window.location.pathname}${to}`
+  reloadAt(to)
 }
 
 /** Everything a walkthrough writes, in one list. */
@@ -203,6 +292,14 @@ function wipeDemoState(): void {
     localStorage.removeItem(`gl.selfuse.${PREVIEW_USER_ID}`)
     localStorage.removeItem(`gl.therapy.${PREVIEW_USER_ID}`)
     localStorage.removeItem(`gl.workspace.${PREVIEW_USER_ID}`)
+    /* EVERYTHING THE MOCK PROVIDER KEEPS, by prefix rather than by name.
+       The named list was the appointment, the avatar, the availability, the
+       booked slots — and it was out of date the first time somebody added a
+       screen that remembers something. `gl.mock.*` is the demo's own world
+       by definition, and a demo starts clean. */
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('gl.mock.')) localStorage.removeItem(k)
+    }
     if (localStorage.getItem(SEEDED)) {
       localStorage.removeItem(CORPORATE_SLOT)
       localStorage.removeItem(SEEDED)
@@ -220,13 +317,24 @@ export function clearPreview(): void {
   wipeDemoState()
 }
 
-/** Leave preview and return to the console. Clears what the walkthrough wrote. */
+/** Leave preview and return to the console. Clears what the walkthrough wrote.
+
+    A RELOAD, for the reason above and then some: the console the
+    salesperson lands back on must be reading the real database again, and
+    the provider only asks which one to be when it mounts. */
 export function endPreview(): void {
   clearPreview()
   let back = '#admin'
   try { back = sessionStorage.getItem(FROM) || '#admin' } catch { /* keep the default */ }
   try { sessionStorage.removeItem(FROM) } catch { /* nothing stored */ }
-  window.location.href = `${window.location.pathname}${back}`
+  reloadAt(back)
+}
+
+/** Which console the walkthrough was started from — `#admin` or `#sales`.
+    The preview bar asks, because the admin console is Italian by rule and
+    the commercial one speaks the language of whoever is signed in. */
+export function previewFrom(): string {
+  try { return sessionStorage.getItem(FROM) || '#admin' } catch { return '#admin' }
 }
 
 /** Which surface the current hash is. */
