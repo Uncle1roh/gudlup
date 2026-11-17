@@ -334,6 +334,16 @@ html.gl2 .helpnow--bar .helpnow__heart { opacity: 0.75; }
      own hexes, which vanished the moment the ground went light. */
   --warn: #9a5a22;
   --ok: #0f6b47;
+  /* …and a third, for the one destructive control the app has: Encerrar a
+     conta. It was a single pale pink (#f0a9a9) picked for the dark room and
+     applied on both grounds — over sand that measured 1.66:1 against the
+     page, which is not a quiet button, it is an invisible one. It read as
+     disabled, and was reported as disabled. Same shape as the note on the
+     stereo answers further down: the tint and the border stay, the red
+     changes with the ground. */
+  --danger: #8f2f2f;
+  --danger-line: rgba(143, 47, 47, 0.42);
+  --danger-wash: rgba(143, 47, 47, 0.10);
   /* The lift under a pane. The deep mockups draw it (`0 12px 40px` at .22
      over the photograph); over the light set it is softer. */
   --shadow: 0 12px 40px rgba(31, 43, 42, 0.14);
@@ -361,7 +371,15 @@ html.gl2 .helpnow--bar .helpnow__heart { opacity: 0.75; }
 
 .gl-root a { color: var(--link); }
 
-html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 0 12px 40px rgba(0, 0, 0, 0.22); }
+html[data-mood-set='dark'] .gl-root {
+  --warn: #f2c29a;
+  --ok: #7ac69b;
+  /* The pale pink the dark room was always given, unchanged. */
+  --danger: #f0a9a9;
+  --danger-line: rgba(240, 169, 169, 0.42);
+  --danger-wash: rgba(240, 169, 169, 0.12);
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
 
 /* ------------------------------------------------------- the deep room ---
    There used to be two grounds here: the mood colour on the library and the

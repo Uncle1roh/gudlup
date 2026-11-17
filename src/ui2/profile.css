@@ -278,12 +278,15 @@
 .gl-root .pwd-form { display: flex; flex-direction: column; gap: 14px; }
 .gl-root .ob-error { color: var(--warn); font-size: 14px; margin: 0; }
 
+/* Encerrar a conta. The colours come from the ground's token set
+   (`shell.css`, `--danger`) rather than from one hex that only worked in
+   the dark room. */
 .gl-root .btn--danger {
   background: transparent;
-  color: #f0a9a9;
-  border: 1px solid rgba(240, 169, 169, 0.42);
+  color: var(--danger);
+  border: 1px solid var(--danger-line);
 }
-.gl-root .btn--danger:hover { background: rgba(240, 169, 169, 0.12); }
+.gl-root .btn--danger:hover { background: var(--danger-wash); }
 
 /* "Como funciona o Good Loop" — the five tutorial cards. The art is the
    signature orb now (`selfuse/ProfileTab.tsx`), which brings its own light

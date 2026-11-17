@@ -605,6 +605,25 @@
 
 .pf2-h { margin: 0; font-family: 'Outfit', system-ui, sans-serif; font-weight: 500; font-size: 22px; line-height: 1.15; }
 
+/* A condition on the offer, at the top of the box that makes it. Tinted
+   rather than muted: this is not a footnote, it is who the card is for, and
+   a reader who skips it walks into a dead end three taps away. `self-start`
+   so it is as wide as its words and reads as a tag, not as a banner. */
+.pf2-flag {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
 /* ------------------------------------------------------------ treatment ---
    No rail, no panes: a dim photograph, the orb, one line, and the two
    things the person is still allowed to do. */

@@ -194,6 +194,13 @@ export function ProfileTab(props: ProfileProps) {
         </article>
 
         <article className="glass pf2-card">
+          {/* WHO CAN ACTUALLY GET THIS, said before the offer and not after
+              it (POs). Guided sessions with a licensed professional come
+              with a company's contract; a person who signed up on their own
+              reads the card, taps "Encontrar um terapeuta" and finds out at
+              the end. The flag is at the top of the box because that is
+              where it saves somebody the walk. */}
+          <span className="pf2-flag">{t('Exclusive access with corporate contracts')}</span>
           <span className="pf2-tile" aria-hidden="true"><Icon name="therapist" size={20} /></span>
           <h2 className="pf2-h">{t('Professional support, when you need it')}</h2>
           <p className="call2-note">{t('Connect with a licensed professional for guided sessions tailored to your needs.')}</p>

@@ -152,6 +152,8 @@ export const IT_UI2: Record<string, string> = {
     'La cura che torna a te: scambia i tuoi LOOPS con qualcosa che si prende cura del tuo corpo o della tua mente.',
   /* ---- la pastiglia dell'umore, e l'avviso quando si esce ---- */
   'No reading yet today': 'Oggi non hai ancora risposto',
+  /* Perfil — la condizione sull'offerta di terapia. */
+  'Exclusive access with corporate contracts': 'Accesso riservato ai contratti aziendali',
   'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
     'Il colore di ogni giorno è quello che hai risposto alla fine della seduta svolta. Un giorno con due risposte porta due colori.',
   'If you stop now, this session earns no LOOPS — they are for the ones you go all the way through.':
@@ -310,6 +312,8 @@ export const PT_UI2: Record<string, string> = {
     'O cuidado que volta para você: troque seus LOOPS por algo que cuide do seu corpo ou da sua mente.',
   /* ---- a pastilha do humor, e o aviso ao sair ---- */
   'No reading yet today': 'Hoje você ainda não respondeu',
+  /* Perfil — a condição sobre a oferta de terapia. */
+  'Exclusive access with corporate contracts': 'Acesso exclusivo com contratos corporativos',
   'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
     'A cor de cada dia reflete o que você respondeu no fim da sessão realizada. Um dia com duas respostas carrega duas cores.',
   'If you stop now, this session earns no LOOPS — they are for the ones you go all the way through.':
