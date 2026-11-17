@@ -15,6 +15,10 @@
 type Row = readonly [en: string, it: string, pt: string]
 
 const ROWS: Row[] = [
+  /* ---- the clinician's registration ---------------------------------- */
+  ['the digits only — the region is the field below',
+   'solo le cifre — la regione è il campo sotto',
+   'apenas os dígitos — a região é o campo abaixo'],
   /* ---- shell --------------------------------------------------------- */
   ['Patients', 'Pazienti', 'Pacientes'],
   ['Calendar', 'Calendario', 'Agenda'],

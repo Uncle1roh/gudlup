@@ -199,8 +199,19 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
               <option value="Ordine">{t('Ordine degli Psicologi (Italy)')}</option>
             </select>
           </Field>
-          <Field label={registry === 'CRP' ? t('CRP registration number') : t('Albo registration number')} error={err('licenceNumber')}>
-            <input className="w-input" value={form.licenceNumber} onChange={(e) => set({ licenceNumber: e.target.value })} onBlur={() => blur('licenceNumber')} placeholder={registry === 'CRP' ? '06/158342' : '12345'} />
+          {/* THE NUMBER WITHOUT ITS REGION. The placeholder used to read
+              "06/158342" — which is a CRP written in full, region and all —
+              beside a field that asks for the region on its own. So the
+              region was typed twice and the two could disagree, and it read
+              as the same thing being asked over again ("I see the CRP
+              number and its component asked more than once"). The region
+              is the select below; this is the digits. */}
+          <Field
+            label={registry === 'CRP' ? t('CRP registration number') : t('Albo registration number')}
+            hint={registry === 'CRP' ? t('the digits only — the region is the field below') : undefined}
+            error={err('licenceNumber')}
+          >
+            <input className="w-input" value={form.licenceNumber} onChange={(e) => set({ licenceNumber: e.target.value })} onBlur={() => blur('licenceNumber')} placeholder={registry === 'CRP' ? '158342' : '12345'} />
           </Field>
           <Field label={registry === 'CRP' ? t('CRP region') : t('Ordine region')}>
             <select className="w-input" value={form.licenceRegion} onChange={(e) => set({ licenceRegion: e.target.value })}>
@@ -218,10 +229,6 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
             <input className="w-input" type="date" value={insuranceExpires} onChange={(e) => setInsuranceExpires(e.target.value)} />
             <input className="w-input" value={insuranceRef} onChange={(e) => setInsuranceRef(e.target.value)} placeholder={t('insurer · policy number')} />
           </Field>
-          <label className="w-check">
-            <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} />
-            {t('I confirm that I am registered and authorised to practise in the territory above, that I practise from it, and that no disciplinary proceedings are outstanding against me (P2.1, P2.3).')}
-          </label>
           <Field label={t('GLCP certification number')} hint={t('cross-validated with the training platform')} error={err('glcpNumber')}>
             <input className="w-input" value={form.glcpNumber} onChange={(e) => set({ glcpNumber: e.target.value })} onBlur={() => blur('glcpNumber')} />
           </Field>
@@ -251,6 +258,19 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
               />
             </label>
           </Field>
+
+          {/* THE DECLARATION GOES LAST. It sat between the insurance dates
+              and the GLCP number, so somebody confirmed under their own
+              registration that nothing was outstanding against them and
+              then carried on filling in four more fields — reported as "the
+              acceptance of terms is in the middle of the input fields
+              instead of being the last to accept". A declaration is about
+              what is written above it, so it belongs below all of it, next
+              to the button that sends it. */}
+          <label className="w-check w-check--last">
+            <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} />
+            {t('I confirm that I am registered and authorised to practise in the territory above, that I practise from it, and that no disciplinary proceedings are outstanding against me (P2.1, P2.3).')}
+          </label>
         </div>
 
         {sendErr && <p className="w-small w-err">{sendErr}</p>}
