@@ -27,6 +27,16 @@ export interface Company {
       CONTACT, not a login — the login is made by the person themselves at
       #hr with the code. */
   contactEmail: string | null
+  /** WHERE THE CONTRACT IS, as an ISO 3166-1 alpha-2 code: 'BR' or 'IT',
+      the two territories the service is offered in (`legal/market.ts`).
+
+      It belongs to the company and not to whoever registered its HR
+      account: the market decides the crisis numbers, the withdrawal
+      period, the governing annex of the Terms and the supervisory
+      authority, so it cannot be inherited from the country one employee
+      happens to live in. Null on a company sold before this field existed;
+      the company panel then shows the field empty rather than guessing. */
+  country: string | null
   /** How many people this company may register. */
   seats: number
   /** Employees currently provisioned. */

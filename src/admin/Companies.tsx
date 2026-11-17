@@ -27,6 +27,8 @@ import { st } from '../sales/i18n'
 import { ConsoleModal } from './ConsoleModal'
 import { explainWriteError } from './writeError'
 import { useAuth } from '../auth/auth'
+import { useI18n } from '../i18n'
+import { SUPPORTED_COUNTRIES } from '../legal/market'
 import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
@@ -37,6 +39,8 @@ import type { AddonPlan } from '../gamification/company'
 export function Companies({ actor }: { actor: string }) {
   const dp = useDataProvider()
   const { role } = useAuth()
+  /* The country names are offered in the console's own language. */
+  const { locale } = useI18n()
 
   /* ---- WHO MAY ISSUE A THERAPIST ACTIVATION CODE -----------------------
 
@@ -81,6 +85,12 @@ export function Companies({ actor }: { actor: string }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [seats, setSeats] = useState('100')
+  /* WHERE THE CONTRACT IS. Asked here, by the team that sells it, because
+     the market decides the crisis numbers, the withdrawal period, the
+     governing annex of the Terms and the supervisory authority — none of
+     which can be inherited from the country one employee lives in. No
+     default: a pre-filled jurisdiction is how the wrong one gets saved. */
+  const [country, setCountry] = useState('')
   const [contact, setContact] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -132,13 +142,14 @@ export function Companies({ actor }: { actor: string }) {
 
   async function create() {
     const n = name.trim()
-    if (!n || !finalCode || codeTaken || codeBad) return
+    if (!n || !finalCode || codeTaken || codeBad || !country) return
     const company: Company = {
       // the id IS the code: one string identifies the company, opens the
       // company panel for its HR admin, and links an employee's account
       id: finalCode,
       name: n,
       contactEmail: contact.trim() || null,
+      country,
       seats: Math.max(1, parseInt(seats, 10) || 0),
       activeUsers: 0,
       status: 'active',
@@ -171,7 +182,7 @@ export function Companies({ actor }: { actor: string }) {
       }
     }
     setBusy(false)
-    setName(''); setSeats('100'); setCode(''); setPlanId(''); setContact(''); setAdding(false); setSaveError(null)
+    setName(''); setSeats('100'); setCode(''); setPlanId(''); setContact(''); setCountry(''); setAdding(false); setSaveError(null)
     setMade(company)
     refetch()
   }
@@ -247,6 +258,16 @@ export function Companies({ actor }: { actor: string }) {
               <span className="adm-form__hint">{st('A chi mandare il codice. Non crea un login: lo apre la persona stessa, dalla pagina di accesso.')}</span>
             </label>
             <label className="adm-form__field">
+              <span className="b2b-label">{st('Paese del contratto')} *</span>
+              <select className="b2b-input" value={country} onChange={(e) => setCountry(e.target.value)}>
+                <option value="">{st('Scegli il paese')}</option>
+                {SUPPORTED_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
+              </select>
+              <span className="adm-form__hint">
+                {st('Decide i numeri di emergenza, il recesso, l’allegato dei Termini e l’autorità di controllo. L’azienda lo vede nel suo pannello e non può cambiarlo.')}
+              </span>
+            </label>
+            <label className="adm-form__field">
               <span className="b2b-label">{st('Quante persone può registrare')} *</span>
               <input className="b2b-input" type="number" min={1} value={seats} onChange={(e) => setSeats(e.target.value)} />
               <span className="adm-form__hint">{st('Il numero di dipendenti coperti dal contratto.')}</span>
@@ -271,7 +292,7 @@ export function Companies({ actor }: { actor: string }) {
             <button className="b2b-btn b2b-btn--ghost" onClick={() => { setAdding(false); setSaveError(null) }}>{st('Annulla')}</button>
             <button
               className="b2b-btn b2b-btn--primary"
-              disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad}
+              disabled={busy || !name.trim() || !finalCode || codeTaken || codeBad || !country}
               onClick={create}
             >
               {st('Crea')}

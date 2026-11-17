@@ -291,7 +291,7 @@ function mapPartnerProduct(r: any): PartnerProduct {
 }
 
 function mapCompany(r: any): Company {
-  return { id: r.id, name: r.name, contactEmail: r.contact_email ?? null, seats: r.seats ?? 0, activeUsers: r.active_users ?? 0, status: r.status === 'paused' ? 'paused' : 'active', createdAt: toMs(r.created_at) }
+  return { id: r.id, name: r.name, contactEmail: r.contact_email ?? null, country: r.country ?? null, seats: r.seats ?? 0, activeUsers: r.active_users ?? 0, status: r.status === 'paused' ? 'paused' : 'active', createdAt: toMs(r.created_at) }
 }
 function mapAdminUser(r: any): AdminUser {
   return { id: r.id, name: r.name ?? '', email: r.email ?? '', role: (r.role as UserRole) ?? 'b2c_user', companyId: r.company_id ?? undefined, active: r.active !== false, createdAt: toMs(r.created_at) }
@@ -1245,7 +1245,7 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
       return (data ?? []).map(mapCompany)
     },
     async saveCompany(c: Company): Promise<void> {
-      const row = { id: c.id, name: c.name, contact_email: c.contactEmail, seats: c.seats, active_users: c.activeUsers, status: c.status, created_at: toIso(c.createdAt) }
+      const row = { id: c.id, name: c.name, contact_email: c.contactEmail, country: c.country, seats: c.seats, active_users: c.activeUsers, status: c.status, created_at: toIso(c.createdAt) }
       const { error } = await sb.from('companies').upsert(row, { onConflict: 'id' })
       if (error) throw error
     },

@@ -41,11 +41,23 @@ alter type therapist_status add value if not exists 'more_info';
 create table if not exists companies (
   id            text primary key,
   name          text not null,
+  -- WHERE THE CONTRACT IS: 'BR' or 'IT', the two territories the service is
+  -- offered in (src/legal/market.ts, D-12). It decides the crisis numbers,
+  -- the withdrawal period, the governing annex of the Terms and the
+  -- supervisory authority, so it belongs to the company and never to the
+  -- country one employee happens to live in. Asked by the commercial
+  -- console when the contract is sold; see supabase/35-company-country.sql.
+  country       text,
   seats         int  not null default 0,
   active_users  int  not null default 0,
   status        text not null default 'active',   -- 'active' | 'paused'
   created_at    timestamptz not null default now()
 );
+-- …and on a database created before that column existed.
+alter table companies add column if not exists country text;
+alter table companies drop constraint if exists companies_country_supported;
+alter table companies add constraint companies_country_supported
+  check (country is null or country in ('BR', 'IT'));
 
 create table if not exists profiles (
   id          uuid primary key default gen_random_uuid(),

@@ -60,6 +60,10 @@ export interface Tenant {
   companyId: string
   name: string
   code: string
+  /** ISO 3166-1 alpha-2, from the company's own record. Null for a tenant
+      whose row does not carry one — the built-in demo conventions, and any
+      company sold before the commercial console asked for it. */
+  country: string | null
   conventionType: ConventionType
   licences: number
   eap: EapContact | null
@@ -72,6 +76,9 @@ export function tenantFromConvention(c: Convention): Tenant {
     companyId: c.companyId,
     name: c.companyName,
     code: c.code,
+    /* A built-in convention carries no country of its own; the demo profile
+       below still supplies one for the four tenants that have one. */
+    country: null,
     conventionType: c.type,
     licences: c.licences,
     eap: c.eap,
@@ -86,18 +93,22 @@ export const FALLBACK_TENANT: Tenant = (() => {
   if (acme) return tenantFromConvention(acme)
   const now = Date.now()
   return {
-    companyId: 'acme', name: 'Acme Corporation', code: 'ACME-2026', conventionType: 'self-use-plus',
+    companyId: 'acme', name: 'Acme Corporation', code: 'ACME-2026', country: null, conventionType: 'self-use-plus',
     licences: 250, eap: null, startsAt: now - 328 * DAY, endsAt: now + 37 * DAY,
   }
 })()
 
 /** A code on the account that the registry does not (yet) know. */
-export function tenantFromCode(code: string, known?: { name: string; seats: number } | null): Tenant {
+export function tenantFromCode(
+  code: string,
+  known?: { name: string; seats: number; country?: string | null } | null,
+): Tenant {
   const now = Date.now()
   return {
     companyId: code,
     name: known?.name || code,
     code,
+    country: known?.country ?? null,
     conventionType: 'self-use',
     licences: known?.seats ?? 0,
     eap: null,
@@ -123,7 +134,13 @@ export function defaultState(tenant: Tenant = FALLBACK_TENANT): CorporateState {
     companyId: tenant.companyId,
     profile: {
       name: tenant.name,
-      country: p?.country ?? '',
+      /* THE COMPANY'S OWN COUNTRY FIRST. This used to be `DEMO_PROFILE`
+         alone, a table of four built-in tenants — so every company sold
+         through the console opened its Profile on an empty, locked Country
+         field, with no way to fill it. The row carries it now
+         (`admin/types.ts`), and the demo table is only the fallback for the
+         four that have no row. */
+      country: tenant.country || p?.country || '',
       industry: p?.industry ?? 'Other',
       size: p?.size ?? '1–50',
       contactName: '',
