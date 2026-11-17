@@ -114,6 +114,27 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   flex-direction: column;
 }
 
+/* ---- A FLOOR UNDER THE TYPE --------------------------------------------
+
+   This wizard was drawn to fit one phone screen without scrolling, and the
+   way it was made to fit was the type: 9.5px on a chip's own line, 10.5,
+   11, 11.5 across the rest, against 15–16px everywhere else in the app.
+   End-to-end testing put it plainly — "the texts seem to be very small, I'm
+   afraid they might be impossible to read on phone" — and on the legal
+   screen the 12px line was a CONSENT, which is the one thing in the product
+   that has to be read rather than glanced at.
+
+   So nothing here goes below 12.5px any more, except an uppercase eyebrow
+   at 11.5 where the letter-spacing does the reading, and a chip's second
+   line at 12 so it stays under its own 13px title.
+
+   WHAT MAKES THIS SAFE. The column below is the scroller and the button bar
+   is its SIBLING, pinned (`flex-shrink: 0`), so taller text can only make
+   the screen scroll — it cannot push the button out of reach. Fitting in
+   one screenful was the thing being traded away, and it was the cheaper of
+   the two.
+   ------------------------------------------------------------------------- */
+
 /* ---- the scroller, and the bar that does not scroll --------------------- */
 .frw__content {
   flex: 1 1 auto;
@@ -228,7 +249,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   color: var(--su-fg);
   font-family: var(--sans);
   font-weight: 700;
-  font-size: 11.5px;
+  font-size: 12.5px;
   letter-spacing: 0.04em;
 }
 .frw__lang svg { opacity: 0.7; flex: none; }
@@ -263,7 +284,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   border: 1px solid rgba(31, 191, 148, 0.35);
   font-family: var(--sans);
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--su-accent);
@@ -310,7 +331,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 .frw__stats span {
   font-family: var(--sans);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--su-muted);
 }
 
@@ -342,7 +363,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   display: block;
   margin-top: 2px;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--su-muted);
 }
 
@@ -392,13 +413,13 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 .frw__chips b {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.25;
   color: var(--su-cream);
 }
 .frw__chips span {
   font-family: var(--sans);
-  font-size: 9.5px;
+  font-size: 12px;
   line-height: 1.3;
   color: var(--su-accent);
 }
@@ -437,7 +458,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 .frw__credit span {
   display: block;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.35;
   color: var(--su-muted);
 }
@@ -514,7 +535,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   text-decoration: underline;
   cursor: pointer;
 }
-.frw__links--fine .frw__link { font-size: 11.5px; color: var(--su-muted); }
+.frw__links--fine .frw__link { font-size: 12.5px; color: var(--su-muted); }
 .frw__link:hover { color: var(--su-accent-2); }
 
 /* The two acceptances. The wizard's own row, 20px box in accent, 13.5px
@@ -555,7 +576,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 .frw__foot {
   margin: auto 0 0;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.4;
   color: var(--su-faint);
 }
@@ -564,7 +585,7 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
 .frw__sub {
   margin: 0;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.5;
   color: var(--su-faint);
 }
@@ -580,11 +601,11 @@ html[data-su-theme='light'].gl2 .su-shell:has(> .frw.app-frame) {
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 .frw .consent-row__title { font-family: var(--display); font-weight: 800; font-size: 13.5px; color: var(--su-cream); }
-.frw .consent-row__note { font-size: 12px; line-height: 1.5; color: var(--su-muted); }
+.frw .consent-row__note { font-size: 13px; line-height: 1.5; color: var(--su-muted); }
 .frw .consent-row__foot { border-top-color: var(--su-hair); }
-.frw .consent-row__state { font-size: 11.5px; color: var(--su-muted); }
-.frw .consent-row__more > summary { color: var(--su-accent); font-size: 11.5px; }
-.frw .legal-consent__hint { display: block; margin-top: 6px; font-size: 11.5px; line-height: 1.5; color: var(--su-muted); }
+.frw .consent-row__state { font-size: 12.5px; color: var(--su-muted); }
+.frw .consent-row__more > summary { color: var(--su-accent); font-size: 12.5px; }
+.frw .legal-consent__hint { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: var(--su-muted); }
 .frw .switch { background: var(--su-fill-2); }
 .frw .switch.is-on { background: var(--su-accent); }
 .frw__consents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
