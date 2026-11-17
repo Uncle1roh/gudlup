@@ -97,7 +97,7 @@ assert(queue.map((a) => a.slug).join() === 'first_loop,stereo_ready,deep_dive', 
 const sheet = renderToString(h(FixedLocale, { locale: 'pt-BR' }, h(UnlockSheet, { queue, onSeeAll: () => {}, onClose: () => {} })))
 assert(sheet.includes('Conquista desbloqueada'), 'sheet: eyebrow "Conquista desbloqueada"')
 assert(sheet.includes('Primeiro Loop'), 'sheet: the first unlock is shown first')
-assert(sheet.includes('+20 Loops de bônus'), 'sheet: the bonus pill reads "+20 Loops de bônus"')
+assert(sheet.includes('+20 LOOPS de bônus'), 'sheet: the bonus pill reads "+20 LOOPS de bônus"')
 assert(sheet.includes('1 de 3'), 'sheet: three unlocks queue into one sheet with a pager')
 assert(sheet.includes('Ver minhas conquistas') && sheet.includes('Agora não'), 'sheet: "Ver minhas conquistas" and "Agora não"')
 assert(!pointsWord.test(sheet.replace(/<[^>]+>/g, ' ')), 'sheet: no points anywhere')

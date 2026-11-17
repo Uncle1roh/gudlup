@@ -77,7 +77,7 @@ const DOORS: { id: Exclude<LoopsView, 'hub'>; icon: IconName; label: string; abo
     id: 'prizes',
     icon: 'partners',
     label: 'Prizes',
-    about: 'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.',
+    about: 'Care that comes back to you: exchange your LOOPS for something that looks after your body or your mind.',
   },
 ]
 
@@ -105,8 +105,8 @@ export function LoopsTab({ name, hasCompany, view, onView, onStartSession }: Loo
     return (
       <>
         <TopBar name={name} />
-        <button className="su-back" onClick={() => onView('hub')}>‹ {t('Loops')}</button>
-        <PageTitle title={t(door?.label ?? 'Loops')} note={door ? t(door.about) : undefined} />
+        <button className="su-back" onClick={() => onView('hub')}>‹ {t('LOOPS')}</button>
+        <PageTitle title={t(door?.label ?? 'LOOPS')} note={door ? t(door.about) : undefined} />
         {view === 'achievements' && <Conquistas onGoRankings={() => onView('rankings')} />}
         {view === 'challenges' && <ChallengesTab hasCompany={hasCompany} onStartSession={onStartSession} />}
         {view === 'rankings' && <RankingsTab />}
@@ -118,7 +118,7 @@ export function LoopsTab({ name, hasCompany, view, onView, onStartSession }: Loo
     <>
       <TopBar name={name} />
       {/* The definition, in the words the popup uses. */}
-      <PageTitle title={t('Loops')} note={t(LOOPS_EXPLAINER)} />
+      <PageTitle title={t('LOOPS')} note={t(LOOPS_EXPLAINER)} />
 
       <div className="g2x2 lp2-doors">
         {DOORS.map((d) => (

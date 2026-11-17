@@ -59,7 +59,7 @@ export const PT_SALES: Record<string, string> = {
   'Filtro': 'Filtro',
   'Tag': 'Tags',
   'Partner': 'Parceiro',
-  'Loops': 'Loops',
+  'LOOPS': 'LOOPS',
   'Pubblica': 'Publicar',
   'Archivia': 'Arquivar',
   'Nome *': 'Nome *',
@@ -82,8 +82,8 @@ export const PT_SALES: Record<string, string> = {
   'A chi mandare il codice. Non crea un login: lo apre la persona stessa, dalla pagina di accesso.':
     'Para quem enviar o código. Não cria um login: a própria pessoa o abre, na página de acesso.',
   'Il numero di dipendenti coperti dal contratto.': 'O número de funcionários cobertos pelo contrato.',
-  'Senza piano i Loops valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».':
-    'Sem plano os Loops valem 1×. Dá para atribuir depois, em «Planos e multiplicadores».',
+  'Senza piano i LOOPS valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».':
+    'Sem plano os LOOPS valem 1×. Dá para atribuir depois, em «Planos e multiplicadores».',
   'Mandalo a {email} — con questo codice apre il pannello aziendale dalla pagina di accesso.':
     'Envie para {email} — com este código ela abre o painel da empresa pela página de acesso.',
   'ES. BENVENUTO10': 'EX. BEMVINDO10',
@@ -119,8 +119,8 @@ export const PT_SALES: Record<string, string> = {
   'Azienda creata, ma il piano non è stato applicato: {err}':
     'Empresa criada, mas o plano não foi aplicado: {err}',
   'Assegnalo da “Piani e moltiplicatori”.': 'Atribua em “Planos e multiplicadores”.',
-  'Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.':
-    'Com o {plan}, os Loops da escuta valem {mult}× para quem é desta empresa, enquanto a assinatura estiver ativa. Vale para as sessões que terminarem a partir de agora: nada é recalculado para trás.',
+  'Con {plan} i LOOPS dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.':
+    'Com o {plan}, os LOOPS da escuta valem {mult}× para quem é desta empresa, enquanto a assinatura estiver ativa. Vale para as sessões que terminarem a partir de agora: nada é recalculado para trás.',
   'Il codice azienda è anche l’accesso: con questo codice l’HR si registra dalla pagina di accesso e apre il pannello aziendale, e i dipendenti lo inseriscono alla registrazione per essere collegati.':
     'O código da empresa também é o acesso: com ele o RH se cadastra pela página de acesso e abre o painel da empresa, e os funcionários o informam no cadastro para serem vinculados.',
 
@@ -151,8 +151,8 @@ export const PT_SALES: Record<string, string> = {
     'Vale a partir de agora: as sessões já creditadas não mudam.',
   'L’id usa solo lettere minuscole, cifre e _.': 'O id usa apenas letras minúsculas, números e _.',
   'Il moltiplicatore va da 1 a 5.': 'O multiplicador vai de 1 a 5.',
-  'Il moltiplicatore tocca solo i Loops dell’ascolto: mai i Punti, le classifiche, le conquiste, le sfide o i bonus.':
-    'O multiplicador afeta apenas os Loops da escuta: nunca os Pontos, os rankings, as conquistas, os desafios ou os bônus.',
+  'Il moltiplicatore tocca solo i LOOPS dell’ascolto: mai i Punti, le classifiche, le conquiste, le sfide o i bonus.':
+    'O multiplicador afeta apenas os LOOPS da escuta: nunca os Pontos, os rankings, as conquistas, os desafios ou os bônus.',
 
   /* ---- Codici promo ---- */
   'Codici promo': 'Códigos promocionais',
@@ -226,8 +226,8 @@ export const PT_SALES: Record<string, string> = {
   'Una durata valida': 'Uma duração válida',
   'La fine viene dopo l’inizio': 'O fim vem depois do início',
   'C’è un premio': 'Há um prêmio',
-  'C’è un premio: Loops bonus e/o un beneficio esclusivo':
-    'Há um prêmio: Loops bônus e/ou um benefício exclusivo',
+  'C’è un premio: LOOPS bonus e/o un beneficio esclusivo':
+    'Há um prêmio: LOOPS bônus e/ou um benefício exclusivo',
   'Obiettivo valido (e un minimo a persona, se collettiva)':
     'Meta válida (e um mínimo por pessoa, se coletiva)',
   'Obiettivo valido (e un minimo per persona, se collettiva)':
@@ -246,7 +246,7 @@ export const PT_SALES: Record<string, string> = {
   'Consegna': 'Entrega',
   'Titolo *': 'Título *',
   'Descrizione': 'Descrição',
-  'Prezzo in Loops': 'Preço em Loops',
+  'Prezzo in LOOPS': 'Preço em LOOPS',
   'Riscatti per persona': 'Resgates por pessoa',
   'Valido dal': 'Válido de',
   'Valido fino al': 'Válido até',
@@ -274,10 +274,10 @@ export const PT_SALES: Record<string, string> = {
   'Serve almeno un tag per pubblicare un beneficio goodloop.':
     'É preciso ao menos uma tag para publicar um benefício goodloop.',
   'Rimborsare «{title}» a {who}?': 'Estornar «{title}» para {who}?',
-  'I Loops tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.':
-    'Os Loops voltam para o saldo da pessoa e a unidade fica disponível de novo. Um código já exibido não é reatribuído.',
-  'Cura che torna alla persona, scambiata con i Loops. {n} benefici goodloop, {active} attivi.':
-    'Cuidado que volta para a pessoa, trocado por Loops. {n} benefícios goodloop, {active} ativos.',
+  'I LOOPS tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.':
+    'Os LOOPS voltam para o saldo da pessoa e a unidade fica disponível de novo. Um código já exibido não é reatribuído.',
+  'Cura che torna alla persona, scambiata con i LOOPS. {n} benefici goodloop, {active} attivi.':
+    'Cuidado que volta para a pessoa, trocado por LOOPS. {n} benefícios goodloop, {active} ativos.',
   'Un codice per riga (o un CSV: conta la prima colonna). I doppioni si saltano. Dopo il caricamento i codici non si rileggono: li vedrà solo chi li riceve.':
     'Um código por linha (ou um CSV: vale a primeira coluna). Duplicados são ignorados. Depois do envio os códigos não são mais legíveis: só quem recebe os vê.',
   'Nessun conto alla rovescia, nessun prezzo barrato, nessun «ultime unità»: l’app non li mostra e il testo non deve suggerirli.':
@@ -343,7 +343,7 @@ export const PT_SALES: Record<string, string> = {
   '(minuti)': '(minutos)',
   'Dalle (ora)': 'Das (hora)',
   'Alle (ora)': 'Às (hora)',
-  'Loops bonus (mai moltiplicati)': 'Loops bônus (nunca multiplicados)',
+  'LOOPS bonus (mai moltiplicati)': 'LOOPS bônus (nunca multiplicados)',
   'Obiettivo proposto': 'Meta proposta',
   'Durata proposta (giorni)': 'Duração proposta (dias)',
   'Link per usarlo': 'Link para usar',
@@ -355,9 +355,9 @@ export const PT_SALES: Record<string, string> = {
   'Minimo a persona per il premio': 'Mínimo por pessoa para o prêmio',
   'Beneficio esclusivo': 'Benefício exclusivo',
   'Prodotto': 'Produto',
-  'Loops bonus': 'Loops bônus',
-  'Una campagna può dare Loops, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.':
-    'Uma campanha pode dar Loops, um produto do catálogo, ou os dois. Pelo menos um dos dois é obrigatório.',
+  'LOOPS bonus': 'LOOPS bônus',
+  'Una campagna può dare LOOPS, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.':
+    'Uma campanha pode dar LOOPS, um produto do catálogo, ou os dois. Pelo menos um dos dois é obrigatório.',
   'Accreditati a chi completa. Mai moltiplicati dal piano dell’azienda. Zero = nessun Loop.':
     'Creditados para quem concluir. Nunca multiplicados pelo plano da empresa. Zero = nenhum Loop.',
   'Dal catalogo di «Benefici e partner». {n} disponibili.':

@@ -828,7 +828,7 @@ function ImmersiveSession({
                 about the audio — and promises nothing about how the person
                 will feel afterwards (MN-05, M1-08). */}
             <div className="player__confirmbox fade-in">
-              <p>{t('If you stop now, this session earns no Loops — they are for the ones you go all the way through.')}</p>
+              <p>{t('If you stop now, this session earns no LOOPS — they are for the ones you go all the way through.')}</p>
               <p className="player__confirmwarm">{t('And the last minutes are the ones that bring you back gently. Stay with it if you can.')}</p>
               <div className="chip-row">
                 <button className="btn btn--light" onClick={() => setConfirmExit(false)}>{t('Keep listening')}</button>

@@ -44,7 +44,7 @@ const RULE_IT: Record<RuleId, string> = {
   R3: 'Le sessioni SOS non contano mai',
   R4: 'Nessuna squadra o piccolo gruppo: nazionale, regione, stato o città',
   dates: 'La fine viene dopo l’inizio',
-  reward: 'C’è un premio: Loops bonus e/o un beneficio esclusivo',
+  reward: 'C’è un premio: LOOPS bonus e/o un beneficio esclusivo',
   goal: 'Obiettivo valido (e un minimo per persona, se collettiva)',
 }
 const ICONS: IconName[] = ['flag', 'moon', 'sun', 'clock', 'wave', 'leaf', 'heart', 'run', 'coffee', 'spark', 'calendar', 'headphones', 'pin', 'globe']
@@ -180,7 +180,7 @@ export function Challenges({ actor }: { actor: string }) {
             <div>{new Date(r.startsAt).toLocaleDateString('it-IT')} – {new Date(r.endsAt).toLocaleDateString('it-IT')}</div>
             <div>{r.format === 'individual' ? st('Individuale') : st('Collettiva')} · {st(SCOPE_IT[r.scope])}{r.scopeRef ? ` ${scopeLabel(r.scope, r.scopeRef)}` : ''}</div>
             <div>{METRIC_IT[r.metric]}: {r.goalValue}{r.perPersonMin ? ` (min. ${r.perPersonMin} a persona)` : ''}</div>
-            <div>{[r.rewardBonusLoopsCenti ? `+${Math.floor(r.rewardBonusLoopsCenti / 100)} Loops` : null, r.rewardBenefitId ? benefitTitle.get(r.rewardBenefitId) ?? st('beneficio') : null].filter(Boolean).join(' · ')}</div>
+            <div>{[r.rewardBonusLoopsCenti ? `+${Math.floor(r.rewardBonusLoopsCenti / 100)} LOOPS` : null, r.rewardBenefitId ? benefitTitle.get(r.rewardBenefitId) ?? st('beneficio') : null].filter(Boolean).join(' · ')}</div>
             <div>{r.participants} / {r.completed}</div>
             <div><span className={`adm-pill ${r.status === 'active' ? 'adm-pill--ok' : 'adm-pill--warn'}`}>{st(STATUS_IT[r.status])}</span></div>
             <div className="adm-tr__right adm-benefit__acts">
@@ -425,11 +425,11 @@ function Editor({ draft, benefits, busy, error, onChange, onCancel, onSave }: {
               stock. */}
           {step === 3 && (
             <div className="adm-prize">
-              <p className="adm-muted">{st('Una campagna può dare Loops, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.')}</p>
+              <p className="adm-muted">{st('Una campagna può dare LOOPS, un prodotto del catalogo, o tutti e due. Almeno uno dei due è obbligatorio.')}</p>
 
               <div className="adm-prize__row">
                 <label className="adm-form__field">
-                  <span className="b2b-label">{st('Loops bonus')}</span>
+                  <span className="b2b-label">{st('LOOPS bonus')}</span>
                   <input
                     className="b2b-input"
                     type="number" min={0}

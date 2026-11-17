@@ -74,7 +74,7 @@ export function Plans({ actor }: { actor: string }) {
       <header className="adm-page__head adm-page__head--row">
         <div>
           <h1 className="b2b-h1">{st('Piani e aziende')}</h1>
-          <p className="b2b-sub">{st('Il moltiplicatore tocca solo i Loops dell’ascolto: mai i Punti, le classifiche, le conquiste, le sfide o i bonus.')}</p>
+          <p className="b2b-sub">{st('Il moltiplicatore tocca solo i LOOPS dell’ascolto: mai i Punti, le classifiche, le conquiste, le sfide o i bonus.')}</p>
         </div>
         {!draft && <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft({ id: '', name: '', multiplier: 1, companyChallenges: true, companyBenefits: true, tagFilter: true, active: true })}>{st('+ Nuovo piano')}</button>}
       </header>

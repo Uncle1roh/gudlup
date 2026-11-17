@@ -76,7 +76,7 @@ export function ChallengesTab({ hasCompany, onStartSession }: { hasCompany: bool
                       <span className="gam-history__title">{c.title}</span>
                       <span className="small">
                         {done
-                          ? [t('Completed'), c.rewardBonusLoopsCenti ? t('+{n} Loops', { n: String(displayLoops(c.rewardBonusLoopsCenti)) }) : null, c.myBenefitGranted && c.rewardBenefit ? c.rewardBenefit.title : null].filter(Boolean).join(' · ')
+                          ? [t('Completed'), c.rewardBonusLoopsCenti ? t('+{n} LOOPS', { n: String(displayLoops(c.rewardBonusLoopsCenti)) }) : null, c.myBenefitGranted && c.rewardBenefit ? c.rewardBenefit.title : null].filter(Boolean).join(' · ')
                           : `${t('You took part')} · ${challengeProgressText(t, c)}`}
                       </span>
                     </span>

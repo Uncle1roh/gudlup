@@ -68,7 +68,7 @@ const LABELS: Record<Dest, string> = {
   home: 'Home',
   therapy: 'Therapy',
   path: 'Guided care',
-  loops: 'Loops',
+  loops: 'LOOPS',
   profile: 'Profile',
 }
 

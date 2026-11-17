@@ -261,8 +261,8 @@ export function Companies({ actor }: { actor: string }) {
               </select>
               <span className="adm-form__hint">
                 {chosenPlan
-                  ? st('Con {plan} i Loops dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.', { plan: chosenPlan.name, mult: chosenPlan.multiplier })
-                  : st('Senza piano i Loops valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».')}
+                  ? st('Con {plan} i LOOPS dell’ascolto valgono {mult}× per chi è di questa azienda, finché l’abbonamento è attivo. Vale per le sessioni che finiscono da adesso: niente viene ricalcolato all’indietro.', { plan: chosenPlan.name, mult: chosenPlan.multiplier })
+                  : st('Senza piano i LOOPS valgono 1×. Si può assegnare anche dopo, in «Piani e moltiplicatori».')}
               </span>
             </label>
           </div>

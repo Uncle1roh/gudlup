@@ -84,7 +84,7 @@ export function buildDataExport(i: ExportInput) {
         savedList: nil(i.state.saved),
         pointsAndLoops: i.gamification
           ? {
-              note: 'Points count the minutes you listened and the sessions you completed; Loops come from Points and from bonuses, and are what you exchange for benefits. They are a tally of use — never a score about you or your health.',
+              note: 'Points count the minutes you listened and the sessions you completed; LOOPS come from Points and from bonuses, and are what you exchange for benefits. They are a tally of use — never a score about you or your health.',
               pointsTotal: i.gamification.wallet.pointsTotal,
               loopsBalance: i.gamification.wallet.loops,
               loopsLedger: nil(i.gamification.loops.map((e) => ({

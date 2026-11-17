@@ -188,7 +188,7 @@ export function progressKey(metric: AchievementMetric): { of: string; left: stri
 
    No forbidden word, no measurement word ("pontuação", "nível" — PLAN A6),
    and nothing a person could read as a score. */
-export const LOOPS_TITLE = 'What are Loops?'
+export const LOOPS_TITLE = 'What are LOOPS?'
 
 export const LOOPS_EXPLAINER =
   'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.'

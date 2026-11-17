@@ -85,14 +85,14 @@ export function GamReports() {
         <>
           <div className="adm-kpis">
             <div><strong>{r.pointsIssued.toLocaleString('it-IT')}</strong><span>Punti emessi</span></div>
-            <div><strong>{loops(issued.reduce((a, x) => a + x.centi, 0) - refunded)}</strong><span>Loops emessi</span></div>
-            <div><strong>{loops(redeemed - refunded)}</strong><span>Loops riscattati (netti)</span></div>
-            <div><strong>{loops(r.multiplierByCompanyMonth.reduce((a, m) => a + m.loopsCenti, 0))}</strong><span>Loops dal moltiplicatore</span></div>
+            <div><strong>{loops(issued.reduce((a, x) => a + x.centi, 0) - refunded)}</strong><span>LOOPS emessi</span></div>
+            <div><strong>{loops(redeemed - refunded)}</strong><span>LOOPS riscattati (netti)</span></div>
+            <div><strong>{loops(r.multiplierByCompanyMonth.reduce((a, m) => a + m.loopsCenti, 0))}</strong><span>LOOPS dal moltiplicatore</span></div>
           </div>
 
-          <h2 className="adm-h2">Loops per origine</h2>
+          <h2 className="adm-h2">LOOPS per origine</h2>
           <div className="adm-table adm-table--report2">
-            <div className="adm-tr adm-tr--head"><div>Origine</div><div>Pagati da</div><div>Movimenti</div><div className="adm-tr__right">Loops</div></div>
+            <div className="adm-tr adm-tr--head"><div>Origine</div><div>Pagati da</div><div>Movimenti</div><div className="adm-tr__right">LOOPS</div></div>
             {r.loopsBySource.map((x) => (
               <div className="adm-tr" key={`${x.entryType}|${x.fundingSource}`}>
                 <div>{ENTRY_IT[x.entryType] ?? x.entryType}</div><div>{x.fundingSource === 'company' ? 'Azienda' : 'goodloop'}</div>
@@ -106,7 +106,7 @@ export function GamReports() {
             <button className="b2b-btn b2b-btn--ghost" disabled={!r.multiplierByCompanyMonth.length} onClick={downloadBilling}>Scarica CSV per la fattura</button>
           </div>
           <div className="adm-table adm-table--report2">
-            <div className="adm-tr adm-tr--head"><div>Azienda</div><div>Mese</div><div>Persone</div><div className="adm-tr__right">Loops</div></div>
+            <div className="adm-tr adm-tr--head"><div>Azienda</div><div>Mese</div><div>Persone</div><div className="adm-tr__right">LOOPS</div></div>
             {r.multiplierByCompanyMonth.map((m) => (
               <div className="adm-tr" key={`${m.companyId}|${m.month}`}><div>{m.companyName}</div><div>{m.month.slice(0, 7)}</div><div>{m.people}</div><div className="adm-tr__right">{loops(m.loopsCenti)}</div></div>
             ))}
@@ -115,7 +115,7 @@ export function GamReports() {
 
           <h2 className="adm-h2">Riscatti per beneficio</h2>
           <div className="adm-table adm-table--report2">
-            <div className="adm-tr adm-tr--head"><div>Beneficio</div><div>Riscatti</div><div>Rimborsati</div><div className="adm-tr__right">Loops</div></div>
+            <div className="adm-tr adm-tr--head"><div>Beneficio</div><div>Riscatti</div><div>Rimborsati</div><div className="adm-tr__right">LOOPS</div></div>
             {r.redemptionsByBenefit.map((b) => (
               <div className="adm-tr" key={b.benefitId}><div>{b.title}{b.companyId && <span className="adm-muted"> · {b.companyId}</span>}</div><div>{b.redemptions}</div><div>{b.refunded}</div><div className="adm-tr__right">{loops(b.loopsCenti)}</div></div>
             ))}

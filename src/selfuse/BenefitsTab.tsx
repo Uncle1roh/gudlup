@@ -116,7 +116,7 @@ export function BenefitsTab({ name, hasCompany, onBack, onStartSession, onSeeAch
           <span className="bn2-eyebrow">{t('Your care')}</span>
           <span className="bn2-balance">
             {displayLoops(wallet.balanceCenti).toLocaleString('pt-BR')}
-            <small>{t('Loops')}</small>
+            <small>{t('LOOPS')}</small>
           </span>
           {/* THE FIGURE HAS TO BE A REAL ONE (POs, 2026-11-06). On the
               first days of a month this read "você dedicou 0 min a você
@@ -133,7 +133,7 @@ export function BenefitsTab({ name, hasCompany, onBack, onStartSession, onSeeAch
               employer. Without a company code there is no employer to
               multiply anything. */}
           {hasCompany && wallet.multiplier !== null && (
-            <span className="call2-note">{t('Your company multiplies your Loops by {x}×', { x: wallet.multiplier.toLocaleString('pt-BR') })}</span>
+            <span className="call2-note">{t('Your company multiplies your LOOPS by {x}×', { x: wallet.multiplier.toLocaleString('pt-BR') })}</span>
           )}
           <div style={{ flex: 1 }} />
           <button type="button" className="glass-btn call2-pill" onClick={onStartSession}>{t('Start a session')}</button>
@@ -235,7 +235,7 @@ function Head({ onBack }: { onBack: () => void }) {
   const { t } = useI18n()
   return (
     <>
-      <button className="su-back" onClick={onBack}>‹ {t('Loops')}</button>
+      <button className="su-back" onClick={onBack}>‹ {t('LOOPS')}</button>
       <PageTitle title={t('Prizes')} note={t('Care that comes back to you.')} />
     </>
   )
@@ -248,9 +248,9 @@ function priceLine(t: ReturnType<typeof useI18n>['t'], b: BenefitView, wallet: W
   const missing = missingLoops(price, wallet.balanceCenti)
   if (missing > 0) {
     const n = standardSessionsFor(price - wallet.balanceCenti, cfg, wallet.multiplier)
-    return { can: false, text: t('{n} Loops to go · about {s} Standard sessions', { n: String(missing), s: String(n) }) }
+    return { can: false, text: t('{n} LOOPS to go · about {s} Standard sessions', { n: String(missing), s: String(n) }) }
   }
-  return { can: true, text: price > 0 ? t('Exchange for {n} Loops', { n: String(displayLoops(price)) }) : t('Redeem') }
+  return { can: true, text: price > 0 ? t('Exchange for {n} LOOPS', { n: String(displayLoops(price)) }) : t('Redeem') }
 }
 
 function BenefitCard({ b, wallet, cfg, onOpen }: { b: BenefitView; wallet: Wallet; cfg: EconomySettings; onOpen: () => void }) {
@@ -274,7 +274,7 @@ function BenefitCard({ b, wallet, cfg, onOpen }: { b: BenefitView; wallet: Walle
 const REFUSAL_TEXT: Record<string, string> = {
   BENEFIT_UNAVAILABLE: 'This benefit is no longer available to you.',
   BENEFIT_LIMIT: 'You have already redeemed this benefit.',
-  BENEFIT_BALANCE: 'You do not have enough Loops for this one yet.',
+  BENEFIT_BALANCE: 'You do not have enough LOOPS for this one yet.',
   BENEFIT_STOCK: 'This benefit is not available right now.',
   BENEFIT_NEEDS_CONSENT: 'To redeem this benefit, confirm that your details may be shared.',
 }
@@ -339,7 +339,7 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
         {step === 'confirm' && (
           <>
             <p className="gam-sheet__ask">
-              {price > 0 ? t('Exchange {n} Loops for this benefit?', { n: String(price) }) : t('Redeem this benefit?')}
+              {price > 0 ? t('Exchange {n} LOOPS for this benefit?', { n: String(price) }) : t('Redeem this benefit?')}
             </p>
             {identified && (
               <div className="gam-shared">
@@ -362,7 +362,7 @@ function BenefitSheet({ b, wallet, cfg, onClose, onRedeemed }: { b: BenefitView;
             )}
             {error && <p className="small" role="alert">{error}</p>}
             <button className="btn btn--primary" disabled={busy || (identified && !consent) || (needsNumber && !employeeNumber.trim())} onClick={() => void redeem()}>
-              {busy ? t('Redeeming…') : price > 0 ? t('Exchange {n} Loops', { n: String(price) }) : t('Redeem')}
+              {busy ? t('Redeeming…') : price > 0 ? t('Exchange {n} LOOPS', { n: String(price) }) : t('Redeem')}
             </button>
             <button className="btn btn--ghost" onClick={() => setStep('detail')}>{t('Back')}</button>
           </>
@@ -408,7 +408,7 @@ function MyBenefit({ r }: { r: Redemption }) {
       <p className="gam-benefit__title">{r.title}</p>
       {r.partnerName && <p className="small muted">{r.partnerName}</p>}
       {r.status === 'refunded'
-        ? <p className="small muted">{t('Returned — the Loops are back in your balance.')}</p>
+        ? <p className="small muted">{t('Returned — the LOOPS are back in your balance.')}</p>
         : <Delivery code={r.code} link={r.link} expiresAt={r.expiresAt} />}
       {r.terms && <p className="small muted">{r.terms}</p>}
     </div>

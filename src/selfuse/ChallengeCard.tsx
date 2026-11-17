@@ -27,7 +27,7 @@ export function challengeProgressText(t: ReturnType<typeof useI18n>['t'], c: Cha
 
 export function challengeRewardText(t: ReturnType<typeof useI18n>['t'], c: ChallengeView): string | null {
   const parts: string[] = []
-  if (c.rewardBonusLoopsCenti) parts.push(t('+{n} Loops', { n: String(displayLoops(c.rewardBonusLoopsCenti)) }))
+  if (c.rewardBonusLoopsCenti) parts.push(t('+{n} LOOPS', { n: String(displayLoops(c.rewardBonusLoopsCenti)) }))
   if (c.rewardBenefit) parts.push(c.rewardBenefit.title)
   return parts.length ? parts.join(' · ') : null
 }

@@ -46,7 +46,7 @@ export function UnlockSheet({
         <h2 id="gam-unlock-title" className="display gam-unlock__name">{t(copy.name)}</h2>
         <p className="gam-unlock__line">{t(copy.unlocked)}</p>
         {a.bonusLoopsCenti > 0 && (
-          <p className="gam-pill">{t('+{n} Loops bonus', { n: String(displayLoops(a.bonusLoopsCenti)) })}</p>
+          <p className="gam-pill">{t('+{n} LOOPS bonus', { n: String(displayLoops(a.bonusLoopsCenti)) })}</p>
         )}
         {many && (
           <div className="gam-pager" role="group" aria-label={t('{i} of {n}', { i: String(i + 1), n: String(queue.length) })}>

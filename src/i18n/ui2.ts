@@ -45,7 +45,7 @@ export const IT_UI2: Record<string, string> = {
   'My journey': 'Il mio viaggio',
 
   /* the library */
-  '{n} Loops': '{n} Loops',
+  '{n} LOOPS': '{n} LOOPS',
   'Results for “{q}”': 'Risultati per “{q}”',
   'Add to My List': 'Aggiungi alla mia lista',
 
@@ -137,7 +137,7 @@ export const IT_UI2: Record<string, string> = {
   /* `LOOPS_EXPLAINER` (gamification/copy.ts): lo stesso testo per il popup
      della pastiglia e per il sottotitolo della schermata. Niente genere:
      non è stato chiesto niente al riguardo. */
-  'What are Loops?': 'Che cosa sono i Loops?',
+  'What are LOOPS?': 'Che cosa sono i LOOPS?',
   'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.':
     'Un Loop è un minuto di cura per la tua mente: quando porti a termine un protocollo, ogni minuto che hai ascoltato diventa un Loop. Esistono per la tua salute e per nient’altro — mai per il tempo che passi davanti a uno schermo — e non si possono acquistare.',
   'Prizes': 'Premi',
@@ -148,14 +148,14 @@ export const IT_UI2: Record<string, string> = {
     'Qualcosa a cui partecipare per qualche giorno o per un mese — per conto tuo, con la tua città o con la tua azienda.',
   'How your city, your state and your region are taking care of themselves. Places only — never people, never names.':
     'Come la tua città, il tuo stato e la tua regione si prendono cura di sé. Solo luoghi — mai persone, mai nomi.',
-  'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
-    'La cura che torna a te: scambia i tuoi Loops con qualcosa che si prende cura del tuo corpo o della tua mente.',
+  'Care that comes back to you: exchange your LOOPS for something that looks after your body or your mind.':
+    'La cura che torna a te: scambia i tuoi LOOPS con qualcosa che si prende cura del tuo corpo o della tua mente.',
   /* ---- la pastiglia dell'umore, e l'avviso quando si esce ---- */
   'No reading yet today': 'Oggi non hai ancora risposto',
   'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
     'Il colore di ogni giorno è quello che hai risposto alla fine della seduta svolta. Un giorno con due risposte porta due colori.',
-  'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
-    'Se ti fermi adesso, questa seduta non dà Loops: sono per quelle che porti fino in fondo.',
+  'If you stop now, this session earns no LOOPS — they are for the ones you go all the way through.':
+    'Se ti fermi adesso, questa seduta non dà LOOPS: sono per quelle che porti fino in fondo.',
   'And the last minutes are the ones that bring you back gently. Stay with it if you can.':
     'E gli ultimi minuti sono quelli che ti riportano qui con calma. Resta, se puoi.',
 
@@ -203,7 +203,7 @@ export const PT_UI2: Record<string, string> = {
   'My journey': 'Minha jornada',
 
   /* the library */
-  '{n} Loops': '{n} Loops',
+  '{n} LOOPS': '{n} LOOPS',
   'Results for “{q}”': 'Resultados para “{q}”',
   'Add to My List': 'Adicionar à minha lista',
 
@@ -295,7 +295,7 @@ export const PT_UI2: Record<string, string> = {
   /* `LOOPS_EXPLAINER` (gamification/copy.ts): o mesmo texto no popup da
      pastilha e no subtítulo da tela — uma definição só. Sem gênero em
      nenhuma frase: nada foi perguntado sobre isso. */
-  'What are Loops?': 'O que são os Loops?',
+  'What are LOOPS?': 'O que são os LOOPS?',
   'A Loop is a minute of care for your mind: when you finish a protocol, every minute you listened becomes one Loop. They exist for your health and nothing else — never for the time you spend on a screen — and they can never be bought.':
     'Um Loop é um minuto de cuidado com a sua mente: quando você termina um protocolo, cada minuto que ouviu vira um Loop. Eles existem pela sua saúde e por nada mais — nunca pelo tempo que você passa numa tela — e nunca podem ser adquiridos.',
   'Prizes': 'Prêmios',
@@ -306,14 +306,14 @@ export const PT_UI2: Record<string, string> = {
     'Algo de que participar por alguns dias ou por um mês — por conta própria, com a sua cidade ou com a sua empresa.',
   'How your city, your state and your region are taking care of themselves. Places only — never people, never names.':
     'Como a sua cidade, o seu estado e a sua região estão cuidando de si. Só lugares — nunca pessoas, nunca nomes.',
-  'Care that comes back to you: exchange your Loops for something that looks after your body or your mind.':
-    'O cuidado que volta para você: troque seus Loops por algo que cuide do seu corpo ou da sua mente.',
+  'Care that comes back to you: exchange your LOOPS for something that looks after your body or your mind.':
+    'O cuidado que volta para você: troque seus LOOPS por algo que cuide do seu corpo ou da sua mente.',
   /* ---- a pastilha do humor, e o aviso ao sair ---- */
   'No reading yet today': 'Hoje você ainda não respondeu',
   'Each day’s colour is what you answered at the end of the session you did. A day with two answers carries two colours.':
     'A cor de cada dia reflete o que você respondeu no fim da sessão realizada. Um dia com duas respostas carrega duas cores.',
-  'If you stop now, this session earns no Loops — they are for the ones you go all the way through.':
-    'Se você parar agora, esta sessão não dá Loops: eles são para as que você leva até o fim.',
+  'If you stop now, this session earns no LOOPS — they are for the ones you go all the way through.':
+    'Se você parar agora, esta sessão não dá LOOPS: eles são para as que você leva até o fim.',
   'And the last minutes are the ones that bring you back gently. Stay with it if you can.':
     'E os últimos minutos são os que trazem você de volta com calma. Fique, se puder.',
 

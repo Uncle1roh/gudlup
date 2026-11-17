@@ -167,7 +167,7 @@ function AchievementSheet({ a, part, onClose, onGoRankings }: { a: AchievementVi
         {locked
           ? <span className="gam-chip gam-chip--muted">{t('Locked')}</span>
           : <span className="gam-chip gam-chip--done">{t('Unlocked on {date}', { date: d(a.unlockedAt!, { day: 'numeric', month: 'long', year: 'numeric' }) })}</span>}
-        {a.bonusLoopsCenti > 0 && <span className="gam-pill">{t('+{n} Loops bonus', { n: String(displayLoops(a.bonusLoopsCenti)) })}</span>}
+        {a.bonusLoopsCenti > 0 && <span className="gam-pill">{t('+{n} LOOPS bonus', { n: String(displayLoops(a.bonusLoopsCenti)) })}</span>}
       </div>
 
       {!locked && <p className="gam-ach__line">{t(copy.unlocked)}</p>}

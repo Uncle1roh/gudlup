@@ -81,7 +81,7 @@ export function Benefits({ actor }: { actor: string }) {
   async function refund(r: AdminRedemption) {
     if (!window.confirm(st('Rimborsare «{title}» a {who}?', { title: r.title, who: r.userLabel })
       + String.fromCharCode(10, 10)
-      + st('I Loops tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.'))) return
+      + st('I LOOPS tornano nel saldo della persona e l’unità torna disponibile. Un codice già mostrato non viene riassegnato.'))) return
     setBusy(true); setError(null)
     try {
       await dp.adminRefundRedemption(r.id)
@@ -101,7 +101,7 @@ export function Benefits({ actor }: { actor: string }) {
         <div>
           <h1 className="b2b-h1">{st('Benefici')}</h1>
           <p className="b2b-sub">
-            {st('Cura che torna alla persona, scambiata con i Loops. {n} benefici goodloop, {active} attivi.', { n: goodloop.length, active: goodloop.filter((b) => b.status === 'active').length })}
+            {st('Cura che torna alla persona, scambiata con i LOOPS. {n} benefici goodloop, {active} attivi.', { n: goodloop.length, active: goodloop.filter((b) => b.status === 'active').length })}
           </p>
         </div>
         {!draft && view === 'catalog' && <button className="b2b-btn b2b-btn--primary" onClick={() => setDraft(blank())}>{st('+ Nuovo beneficio')}</button>}
@@ -129,7 +129,7 @@ export function Benefits({ actor }: { actor: string }) {
       {view === 'catalog' && (
         <div className="adm-table adm-table--benefits">
           <div className="adm-tr adm-tr--head">
-            <div>{st('Beneficio')}</div><div>{st('Pilastro')}</div><div>{st('Loops')}</div><div>{st('Consegna')}</div><div>{st('Tag')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azioni')}</div>
+            <div>{st('Beneficio')}</div><div>{st('Pilastro')}</div><div>{st('LOOPS')}</div><div>{st('Consegna')}</div><div>{st('Tag')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azioni')}</div>
           </div>
           {list.map((b) => (
             <div className={`adm-tr${b.status === 'archived' ? ' is-inactive' : ''}`} key={b.id}>
@@ -156,7 +156,7 @@ export function Benefits({ actor }: { actor: string }) {
 
       {view === 'redemptions' && (
         <div className="adm-table adm-table--redemptions">
-          <div className="adm-tr adm-tr--head"><div>{st('Data')}</div><div>{st('Persona')}</div><div>{st('Beneficio')}</div><div>{st('Loops')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azione')}</div></div>
+          <div className="adm-tr adm-tr--head"><div>{st('Data')}</div><div>{st('Persona')}</div><div>{st('Beneficio')}</div><div>{st('LOOPS')}</div><div>{st('Stato')}</div><div className="adm-tr__right">{st('Azione')}</div></div>
           {redemptions.map((r) => (
             <div className={`adm-tr${r.status === 'refunded' ? ' is-inactive' : ''}`} key={r.id}>
               <div>{new Date(r.createdAt).toLocaleDateString('it-IT')}</div>
@@ -215,7 +215,7 @@ function Editor({ draft, tags, busy, onChange, onSave, onCancel }: {
           </select>
         </label>
         <label>
-          <span className="b2b-label">{st('Prezzo in Loops')}</span>
+          <span className="b2b-label">{st('Prezzo in LOOPS')}</span>
           <input className="b2b-input" type="number" min={0} step={1} disabled={onlyChallenge}
             value={onlyChallenge ? '' : Math.floor((draft.priceLoopsCenti ?? 0) / 100)}
             onChange={(e) => patch({ priceLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 })} />

@@ -32,14 +32,14 @@ export function LoopsChip({ loops }: { loops: number | null }) {
         aria-haspopup="dialog"
         /* The number is the label; the dialog's own heading says what it is
            about, so the button does not have to repeat it. */
-        aria-label={t('{n} Loops', { n: loops.toLocaleString() })}
+        aria-label={t('{n} LOOPS', { n: loops.toLocaleString() })}
       >
-        {t('{n} Loops', { n: loops.toLocaleString() })}
+        {t('{n} LOOPS', { n: loops.toLocaleString() })}
       </button>
 
       {open && (
         <GamDialog labelledBy="gl-loops-title" onClose={() => setOpen(false)} className="gam-about">
-          <p className="eyebrow">{t('{n} Loops', { n: loops.toLocaleString() })}</p>
+          <p className="eyebrow">{t('{n} LOOPS', { n: loops.toLocaleString() })}</p>
           <h2 id="gl-loops-title" className="display gam-unlock__name">{t(LOOPS_TITLE)}</h2>
           <p className="gam-unlock__line">{t(LOOPS_EXPLAINER)}</p>
           <button className="btn btn--primary" onClick={() => setOpen(false)}>{t('OK')}</button>

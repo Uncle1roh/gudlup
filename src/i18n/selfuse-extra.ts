@@ -361,7 +361,7 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   /* ---- the session flow ---- */
   "Let's check your headphones": 'Vamos verificar seus fones',
   'German': 'Alemão',
-  'End session early? Loops are for the sessions you finish.': 'Encerrar a sessão antes? Os Loops são para as sessões que você termina.',
+  'End session early? LOOPS are for the sessions you finish.': 'Encerrar a sessão antes? Os LOOPS são para as sessões que você termina.',
 
   /* ---- support ---- */
   "We're here to help you find support": 'Estamos aqui para ajudar você a encontrar apoio',

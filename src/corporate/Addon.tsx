@@ -51,7 +51,7 @@ export function AddonPlan({ addon }: { addon: AddonInfo }) {
       <PrivacyBanner />
       <div className="c-card">
         <h3 className="c-h3">{addon.planName}</h3>
-        <p className="c-lead">{t('Your people receive {x}× the Loops they earn by listening.', { x: addon.multiplier.toLocaleString('pt-BR') })}</p>
+        <p className="c-lead">{t('Your people receive {x}× the LOOPS they earn by listening.', { x: addon.multiplier.toLocaleString('pt-BR') })}</p>
         <table className="c-table">
           <tbody>
             <tr><td>{t('Company challenges')}</td><td>{yes(addon.companyChallenges)}</td></tr>
@@ -61,7 +61,7 @@ export function AddonPlan({ addon }: { addon: AddonInfo }) {
             {addon.endsAt && <tr><td>{t('Until')}</td><td>{fmtDate(addon.endsAt)}</td></tr>}
           </tbody>
         </table>
-        <p className="c-small">{t('The multiplier applies only to Loops from listening. It never changes rankings, achievements, challenge progress or bonuses.')}</p>
+        <p className="c-small">{t('The multiplier applies only to LOOPS from listening. It never changes rankings, achievements, challenge progress or bonuses.')}</p>
         <a className="c-btn c-btn--ghost" href="mailto:Suporte@goodloop.com.br?subject=Upgrade%20add-on">{t('Talk to us about your plan')}</a>
       </div>
     </section>
@@ -141,7 +141,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
           <div className="c-card"><span className="c-kpi__label">{t('Active challenges')}</span><span className="c-kpi__value">{dash.activeChallenges}</span></div>
           <div className="c-card"><span className="c-kpi__label">{t('Challenge adhesion')}</span>
             <span className="c-kpi__value">{active?.adhesionPct != null ? `${active.adhesionPct}%` : <Hidden k={k} />}</span></div>
-          <div className="c-card"><span className="c-kpi__label">{t('Loops from the multiplier this month')}</span>
+          <div className="c-card"><span className="c-kpi__label">{t('LOOPS from the multiplier this month')}</span>
             <span className="c-kpi__value">{dash.multiplierLoopsMonth != null ? dash.multiplierLoopsMonth.toLocaleString('pt-BR') : <Hidden k={k} />}</span></div>
           <div className="c-card"><span className="c-kpi__label">{t('Benefits redeemed this month')}</span>
             <span className="c-kpi__value">{dash.redemptionsMonth != null ? dash.redemptionsMonth : <Hidden k={k} />}</span></div>
@@ -173,7 +173,7 @@ export function AddonChallenges({ addon }: { addon: AddonInfo }) {
               <label className="c-field"><span className="c-field__label">{t('Sessions each person needs')}</span>
                 <input className="c-input" type="number" min={1} value={draft.perPersonMin ?? 1} onChange={(e) => setDraft({ ...draft, perPersonMin: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /></label>
             )}
-            <label className="c-field"><span className="c-field__label">{t('Bonus Loops (paid by the company)')}</span>
+            <label className="c-field"><span className="c-field__label">{t('Bonus LOOPS (paid by the company)')}</span>
               <input className="c-input" type="number" min={0} value={Math.floor((draft.rewardBonusLoopsCenti ?? 0) / 100)} onChange={(e) => setDraft({ ...draft, rewardBonusLoopsCenti: (Math.max(0, Math.round(Number(e.target.value) || 0)) * 100) || null })} /></label>
             {addon.companyBenefits && (
               <label className="c-field"><span className="c-field__label">{t('A company benefit as the reward')}</span>
@@ -383,7 +383,7 @@ function OwnBenefits() {
       )}
       {rows && rows.length > 0 && (
         <table className="c-table">
-          <thead><tr><th>{t('Benefit')}</th><th>{t('Delivery')}</th><th>{t('Loops')}</th><th>{t('Codes left')}</th><th>{t('Status')}</th><th /></tr></thead>
+          <thead><tr><th>{t('Benefit')}</th><th>{t('Delivery')}</th><th>{t('LOOPS')}</th><th>{t('Codes left')}</th><th>{t('Status')}</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
