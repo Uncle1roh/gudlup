@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n, fmtDate } from '../i18n'
+import { inviteUrl } from '../auth/invite'
 import { useDataProvider, type CompanyMember, type CompanyMemberDraft } from '../data/provider'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -93,6 +94,8 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
      because the two have opposite advice: one says add your first address,
      the other says nothing you add will be saved. */
   const [unreadable, setUnreadable] = useState(false)
+  /* Which address's invitation was just copied, so the button can say so. */
+  const [copied, setCopied] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
@@ -114,6 +117,30 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
     void dp.countUnlistedMembers(companyId).then(setUnlisted).catch(() => setUnlisted(0))
   }, [dp, companyId])
   useEffect(load, [load])
+
+  /* THE INVITATION, ready to paste into an e-mail.
+
+     The platform does not send mail, so HR sends it — and what they had to
+     send was a bare site address plus instructions to find the sign-up,
+     pick the right kind of account and type a code from memory. The link
+     carries the code and the one address this company approved, and the
+     form opens with both in place (`auth/invite.ts`). It grants nothing:
+     the password is still set by the person, and the address is still
+     checked against this very list inside the database. */
+  function copyInvite(m: CompanyMember) {
+    if (!companyId) return
+    const text = t('{company} has given you access to goodloop. Open {url} and choose a password — the form opens with your address and the company code already in it. If the link does not work, go to {plain}, choose to create an account, and register with {email} and the code {code}.', {
+      company: companyId,
+      url: inviteUrl({ code: companyId, email: m.email }),
+      plain: `${window.location.origin}${window.location.pathname}`,
+      email: m.email,
+      code: companyId,
+    })
+    void navigator.clipboard?.writeText(text).then(
+      () => { setCopied(m.email); window.setTimeout(() => setCopied(null), 2500) },
+      () => undefined,
+    )
+  }
 
   async function run(job: () => Promise<unknown>) {
     setBusy(true); setError(null)
@@ -312,6 +339,11 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
                   </td>
                   <td className="c-small">{fmtDate(m.addedAt)}</td>
                   <td className="c-right">
+                    {m.enabled && (
+                      <button className="c-link" onClick={() => copyInvite(m)}>
+                        {copied === m.email ? t('Copied') : t('Copy the invitation')}
+                      </button>
+                    )}
                     <button className="c-link" disabled={busy} onClick={() => toggle(m)}>
                       {m.enabled ? t('Turn off') : t('Turn on')}
                     </button>

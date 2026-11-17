@@ -95,8 +95,8 @@ export const PT_SALES: Record<string, string> = {
   'Copia il codice': 'Copiar o código',
   'Codice terapeuta': 'Código do terapeuta',
   'Copia l’invito': 'Copiar o convite',
-  'Il codice della vostra azienda su goodloop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.':
-    'O código da sua empresa na goodloop é {code}. Para abrir o painel da empresa, acesse {url} e crie a conta com este código; os funcionários o informam no cadastro.',
+  'Il codice della vostra azienda su goodloop è {code}. Per aprire il pannello aziendale andate su {url} — il modulo si apre già compilato — e scegliete una password. Se il link non funziona, andate su {plain}, scegliete «Crea un account» → «Per la mia azienda» e inserite il codice a mano; i dipendenti lo inseriscono alla registrazione.':
+    'O código da sua empresa na goodloop é {code}. Para abrir o painel da empresa, acesse {url} — o formulário abre já preenchido — e escolha uma senha. Se o link não funcionar, acesse {plain}, escolha «Criar uma conta» → «Para a minha empresa» e informe o código à mão; os funcionários o informam no cadastro.',
   'Sospendi': 'Pausar',
   'Riattiva': 'Reativar',
   'Attiva': 'Ativa',

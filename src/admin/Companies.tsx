@@ -33,6 +33,7 @@ import { useDataProvider } from '../data/provider'
 import { useCompanies } from './hooks'
 import { fmtDate } from '../b2b/data'
 import { generateCompanyCode, looksLikeCompanyCode, normalizeCode } from '../data/convention'
+import { inviteUrl } from '../auth/invite'
 import type { Company } from './types'
 import type { AddonPlan } from '../gamification/company'
 
@@ -315,7 +316,15 @@ export function Companies({ actor }: { actor: string }) {
                 so the thing to copy is the message and not just the code. */}
             <button
               className="b2b-btn b2b-btn--primary"
-              onClick={() => copy(st('Il codice della vostra azienda su goodloop è {code}. Per aprire il pannello aziendale andate su {url}, scegliete «Crea un account» → «Per la mia azienda» e create l’account con questo codice; i dipendenti lo inseriscono alla registrazione.', { code: made.id, url: `${window.location.origin}${window.location.pathname}` }))}
+              /* THE LINK OPENS THE FORM, not the home page. It used to be
+                 the bare site address followed by three instructions —
+                 find the sign-up, choose the right kind of account, type a
+                 code you read in this e-mail. The link now carries the
+                 code and the contact's address and the form opens with
+                 both in place (`auth/invite.ts`); it still grants nothing,
+                 so the three instructions are kept as the fallback for
+                 anybody whose mail client strips the link. */
+              onClick={() => copy(st('Il codice della vostra azienda su goodloop è {code}. Per aprire il pannello aziendale andate su {url} — il modulo si apre già compilato — e scegliete una password. Se il link non funziona, andate su {plain}, scegliete «Crea un account» → «Per la mia azienda» e inserite il codice a mano; i dipendenti lo inseriscono alla registrazione.', { code: made.id, url: inviteUrl({ code: made.id, email: made.contactEmail, kind: 'company' }), plain: `${window.location.origin}${window.location.pathname}` }))}
             >
               {copied ? st('Copiato') : st('Copia l’invito')}
             </button>

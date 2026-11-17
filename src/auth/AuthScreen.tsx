@@ -6,6 +6,7 @@ import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n, localeForCountry, localeWasChosen } from '../i18n'
+import { readInvite, clearInvite } from './invite'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
 import { useDataProvider } from '../data/provider'
@@ -93,6 +94,34 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   const [name, setName] = useState(demo && isB2b ? 'Dra. Helena Costa' : '')
   const [crp, setCrp] = useState(demo && isB2b ? 'CRP 04/45821' : '')
   const [companyCode, setCompanyCode] = useState('')
+
+  /* ---- an invitation opens the form already filled in --------------------
+
+     The code and the address are the two things somebody being invited has
+     to get exactly right and no way to check: a company code read off an
+     e-mail and typed from memory, and the one address their employer
+     approved, which is often not the address they would reach for. The link
+     in the invitation carries both (`auth/invite.ts`), and this is where
+     they land.
+
+     It grants nothing — the password is still set here, the address is still
+     checked against the company's own roster inside the database, and the
+     code still has to resolve to a live contract. It saves the typing.
+
+     ONCE, on mount, and only on the public door: the other four surfaces
+     are provisioned by hand and have no sign-up to open. The parameters are
+     then taken out of the URL, because an address in the address bar
+     outlives its usefulness. */
+  useEffect(() => {
+    if (mode !== 'b2c') return
+    const invite = readInvite()
+    if (!invite) return
+    setSignup(true)
+    if (invite.kind === 'company') setKind('company')
+    if (invite.email) setEmail(invite.email)
+    if (invite.code) setCompanyCode(invite.code)
+    clearInvite()
+  }, [mode])
   /* Screen 1 of the onboarding (ONB-05): age and country, asked before the
      account exists. The 18+ gate (ONB-01, D-11) blocks an under-age person
      with no account and no data retained; the country sets the market

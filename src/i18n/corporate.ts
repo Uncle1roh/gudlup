@@ -14,6 +14,10 @@
 export const IT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Partecipazione',
+  'Copy the invitation': 'Copia l’invito',
+  'Copied': 'Copiato',
+  '{company} has given you access to goodloop. Open {url} and choose a password — the form opens with your address and the company code already in it. If the link does not work, go to {plain}, choose to create an account, and register with {email} and the code {code}.':
+    '{company} vi ha dato accesso a goodloop. Aprite {url} e scegliete una password — il modulo si apre con il vostro indirizzo e il codice azienda già inseriti. Se il link non funziona, andate su {plain}, scegliete di creare un account e registratevi con {email} e il codice {code}.',
   'This list could not be read.': 'Non è stato possibile leggere questo elenco.',
   'It is not empty — we could not reach it. Nothing you add here would be saved either. Please tell goodloop support, and leave the list as it is for now.':
     'Non è vuoto: non siamo riusciti a raggiungerlo. Nemmeno quello che aggiungi qui verrebbe salvato. Avvisa l’assistenza goodloop e per ora lascia l’elenco com’è.',
@@ -390,6 +394,10 @@ export const IT_CORPORATE: Record<string, string> = {
 export const PT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Participação',
+  'Copy the invitation': 'Copiar o convite',
+  'Copied': 'Copiado',
+  '{company} has given you access to goodloop. Open {url} and choose a password — the form opens with your address and the company code already in it. If the link does not work, go to {plain}, choose to create an account, and register with {email} and the code {code}.':
+    'A {company} liberou o seu acesso à goodloop. Abra {url} e escolha uma senha — o formulário abre com o seu e-mail e o código da empresa já preenchidos. Se o link não funcionar, acesse {plain}, escolha criar uma conta e cadastre-se com {email} e o código {code}.',
   'This list could not be read.': 'Não foi possível ler esta lista.',
   'It is not empty — we could not reach it. Nothing you add here would be saved either. Please tell goodloop support, and leave the list as it is for now.':
     'Ela não está vazia: não conseguimos alcançá-la. O que você adicionar aqui também não seria salvo. Avise o suporte da goodloop e, por ora, deixe a lista como está.',
