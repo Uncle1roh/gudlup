@@ -491,14 +491,28 @@ function SessionPrefs({ state, update }: ProfileProps) {
 
 /** The optional purposes: label, and the consequence line the person sees
     (which is what the consent row records). Order matches the first run. */
-const PURPOSES: { purpose: ConsentPurpose; label: string; note: string; local?: 'measurementAt' | 'aggregate' | 'notifications' | 'therapistBridge' }[] = [
-  { purpose: 'measurement', label: 'Wellbeing check-ins', note: 'A short weekly self-report you can see back as your own history. Never scored, never compared to anything.', local: 'measurementAt' },
+/* `notYet` MARKS A CONSENT FOR SOMETHING THAT IS NOT RUNNING.
+
+   Five of these switch nothing on: the weekly check-in has no screen in the
+   app, nothing schedules or sends a reminder, and there is no mailing, no
+   testimonial flow and no research export — each purpose appears in the
+   consent registry and the data export and nowhere else. Somebody turning
+   one on believed they had subscribed to a newsletter, or put their data in
+   a research pool, and nothing happened either way.
+
+   They are not removed. A consent already given has to stay visible and
+   withdrawable, and these were collected in good faith for things that are
+   coming. What they get is the truth printed next to them, so the switch
+   stops promising. Taking the line off is what shipping the feature looks
+   like. */
+const PURPOSES: { purpose: ConsentPurpose; label: string; note: string; notYet?: true; local?: 'measurementAt' | 'aggregate' | 'notifications' | 'therapistBridge' }[] = [
+  { purpose: 'measurement', label: 'Wellbeing check-ins', note: 'A short weekly self-report you can see back as your own history. Never scored, never compared to anything.', notYet: true, local: 'measurementAt' },
   { purpose: 'aggregate', label: 'Aggregate programme figures', note: 'Counted in totals for groups of 25 or more. Never shared individually.', local: 'aggregate' },
-  { purpose: 'notifications', label: 'Reminders on this device', note: 'Reminders never contain health information.', local: 'notifications' },
+  { purpose: 'notifications', label: 'Reminders on this device', note: 'Reminders never contain health information.', notYet: true, local: 'notifications' },
   { purpose: 'therapist_bridge', label: 'Share Self Use history with your therapist', note: 'Your linked professional may see which sessions you listened to. Revocable anytime.', local: 'therapistBridge' },
-  { purpose: 'marketing', label: 'News from goodloop', note: 'Occasional product news by e-mail.' },
-  { purpose: 'testimonial', label: 'Testimonials', note: 'An account of your experience may be published, with your name only if you say so.' },
-  { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.' },
+  { purpose: 'marketing', label: 'News from goodloop', note: 'Occasional product news by e-mail.', notYet: true },
+  { purpose: 'testimonial', label: 'Testimonials', note: 'An account of your experience may be published, with your name only if you say so.', notYet: true },
+  { purpose: 'research', label: 'Research on the methodology', note: 'De-identified use, only in research about how the sessions work.', notYet: true },
   /* Gamification, SPEC §4.1: a separate purpose, so withdrawing it stops the
      city counting without touching anything else. */
   { purpose: 'geo_ranking', label: GEO_CONSENT_LABEL, note: GEO_CONSENT_NOTE },
@@ -545,6 +559,12 @@ function PrivacyData({ update, hasTherapist, convention, onExport, onDelete }: P
         return (
           <div key={row.purpose}>
             <Toggle label={t(row.label)} hint={hint} on={legal.consented(row.purpose)} disabled={busy === row.purpose} onToggle={() => void flip(row)} />
+            {/* See `notYet` on PURPOSES: a switch for something that is not
+                running yet says so, rather than letting somebody believe
+                they just turned it on. */}
+            {row.notYet && (
+              <p className="small muted profile__notyet">{t('Not running yet — your answer is recorded for when it is.')}</p>
+            )}
             {row.purpose === 'geo_ranking' && legal.consented('geo_ranking') && <ProfileCity />}
           </div>
         )

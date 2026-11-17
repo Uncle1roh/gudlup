@@ -974,6 +974,8 @@ export const PT: Record<string, string> = {
   'Type your password again.': 'Digite a senha novamente.',
   'The two passwords are not the same.': 'As duas senhas não são iguais.',
   'Repeat the password': 'Repita a senha',
+  'Not running yet — your answer is recorded for when it is.':
+    'Ainda não está em funcionamento — a sua resposta fica registrada para quando estiver.',
   'Choose a new password':
     'Escolha uma nova senha',
   'You opened a link from your email, so you do not need the old password.':

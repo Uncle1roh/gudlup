@@ -544,6 +544,8 @@ export const IT_SELF_USE: Record<string, string> = {
   'Type your password again.': 'Scrivi di nuovo la password.',
   'The two passwords are not the same.': 'Le due password non coincidono.',
   'Repeat the password': 'Ripeti la password',
+  'Not running yet — your answer is recorded for when it is.':
+    'Non è ancora attivo — la tua risposta resta registrata per quando lo sarà.',
   'Choose a new password':
     'Scegli una nuova password',
   'You opened a link from your email, so you do not need the old password.':

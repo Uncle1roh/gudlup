@@ -363,6 +363,11 @@
 .sheet__label { font-size: 16px; font-weight: 700; color: var(--slate); margin-top: 6px; }
 .sheet__hint { text-align: center; }
 
+/* A consent whose feature is not running yet (see `PURPOSES` in
+   selfuse/ProfileTab.tsx). Indented under its own switch so it reads as a
+   note on that row rather than as the opening of the next one. */
+.profile__notyet { margin: -6px 0 2px; padding-left: 2px; font-style: italic; }
+
 /* ------------------------------------------------------------ explore ---- */
 
 .pw-list, .thr-list { display: flex; flex-direction: column; }
