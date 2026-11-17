@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth, type Role } from './auth'
 import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
-import { useI18n } from '../i18n'
+import { useI18n, localeForCountry, localeWasChosen } from '../i18n'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
 import { useDataProvider } from '../data/provider'
@@ -48,7 +48,7 @@ function labelled(on: boolean, text: string, field: ReactNode): ReactNode {
 export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 'sales' }) {
   const auth = useAuth()
   const dp = useDataProvider()
-  const { t, locale } = useI18n()
+  const { t, locale, setLocale } = useI18n()
   const { m } = useLegal()
   const isB2b = mode === 'b2b'
   const isAdmin = mode === 'admin'
@@ -113,6 +113,27 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      listener account, because the very first session needs it. */
   const [addressedAs, setAddressedAs] = useState<'m' | 'f' | null>(null)
   const [country, setCountry] = useState('')
+
+  /**
+   * SAYING WHERE YOU LIVE SETS THE LANGUAGE — once, and never over a choice.
+   *
+   * The app opens in Italian by default (the pilot's direction), so a
+   * Brazilian creating an account read the whole of registration in Italian:
+   * the consents, the Terms, the crisis notice. Those are the pages where
+   * being in the wrong language costs something, which is why this fires the
+   * moment the country is picked rather than after the account exists.
+   *
+   * `localeWasChosen()` is the guard, and it is the whole rule: the picker
+   * is on this screen, so anybody who has used it has already said what they
+   * want and the country must not argue. A device with no stored choice is
+   * the only one this touches.
+   */
+  function pickCountry(code: string) {
+    setCountry(code)
+    if (localeWasChosen()) return
+    const l = localeForCountry(code)
+    if (l && l !== locale) setLocale(l)
+  }
   const [promo, setPromo] = useState('')
   /* What the typed promo code is worth, asked while the person types:
      `checking` → a number (valid) or null (unknown). */
@@ -507,7 +528,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               <label className="auth__gatefield">
                 <span>{m('ONB-1.2')} <i className="auth__req">{t('required')}</i></span>
                 <select className="auth__input" value={country} autoComplete="country" ref={hold('country')}
-                  onChange={(e) => setCountry(e.target.value)}>
+                  onChange={(e) => pickCountry(e.target.value)}>
                   <option value="">{t('Choose your country')}</option>
                   {SUPPORTED_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}
                   {OTHER_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label[locale]}</option>)}

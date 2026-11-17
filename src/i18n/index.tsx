@@ -61,6 +61,41 @@ function defaultLocale(): Locale {
   return isLocale(env) ? env : 'it'
 }
 
+/**
+ * Whether anybody has chosen a language ON THIS DEVICE.
+ *
+ * The one thing that must never be overridden: a person who picked a
+ * language picked it. Everything that wants to GUESS a language asks this
+ * first — and a guess is only allowed where the answer is no.
+ */
+export function localeWasChosen(): boolean {
+  try {
+    return isLocale(localStorage.getItem(STORAGE_KEY))
+  } catch {
+    /* No storage: nothing was chosen, and nothing can be remembered either. */
+    return false
+  }
+}
+
+/**
+ * The language to OPEN IN for somebody who has just said where they live.
+ *
+ * The two territories the service is offered in have one language each
+ * (`legal/market.ts`): Brazil reads Portuguese, Italy reads Italian. Null
+ * for anywhere else, because there is nothing to conclude — sign-up is
+ * blocked outside those two anyway (ONB-1.4), and a country we do not serve
+ * should not change the interface on its way to being refused.
+ *
+ * Deliberately NOT the market (`marketForCountry`): a market is a legal
+ * jurisdiction and a locale is a language, and the day the EU market holds a
+ * second country those two stop agreeing.
+ */
+export function localeForCountry(code: string | null | undefined): Locale | null {
+  if (code === 'BR') return 'pt-BR'
+  if (code === 'IT') return 'it'
+  return null
+}
+
 function interpolate(s: string, vars?: Record<string, string | number>): string {
   if (!vars) return s
   let out = s
