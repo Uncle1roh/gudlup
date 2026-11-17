@@ -8,7 +8,7 @@ import { SalesApp } from './sales/SalesApp'
 import { DataLayerProvider } from './data/provider'
 import { AuthProvider } from './auth/auth'
 import { AuthGate } from './auth/AuthScreen'
-import { I18nProvider, FixedLocale, currentLocale } from './i18n'
+import { I18nProvider, FixedLocale, currentLocale, pinLocale } from './i18n'
 import { Hub } from './hub/Hub'
 import { initVoiceSync } from './tts/voiceSync'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -125,6 +125,21 @@ export default function App() {
      follows, so a screen reader reads it as Italian too. Anywhere else it is
      the person's own language again. */
   const pinnedIt = isAdmin || (route === '#studio' && studioFromAdmin())
+
+  /* AND SO ARE THE READERS THAT ARE NOT REACT. `FixedLocale` replaces the
+     context, which is all that `useI18n()` sees; `st()`, `fmtDate()`,
+     `fmtDateTime()` and `relWhen()` run outside React and ask
+     `currentLocale()` at call time. So an operator whose own language is
+     Portuguese had an Italian console with Portuguese dates in it, which is
+     the language mix that was reported.
+
+     Here, in the body and not in an effect, because setting a module value
+     re-renders nothing: an effect would paint one frame of Portuguese dates
+     and then leave them on screen. Idempotent and re-asserted on every
+     render, so a render React throws away cannot stand the pin up, and
+     leaving the console takes it down. */
+  pinLocale(pinnedIt ? 'it' : null)
+
   useEffect(() => {
     document.documentElement.lang = pinnedIt ? 'it' : currentLocale()
   }, [pinnedIt])

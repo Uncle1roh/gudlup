@@ -187,8 +187,43 @@ let current: Locale = (() => {
   return defaultLocale()
 })()
 
+/* ---- the pin, for the readers that are not React ------------------------
+
+   `FixedLocale` pins the admin console to Italian by replacing the React
+   CONTEXT. Everything that reads the language through `useI18n()` follows
+   it — and nothing else does. `st()` (the commercial dictionary),
+   `fmtDate()`, `fmtDateTime()`, `relWhen()` and the PDF builders all ask
+   `currentLocale()` at call time, because they run outside React, and that
+   is a module value the provider sets from the person's own choice.
+
+   So an operator whose own language is Portuguese got an Italian console
+   with Portuguese dates in it — "13 de nov., 13:33" under Credenziali and
+   all down the Registro attività — which is the reported mix. The console
+   is Italian by decision, and that decision has to reach the readers that
+   cannot see a context.
+
+   `pinned` is set by whoever owns the whole surface (src/App.tsx, where the
+   same flag already sets `documentElement.lang`), on every render and
+   idempotently: a render React discards cannot leave a stale pin, and the
+   next render corrects it either way. The person's own choice is never
+   touched — it stays in storage and in `current`, so every other surface
+   keeps it. */
+let pinned: Locale | null = null
+
+/**
+ * Pin, or release, the language the non-React readers see.
+ *
+ * Called with a locale by a surface that is one language by decision, and
+ * with `null` by every other. It is deliberately not a hook and keeps no
+ * state of its own beyond this value: the caller re-asserts it on every
+ * render, which is what makes it impossible to strand.
+ */
+export function pinLocale(locale: Locale | null): void {
+  pinned = locale
+}
+
 export function currentLocale(): Locale {
-  return current
+  return pinned ?? current
 }
 
 /** `formatDate` for code outside React. Same rules, implicit locale. */

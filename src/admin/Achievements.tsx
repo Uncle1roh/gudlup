@@ -5,14 +5,22 @@
    lo slug, la metrica e l’ambito no: sono il contratto con il database, che
    rifiuta metriche su punteggi o VAS e ambiti di squadra. Una conquista,
    una volta sbloccata, resta della persona anche se qui la si spegne.
-   Nomi e frasi sono in src/gamification/copy.ts (pt-BR in i18n).
+   Nomi e frasi sono in src/gamification/copy.ts, con chiave inglese.
+
+   I NOMI SI LEGGONO CON t(), NON DAL DIZIONARIO PORTOGHESE. Questa pagina
+   leggeva `PT_GAMIFICATION` direttamente, così la tabella elencava «Cidade
+   em Loop», «Região em Loop», «Brasil em Loop» in mezzo a una console
+   italiana — il motivo per cui qui si vedevano due lingue insieme. La
+   console è fissata all'italiano (FixedLocale), quindi `t()` restituisce
+   l'italiano qui e il portoghese dove la persona lo ha scelto: una sola
+   fonte, nessuna copia da tenere allineata.
    ============================================================================ */
 
 import { useCallback, useEffect, useState } from 'react'
 import { useDataProvider } from '../data/provider'
 import { Badge } from '../gamification/ui/Badge'
 import { copyFor } from '../gamification/copy'
-import { PT_GAMIFICATION } from '../i18n/gamification'
+import { useI18n } from '../i18n'
 import type { AchievementDef } from '../gamification/achievements'
 
 type Row = AchievementDef & { id: string }
@@ -21,6 +29,9 @@ const UNIT: Record<string, string> = { minutes_listened: 'minuti', distinct_week
 
 export function Achievements({ actor }: { actor: string }) {
   const dp = useDataProvider()
+  const { t } = useI18n()
+  /** Il nome della conquista nella lingua della console. */
+  const named = (slug: string) => t(copyFor(slug).name) || slug
   const [rows, setRows] = useState<Row[]>([])
   const [edits, setEdits] = useState<Record<string, Row>>({})
   const [busy, setBusy] = useState(false)
@@ -36,7 +47,7 @@ export function Achievements({ actor }: { actor: string }) {
       await dp.adminSaveAchievementDef(r)
       await dp.logAudit({ actor, action: 'achievement.updated', target: r.slug, detail: `soglia ${r.threshold}, bonus ${r.bonusLoopsCenti / 100}, ${r.active ? 'attiva' : 'spenta'}` }).catch(() => undefined)
       setEdits((e) => { const n = { ...e }; delete n[r.id]; return n })
-      setNote(`«${PT_GAMIFICATION[copyFor(r.slug).name] ?? r.slug}» salvata.`)
+      setNote(`«${named(r.slug)}» salvata.`)
       load()
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
@@ -75,7 +86,7 @@ export function Achievements({ actor }: { actor: string }) {
               return (
                 <div className={`adm-tr${r.active ? '' : ' is-inactive'}`} key={r0.id}>
                   <div><Badge icon={r.icon} tier={r.tier} shape={r.kind === 'individual' ? 'circle' : 'hexagon'} size={36} locked={!r.active} /></div>
-                  <div><strong>{PT_GAMIFICATION[copyFor(r.slug).name] ?? r.slug}</strong><div className="adm-muted adm-mono">{r.slug} · {r.tier}</div></div>
+                  <div><strong>{named(r.slug)}</strong><div className="adm-muted adm-mono">{r.slug} · {r.tier}</div></div>
                   <div className="adm-mono">{r.metric}{UNIT[r.metric] ? ` (${UNIT[r.metric]})` : ''}</div>
                   <div><input className="b2b-input" type="number" min={1} value={r.threshold} onChange={(e) => set({ threshold: Math.max(1, Number(e.target.value) || 1) })} /></div>
                   <div><input className="b2b-input" type="number" min={0} value={Math.floor(r.bonusLoopsCenti / 100)} onChange={(e) => set({ bonusLoopsCenti: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 })} /></div>
