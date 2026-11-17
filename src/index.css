@@ -26,6 +26,17 @@
   --deep-2:      #061710; /* player gradient bottom — near-black green */
 
   --aura:        #009b77; /* Emerald — primary brand / luminous accent */
+  /* THE SAME GREEN, DARK ENOUGH TO CARRY WHITE WORDS. White on #009b77
+     measures 3.53:1, and ordinary text needs 4.5 — so the one thing on the
+     console sidebar that is supposed to stand out, the SELECTED menu item,
+     was the hardest thing on the page to read. Reported as "colour
+     contrasts are not allowing to read certain buttons".
+
+     A second token rather than a darker `--aura`: the brand green is used
+     in 171 places and most of them are a fill, a dot or a bar with no text
+     on them at all, where it is exactly right. This is for the few that put
+     white on it. #00805f with white is 4.94:1. */
+  --aura-deep:   #00805f;
   --aura-deep:   #007a5e; /* pressed emerald (safe with white text) */
   --halo:        #7ac69b; /* mint — orb haze */
   --core:        #fbf6e4; /* warm cream — orb core */
@@ -734,7 +745,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   font-size: 12px; font-weight: 600;
 }
-.journey__wk--done { background: var(--aura); color: #fff; }
+.journey__wk--done { background: var(--aura-deep); color: #fff; }
 .journey__wk--now { background: #fff; color: var(--aura-deep); border: 2px solid var(--aura); box-shadow: 0 0 0 4px rgba(0,155,119,0.18); /* --aura */ }
 .journey__wk--todo { background: var(--mist-2); color: var(--slate); }
 
@@ -784,7 +795,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .b2b-brand__sub { font-family: var(--display); font-size: 15px; color: var(--aura-deep); font-weight: 500; }
 .b2b-topbar__right { display: flex; align-items: center; gap: 12px; }
 .b2b-credchip { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink); padding: 6px 12px; border-radius: 999px; background: var(--mist-2); }
-.b2b-credchip__badge { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--aura); color: #fff; font-size: 10px; }
+.b2b-credchip__badge { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--aura-deep); color: #fff; font-size: 10px; }
 .b2b-demobtn { font-size: 12px; font-weight: 600; color: var(--slate); border: 1px dashed var(--line); border-radius: 8px; padding: 5px 9px; }
 .b2b-avatar { font-size: 24px; }
 
@@ -883,7 +894,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--slate); }
 .check.is-ok { color: var(--ink); }
 .check__dot { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fbeaea; color: #b23b3b; font-size: 13px; flex: none; }
-.check.is-ok .check__dot { background: var(--aura); color: #fff; }
+.check.is-ok .check__dot { background: var(--aura-deep); color: #fff; }
 .check__action { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--aura-deep); border: 1px solid var(--aura); border-radius: 7px; padding: 4px 10px; }
 
 /* buttons */
@@ -956,7 +967,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 
 /* debrief + transition */
 .transition-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
-.transition-head__check { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--aura); color: #fff; font-size: 22px; }
+.transition-head__check { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--aura-deep); color: #fff; font-size: 22px; }
 .debrief-steps { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--slate); margin-bottom: 16px; }
 .instruments li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
 .inst-ok { font-size: 11px; font-weight: 700; color: #1f9d6b; background: #e6f4ee; padding: 2px 8px; border-radius: 6px; }
@@ -1324,11 +1335,11 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .cmp__range { width: 100%; accent-color: var(--aura-deep); margin-top: 2px; }
 
 .cmp__preview { background: var(--ink); border-radius: var(--r-md); padding: 14px 16px; }
-.cmp__gen { width: 100%; padding: 12px; border-radius: var(--r-sm); border: none; background: var(--aura); color: #fff; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+.cmp__gen { width: 100%; padding: 12px; border-radius: var(--r-sm); border: none; background: var(--aura-deep); color: #fff; font-size: 14.5px; font-weight: 600; cursor: pointer; }
 .cmp__gen:hover { background: var(--mint); }
 .cmp__gen:disabled { opacity: 0.6; cursor: progress; }
 .cmp__player { display: flex; align-items: center; gap: 12px; }
-.cmp__play { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--aura); color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; }
+.cmp__play { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--aura-deep); color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; }
 .cmp__play:hover { background: var(--mint); }
 .cmp__pmeta { color: #cfe6dd; font-size: 13px; flex: 1; }
 .cmp__regen { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); background: transparent; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; }
@@ -1468,7 +1479,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
 .adm-nav__item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.adm-nav__item.is-active { background: var(--aura); color: #fff; }
+.adm-nav__item.is-active { background: var(--aura-deep); color: #fff; }
 .adm-nav__icon { width: 18px; text-align: center; opacity: 0.9; }
 /* Opening the other apps from the console, for a walkthrough. */
 .adm-open {
@@ -1602,7 +1613,7 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   white-space: nowrap; cursor: pointer; transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
 .adm-tab:hover { color: var(--ink); border-color: var(--slate); }
-.adm-tab.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
+.adm-tab.is-on { background: var(--aura-deep); border-color: var(--aura-deep); color: #fff; }
 .adm-page { max-width: 1400px; }
 .adm-page__head { margin-bottom: 22px; }
 .adm-page__head--row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
@@ -1646,7 +1657,9 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .adm-benefit__tags .adm-tag { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .adm-benefit__tags .adm-tag input { margin: 0; }
 button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; color: var(--ink); cursor: pointer; }
-.adm-tag.is-on { background: var(--aura); color: #fff; border-color: var(--aura); }
+/* White words, so the deeper green — see `--aura-deep`. The border keeps
+   the brand green, which carries no text. */
+.adm-tag.is-on { background: var(--aura-deep); color: #fff; border-color: var(--aura-deep); }
 /* Sfide (gamification) */
 .adm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 18px; }
 .adm-kpis > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: #fff; }
@@ -1751,7 +1764,7 @@ button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px
 .adm-pipe__step { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
 .adm-pipe__step.is-next { opacity: 0.62; }
 .adm-pipe__num { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--mist-2); color: var(--slate); }
-.adm-pipe__step.is-done .adm-pipe__num { background: var(--aura); color: #fff; }
+.adm-pipe__step.is-done .adm-pipe__num { background: var(--aura-deep); color: #fff; }
 .adm-pipe__step.is-active .adm-pipe__num { background: var(--ink); color: #fff; }
 .adm-pipe__body { display: flex; flex-direction: column; flex: 1; }
 .adm-pipe__label { font-weight: 600; font-size: 14px; }
@@ -1999,7 +2012,7 @@ button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px
 .vctl { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #cdd7e0; background: rgba(6,10,14,0.72); border: 1px solid #2c343d; border-radius: 10px; padding: 7px 11px; cursor: pointer; backdrop-filter: blur(4px); }
 .vctl:disabled { opacity: 0.45; cursor: default; }
 .vctl.is-off { background: rgba(74,31,31,0.6); color: #ff9a9a; border-color: #5a2b2b; }
-.vctl--go { background: var(--aura); color: #fff; border-color: transparent; }
+.vctl--go { background: var(--aura-deep); color: #fff; border-color: transparent; }
 .vctl--end { background: #7a2020; color: #ffd7d7; border-color: transparent; }
 
 .vstage__note { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); max-width: 300px; text-align: center; font-size: 10.5px; line-height: 1.4; color: #7d8b99; background: rgba(6,10,14,0.55); padding: 4px 10px; border-radius: 8px; }
@@ -2029,10 +2042,10 @@ button.adm-tag, label.adm-tag { padding: 7px 12px; min-height: 36px; border: 1px
 .assess__scale { display: flex; gap: 8px; }
 .assess__opt { flex: 1; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--slate); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 120ms var(--ease); }
 .assess__opt:hover { border-color: var(--mint); }
-.assess__opt.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
+.assess__opt.is-on { background: var(--aura-deep); border-color: var(--aura-deep); color: #fff; }
 .assess__scalelabels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10.5px; color: var(--slate); }
 .assess__foot { padding-top: 14px; }
-.assess__cta { width: 100%; padding: 15px; border-radius: var(--r-md); border: none; background: var(--aura); color: #fff; font-family: var(--display); font-size: 17px; font-weight: 500; cursor: pointer; transition: transform 140ms var(--ease); }
+.assess__cta { width: 100%; padding: 15px; border-radius: var(--r-md); border: none; background: var(--aura-deep); color: #fff; font-family: var(--display); font-size: 17px; font-weight: 500; cursor: pointer; transition: transform 140ms var(--ease); }
 .assess__cta:disabled { background: var(--mist-2); color: var(--slate); cursor: default; }
 .assess__cta:not(:disabled):active { transform: scale(0.99); }
 .assess__done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; flex: 1; padding: 20px; }
@@ -2954,7 +2967,7 @@ td, th { overflow-wrap: anywhere; }
   text-transform: none; white-space: nowrap; cursor: pointer;
 }
 .adm .mt-seg button:hover { color: var(--ink); border-color: var(--slate); }
-.adm .mt-seg button.is-on { background: var(--aura); border-color: var(--aura); color: #fff; }
+.adm .mt-seg button.is-on { background: var(--aura-deep); border-color: var(--aura-deep); color: #fff; }
 .adm .mt-seg button:disabled { opacity: 0.5; cursor: default; }
 
 /* "How should the audio address you?" — asked at registration, because the
