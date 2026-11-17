@@ -69,6 +69,22 @@
   background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 10px;
   box-shadow: 0 12px 30px -14px rgba(20,32,26,0.3); overflow: hidden;
 }
+/* Who is signed in, at the head of the menu. The button above names the
+   COMPANY, so this is the only place the person's own identity appears —
+   and it is their address, never a name guessed from it. */
+.c-usermenu__who {
+  margin: 0;
+  padding: 11px 14px 10px;
+  border-bottom: 1px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12.5px;
+  color: var(--c-muted);
+  word-break: break-word;
+}
+.c-usermenu__who b { font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
+
 .c-usermenu__row {
   padding: 11px 14px; font-size: 13.5px; text-align: left; color: var(--c-ink);
   text-decoration: none; background: none; border: none; width: 100%;

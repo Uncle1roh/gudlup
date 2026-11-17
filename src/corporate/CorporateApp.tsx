@@ -172,6 +172,27 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
     ? demoProfile('company').name
     : state.profile.contactName || displayName(user?.email)
 
+  /* ---- what the top right says -------------------------------------------
+
+     THE COMPANY, and not a name manufactured out of an address. It used to
+     print `adminName`, which when nobody had filled in a contact name was
+     `displayName(email)` — the local part of the address with its dots
+     turned into spaces and each piece capitalised. So "rh.aurora@…" became
+     "Rh Aurora", which is not anybody's name: it is a guess, printed as a
+     fact, as the identity of the whole console.
+
+     This console belongs to a COMPANY. One person signs in, but what the
+     screen is about, what the reports are about and what the licences
+     belong to is the tenant, so that is what the corner names. Who is
+     signed in is still one tap away, in the menu, as the ADDRESS they
+     signed in with — true, and nothing invented from it.
+
+     `state.profile.name` is the company's name and is re-seeded from the
+     tenant on every load (`data.ts`), so a saved copy cannot drift from the
+     registry; `tenant.name` is the belt and braces. */
+  const companyName = state.profile.name || tenant.name
+  const signedInAs = previewing() ? demoProfile('company').email : user?.email ?? ''
+
   /* SPN-07 — before anything else, once, logged: this service supports
      wellbeing and neither assesses workplace risk nor meets any legal
      obligation for the sponsor (D-09). Nothing in this console uses the
@@ -246,12 +267,19 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
 
         <div className="c-topbar__right">
           <button className="c-user" onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-label={t('Account menu')}>
-            <span className="c-avatar" aria-hidden="true">{initials(adminName)}</span>
-            <span className="c-user__name">{adminName}</span>
+            <span className="c-avatar" aria-hidden="true">{initials(companyName)}</span>
+            <span className="c-user__name">{companyName}</span>
             <span className="c-user__caret" aria-hidden="true">⌄</span>
           </button>
           {menu && (
             <div className="c-usermenu">
+              {/* Who is signed in, which the button no longer says. The
+                  address, and the contact name only where the company
+                  actually filled one in. */}
+              <p className="c-usermenu__who">
+                {state.profile.contactName && <b>{state.profile.contactName}</b>}
+                <span>{signedInAs}</span>
+              </p>
               <button className="c-usermenu__row" onClick={() => { setNav('settings'); setMenu(false) }}>{t('Profile')}</button>
               <a className="c-usermenu__row" href="mailto:Suporte@goodloop.com.br">{t('Contact support')}</a>
               <div className="c-usermenu__lang"><LanguagePicker className="c-input c-input--sm" /></div>
