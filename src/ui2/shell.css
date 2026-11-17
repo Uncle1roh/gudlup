@@ -1139,6 +1139,9 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
     left: 12px;
     right: 12px;
     bottom: 12px;
+    /* Above the page, below every sheet and dialog. `.helpnow--floating`
+       sits at 41, deliberately one step up: the crisis button is never
+       covered by anything. */
     z-index: 40;
     flex: none;
     flex-direction: row;
@@ -1172,7 +1175,7 @@ html[data-mood-set='dark'] .gl-root { --warn: #f2c29a; --ok: #7ac69b; --shadow: 
      12 again so the sheet does not touch it. Only inside `.gl-root`, which
      is the one surface that has a floating rail — the console's and the
      clinic's dialogs are centred and are not affected. */
-  .gl-root .sheet-scrim { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .gl-root .sheet-scrim { padding-bottom: var(--gl-rail-clear); }
 }
 
 /* ------------------------------------------------------- the session ---

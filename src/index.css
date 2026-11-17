@@ -8,6 +8,15 @@
   /* --- Palette — Good Loop brand (Goodloop_Identity.pdf) --- */
   /* green-forward + warm cream; emerald is primary, accents used sparingly */
   --mist:        #faf8df; /* Beige — warm app background */
+  /* HOW MUCH ROOM THE PHONE'S FLOATING RAIL TAKES at the foot of the
+     window: 12px off the floor, 62px tall, and 12px of air above it
+     (src/ui2/shell.css, `.gl-nav` under 900px). Any sheet fixed to the
+     bottom of the window has to reserve it, or its last button — which is
+     always the one that closes the sheet — lands underneath the rail and
+     belongs to it. Defined once here because two stylesheets need the same
+     number: the app's own sheets and the crisis sheet, which lives in the
+     strip above the frame. */
+  --gl-rail-clear: calc(86px + env(safe-area-inset-bottom));
   --mist-2:      #eef3e2; /* pale celadon — raised surfaces (inputs, chips) */
   --ink:         #15362b; /* deep forest — primary text + dark neutral fills */
   --slate:       #5e7268; /* muted green-grey — secondary text */

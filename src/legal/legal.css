@@ -82,7 +82,22 @@
   align-items: center;
   padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left));
   box-shadow: none;
-  z-index: 2;
+  /* 45, AND THE REASON IS THE CRISIS SHEET, NOT THE STRIP.
+
+     The sheet opens from the button in here, and a z-index only means
+     anything against its siblings: whatever it asks for, it paints at the
+     level of this bar. At 2 that was underneath the phone's floating rail
+     (40, `.gl-nav`) — so on a phone the Fechar button sat behind the rail's
+     icons and `elementFromPoint` at the middle of it returned one of them.
+     The button was on screen, looked enabled, and belonged to the rail.
+
+     Same disease as the note at 1100px below, where a blurred bar became
+     the containing block of the sheet: a bar that is only a strip keeps
+     shutting a sheet inside itself. 45 is above the rail (40) and the
+     floating crisis button (41) and below every scrim (60, 65, 70), so a
+     dialog still covers the strip. The strip and the rail are at opposite
+     ends of the window and never overlap. */
+  z-index: 45;
 }
 .su-shell__bar.su-studio::before { display: none; }
 @media (min-width: 760px) {
@@ -123,6 +138,14 @@ html[data-su-theme='light'] .su-shell { background: #eceee6; }
 /* ---- the crisis sheet (action-first: numbers, one line, link) ---------- */
 
 .helpnow-scrim { z-index: 70; }
+/* AND IT STOPS ABOVE THE RAIL. This scrim is not inside `.gl-root`, so the
+   app's own clearance rule (`shell.css`) does not reach it — it lives in the
+   strip above the frame. Same footprint, same variable, scoped to the
+   person's app shell because that is the one surface with a floating rail:
+   the console's and the clinic's crisis sheets are centred. */
+@media (max-width: 899px) {
+  .su-shell .helpnow-scrim { padding-bottom: var(--gl-rail-clear); }
+}
 .helpnow-sheet { gap: 14px; }
 .helpnow-sheet__numbers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .helpnow-sheet__call {
