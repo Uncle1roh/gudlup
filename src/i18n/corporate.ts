@@ -14,6 +14,9 @@
 export const IT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Partecipazione',
+  'This list could not be read.': 'Non è stato possibile leggere questo elenco.',
+  'It is not empty — we could not reach it. Nothing you add here would be saved either. Please tell goodloop support, and leave the list as it is for now.':
+    'Non è vuoto: non siamo riusciti a raggiungerlo. Nemmeno quello che aggiungi qui verrebbe salvato. Avvisa l’assistenza goodloop e per ora lascia l’elenco com’è.',
   'Therapists': 'Terapeuti',
   'Engagement': 'Coinvolgimento',
   'Wellbeing': 'Benessere',
@@ -387,6 +390,9 @@ export const IT_CORPORATE: Record<string, string> = {
 export const PT_CORPORATE: Record<string, string> = {
   /* ---- shell ---- */
   'Participation': 'Participação',
+  'This list could not be read.': 'Não foi possível ler esta lista.',
+  'It is not empty — we could not reach it. Nothing you add here would be saved either. Please tell goodloop support, and leave the list as it is for now.':
+    'Ela não está vazia: não conseguimos alcançá-la. O que você adicionar aqui também não seria salvo. Avise o suporte da goodloop e, por ora, deixe a lista como está.',
   'Therapists': 'Terapeutas',
   'Engagement': 'Engajamento',
   'Wellbeing': 'Bem-estar',

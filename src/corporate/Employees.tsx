@@ -89,6 +89,10 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
   const dp = useDataProvider()
   const [rows, setRows] = useState<CompanyMember[] | null>(null)
   const [unlisted, setUnlisted] = useState(0)
+  /* "Could not read the list" is not "the list is empty". Separate state,
+     because the two have opposite advice: one says add your first address,
+     the other says nothing you add will be saved. */
+  const [unreadable, setUnreadable] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
@@ -104,7 +108,9 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(() => {
-    void dp.listCompanyMembers(companyId).then(setRows).catch(() => setRows([]))
+    void dp.listCompanyMembers(companyId)
+      .then((list) => { setUnreadable(false); setRows(list) })
+      .catch(() => { setUnreadable(true); setRows([]) })
     void dp.countUnlistedMembers(companyId).then(setUnlisted).catch(() => setUnlisted(0))
   }, [dp, companyId])
   useEffect(load, [load])
@@ -177,7 +183,16 @@ export function Employees({ companyId, licences }: { companyId?: string; licence
 
       {error && <p className="c-err">{error}</p>}
 
-      {rows !== null && !rows.length && (
+      {unreadable && (
+        <div className="c-alertbox">
+          <strong>{t('This list could not be read.')}</strong>
+          <p className="c-small">
+            {t('It is not empty — we could not reach it. Nothing you add here would be saved either. Please tell goodloop support, and leave the list as it is for now.')}
+          </p>
+        </div>
+      )}
+
+      {!unreadable && rows !== null && !rows.length && (
         <div className="c-alertbox">
           <strong>{t('The list is empty, so the code alone opens the app.')}</strong>
           <p className="c-small">

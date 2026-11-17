@@ -10642,6 +10642,13 @@ create policy company_members_hr_read on company_members
 -- "turned off" — both are DENIED — so the code cannot be used to read the
 -- employer's list back out one address at a time.
 -- ---------------------------------------------------------------------------
+-- `create or replace function` cannot RENAME an input parameter, and this
+-- file runs as one transaction: a refusal here rolls back everything above
+-- it and the app then reports "Could not find the function
+-- public.hr_add_company_members(p_rows) in the schema cache". Explicit drops
+-- make the file re-runnable from any earlier state. See
+-- supabase/25-company-roster.sql.
+drop function if exists company_email_status(text, text);
 create or replace function company_email_status(p_company_id text, p_email text)
   returns text language sql stable security definer set search_path = public as $$
   select case
@@ -10669,6 +10676,8 @@ grant execute on function company_email_status(text, text) to anon, authenticate
 -- building a list for the first time cannot disconnect anybody; HR does that
 -- knowingly, with hr_revoke_unlisted_members() below.
 -- ---------------------------------------------------------------------------
+drop trigger if exists profiles_company_roster_guard on profiles;
+drop function if exists profiles_company_roster_guard();
 create or replace function profiles_company_roster_guard() returns trigger
   language plpgsql security definer set search_path = public as $$
 begin
@@ -10699,6 +10708,7 @@ create trigger profiles_company_roster_guard
 -- address typed into the form, or a few hundred from a spreadsheet, same call.
 -- An address already on the list keeps its enabled flag: re-importing last
 -- year's export must never quietly re-admit somebody HR turned off.
+drop function if exists hr_add_company_members(jsonb);
 create or replace function hr_add_company_members(p_rows jsonb)
   returns int language plpgsql security definer set search_path = public as $$
 declare
@@ -10735,6 +10745,7 @@ grant execute on function hr_add_company_members(jsonb) to authenticated;
 -- account loose in the same transaction, which is what "cancel the access of
 -- somebody who left" has to mean. ON re-links an account that is not already
 -- with another company — a rehire gets their convention back.
+drop function if exists hr_set_member_access(text, boolean);
 create or replace function hr_set_member_access(p_email text, p_enabled boolean)
   returns void language plpgsql security definer set search_path = public as $$
 declare
@@ -10767,6 +10778,7 @@ grant execute on function hr_set_member_access(text, boolean) to authenticated;
 -- Off the list entirely. Same consequence as disabling, plus the row goes:
 -- for an address added by mistake, where leaving a disabled line behind would
 -- be a record of somebody who never belonged here.
+drop function if exists hr_remove_company_member(text);
 create or replace function hr_remove_company_member(p_email text)
   returns void language plpgsql security definer set search_path = public as $$
 declare
@@ -10785,6 +10797,7 @@ grant execute on function hr_remove_company_member(text) to authenticated;
 -- How many accounts are on the company code today WITHOUT being on the list:
 -- what a leaked code actually cost, as one number. A count and nothing else —
 -- no addresses, no names, nothing about what any of them did in the app.
+drop function if exists hr_unlisted_member_count();
 create or replace function hr_unlisted_member_count()
   returns int language sql stable security definer set search_path = public as $$
   select count(*)::int
@@ -10803,6 +10816,7 @@ grant execute on function hr_unlisted_member_count() to authenticated;
 -- Close the door on everyone the list does not name. Deliberate, confirmed in
 -- the console, and reported as a count. Refused while the list is empty,
 -- because "approve nobody" would disconnect the entire company.
+drop function if exists hr_revoke_unlisted_members();
 create or replace function hr_revoke_unlisted_members()
   returns int language plpgsql security definer set search_path = public as $$
 declare

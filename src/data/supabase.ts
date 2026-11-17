@@ -1116,7 +1116,13 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         .select('*')
         .eq('company_id', cid.toUpperCase())
         .order('email')
-      if (error) return []
+      /* THROWN, NOT SWALLOWED. This used to `return []` on any error, so a
+         missing table, a refused policy and a company with no employees all
+         looked the same on screen: an empty list and an invitation to add
+         the first address. It is how a whole feature came to be reported as
+         "the invitation does not work" when the LIST had been failing
+         silently all along. The one caller already catches. */
+      if (error) throw error
       return (data ?? []).map((r: Record<string, any>) => ({
         email: String(r.email),
         name: r.name ?? undefined,
