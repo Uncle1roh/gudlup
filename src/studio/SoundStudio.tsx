@@ -66,7 +66,7 @@ import type { CatalogProtocol } from '../data/catalog'
 import type { ScriptIndex, StudioProject, VoiceChoice } from '../compose/types'
 import { useDataProvider } from '../data/provider'
 import type { SeedTrack, StudioPhase } from '../compose/types'
-import { planVoiceOverlaps, VOICE_GAP, type VoicePlan } from './voiceOverlap'
+import { planVoiceOverlaps, VOICE_GAP, MUSIC_TAIL_SEC, type VoicePlan } from './voiceOverlap'
 import { BrandLogo } from '../components/Brand'
 import { useI18n } from '../i18n'
 import { LanguagePicker } from '../components/LanguagePicker'
@@ -1734,11 +1734,16 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
 
     window.setTimeout(() => {
       const p = plan
-      if (!p || (!p.panned && !p.moved)) return
+      /* `longer` on its own is a real outcome now: no voice had to move and
+         the closing's bed was still landing on the last word. */
+      if (!p || (!p.panned && !p.moved && !p.longer)) return
       /* The closing may now run past the end of the session. It is allowed to:
          a protocol that ends a few seconds past 24 minutes is the accepted
-         price of not stacking two voices on top of each other. */
-      if (p.closingEnd > lengthSecRef.current) setLengthSec(Math.ceil(p.closingEnd))
+         price of not stacking two voices on top of each other — and of not
+         ending on a cut. `sessionEnd` covers the stretched bed, not just the
+         last voice, or the tail this rule just added would be the first thing
+         truncated. */
+      if (p.sessionEnd > lengthSecRef.current) setLengthSec(Math.ceil(p.sessionEnd))
       for (const t of tracksRef.current) {
         for (const c of t.clips) {
           if (p.starts[c.id] !== undefined || p.pans[c.id] !== undefined || p.stretched[c.id] !== undefined) {
@@ -1751,8 +1756,13 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
       if (p.moved) bits.push(p.moved === 1
         ? lt('1 in phase 6 spaced {gap}s apart, centred', { gap: VOICE_GAP })
         : lt('{n} in phase 6 spaced {gap}s apart, centred', { n: p.moved, gap: VOICE_GAP }))
-      if (p.longer) bits.push(lt('phase 6 music extended to the last voice'))
-      setEditMsg(lt('Overlapping voices resolved: {list}.', { list: bits.join(' \u00b7 ') }))
+      if (p.longer) bits.push(p.longer === 1
+        ? lt('closing music extended to end {n}s after the last voice', { n: MUSIC_TAIL_SEC })
+        : lt('{k} closing beds extended to end {n}s after the last voice', { k: p.longer, n: MUSIC_TAIL_SEC }))
+      /* Not always an overlap any more: the tail runs on its own. */
+      setEditMsg(p.panned || p.moved
+        ? lt('Overlapping voices resolved: {list}.', { list: bits.join(' \u00b7 ') })
+        : lt('Ending adjusted: {list}.', { list: bits.join(' \u00b7 ') }))
     }, 0)
   }
 
@@ -1801,6 +1811,27 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
     setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
       ...t,
       clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, gainDb: v === 0 ? undefined : v })),
+    })))
+    scheduleRender(trackId, clipId)
+  }
+
+  /** The clip's own fade in / fade out, in seconds, baked into its buffer.
+      A fade is measured from the clip's EDGES, so it travels with the clip and
+      with any stretch of it — which is what makes the closing rule work: the
+      bed is extended past the last voice and its fade-out moves to the new
+      end, over the air the voice is no longer in. */
+  function patchClipFades(trackId: string, clipId: string, patch: { fadeInSec?: number; fadeOutSec?: number }) {
+    const cl = tracksRef.current.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)
+    if (cl?.frozen) {
+      setEditMsg(lt('Cut pieces have frozen audio — set the fades before cutting, or by joining the parts again.'))
+      return
+    }
+    const clean: { fadeInSec?: number; fadeOutSec?: number } = {}
+    if (patch.fadeInSec !== undefined) clean.fadeInSec = Math.max(0, Math.round(patch.fadeInSec * 2) / 2)
+    if (patch.fadeOutSec !== undefined) clean.fadeOutSec = Math.max(0, Math.round(patch.fadeOutSec * 2) / 2)
+    setTracks((prev) => prev.map((t) => (t.id !== trackId ? t : {
+      ...t,
+      clips: t.clips.map((c) => (c.id !== clipId ? c : { ...c, ...clean })),
     })))
     scheduleRender(trackId, clipId)
   }
@@ -2272,6 +2303,7 @@ function StudioDesktop({ languagePicker }: { languagePicker: boolean }) {
         onParam={(patch) => selected && patchClipParams(selected.trackId, selected.clipId, patch)}
         onTiming={(patch) => selected && patchClipTiming(selected.trackId, selected.clipId, patch)}
         onGain={(db) => selected && patchClipGain(selected.trackId, selected.clipId, db)}
+        onFades={(patch) => selected && patchClipFades(selected.trackId, selected.clipId, patch)}
         onDelete={() => selected && deleteClip(selected.trackId, selected.clipId)}
         ttsLabel={ttsInfo.label}
         ttsCanRender={ttsInfo.canRender}
@@ -2726,12 +2758,13 @@ function Slider({ label, value, min, max, step, onChange, fmt }: {
   )
 }
 
-function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg, workingLang, workingTo }: {
+function Inspector({ track, clip, onParam, onTiming, onGain, onFades, onDelete, ttsLabel, ttsCanRender, ttsBusy, previewBusy, ttsError, onVoiceText, onVoicePreview, onVoiceSynthesize, onVoiceChange, onEq, onDrawClip, onDrawAllMissing, drawBusy, drawMsg, workingLang, workingTo }: {
   track: Track | null
   clip: Clip | null
   onParam: (patch: Partial<ClipParams>) => void
   onTiming: (patch: { startSec?: number; durationSec?: number }) => void
   onGain: (db: number) => void
+  onFades: (patch: { fadeInSec?: number; fadeOutSec?: number }) => void
   onDelete: () => void
   ttsLabel: string
   ttsCanRender: boolean
@@ -2806,6 +2839,59 @@ function Inspector({ track, clip, onParam, onTiming, onGain, onDelete, ttsLabel,
             {lt('Fades out over its last {n}s — every bed in the Studio does.', { n: clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec).toFixed(clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec) < 1 ? 1 : 0) })}
           </div>
         )}
+        {/* ---- how the clip ENDS -------------------------------------------
+            Only off the voice lane. A voice buffer is exactly as long as the
+            line that was spoken, so a fade on it is the sentence going quiet
+            mid-word; the beds are what stop abruptly, and they are what the
+            closing rule stretches.
+
+            The number here is the clip's OWN fade. What is actually rendered
+            is `clipFadeOutSec`: three seconds is a floor for every bed, and
+            never more than half the audio there is, so a short stab cannot be
+            three quarters fade. The line below says which one is in force, or
+            the two numbers disagreeing on screen is the next bug report. */}
+        {track.type !== 'voice' && !clip.frozen && (() => {
+          const own = clip.fadeOutSec ?? 0
+          const real = clipFadeOutSec(track.type, clip.fadeOutSec, clip.durationSec)
+          return (
+            <>
+              <Slider
+                label={lt('Fade out')}
+                value={own}
+                min={0} max={30} step={0.5}
+                onChange={(v) => onFades({ fadeOutSec: v })}
+                fmt={(v) => (v === 0 ? lt('none') : `${v.toFixed(1)}s`)}
+              />
+              <div className="mt-trim">
+                <span className="mt-trim__lbl">{lt('Ending')}</span>
+                <span className="mt-trim__val">{real > 0 ? lt('fades over {n}s', { n: real.toFixed(real < 1 ? 1 : 0) }) : lt('stops dead')}</span>
+                <span className="mt-trim__btns">
+                  <button
+                    onClick={() => onFades({ fadeOutSec: MUSIC_TAIL_SEC })}
+                    title={lt('A fade as long as the air the closing rule leaves after the last voice')}
+                  >
+                    {lt('Fade out {n}s', { n: MUSIC_TAIL_SEC })}
+                  </button>
+                  <button onClick={() => onFades({ fadeOutSec: Math.max(0, Math.min(30, clip.durationSec / 3)) })}>
+                    {lt('last third')}
+                  </button>
+                  <button onClick={() => onFades({ fadeOutSec: 0 })} title={lt('Back to the three-second floor every bed gets')}>
+                    {lt('reset')}
+                  </button>
+                </span>
+                <div className="mt-note">
+                  {own === 0
+                    ? lt('No fade of its own, so it gets the three seconds every bed in the Studio gets.')
+                    : (real > own
+                      ? lt('Asked for {own}s; rendered at {real}s, which is half the audio there is.', { own: own.toFixed(1), real: real.toFixed(1) })
+                      : lt('Measured back from where the clip ends — stretch the clip and the fade moves with it.'))}
+                  {' '}
+                  {lt('A voice clip must never end the piece with the music: the closing bed is extended to end {n}s after the last voice, and this is the fade that air is for.', { n: MUSIC_TAIL_SEC })}
+                </div>
+              </div>
+            </>
+          )
+        })()}
         {!clip.frozen && <ClipEqPanel clip={clip} onEq={onEq} />}
         {clip.frozen && clip.eq && (
           <div className="mt-note" style={{ marginTop: 6 }}>{lt('EQ is locked on cut pieces — the audio is frozen.')}</div>
