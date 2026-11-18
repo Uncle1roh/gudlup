@@ -136,10 +136,25 @@ import { defaultClipEq, applyEqToBuffer, eqMagnitudeDb, eqIsTransparent } from '
   const [mag1k] = eqMagnitudeDb(eq, [1000], sr3)
   assert(close(mag1k, 12, 0.5), `eqMagnitudeDb @1 kHz reads ${mag1k.toFixed(1)} dB (curve = audio)`)
 
-  // shapeClipBuffer order: EQ then calibration — layer level survives the boost
+  /* shapeClipBuffer order: EQ → calibration → fades (CLAUDE.md).
+
+     This assertion used to be written against VOICE_REF_RMS and a gated RMS,
+     which was the OLD calibration model — `calibrateBufferToDb` has targeted
+     LUFS (`ANCHOR_LUFS + targetDb`) for some time, and VOICE_REF_RMS is now
+     referenced nowhere in src/. So it asserted a number the engine had
+     stopped promising. Worse, it crashed before asserting anything at all:
+     the constant was never imported, so the file threw a ReferenceError here
+     and this — the one check of the signal ORDER — silently never ran.
+
+     Written in the engine's own terms now: whatever the EQ does to a clip,
+     calibration comes after it and lands the clip on its layer level. If the
+     order were reversed, a +12 dB bell would leave this 12 LU hot. */
   const t = mk(1000)
   const out2 = shapeClipBuffer(t as any, { eq, calibrateDb: -9 }) as any
-  const want2 = VOICE_REF_RMS * Math.pow(10, -9 / 20)
-  assert(close(gatedRms(out2), want2, want2 * 0.03), `EQ'd clip still lands at −9 dB layer level (calibration after EQ)`)
+  const got2 = measureLufs(out2)
+  assert(close(got2, ANCHOR_LUFS - 9, 0.6),
+    `EQ'd clip still lands at −9 LU under the anchor: ${got2.toFixed(1)} LUFS (calibration after EQ)`)
+  assert(got2 < ANCHOR_LUFS - 9 + 6,
+    `…and is not left hot by the +12 dB bell (would be ~${(ANCHOR_LUFS - 9 + 12).toFixed(0)} LUFS if EQ ran last)`)
 }
 console.log('eq checks done')

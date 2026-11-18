@@ -113,8 +113,14 @@ function noRepeat(): void {
   const drawn = [0, 1, 2, 3, 4, 5].map(() => drawMusic(pools, 1, rnd, ledger)!)
   const first3 = drawn.slice(0, 3).map((d) => d.asset.name)
   assert(new Set(first3).size === 3, `the first 3 draws use all 3 files, none twice — got ${first3.join(', ')}`)
-  assert(drawn.slice(0, 3).every((d) => !/reused/.test(d.how)), `no "reused" note while the pool still had unused files`)
-  assert(/reused/.test(drawn[3].how), `draw 4 reports the pool exhausted`)
+  /* The provenance note is the one an operator reads in the Studio, so it is
+     written in the console's language — "pool esaurito, file riutilizzato"
+     (`admin/assetPools.ts`, poolNote). This used to match on the English
+     "reused" and so failed on a note that had simply been translated; the
+     DRAWING behaviour it is here to guard never changed. */
+  const REUSED = /riutilizzat|esaurit/i
+  assert(drawn.slice(0, 3).every((d) => !REUSED.test(d.how)), `no reuse note while the pool still had unused files`)
+  assert(REUSED.test(drawn[3].how), `draw 4 reports the pool exhausted — ${drawn[3].how}`)
   const names = drawn.map((d) => d.asset.name)
   assert(names.every((n, i) => i === 0 || n !== names[i - 1]), `never the same file twice in a row — ${names.join(' → ')}`)
   const counts = new Map<string, number>()

@@ -20,7 +20,23 @@
    Run: npx esbuild tools/test-pdf.ts --bundle --platform=node --format=cjs \
           --define:import.meta.env={} --outfile=<tmp>/pdf.cjs && node <tmp>/pdf.cjs */
 
+/* ---------------------------------------------------------------------------
+   WHY SOME EXPECTATIONS GO THROUGH wt()
+
+   The session report is built by code that runs outside React, so it
+   translates with `wt()` (src/workspace/i18n.ts) against the interface
+   locale — which in the workspace is Italian. These assertions used to
+   compare the rendered text with the ENGLISH key, so each one failed the
+   moment its string was translated, and the failures said nothing about the
+   report. Asserting through `wt()` tests what the builder would actually
+   print, in whatever language it prints it.
+
+   The CORPORATE report is a different case: it is not translated at all. Its
+   footer failed because the product was re-branded — "Good Loop" became
+   "goodloop" everywhere — and this file still held the old spelling.
+   --------------------------------------------------------------------------- */
 import { PdfDoc, textWidth, toWinAnsi, wrap, ellipsize } from '../src/lib/pdf'
+import { wt } from '../src/workspace/i18n'
 import { buildSessionReportPdf, buildBatchReportPdf } from '../src/workspace/sessionPdf'
 import { buildCorporateReportPdf } from '../src/corporate/reportPdf'
 import { demoWorkspace } from '../src/workspace/data'
@@ -41,11 +57,33 @@ interface Parsed {
   /** Case-insensitive containment. Section labels are rendered uppercased, so
       a case-SENSITIVE absence check would pass for the wrong reason. */
   has: (needle: string) => boolean
+  /** Containment with every run of whitespace flattened to one space, for
+      text the builder wraps across lines. */
+  says: (needle: string) => boolean
+}
+
+/** What `text` looks like once the encoder has had it: WinAnsi has no em-dash,
+    so "BOZZA — NON FIRMATO" reaches the page as "BOZZA - NON FIRMATO", and an
+    expectation written with the original dash can never match. `toWinAnsi`
+    returns BYTES, which is what this turns back into readable characters. */
+function asRendered(text: string): string {
+  return toWinAnsi(text).map((b) => String.fromCharCode(b)).join('')
 }
 
 async function parse(bytes: Uint8Array): Promise<Parsed> {
   // The legacy build is the one that runs under plain Node without a DOM.
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  /* This file is bundled into node_modules/.cache before it runs, so pdfjs
+     looks for its worker next to the BUNDLE and reports
+     "Setting up fake worker failed". Point it at the real file, which is
+     where the dependency actually keeps it.
+     A file:// URL and not a bare path: the ESM loader refuses a Windows
+     absolute path, where the drive letter reads as a URL scheme. */
+  const nodePath = await import('node:path')
+  const nodeUrl = await import('node:url')
+  pdfjs.GlobalWorkerOptions.workerSrc = nodeUrl.pathToFileURL(nodePath.join(
+    process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs',
+  )).href
   const doc = await pdfjs.getDocument({
     data: bytes,
     useSystemFonts: false,
@@ -70,7 +108,21 @@ async function parse(bytes: Uint8Array): Promise<Parsed> {
   await doc.destroy()
   const all = text.join('\n')
   const lower = all.toLowerCase()
-  return { pages: doc.numPages, text, all, has: (n: string) => lower.includes(n.toLowerCase()) }
+  /* `note()` and `paragraph()` WRAP their text, so a long sentence arrives
+     here broken across lines. A needle longer than one line can never match
+     `has`, which is why assertions about those boxes used to test a short
+     English fragment instead — and broke the moment the sentence was
+     translated. `says` flattens both sides first.
+
+     An expectation also has to pass through `toWinAnsi`, which is what the
+     encoder does to the text: WinAnsi has no em-dash, so “BOZZA — NON
+     FIRMATO” reaches the page as “BOZZA - NON FIRMATO”. */
+  const flat = lower.replace(/\s+/g, ' ')
+  return {
+    pages: doc.numPages, text, all,
+    has: (n: string) => lower.includes(n.toLowerCase()),
+    says: (n: string) => flat.includes(n.toLowerCase().replace(/\s+/g, ' ')),
+  }
 }
 
 async function main() {
@@ -159,35 +211,35 @@ async function main() {
   assert(one.all.includes(maria.name), 'the report names the patient')
   assert(one.all.includes(ws.account.fullName), 'the report carries the signing professional')
   assert(one.all.includes(ws.account.licenceNumber.replace('CRP ', '')), 'the report carries the licence number')
-  assert(one.has('Confidential clinical record'), 'the confidentiality footer is present')
+  assert(one.has(wt('Confidential clinical record')), 'the confidentiality footer is present')
   assert(!one.all.includes('DRAFT'), 'a signed report is not marked draft')
 
   const glParsed = await parse(buildSessionReportPdf({ patient: maria, account: ws.account, rows: [glSession] }).render())
-  assert(glParsed.has('Phases completed'), 'a GL session reports its phases')
+  assert(glParsed.has(wt('Phases completed')), 'a GL session reports its phases')
   assert(glParsed.all.includes(glSession.protocolCode ?? ''), 'a GL session names its protocol')
 
   const voParsed = await parse(buildSessionReportPdf({ patient: maria, account: ws.account, rows: [videoOnly] }).render())
   assert(!voParsed.has('Phases completed'), 'a video-only session omits the treatment rows entirely')
-  assert(voParsed.has('Good Loop treatment'), 'a video-only session still states there was no treatment')
+  assert(voParsed.has(wt('goodloop audio')), 'a video-only session still states there was no treatment')
 
   const draftRow = { ...signed, signedAt: undefined, signatureVersion: 0 }
   const draftParsed = await parse(buildSessionReportPdf({ patient: maria, account: ws.account, rows: [draftRow] }).render())
-  assert(draftParsed.all.includes('DRAFT'), 'an UNSIGNED report is watermarked as a draft')
-  assert(draftParsed.all.includes('Not signed'), 'an unsigned report says so in the signature block')
+  assert(draftParsed.says(asRendered(wt('DRAFT — NOT SIGNED. This report has not been confirmed and is not a completed clinical record.'))), 'an UNSIGNED report is watermarked as a draft')
+  assert(draftParsed.has(wt('Not signed.')), 'an unsigned report says so in the signature block')
 
   const noVas = { ...signed, vasPre: undefined, vasPost: undefined }
   const noVasParsed = await parse(buildSessionReportPdf({ patient: maria, account: ws.account, rows: [noVas] }).render())
-  assert(noVasParsed.has('Not recorded'), 'a missing VAS is stated, not silently omitted')
+  assert(noVasParsed.has(wt('Not recorded.')), 'a missing VAS is stated, not silently omitted')
 
   const batch = await parse(
     buildBatchReportPdf(ws.account, ws.patients.filter((p) => p.sessions.length).map((p) => ({ patient: p, rows: p.sessions }))).render(),
   )
   assert(batch.pages > 1, 'a batch export is multi-page')
-  assert(batch.text[0].includes('Session reports'), 'the batch has a cover page')
-  assert(batch.text[0].toLowerCase().includes('contents'), 'the cover lists what the file contains')
-  assert(batch.all.includes('Maria Santos'), 'the batch contains its first patient')
+  assert(batch.text[0].includes(wt('Session reports')), 'the batch has a cover page')
+  assert(batch.text[0].toLowerCase().includes(wt('Contents').toLowerCase()), 'the cover lists what the file contains')
+  assert(batch.all.includes(ws.patients[0].name), 'the batch contains its first patient')
   assert(
-    batch.text.every((t) => t.includes('Confidential clinical records')),
+    batch.text.every((t) => t.includes(wt('Confidential clinical records'))),
     'every page of a batch carries the confidentiality footer',
   )
 
@@ -201,10 +253,11 @@ async function main() {
     'Professional support utilization',
   ]
 
+  const agg = buildAggregates(corp, 189)
   const big = await parse(
     buildCorporateReportPdf({
       state: corp,
-      agg: buildAggregates(corp, 189),
+      agg,
       name: 'August 2026 — Monthly Report',
       periodFrom: Date.UTC(2026, 7, 1),
       periodTo: Date.UTC(2026, 7, 31),
@@ -214,14 +267,26 @@ async function main() {
 
   assert(big.all.includes(corp.profile.name), 'the report names the company')
   assert(
-    big.text.every((t) => t.includes('Confidential') && t.includes('Good Loop Aggregate Wellbeing Report')),
+    big.text.every((t) => t.includes('Confidential') && t.includes('goodloop Aggregate Wellbeing Report')),
     'the required confidentiality footer is on EVERY page',
   )
   assert(big.has('Adoption'), 'the adoption section is present')
   assert(big.has('WHO-5'), 'the WHO-5 section is present')
   assert(big.has('does not constitute a clinical assessment'), 'the WHO-5 interpretation note travels with the export')
   assert(big.has('Benchmarking'), 'the benchmarking section is present')
-  assert(big.has('employees currently using professional support'), 'the professional-support integer is present')
+  /* INVERTED, and on purpose. This asserted that the report prints
+     "Employees currently using professional support". It does not, and must
+     not: `buildAggregates` returns `professionalSupport: null` unconditionally,
+     with the rule written beside it — "Never a separate figure for
+     professionally guided use (SPN-04)". A single figure for who is in therapy
+     is exactly the number an employer must never be handed, however
+     aggregated the rest of the page is.
+
+     So the assertion now guards the rule instead of contradicting it: the
+     section may be ASKED for, and no such integer may appear. */
+  assert(agg.professionalSupport === null, 'no separate professional-support figure is ever computed (SPN-04)')
+  assert(!big.has('currently using professional support'),
+    'and the report does not print one, even when the section is requested')
 
   // The vocabulary rule holds on paper too.
   for (const term of ['at risk', 'diagnosis', 'pathological', 'red flag', 'alarming']) {

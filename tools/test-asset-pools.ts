@@ -67,7 +67,11 @@ console.log('\n--- drawing one ---')
 
 const bowlDraw = drawSoundscape(pools, 'campana tibetana', rnd, newDrawLedger())
 assert(bowlDraw?.asset.path === BOWL.path, 'a clip asking for a bowl gets the bowl')
-assert(/bowl pool/.test(bowlDraw?.how ?? ''), 'and the note says where it came from')
+/* The provenance note is what an operator reads in the Studio, so it is in
+   the console's language (`admin/assetPools.ts`, poolNote). Matching the
+   English "bowl pool" failed on a note that had only been translated. */
+assert(/pool/i.test(bowlDraw?.how ?? '') && /campan|bowl/i.test(bowlDraw?.how ?? ''),
+  `and the note says where it came from — ${bowlDraw?.how}`)
 
 const heartDraw = drawSoundscape(pools, 'heartbeat 60 bpm', rnd, newDrawLedger())
 assert(heartDraw?.asset.path === HEART.path, 'a clip asking for a heartbeat gets the heartbeat')
@@ -78,7 +82,14 @@ assert(lakeDraw?.asset.path === LAKE.path, 'and an ordinary texture still draws 
 /* ---------------------------------------------------- the other folder --- */
 console.log('\n--- filed under soundscape/ instead ---')
 
-/* Both readings of the folder convention are defensible, so both work. */
+/* Both FOLDERS work, and a special sound keeps its own pool wherever it is
+   filed. This used to assert the opposite — that a heartbeat filed under
+   `assets/soundscape/` left the dedicated pool empty — which was the older,
+   looser reading of the convention. `buildAssetPools` was tightened since,
+   with its reason written beside it: a singing bowl filed under soundscape/
+   is still a bowl, it is a struck accent rather than a texture, and it must
+   never turn up in a mix that asked for an ambiente. So it joins its special
+   pool AND stays out of the general one, which is what is asserted now. */
 const filedAsScape = buildAssetPools(
   [
     asset('assets/soundscape/heartbeat/hb.mp3', 'soundscape', { texture: 'heartbeat' }),
@@ -87,7 +98,10 @@ const filedAsScape = buildAssetPools(
   ],
   [],
 )
-assert(filedAsScape.heartbeat.length === 0, 'the dedicated folder is empty in this arrangement')
+assert(filedAsScape.heartbeat.length === 1, 'a heartbeat filed under soundscape/ still joins the heartbeat pool')
+assert(filedAsScape.bowl.length === 1, 'and a bowl filed there still joins the bowl pool')
+assert(filedAsScape.soundscapes.length === 1 && filedAsScape.soundscapes[0].name === 'lake-01.mp3',
+  'neither of them is left in the general soundscape pool, so an ambiente draw cannot reach one')
 const hb2 = drawSoundscape(filedAsScape, 'heartbeat', rnd, newDrawLedger())
 assert(hb2?.asset.name === 'hb.mp3', 'and the heartbeat is found anyway, rather than reported missing')
 const bw2 = drawSoundscape(filedAsScape, 'campana tibetana', rnd, newDrawLedger())
