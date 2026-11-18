@@ -29,8 +29,11 @@
 --     about the order in which callbacks fire.
 --
 -- A retry becomes safe as a side effect: the second insert is refused by the
--- index, the client already swallows that error, and the row from the first
--- attempt is the one that stays.
+-- index and the row from the first attempt is the one that stays. The CLIENT
+-- has to agree with that, and it did not: `recordSession` threw and no caller
+-- caught it, so a refused duplicate left the person stuck on the session
+-- screen. That is fixed alongside this script — a 23505 from this index is
+-- now read as "already recorded", which is exactly what it means.
 --
 -- ---------------------------------------------------------------------------
 -- WHAT IT DOES NOT COVER, on purpose
@@ -66,6 +69,13 @@ having count(*) > 1
 -- In a DO block so that existing duplicates produce a sentence you can act
 -- on rather than an error that rolls the whole file back. Nothing above this
 -- point writes anything, so there is nothing to lose either way.
+-- It RAISES rather than notices, and that is the correction to the first
+-- version of this file. The SQL editor shows only the last statement's
+-- result and does not print `raise notice`: with a notice, a run that created
+-- nothing and a run that created the index both ended in "Success. No rows
+-- returned", so the one case worth knowing about was the one case invisible.
+-- Nothing above this point writes anything, so failing costs nothing but the
+-- rollback of a file that had nothing to roll back.
 do $$
 begin
   if exists (
@@ -74,14 +84,24 @@ begin
      group by b2c_profile_id, protocol_code, started_at
     having count(*) > 1
   ) then
-    raise notice 'NOT CREATED: there are already duplicate b2c sessions — see the list above, keep one row of each pair, then run this file again.';
-  else
-    create unique index if not exists sessions_one_per_start
-      on sessions (b2c_profile_id, protocol_code, started_at)
-      where kind = 'b2c' and b2c_profile_id is not null and started_at is not null;
-    raise notice 'sessions_one_per_start is in place.';
+    raise exception 'NOT CREATED: there are already duplicate b2c sessions. Run the select at the top of this file on its own, keep one row of each pair, then run this file again.'
+      using errcode = 'P0001', hint = 'DUPLICATE_SESSIONS';
   end if;
+
+  create unique index if not exists sessions_one_per_start
+    on sessions (b2c_profile_id, protocol_code, started_at)
+    where kind = 'b2c' and b2c_profile_id is not null and started_at is not null;
 end $$;
 
 -- ---------------------------------------------------------------------------
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 3. Did it work? (read-only — run this one on its own)
+-- ---------------------------------------------------------------------------
+-- The editor prints the LAST statement only, and the notify above is not an
+-- answer. Select this block and run it by itself: one row means the guard is
+-- in place, no rows means it is not.
+select indexname, indexdef
+  from pg_indexes
+ where indexname = 'sessions_one_per_start';

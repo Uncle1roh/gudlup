@@ -108,10 +108,34 @@ select u.id,
  where p.id is null
  order by u.created_at;
 
--- UNCOMMENT TO CLEAN UP, once the list above is what you expect:
+-- ---------------------------------------------------------------------------
+-- UNCOMMENT TO CLEAN UP, once the list above is what you expect
+-- ---------------------------------------------------------------------------
+-- Three guards, and none of them is decoration. "Every login with no profile"
+-- is a WIDER set than "every login this defect stranded":
+--
+--   · created_at older than an hour. A sign-up in flight RIGHT NOW is a login
+--     with no profile: `auth.signUp` has committed and the profile insert has
+--     not arrived yet. Deleting it hands that person the very defect this
+--     file closes, and their insert then lands with an auth_uid pointing at
+--     nothing (`profiles.auth_uid` has no foreign key to auth.users).
+--   · not an address any profile carries. A login made by hand in the
+--     dashboard is bound by a second statement afterwards — that is how admin,
+--     HR and sales accounts are created (`seed_demo.sql`, `16-sales-role.sql`).
+--     Between the two steps it looks exactly like an orphan.
+--   · never admin@goodloop.app, by the address itself. `reset/2-wipe.sql`
+--     protects the admin three ways over because this is the one delete that
+--     cannot be undone; this statement gets the same literal.
+--
+-- Run the select above once more afterwards: what is left should be the
+-- addresses you decided to keep, and nothing else.
 --
 -- delete from auth.users u
---  where not exists (select 1 from profiles p where p.auth_uid = u.id);
+--  where not exists (select 1 from profiles p where p.auth_uid = u.id)
+--    and u.created_at < now() - interval '1 hour'
+--    and lower(coalesce(u.email, '')) not in (
+--          select lower(email) from profiles where email is not null)
+--    and lower(coalesce(u.email, '')) <> 'admin@goodloop.app';
 
 -- ---------------------------------------------------------------------------
 notify pgrst, 'reload schema';

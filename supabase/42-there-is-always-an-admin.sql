@@ -76,17 +76,42 @@ begin
 
   -- Will it still be one after? (An UPDATE that changes neither column is
   -- the common case — a name, a locale — and must cost nothing.)
+  --
+  -- `auth_uid` is part of the question, which is not obvious. An admin row
+  -- whose auth_uid is set to null, or moved to another login, is an admin who
+  -- cannot sign in — the console is just as locked as after a demotion, and
+  -- role and active would both still read 'admin' and true. There is no
+  -- foreign key from profiles.auth_uid to auth.users to catch it either.
   if tg_op = 'UPDATE'
      and new.role::text = 'admin'
-     and coalesce(new.active, true) then
+     and coalesce(new.active, true)
+     and new.auth_uid is not distinct from old.auth_uid then
     return new;
   end if;
 
+  /* From here on this write REMOVES an active admin, so the count below
+     decides whether it is allowed — and the count has to be taken one writer
+     at a time.
+
+     Under READ COMMITTED two concurrent transactions each see the OTHER row
+     still as an admin: both count others = 1, both are allowed, both commit,
+     and no admin is left. That is the header's "demote someone else, then
+     yourself" done from two tabs instead of in sequence. The lock serialises
+     exactly this path and nothing else — an ordinary profile update returned
+     above and never reaches it. */
+  perform pg_advisory_xact_lock(hashtext('goodloop.keep_an_admin'));
+
+  /* Counted as the DATABASE will answer it, which means a login must exist.
+     A profile row still saying 'admin' after its login was deleted from the
+     dashboard would otherwise be counted as the survivor, and the real admin
+     could then be demoted onto an empty console. */
   select count(*) into others
     from profiles p
    where p.role::text = 'admin'
      and coalesce(p.active, true)
-     and p.id <> old.id;
+     and p.id <> old.id
+     and p.auth_uid is not null
+     and exists (select 1 from auth.users u where u.id = p.auth_uid);
 
   if others = 0 then
     raise exception 'this is the last active admin — give another account the admin role first'
@@ -106,8 +131,21 @@ create trigger profiles_keep_an_admin
 -- ---------------------------------------------------------------------------
 -- Read-only. One active admin is enough for the trigger to protect; two is
 -- what an organisation wants, so that losing a password is not an incident.
-select count(*) filter (where role::text = 'admin' and coalesce(active, true)) as active_admins,
-       count(*) filter (where role::text = 'admin' and not coalesce(active, true)) as switched_off_admins
+-- `admins_who_can_sign_in` is the number the trigger actually protects. If it
+-- reads 1, one forgotten password is an incident; 2 is what an organisation
+-- wants. If `admins_with_no_login` is not 0, those rows say admin and cannot
+-- open anything — give one of them a login or take the role away.
+select count(*) filter (
+         where role::text = 'admin' and coalesce(active, true)
+           and auth_uid is not null
+           and exists (select 1 from auth.users u where u.id = profiles.auth_uid)
+       ) as admins_who_can_sign_in,
+       count(*) filter (where role::text = 'admin' and not coalesce(active, true)) as switched_off_admins,
+       count(*) filter (
+         where role::text = 'admin'
+           and (auth_uid is null
+                or not exists (select 1 from auth.users u where u.id = profiles.auth_uid))
+       ) as admins_with_no_login
   from profiles;
 
 -- ---------------------------------------------------------------------------
