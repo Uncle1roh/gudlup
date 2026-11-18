@@ -39,6 +39,7 @@ import { useDataProvider } from '../data/provider'
 import { uploadCredentialDoc, type CredentialDoc } from '../b2b/credentials'
 import type { Therapist } from '../b2b/data'
 import type { TherapistAccount } from './data'
+import { isBareRegistrationNumber } from '../b2b/registration'
 
 interface OnboardingProps {
   account: TherapistAccount
@@ -163,6 +164,14 @@ function Registration({ account, cred, onSubmit, onCredChanged }: {
   if (!form.fullName.trim()) errors.fullName = t('Required')
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) errors.email = t('Enter the email on your GLCP certificate')
   if (!form.licenceNumber.trim()) errors.licenceNumber = t('Required')
+  /* A FORMAT check, and only that: whether the number exists and belongs to
+     this person is the document upload and a human reviewer. An unchecked
+     field sent a reviewer a name or a typo to vouch for, and the region is
+     asked for separately, so letters and slashes do not belong in it
+     (`b2b/registration.ts`). */
+  else if (!isBareRegistrationNumber(form.licenceNumber)) {
+    errors.licenceNumber = t('Four to six digits, with no region and no letters — for example 158342.')
+  }
   if (!form.glcpNumber.trim()) errors.glcpNumber = t('Required')
   if (!form.certificateName) errors.certificateName = t('Upload your professional certificate')
   if (!form.photoDataUrl) errors.photoDataUrl = t('A photo is shown to patients during booking')

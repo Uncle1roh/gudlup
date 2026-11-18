@@ -16,6 +16,9 @@ type Row = readonly [en: string, it: string, pt: string]
 
 const ROWS: Row[] = [
   /* ---- the clinician's registration ---------------------------------- */
+  ['Four to six digits, with no region and no letters — for example 158342.',
+   'Da quattro a sei cifre, senza regione e senza lettere — per esempio 158342.',
+   'De quatro a seis dígitos, sem a região e sem letras — por exemplo 158342.'],
   ['the digits only — the region is the field below',
    'solo le cifre — la regione è il campo sotto',
    'apenas os dígitos — a região é o campo abaixo'],

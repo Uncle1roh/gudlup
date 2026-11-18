@@ -7,6 +7,7 @@ import { stashSignupIntake } from '../data/selfUseStore'
 import { conventionLabel, looksLikeCompanyCode, normalizeCode, resolveCompanyCode } from '../data/convention'
 import { useI18n, localeForCountry, localeWasChosen } from '../i18n'
 import { readInvite, clearInvite } from './invite'
+import { rememberIntended, takeIntended } from './intended'
 import { authErrorKey } from './authError'
 import { previewing, clearPreview } from '../admin/preview'
 import { BrandLogo } from '../components/Brand'
@@ -247,13 +248,23 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
            it sends none and the account's own record answers — in demo
            mode, by its address (`auth/auth.tsx`). */
         await auth.signIn(email.trim(), password, isAdmin || isSales ? role : undefined)
-        /* Signed in from the public door: the background is told, so the
-           rings leave the person in the photograph and open out across the
-           library (brief 10.3). It is only ever set here — on the sign-UP
-           path the next screen is the terms, which is not an arrival, and
-           `FirstRun` clears the flag if it ever gets one. The hash follows
-           WITHOUT a page load, or there would be nothing left to animate. */
-        if (hero) {
+        /* The screen they were trying to open when the door stopped them.
+           Read once and cleared, so it can only ever steer the sign-in it
+           was stored for. It takes precedence over the arrival below because
+           it is a destination the PERSON chose, and the rings are an
+           entrance to the library, not to an arbitrary screen — animating
+           into somewhere they did not ask for is the wrong welcome. */
+        const back = takeIntended()
+        if (back) {
+          navigate(back)
+        } else if (hero) {
+          /* Signed in from the public door: the background is told, so the
+             rings leave the person in the photograph and open out across the
+             library (brief 10.3). It is only ever set here — on the sign-UP
+             path the next screen is the terms, which is not an arrival, and
+             `FirstRun` clears the flag if it ever gets one. The hash follows
+             WITHOUT a page load, or there would be nothing left to
+             animate. */
           noteArrival()
           navigate('')
         }
@@ -484,8 +495,23 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   }
   /* These two already print their own sentence next to the field they belong
      to, so they block the button without adding a second one. */
+  /* `codeCheck` is the sentence under the code field, and when it is a
+     definite NO the button must not fire anyway.
+
+     It used to print "We do not know this code yet. You can create your
+     account without it and add it later" and let the person submit with the
+     code still in the field — which could not work and was not harmless:
+     `profiles.company_id` is a foreign key, so an unknown code is a
+     violation, and until supabase/41 that refusal stranded the login and
+     took the address with it. The same for a paused company: the row exists,
+     so the key is satisfied and the code would quietly be stored by the one
+     path that says it will not work.
+
+     So the field's own sentence is the authority. A shape that is not a code
+     at all is already answered next to the field by `problems.companyCode`. */
   const codeBlocked =
     rosterOk === false ||
+    (signup && codeCheck?.ok === false) ||
     (signup && offersPromo && !!promo.trim() && promoPct === null)
   const firstBad = FIELD_ORDER.find((k) => problems[k])
   const blocked = !!firstBad || codeBlocked
@@ -923,6 +949,10 @@ const SHARES_THE_DOOR: GateMode[] = ['b2b', 'hr']
 function ToTheDoor({ to = R_LOGIN }: { to?: string }) {
   const { t } = useI18n()
   useEffect(() => {
+    /* The address they actually asked for, kept until they have signed in.
+       Written BEFORE the reload below, which is what destroys it, and read
+       once by the sign-in handler above (`auth/intended.ts`). */
+    rememberIntended(window.location.hash)
     /* A reload, not a hash change: each surface mounts its own data layer
        and its own gate, and only a load puts the person on the right one.
        That is the opposite of what the public site needs — see `navigate()`

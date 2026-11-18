@@ -16,6 +16,7 @@
 
 import { useState } from 'react'
 import { useDataProvider } from '../data/provider'
+import { looksLikeRegistration } from './registration'
 import { uploadCredentialDoc } from './credentials'
 import type { Therapist } from './data'
 
@@ -27,7 +28,6 @@ interface CredentialingProps {
   onBack?: () => void
 }
 
-const CRP_RE = /^CRP\s?\d{2}\/\d{4,6}$/i
 
 const BANNER: Record<Therapist['status'], { cls: string; title: string; body: string }> = {
   approved: { cls: 'ok', title: '✓ Approvato', body: 'Il tuo account è verificato e attivo.' },
@@ -53,7 +53,14 @@ export function Credentialing({ therapist, onChanged, onBack }: CredentialingPro
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
 
-  const formatValid = CRP_RE.test(crp.trim())
+  /* Both shapes are valid, because both are in the database: the bare
+     number the registration form writes (the region is its own column) and
+     the full `CRP 06/158342` the fixtures and older rows hold. Testing only
+     the second one told a real clinician their own correct number was
+     malformed — and `submit()` below returns early on an invalid format, so
+     the screen that exists to send a document could not send one
+     (`b2b/registration.ts`). */
+  const formatValid = looksLikeRegistration(crp)
   const banner = BANNER[therapist.status]
 
   /* Something has to be new for a re-submission to mean anything: a different
@@ -95,7 +102,7 @@ export function Credentialing({ therapist, onChanged, onBack }: CredentialingPro
         <label className="b2b-label">Numero di iscrizione all’albo</label>
         <input className="b2b-input" value={crp} onChange={(e) => { setCrp(e.target.value); setSent(false) }} />
         <p className={`fmt-hint${formatValid ? ' is-ok' : ' is-bad'}`}>
-          {formatValid ? '✓ Formato valido' : 'Formato atteso: CRP 04/12345'}
+          {formatValid ? '✓ Formato valido' : 'Solo il numero, per esempio 158342 — la regione è un campo a parte nella registrazione.'}
         </p>
 
         <label className="b2b-label" style={{ marginTop: 14 }}>Documenti inviati</label>

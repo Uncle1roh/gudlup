@@ -13,6 +13,7 @@
 import { useI18n } from '../i18n'
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
+import { clearIntended } from './intended'
 import { stashMockLegalProfile } from '../data/mockLegal'
 
 export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin' | 'sales'
@@ -144,6 +145,38 @@ function demoRoleFor(email: string): Role {
   if (addr.endsWith('@clinic.demo')) return 'therapist'
   if (addr === 'camila@aurora.co' || addr.startsWith('hr@') || addr.startsWith('rh@')) return 'hr_admin'
   return 'b2c_user'
+}
+
+/**
+ * Take back the login that a failed sign-up left behind.
+ *
+ * Called from the one place that can need it: the catch around step two of
+ * `signUp`, where a login exists and the person it was for does not. The
+ * account is seconds old, was created by this same call, and owns nothing —
+ * no sessions, no readings, no consents, no company seat — so removing it
+ * costs nothing and frees the address.
+ *
+ * TWO FUNCTIONS, because by then the account can be in either of two states:
+ *
+ *   · no profile  → `abandon_orphan_signup()` (supabase/41). It takes no
+ *     argument, so it cannot be aimed at anyone else, and it refuses the
+ *     moment a profile exists.
+ *   · a profile, but the clinician row after it failed →
+ *     `delete_my_account()`, which owns that case and is the only path that
+ *     detaches clinical records properly.
+ *
+ * Failures here are swallowed deliberately. The person is reading a refusal
+ * about their company code; a second error about cleaning up tells them
+ * nothing they can act on, and a stranded login beats a form that hangs.
+ * The script's own query lists anything left behind.
+ */
+async function undoHalfMadeAccount(sb: ReturnType<typeof getSupabaseClient>): Promise<void> {
+  try {
+    const { error } = await sb.rpc('abandon_orphan_signup')
+    if (error) await sb.rpc('delete_my_account')
+  } catch { /* see above: nothing here is the person's problem */ }
+  /* Whatever happened to the row, this tab must not keep acting signed in. */
+  try { await sb.auth.signOut() } catch { /* the session dies with the tab */ }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -315,38 +348,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data, error } = await sb.auth.signUp({ email, password })
         if (error) throw error
         const uid = data.user?.id
-        if (!uid) throw new Error('Sign-up returned no user — turn off email confirmation while testing (see docs/AUTH_SETUP.md).')
-        if (!data.session) throw new Error('Email confirmation is ON in Supabase, so this sign-up has no session yet. Disable it (Authentication → Sign In / Providers → Email → "Confirm email") and sign up again.')
-        const { error: pErr } = await sb.from('profiles').insert({
-          auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
-          company_id: extra?.companyId?.trim() || null,
-          team: extra?.team?.trim() || null,
-          promo_code: extra?.promoCode?.trim() || null,
-          birth_date: extra?.birthDate || null,
-          addressed_as: extra?.addressedAs ?? null,
-          country: extra?.country || null,
-          locale: extra?.locale || 'it',
-        })
-        if (pErr) {
-          if ((pErr as { code?: string }).code === '23503')
-            throw new Error('Unknown company code — ask HR for the right one.')
-          if ((pErr as { hint?: string }).hint === 'PROMO_UNKNOWN')
-            throw new Error('This promo code is not valid. Check it, or leave the field empty.')
-          /* The company keeps a list of the addresses it approves, and this
-             one is not on it. The door checks this before submitting; the
-             database checks it again, and this is where that answer becomes
-             a sentence rather than a constraint violation. */
-          if ((pErr as { hint?: string }).hint === 'COMPANY_NOT_APPROVED')
-            throw new Error('This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.')
-          throw pErr
+        /* No user, or a user with no session, both mean the same thing: email
+           confirmation is ON in Supabase Auth. That is a setting, not
+           something the person at the form did, and the menu path to it is of
+           no use to them — so they read one plain sentence and the detail goes
+           to the console, where whoever can change it will be looking. */
+        if (!uid || !data.session) {
+          console.warn(
+            '[goodloop] Sign-up returned no session: email confirmation is ON in '
+            + 'Supabase (Authentication → Sign In / Providers → Email → "Confirm '
+            + 'email"). Turn it off, or finish the flow by confirming the address. '
+            + 'See docs/AUTH_SETUP.md.',
+          )
+          throw new Error('We could not finish creating your account just now. Try again in a moment.')
         }
-        if (role === 'therapist') {
-          const { data: prof, error: gErr } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
-          if (gErr) throw gErr
-          const { error: tErr } = await sb.from('therapists').insert({
-            id: (prof as { id: string }).id, crp: extra?.crp ?? '', status: 'pending',
+        /* ------------------------------------------------------------------
+           EVERYTHING BELOW RUNS WITH A LOGIN THAT ALREADY EXISTS.
+
+           Sign-up is two writes against two services and only the first is a
+           transaction. Step two can refuse for good reasons — a company code
+           with one wrong character is a foreign-key violation, the roster
+           trigger turns away an address the employer has not approved, a
+           promo code can be unknown — and each of those used to leave the
+           login behind. The address was then TAKEN by an account with no
+           profile: signing up again said "this address already has an
+           account", signing in landed nowhere because the role is read from
+           the profile, and nothing in the product could undo it
+           (`delete_my_account()` starts from `current_profile()`, which is
+           null for precisely these accounts).
+
+           So the person read the right sentence and lost their work address
+           to a typo. Whatever the refusal is, the half-made login goes.
+           ------------------------------------------------------------------ */
+        try {
+          const { error: pErr } = await sb.from('profiles').insert({
+            auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
+            company_id: extra?.companyId?.trim() || null,
+            team: extra?.team?.trim() || null,
+            promo_code: extra?.promoCode?.trim() || null,
+            birth_date: extra?.birthDate || null,
+            addressed_as: extra?.addressedAs ?? null,
+            country: extra?.country || null,
+            locale: extra?.locale || 'it',
           })
-          if (tErr) throw tErr
+          if (pErr) {
+            if ((pErr as { code?: string }).code === '23503')
+              throw new Error('Unknown company code — ask HR for the right one.')
+            if ((pErr as { hint?: string }).hint === 'PROMO_UNKNOWN')
+              throw new Error('This promo code is not valid. Check it, or leave the field empty.')
+            /* The company keeps a list of the addresses it approves, and this
+               one is not on it. The door checks this before submitting; the
+               database checks it again, and this is where that answer becomes
+               a sentence rather than a constraint violation. */
+            if ((pErr as { hint?: string }).hint === 'COMPANY_NOT_APPROVED')
+              throw new Error('This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.')
+            throw pErr
+          }
+          if (role === 'therapist') {
+            const { data: prof, error: gErr } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
+            if (gErr) throw gErr
+            const { error: tErr } = await sb.from('therapists').insert({
+              id: (prof as { id: string }).id, crp: extra?.crp ?? '', status: 'pending',
+            })
+            if (tErr) throw tErr
+          }
+        } catch (e) {
+          await undoHalfMadeAccount(sb)
+          throw e
         }
         /* The row exists now. Remember it for a listener that already looked
            and found nothing, and set it directly for the case where no further
@@ -414,6 +482,10 @@ export function useAuth(): AuthApi {
  * `#admin` or `#sales`, which is the only way in to them anyway.
  */
 function toTheLanding(): void {
+  /* Signing out ends the errand the kept route belonged to. Leaving it would
+     send the NEXT person who signs in on this tab to a screen the previous
+     one asked for (`auth/intended.ts`). */
+  clearIntended()
   try {
     window.location.href = window.location.pathname + window.location.search
   } catch {

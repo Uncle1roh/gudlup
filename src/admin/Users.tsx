@@ -10,16 +10,36 @@ export function Users({ actor }: { actor: string }) {
   const { data, loading, refetch } = useAdminUsers()
   const companies = useCompanies()
   const [busy, setBusy] = useState<string | null>(null)
+  const [refused, setRefused] = useState<string | null>(null)
 
   const companyName = (id?: string) => companies.data?.find((c) => c.id === id)?.name
+
+  /* The database refuses two writes on this screen, and both used to fail in
+     silence: the picker sprang back to its old value, the switch did not
+     move, and nothing said why. The rule it enforces is that the console
+     cannot be locked for everybody (supabase/42) — the last active admin
+     keeps the role and keeps the access. */
+  function explain(e: unknown): string {
+    const err = (e ?? {}) as { hint?: string; message?: string }
+    if (err.hint === 'LAST_ADMIN' || /last active admin/i.test(err.message ?? '')) {
+      return 'È l’ultimo admin attivo. Assegna il ruolo admin a un altro account prima di togliere questo — altrimenti nessuno potrebbe più pubblicare protocolli, approvare clinici o rimettere i ruoli a posto.'
+    }
+    return err.message || 'Non è stato possibile salvare la modifica.'
+  }
 
   async function changeRole(u: AdminUser, role: UserRole) {
     if (role === u.role) return
     setBusy(u.id)
-    await dp.setUserRole(u.id, role)
-    await dp.logAudit({ actor, action: 'user.role_changed', target: u.email, detail: `${u.role} → ${role}` })
-    setBusy(null)
-    refetch()
+    setRefused(null)
+    try {
+      await dp.setUserRole(u.id, role)
+      await dp.logAudit({ actor, action: 'user.role_changed', target: u.email, detail: `${u.role} → ${role}` })
+    } catch (e) {
+      setRefused(explain(e))
+    } finally {
+      setBusy(null)
+      refetch()
+    }
   }
 
   /* ONB-02 / D-11: a person found to be under eighteen is suspended and
@@ -40,10 +60,16 @@ export function Users({ actor }: { actor: string }) {
 
   async function toggleActive(u: AdminUser) {
     setBusy(u.id)
-    await dp.setUserActive(u.id, !u.active)
-    await dp.logAudit({ actor, action: u.active ? 'user.deactivated' : 'user.activated', target: u.email })
-    setBusy(null)
-    refetch()
+    setRefused(null)
+    try {
+      await dp.setUserActive(u.id, !u.active)
+      await dp.logAudit({ actor, action: u.active ? 'user.deactivated' : 'user.activated', target: u.email })
+    } catch (e) {
+      setRefused(explain(e))
+    } finally {
+      setBusy(null)
+      refetch()
+    }
   }
 
   const users = data ?? []
@@ -56,6 +82,8 @@ export function Users({ actor }: { actor: string }) {
       </header>
 
       {loading && <p className="b2b-sub">Caricamento…</p>}
+
+      {refused && <p className="adm-note adm-note--warn" role="alert">{refused}</p>}
 
       {!loading && (
         <div className="adm-table adm-table--users">

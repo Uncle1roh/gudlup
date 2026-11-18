@@ -298,6 +298,7 @@ export const IT: Record<string, string> = {
   /* ---- signup provisioning + therapist request ---- */
   'Company code (from HR, optional)': 'Codice azienda (da HR, facoltativo)',
   'Unknown company code — ask HR for the right one.': 'Codice azienda sconosciuto — chiedi alle HR quello corretto.',
+  'We could not finish creating your account just now. Try again in a moment.': 'Non abbiamo potuto completare la creazione del tuo account adesso. Riprova tra un momento.',
   'Talk to a therapist': 'Parla con un terapeuta',
   'Request a session — a clinician will pick it up.': 'Richiedi una sessione — un clinico la prenderà in carico.',
   'Request sent — waiting for a therapist': 'Richiesta inviata — in attesa di un terapeuta',
