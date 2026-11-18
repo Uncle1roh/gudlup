@@ -584,6 +584,14 @@ export function createSupabaseProvider(url: string, anonKey: string): DataProvid
         is_sos: !!rec.sos,
         stereo_checked: !!rec.stereoChecked,
       })
+      /* 23505 from `sessions_one_per_start` (supabase/43) means this session
+         is ALREADY recorded — the same person, protocol and start instant.
+         That is the index doing its job on a retry or a double call, and the
+         row from the first attempt is the one that counts, so the right
+         answer here is the one the caller expects from a successful write.
+         Throwing instead left the person stranded on the session screen,
+         because `finishSession` and the PatientCall handler do not catch. */
+      if (error && (error as { code?: string }).code === '23505') return
       if (error) throw error
     },
 

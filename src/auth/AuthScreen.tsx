@@ -83,6 +83,18 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
      register at all without knowing a second URL, and what sends them to the
      workspace instead of the library afterwards. */
   const [kind, setKind] = useState<'b2c_user' | 'therapist' | 'company'>('b2c_user')
+  /* Changing which kind of account this is takes the company code with it.
+     The code field is not on every kind's form, and a refusal about a field
+     that is no longer on screen blocked the button permanently with nothing
+     to look at: type a bad code under "For me", switch to "I am a therapist",
+     and `codeCheck`/`rosterOk` were still false with the input gone. */
+  function chooseKind(next: 'b2c_user' | 'therapist' | 'company') {
+    if (next === kind) return
+    setKind(next)
+    setCompanyCode('')
+    setError(null)
+    setTried(false)
+  }
   const asTherapist = isB2b || (mode === 'b2c' && signup && kind === 'therapist')
   /* ONE DOOR FOR THE THREE PUBLIC APPS (POs, 2026-11-06). The person's app,
      the clinic and the employer's panel had a sign-in page each; they share
@@ -256,7 +268,14 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
            into somewhere they did not ask for is the wrong welcome. */
         const back = takeIntended()
         if (back) {
-          navigate(back)
+          /* A LOAD, not a hash change — the same reason `ToTheDoor` reloads.
+             `navigate()` only moves the fragment, so the target gate renders
+             inside THIS tree, where the provider has not read the session
+             back yet: it saw a signed-out visitor, sent the person to the
+             door again and re-stored the very hash we had just consumed.
+             A load boots the tree with the session already in storage, and
+             the gate sees who they are on the first render. */
+          window.location.href = window.location.pathname + back
         } else if (hero) {
           /* Signed in from the public door: the background is told, so the
              rings leave the person in the photograph and open out across the
@@ -512,7 +531,10 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
   const codeBlocked =
     rosterOk === false ||
     (signup && codeCheck?.ok === false) ||
-    (signup && offersPromo && !!promo.trim() && promoPct === null)
+    /* Only once there is something to SAY about the promo code. `promoCheck`
+       stays silent for the first two characters, so blocking on them left the
+       button dead with no sentence anywhere on the form. */
+    (signup && !!promoCheck && !promoCheck.ok && promoPct !== 'checking')
   const firstBad = FIELD_ORDER.find((k) => problems[k])
   const blocked = !!firstBad || codeBlocked
 
@@ -707,12 +729,12 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
               <span className="auth__addressed__q">{t('What is this account for?')}</span>
               <div className="auth__kind">
                 <button type="button" className={`auth__kindbtn${kind === 'b2c_user' ? ' is-on' : ''}`}
-                  aria-pressed={kind === 'b2c_user'} onClick={() => setKind('b2c_user')}>
+                  aria-pressed={kind === 'b2c_user'} onClick={() => chooseKind('b2c_user')}>
                   <b>{t('For me')}</b>
                   <small>{t('Sessions to listen to on my own')}</small>
                 </button>
                 <button type="button" className={`auth__kindbtn${kind === 'therapist' ? ' is-on' : ''}`}
-                  aria-pressed={kind === 'therapist'} onClick={() => setKind('therapist')}>
+                  aria-pressed={kind === 'therapist'} onClick={() => chooseKind('therapist')}>
                   <b>{t('I am a therapist')}</b>
                   <small>{t('I see people through goodloop')}</small>
                 </button>
@@ -721,7 +743,7 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                     had to carry a second address with it; the link is the
                     ordinary one now and this card is what it opens. */}
                 <button type="button" className={`auth__kindbtn${kind === 'company' ? ' is-on' : ''}`}
-                  aria-pressed={kind === 'company'} onClick={() => setKind('company')}>
+                  aria-pressed={kind === 'company'} onClick={() => chooseKind('company')}>
                   <b>{t('For my company')}</b>
                   <small>{t('I manage goodloop where I work')}</small>
                 </button>
@@ -748,6 +770,15 @@ export function AuthScreen({ mode }: { mode: 'b2c' | 'b2b' | 'admin' | 'hr' | 's
                 value={companyCode} onChange={(e) => setCompanyCode(e.target.value)} />
             ))}
             {bad('companyCode') && <p className="auth__bad" role="alert">{bad('companyCode')}</p>}
+            {/* The SAME sentence the optional field below gets. Without it a
+                well-shaped code for a company that is unknown or paused
+                blocked the button with nothing marked anywhere: `problems`
+                was empty, so `nudge()` had no field to scroll to and the only
+                text on screen was "fill in the fields marked above". An
+                invite link for a paused company landed here directly. */}
+            {codeCheck && (
+              <p className={`auth__code${codeCheck.ok ? ' is-ok' : ''}`} role={codeCheck.ok ? undefined : 'alert'}>{codeCheck.text}</p>
+            )}
           </>}
           {signup && !asTherapist && !asCompany && <>
             {/* Not optional any more: it is the name the app greets this
@@ -968,8 +999,23 @@ function ToTheDoor({ to = R_LOGIN }: { to?: string }) {
 }
 
 export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Role[]; children: ReactNode }) {
-  const { ready, user, role, deactivated, signOut } = useAuth()
+  const { ready, user, role, deactivated, signOut, releaseHalfMadeAccount } = useAuth()
   const { t } = useI18n()
+  /* Only for the "not set up yet" dead end below. */
+  const [freeing, setFreeing] = useState(false)
+  const [freeMsg, setFreeMsg] = useState<string | null>(null)
+  async function releaseAddress() {
+    if (!window.confirm(t('This deletes the unfinished account so the address is free again. Continue?'))) return
+    setFreeing(true)
+    setFreeMsg(null)
+    try {
+      await releaseHalfMadeAccount()
+    } catch (e) {
+      setFreeMsg((e as Error).message || t('We could not release this address. The goodloop team can finish it.'))
+    } finally {
+      setFreeing(false)
+    }
+  }
   /* The waiting and the dead ends wear the door's own ground, or the pause
      before the door is a flash of a different colour. `auth--b2c` travels
      with `su-studio` because that pair is what carries the daylight palette
@@ -1100,6 +1146,21 @@ export function AuthGate({ mode, allow, children }: { mode: GateMode; allow?: Ro
               a reload asks again, and costs nothing when the answer is the
               same. Signing out stays, for the account that really has none. */}
           <button className="auth__btn" onClick={() => window.location.reload()}>{t('Try again')}</button>
+          {/* The other way to arrive here is a sign-up that was INTERRUPTED —
+              the tab closed, or the network dropped, while the profile was
+              being written. The rollback inside `signUp` cannot run for one of
+              those, so without this the address stays taken by an account
+              that can never open anything, and signing out only hides it. The
+              person is holding the address; they are the one who can say it
+              should go. */}
+          <button
+            className="auth__toggle"
+            disabled={freeing}
+            onClick={() => void releaseAddress()}
+          >
+            {freeing ? t('Releasing…') : t('Release this address so I can register again')}
+          </button>
+          {freeMsg && <p className="auth__err" role="alert">{freeMsg}</p>}
           <button className="auth__toggle" onClick={() => void signOut()}>{t('Sign out')}</button>
         </div>
       </div>

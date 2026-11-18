@@ -60,6 +60,17 @@ export interface AuthApi {
   signUp(email: string, password: string, role: Role, extra?: SignUpExtra): Promise<void>
   signOut(): Promise<void>
   /**
+   * Give a half-made account's address back.
+   *
+   * For the one state the product could not leave: signed in, no profile row.
+   * `signUp` rolls its own failure back, but an INTERRUPTED sign-up — the tab
+   * closed, the network dropped — leaves nobody to run it, and the address
+   * stays taken by an account that opens nothing. `abandon_orphan_signup()`
+   * (supabase/41) deletes the login, and only ever the caller's own, and only
+   * while it has no profile. Throws with something sayable if it cannot.
+   */
+  releaseHalfMadeAccount(): Promise<void>
+  /**
    * Send a reset link. Resolves whether or not the address has an account —
    * telling a stranger which emails are registered is an account-enumeration
    * leak, and the screen says "if that address has an account" for the same
@@ -170,13 +181,45 @@ function demoRoleFor(email: string): Role {
  * nothing they can act on, and a stranded login beats a form that hangs.
  * The script's own query lists anything left behind.
  */
-async function undoHalfMadeAccount(sb: ReturnType<typeof getSupabaseClient>): Promise<void> {
+async function undoHalfMadeAccount(
+  sb: ReturnType<typeof getSupabaseClient>,
+  uid: string,
+  profileWasMade: boolean,
+): Promise<void> {
+  /* WHOSE account is this? Neither RPC takes an argument: both act on the
+     session the client holds AT THE MOMENT THEY RUN, and that is not
+     necessarily the account this sign-up created. supabase-js shares its
+     session between tabs through localStorage, so a person who gives up on a
+     hanging form and signs in with their existing account in a second tab has
+     replaced this client's session — and `delete_my_account()` would then
+     delete the account they have had for a year, clinical records and all.
+     Rare, and irreversible, which is the combination that earns a check. */
+  let live: string | undefined
+  try { live = (await sb.auth.getSession()).data.session?.user?.id } catch { /* treated as a mismatch */ }
+  if (live !== uid) {
+    console.warn('[goodloop] Sign-up rollback skipped: the session in this tab is no longer the account that was just created.')
+    return
+  }
+
   try {
     const { error } = await sb.rpc('abandon_orphan_signup')
-    if (error) await sb.rpc('delete_my_account')
+    /* `delete_my_account()` is for the OTHER case — the profile row was
+        written and the clinician row after it failed — and it is the only path
+        that detaches clinical records properly. Calling it on any error at all
+        would mean calling it when `abandon_orphan_signup` is simply missing
+        (script 41 not applied yet), where it has nothing to delete, or when
+        the refusal was "this account has a profile" for a profile this call
+        never made. So it is reached only when this call made one. */
+    if (error && profileWasMade) await sb.rpc('delete_my_account')
+    else if (error) console.warn('[goodloop] Could not release the half-made login:', error.message, '— run supabase/41 if you have not.')
   } catch { /* see above: nothing here is the person's problem */ }
-  /* Whatever happened to the row, this tab must not keep acting signed in. */
-  try { await sb.auth.signOut() } catch { /* the session dies with the tab */ }
+
+  /* Whatever happened to the row, this tab must not keep acting signed in —
+     and that has to be true even with no network. The default scope is
+     'global', which calls /logout and keeps the local session when the call
+     fails: exactly the state this whole function exists to prevent. 'local'
+     needs no round trip. */
+  try { await sb.auth.signOut({ scope: 'local' }) } catch { /* the session dies with the tab */ }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -226,6 +269,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      failed insert would hand the account a role it does not have in the
      database and let it into a surface it cannot read. */
   const createdRole = useRef<Role | null>(null)
+  /* True from the moment `auth.signUp` returns a session until the profile row
+     either exists or has been rolled back. See `apply()`. */
+  const signingUp = useRef(false)
 
   useEffect(() => {
     if (!supa) return
@@ -254,12 +300,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function apply(u: { id: string; email?: string } | undefined) {
       if (!u) {
         if (!active) return
+        /* However the session ended — this tab, another tab, a refresh token
+           that died, or the sign-up rollback, which signs out directly — a
+           route remembered for a sign-in that never happened must not steer
+           the NEXT one. `toTheLanding()` clears it on the ordinary path; this
+           covers the others. */
+        clearIntended()
         setUser(null); setRole(null); setDeactivated(null); setReady(true)
         return
       }
+      /* A sign-up is MID-FLIGHT, and this is its own SIGNED_IN event.
+         Publishing the user here is what made a refused sign-up silent: the
+         login exists before the profile does, so `loadRole` finds no row, the
+         route guard reads a signed-in account with no surface, replaces the
+         form with a spinner and sends the person to the landing page — and the
+         refusal, when it finally arrives a few round trips later, is set on a
+         component that no longer exists. The person is left on the marketing
+         page with an empty form and no idea the company code was wrong.
+
+         So nothing is published until `signUp` has finished. It publishes the
+         account itself on success, and on failure the sign-out below arrives
+         with no user and takes the ordinary path. */
+      if (signingUp.current) return
       const got = await loadRole(u.id)
       const r = got.role
-      if (!active) return
+      /* Checked again: the sign-up may have failed WHILE this query was in
+         flight, in which case the session is already gone. */
+      if (!active || signingUp.current) return
       setUser({ id: u.id, email: u.email ?? '' })
       setDeactivated(got.active === null ? null : !got.active)
       /* `createdRole` is read HERE, when the answer is used, not when the
@@ -319,6 +386,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null); setRole(null)
           toTheLanding()
         },
+        /* A demo has no half-made accounts: there is no profiles table for an
+           insert to fail against, so the state this repairs cannot be reached
+           here. Signing out is the honest equivalent. */
+        async releaseHalfMadeAccount() {
+          try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
+          setUser(null); setRole(null)
+          toTheLanding()
+        },
       }
     }
     const sb = getSupabaseClient(SB_URL as string, SB_KEY as string)
@@ -348,6 +423,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data, error } = await sb.auth.signUp({ email, password })
         if (error) throw error
         const uid = data.user?.id
+        /* From here the login may exist, so the listener must hold its tongue
+           until this function knows whether there is an account to show.
+           Cleared in `finally`, including on the paths that throw. */
+        if (uid && data.session) signingUp.current = true
         /* No user, or a user with no session, both mean the same thing: email
            confirmation is ON in Supabase Auth. That is a setting, not
            something the person at the form did, and the menu path to it is of
@@ -380,6 +459,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
            So the person read the right sentence and lost their work address
            to a typo. Whatever the refusal is, the half-made login goes.
            ------------------------------------------------------------------ */
+        /* Which half of the sign-up got done, so the rollback knows which of
+           the two cleanup paths belongs to this failure. */
+        let profileWasMade = false
         try {
           const { error: pErr } = await sb.from('profiles').insert({
             auth_uid: uid, role, name: extra?.name ?? email.split('@')[0], email,
@@ -402,30 +484,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                a sentence rather than a constraint violation. */
             if ((pErr as { hint?: string }).hint === 'COMPANY_NOT_APPROVED')
               throw new Error('This company only accepts addresses it has approved, and this one is not among them. Ask your HR contact to add it, or create your account without the code.')
-            throw pErr
+            /* Anything else is a database answer, not a sentence: it can
+               carry a table, a policy or a constraint name, and that reaches
+               the person verbatim through `authErrorKey`. The detail goes to
+               the console for whoever is looking; the person gets something
+               they can act on. */
+            console.warn('[goodloop] Sign-up refused by the profiles insert:', pErr)
+            throw new Error('We could not finish creating your account just now. Check the details and try again.')
           }
+          profileWasMade = true
           if (role === 'therapist') {
             const { data: prof, error: gErr } = await sb.from('profiles').select('id').eq('auth_uid', uid).single()
-            if (gErr) throw gErr
+            if (gErr) {
+              console.warn('[goodloop] Sign-up could not read back the profile it just wrote:', gErr)
+              throw new Error('We could not finish creating your account just now. Try again in a moment.')
+            }
             const { error: tErr } = await sb.from('therapists').insert({
               id: (prof as { id: string }).id, crp: extra?.crp ?? '', status: 'pending',
             })
-            if (tErr) throw tErr
+            if (tErr) {
+              console.warn('[goodloop] Sign-up refused by the therapists insert:', tErr)
+              throw new Error('We could not finish creating your clinician record just now. Try again in a moment.')
+            }
           }
         } catch (e) {
-          await undoHalfMadeAccount(sb)
+          await undoHalfMadeAccount(sb, uid, profileWasMade)
           throw e
+        } finally {
+          signingUp.current = false
         }
         /* The row exists now. Remember it for a listener that already looked
            and found nothing, and set it directly for the case where no further
            listener runs at all. Both are needed: the two finish in either
            order, and only one of them can be last. */
         createdRole.current = role
+        setUser({ id: uid, email })
+        setDeactivated(false)
         setRole(role)
       },
       async signOut() {
         createdRole.current = null
         await sb.auth.signOut()
+        toTheLanding()
+      },
+      async releaseHalfMadeAccount() {
+        const { error } = await sb.rpc('abandon_orphan_signup')
+        if (error) {
+          /* The function is not there: script 41 has not been run on this
+             project. Nothing the person can do, and nothing they should read
+             as their own fault. */
+          console.warn('[goodloop] abandon_orphan_signup failed:', error)
+          throw new Error('We could not release this address. The goodloop team can finish it.')
+        }
+        createdRole.current = null
+        /* No round trip: the login this session belonged to no longer exists,
+           so a global sign-out would be asking a deleted user to log out. */
+        try { await sb.auth.signOut({ scope: 'local' }) } catch { /* the session dies with the tab */ }
         toTheLanding()
       },
       async resetPassword(email: string) {
