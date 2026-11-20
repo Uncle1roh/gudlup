@@ -434,3 +434,24 @@ html[data-gl-site] body {
    last word on both rules rather than a change to them. */
 .glw header.glw-site { top: var(--pvw-h, 0px); }
 .glw .glw-home-hero { min-height: calc(100vh - var(--pvw-h, 0px)); }
+
+/* ==================================================== v20 · v24 · v25 ======
+   The last three rounds of the owner's own HTML, in the order they were
+   written there.
+
+   v20 — the five-stat row on the methodology page is a row of short numbers,
+   and left-aligned they read as five ragged columns rather than one band.
+   v20 — the evidence table abbreviates three therapies (EMDR, NLP, DBT) and
+   now spells each out beneath the initials. The field column is
+   `white-space: nowrap`, which an expansion would stretch into a column half
+   the table wide, so the expansion gets its own line and its own wrap.
+   v25 — Home's single button is solid cream. Everywhere else the Enter
+   button is an outline on the photograph; on Home it is the only thing to do
+   on the page, and an outline on a bright frame of that picture was reading
+   as decoration. */
+.glw .glw-stats.glw-five .glw-stat{align-items:center;text-align:center;justify-content:center;}
+
+.glw #page-methodology table.glw-evidence td small.glw-ac{display:block;white-space:normal;max-width:230px;margin-top:3px;font-weight:500;font-size:0.76rem;line-height:1.35;color:var(--muted);}
+
+.glw .glw-home-cta .glw-btn-enter{background:var(--cream);border-color:var(--cream);color:#0b1512;font-weight:700;box-shadow:0 6px 22px rgba(0,0,0,.35);}
+.glw .glw-home-cta .glw-btn-enter:hover{background:#fffbd6;border-color:#fffbd6;color:#0b1512;transform:translateY(-1px);box-shadow:0 8px 26px rgba(0,0,0,.42);}

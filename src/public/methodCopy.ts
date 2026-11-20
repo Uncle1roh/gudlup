@@ -37,7 +37,11 @@ export interface MethodBody {
   evFine: string
   thField: string
   thSays: string
-  rows: { field: string; says: string }[]
+  /** `ac` spells the acronym out under the field name. Only the rows that
+      abbreviate carry one: EMDR, NLP and DBT are initials a reader outside
+      the profession cannot expand, and a table that names a therapy it then
+      says the audio is NOT had better say what it is naming. */
+  rows: { field: string; says: string; ac?: string }[]
   whyEyebrow: string
   whyH2: string
   why: { lead: string; rest: string }[]
@@ -80,7 +84,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
         "t": "A soundscape of nature, texture and calibrated silence builds the safe inner space for deep work."
       },
       {
-        "h": "Dual Hypnotic Induction",
+        "h": "Dual-Voice Immersion",
         "t": "Two simultaneous voices, one per ear — opening a direct path to the unconscious."
       },
       {
@@ -165,6 +169,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
     "rows": [
       {
         "field": "EMDR",
+        "ac": "Eye Movement Desensitization and Reprocessing",
         "says": "Recognized by the WHO for trauma treatment; bilateral stimulation facilitates reprocessing."
       },
       {
@@ -177,10 +182,12 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
       },
       {
         "field": "NLP",
+        "ac": "Neuro-Linguistic Programming",
         "says": "Anchoring and restructuring techniques used for decades in coaching and brief therapy."
       },
       {
         "field": "DBT",
+        "ac": "Dialectical Behavior Therapy",
         "says": "A standard reference for emotional regulation and stress tolerance."
       },
       {
@@ -221,7 +228,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
     "intro": {
       "eyebrow": "la metodologia",
       "h2": "Metodologia innovativa per la Salute Mentale",
-      "sub": "La metodologia innovativa di <b>goodloop</b> attinge a decenni di ricerca in ambiti come la mindfulness, la teoria polivagale, la PNL, le tecniche immaginative e la pratica meditativa — combinati in un'unica esperienza audio strutturata e riproducibile, costruita su oltre 30 anni di pratica clinica e perfezionata in oltre 15 anni di applicazione reale.",
+      "sub": "La metodologia innovativa della <b>goodloop</b> attinge a decenni di ricerca in ambiti come la mindfulness, la teoria polivagale, la PNL, le tecniche immaginative e la pratica meditativa — combinati in un'unica esperienza audio strutturata e riproducibile, costruita su oltre 30 anni di pratica clinica e perfezionata in oltre 15 anni di applicazione reale.",
       "panelLead": "Dove risiede l'innovazione:",
       "panelRest": "non in una nuova teoria, ma nella precisione con cui tecniche comprovate vengono combinate, sequenziate ed erogate — così i risultati sono più affidabili, più ripetibili e accessibili senza anni di pratica."
     },
@@ -249,7 +256,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
         "t": "Un paesaggio sonoro fatto di natura, texture e silenzi calibrati costruisce lo spazio interiore sicuro per il lavoro profondo."
       },
       {
-        "h": "Induzione Ipnotica Duale",
+        "h": "Immersione a Doppia Voce",
         "t": "Due voci simultanee, una per orecchio — che aprono un accesso diretto all'inconscio."
       },
       {
@@ -328,12 +335,13 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
     "evH2": "Fondato sulla ricerca clinica.",
     "evLead": "Oltre 15 anni di sviluppo e applicazione reale",
     "evRest": "— il Metodo GL è stato sviluppato e perfezionato direttamente con i pazienti, non concepito in astratto.",
-    "evFine": "I contenuti audio di <b>goodloop</b> si ispirano ai principi emersi da questa ricerca. Non sono EMDR, DBT né altre modalità cliniche specifiche, e il loro ascolto non equivale a ricevere tali terapie da un clinico formato.",
+    "evFine": "I contenuti audio della <b>goodloop</b> si ispirano ai principi emersi da questa ricerca. Non sono EMDR, DBT né altre modalità cliniche specifiche, e il loro ascolto non equivale a ricevere tali terapie da un clinico formato.",
     "thField": "Ambito di ricerca",
     "thSays": "Cosa mostra l'evidenza",
     "rows": [
       {
         "field": "EMDR",
+        "ac": "Desensibilizzazione e Rielaborazione attraverso i Movimenti Oculari",
         "says": "Riconosciuto dall'OMS per il trattamento del trauma; la stimolazione bilaterale facilita la rielaborazione."
       },
       {
@@ -346,10 +354,12 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
       },
       {
         "field": "PNL",
+        "ac": "Programmazione Neuro-Linguistica",
         "says": "Tecniche di ancoraggio e ristrutturazione utilizzate da decenni nel coaching e nella terapia breve."
       },
       {
         "field": "DBT",
+        "ac": "Terapia Dialettico-Comportamentale",
         "says": "Un riferimento consolidato per la regolazione emotiva e la tolleranza allo stress."
       },
       {
@@ -390,7 +400,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
     "intro": {
       "eyebrow": "a metodologia",
       "h2": "Metodologia inovadora para a Saúde Mental",
-      "sub": "A metodologia inovadora do <b>goodloop</b> se baseia em décadas de pesquisa em áreas como mindfulness, teoria polivagal, PNL, técnicas de imagens guiadas e prática meditativa — combinadas em uma única experiência de áudio estruturada e reproduzível, construída sobre mais de 30 anos de prática clínica e refinada ao longo de mais de 15 anos de aplicação real.",
+      "sub": "A metodologia inovadora da <b>goodloop</b> se baseia em décadas de pesquisa em áreas como mindfulness, teoria polivagal, PNL, técnicas de imagens guiadas e prática meditativa — combinadas em uma única experiência de áudio estruturada e reproduzível, construída sobre mais de 30 anos de prática clínica e refinada ao longo de mais de 15 anos de aplicação real.",
       "panelLead": "Onde está a inovação:",
       "panelRest": "não em uma nova teoria, mas na precisão de como técnicas comprovadas são combinadas, sequenciadas e entregues — tornando os resultados mais confiáveis, mais repetíveis e acessíveis sem anos de prática."
     },
@@ -418,7 +428,7 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
         "t": "Uma paisagem sonora de natureza, texturas e silêncios calibrados constrói o espaço interno seguro para o trabalho profundo."
       },
       {
-        "h": "Indução Hipnótica Dupla",
+        "h": "Imersão em Dupla Voz",
         "t": "Duas vozes simultâneas, uma por ouvido — abrindo um caminho direto ao inconsciente."
       },
       {
@@ -497,12 +507,13 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
     "evH2": "Fundamentado em pesquisa clínica.",
     "evLead": "Mais de 15 anos de desenvolvimento e aplicação real",
     "evRest": "— a Metodologia GL foi desenvolvida e refinada diretamente com pacientes, não concebida de forma abstrata.",
-    "evFine": "O conteúdo em áudio do <b>goodloop</b> é inspirado em princípios encontrados nessa pesquisa. Não é EMDR, DBT ou qualquer outra modalidade clínica específica, e ouvi-lo não equivale a receber essas terapias de um clínico treinado.",
+    "evFine": "O conteúdo em áudio da <b>goodloop</b> é inspirado em princípios encontrados nessa pesquisa. Não é EMDR, DBT ou qualquer outra modalidade clínica específica, e ouvi-lo não equivale a receber essas terapias de um clínico treinado.",
     "thField": "Área de pesquisa",
     "thSays": "O que a evidência mostra",
     "rows": [
       {
         "field": "EMDR",
+        "ac": "Dessensibilização e Reprocessamento por Movimentos Oculares",
         "says": "Reconhecido pela OMS para o tratamento de trauma; a estimulação bilateral facilita o reprocessamento."
       },
       {
@@ -515,10 +526,12 @@ export const METHOD_BODY: Record<SiteLang, MethodBody> = {
       },
       {
         "field": "PNL",
+        "ac": "Programação Neurolinguística",
         "says": "Técnicas de ancoragem e reestruturação usadas há décadas em coaching e terapia breve."
       },
       {
         "field": "DBT",
+        "ac": "Terapia Comportamental Dialética",
         "says": "Uma referência consolidada para regulação emocional e tolerância ao estresse."
       },
       {

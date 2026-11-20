@@ -231,7 +231,16 @@ export function SiteMethod() {
               </thead>
               <tbody>
                 {m.rows.map((row) => (
-                  <tr key={row.field}><td>{row.field}</td><td>{row.says}</td></tr>
+                  <tr key={row.field}>
+                    <td>
+                      {row.field}
+                      {/* The initials alone name a therapy the fine print then
+                          says this audio is NOT. Spelled out, a reader can tell
+                          which one. */}
+                      {row.ac && <small className="glw-ac">{row.ac}</small>}
+                    </td>
+                    <td>{row.says}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>

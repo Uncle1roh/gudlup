@@ -62,8 +62,20 @@ export function coverPoint(
   }
 }
 
-/** The seated person — head and shoulders — as fractions of the photograph. */
-export const HERO_FOCUS = { fx: 0.60, fy: 0.55 }
+/**
+ * The seated person — head and shoulders — as fractions of the photograph.
+ *
+ * It moved with the picture: v25 replaced the man at the sea with the woman
+ * at the fireplace, and the two figures do not sit in the same place. These
+ * are measured off the file now in `public/media/landing-back.jpg`
+ * (1671×941): the headphones are a little left of centre and high, where
+ * the man's head was right of centre and low.
+ *
+ * Only the halo of rings reads it, and `landingRings` is false by default
+ * (`src/app/backgrounds.ts`), so nothing draws against it until the console
+ * turns the rings on — which is also when it is worth checking by eye.
+ */
+export const HERO_FOCUS = { fx: 0.44, fy: 0.24 }
 
 /**
  * `object-position` on a desk: the middle of the picture, which is what
@@ -77,10 +89,17 @@ export const HERO_POS_DESKTOP = { x: 0.50, y: 0.50 }
  * …and on a phone, where the window is taller than the picture is wide and
  * the crop is the other way about: a 16:9 photograph in a 390px window
  * shows about a quarter of its width, and centring that quarter puts the
- * listener's shoulder against the right edge. 0.58 is the figure's own
- * middle, so they sit in the frame instead of leaving it.
+ * listener's shoulder against the right edge.
+ *
+ * 0.67 is v25's framing (`background-position:67% 50%` in the owner's HTML,
+ * where the portrait crop is horizontal only): the figure sits centre-left
+ * and the fire keeps a corner at the right edge, which 0.58 — the figure's
+ * own middle, and what this held before — cropped away. The number is here
+ * and nowhere else because the rings are placed against it; a media query
+ * that moved the picture without moving them would leave the rings on the
+ * wrong part of the photograph.
  */
-export const HERO_POS_MOBILE = { x: 0.58, y: 0.50 }
+export const HERO_POS_MOBILE = { x: 0.67, y: 0.50 }
 
 /** The width the ring radii were drawn against. `displayedWidth / this` is
     the factor every radius is multiplied by. */

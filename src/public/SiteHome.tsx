@@ -15,7 +15,9 @@ export function SiteHome() {
     <section className="glw-section glw-tight glw-home-hero">
       <div className="glw-wrap">
         <h1 className="glw-h1">{r('h_h1')}</h1>
-        <p className="glw-sub">{s('h_sub')}</p>
+        {/* v25 puts the brand in bold inside this sentence, so it is
+            markup now and `s()` would print the tags. */}
+        <p className="glw-sub">{r('h_sub')}</p>
         <div className="glw-home-cta">
           <a
             className="glw-btn glw-btn-enter"

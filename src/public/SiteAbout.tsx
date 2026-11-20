@@ -41,13 +41,25 @@ export function SiteAbout() {
           <div className="glw-cards2" style={{ marginTop: 0 }}>
             <div className="glw-pcard">
               <span className="glw-tag">{s('a_p1tag')}</span>
-              <h3>GAM Technology and Investments</h3>
+              <h3>GAM Tecnologia e Participações</h3>
               <p>{r('a_p1d')}</p>
             </div>
             <div className="glw-pcard">
               <span className="glw-tag">{s('a_p2tag')}</span>
               <h3>Quokkas</h3>
               <p>{r('a_p2d')}</p>
+            </div>
+          </div>
+
+          {/* v25 — the technology partner, on a row of its own. Not a founding
+              partner, which is why it is not a third column beside the two:
+              the tag says what each one is, and a grid of three would say they
+              are the same kind of thing. */}
+          <div className="glw-cards2" style={{ marginTop: 20 }}>
+            <div className="glw-pcard">
+              <span className="glw-tag">{s('a_p3tag')}</span>
+              <h3>Bachmann Studio</h3>
+              <p>{r('a_p3d')}</p>
             </div>
           </div>
         </div>
