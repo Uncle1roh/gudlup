@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { SoundStudio } from './studio/SoundStudio'
 import { SelfUseApp } from './selfuse/SelfUseApp'
 import { WorkspaceApp } from './workspace/WorkspaceApp'
@@ -425,6 +425,7 @@ export default function App() {
      page of the app. */
   const surface: Surface = isAdmin || isSales || route === '#studio' || isWorkspace || isCorporate ? 'team' : 'public'
   const banner = showsBanner(appEnv(), surface)
+  const chrome = useChromeHeight(banner, bar)
   useEffect(() => { warnIfUndeclared() }, [])
   const boundary = (
     <ErrorBoundary resetKey={route} label={route || '#home'}>
@@ -448,7 +449,7 @@ export default function App() {
     <I18nProvider>
       <AmbientBackground />
       {bar || banner ? (
-        <div className={`pvw-shell${banner ? ' pvw-shell--env' : ''}${bar ? ' pvw-shell--bar' : ''}`}>
+        <div ref={chrome} className={`pvw-shell${banner ? ' pvw-shell--env' : ''}${bar ? ' pvw-shell--bar' : ''}`}>
           {banner && strip}
           {/* The bar is the CONSOLE's chrome, not the surface's — so it
               speaks the language of the console the walkthrough was started
@@ -466,4 +467,51 @@ export default function App() {
       ) : body}
     </I18nProvider>
   )
+}
+
+/* --------------------------------------------------- how tall the chrome is ---
+
+   `--pvw-h` IS MEASURED NOW, not declared.
+
+   The surfaces under the bars size themselves with `calc(100dvh - var(--pvw-h))`,
+   and the number came from three rules in index.css: 38px for the environment
+   banner, 44px for the preview bar, 82px for both. Three constants describing
+   two elements that are laid out, not drawn — and they were wrong in two
+   ordinary cases:
+
+     · The preview bar wraps. It is `flex-wrap: wrap` with a tag, a note, three
+       surface buttons and the exit, and the one-row phone treatment starts at
+       560px. Between there and the width where it all fits — a half-screen
+       window, a tablet, a projector at 1024 — it took two rows, about 70px,
+       while every surface below still subtracted 44. The foot of the app went
+       under the fold, and on the Self Use surface the document cannot scroll
+       (`body:has(.su-studio)`), so there was no way to reach it.
+     · Neither constant counts the 1px border under each bar, and the banner's
+       note is a translated sentence that can be longer in one language than in
+       the one it was measured in.
+
+   So the shell asks the bars how tall they actually are and publishes that.
+   A ResizeObserver, because the answer changes with the window, with the
+   language and with a bar that appears mid-session. The CSS constants stay as
+   the first-paint fallback and for the case where nothing can be measured. */
+function useChromeHeight(banner: boolean, bar: boolean) {
+  const shell = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = shell.current
+    if (!el) return
+    const bars = () => Array.from(el.children).filter(
+      (c) => !c.classList.contains('pvw-shell__surface')) as HTMLElement[]
+    const measure = () => {
+      const h = bars().reduce((sum, b) => sum + b.getBoundingClientRect().height, 0)
+      /* Rounded UP: half a pixel short leaves a hairline of the surface
+         below the fold, and half a pixel long is invisible. */
+      if (h > 0) el.style.setProperty('--pvw-h', `${Math.ceil(h)}px`)
+      else el.style.removeProperty('--pvw-h')
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    for (const b of bars()) ro.observe(b)
+    return () => { ro.disconnect() }
+  }, [banner, bar])
+  return shell
 }

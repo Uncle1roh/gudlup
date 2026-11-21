@@ -1518,9 +1518,23 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
 .pvw-shell .w-sidebar { min-height: calc(100dvh - var(--pvw-h)); }
 .pvw-shell .w-sidebar { height: calc(100dvh - var(--pvw-h)); top: var(--pvw-h); }
 
+/* ONE ROW AT EVERY WIDTH, and that is a correction.
+
+   It was `flex-wrap: wrap`, with the one-row treatment starting at 560px —
+   so between 560px and the width where the tag, the note, three surface
+   buttons and the exit all fit, the bar took TWO rows. Every surface below
+   sizes itself with `calc(100dvh - var(--pvw-h))`, so a bar 26px taller
+   than it says pushes the foot of the app under the fold; on the person's
+   app the document cannot scroll (`body:has(.su-studio)`), so what went
+   under could not be reached at all. A salesperson on a half-screen window
+   or a tablet met it every time.
+
+   The height is also measured now rather than assumed (`useChromeHeight`,
+   App.tsx), so the two answers cannot drift apart again — but a bar that
+   stays one row is the one that looks like a bar. */
 .pvw {
   position: sticky; top: 0; z-index: 900; min-height: var(--pvw-h, 44px);
-  display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px 14px; flex-wrap: nowrap;
   padding: 8px max(12px, env(safe-area-inset-left)) 8px 12px;
   padding-top: calc(8px + env(safe-area-inset-top, 0px));
   background: #3a2b0e; color: #f7e7c6;
@@ -1531,7 +1545,10 @@ h2.display { font-size: clamp(24px, 7vw, 30px); }
   font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px;
   background: #e0b267; color: #2a1f08; padding: 3px 9px; border-radius: 999px;
 }
-.pvw__note { color: #d8c49a; min-width: 0; }
+/* The first thing to give up its room: it is a sentence, and the controls
+   beside it are the ones that have to be reachable. */
+.pvw__note { color: #d8c49a; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1000px) { .pvw__note { display: none; } }
 .pvw__nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 .pvw__btn {
   padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
@@ -3009,7 +3026,7 @@ td, th { overflow-wrap: anywhere; }
   font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px;
   padding: 3px 9px; border-radius: 999px;
 }
-.envb__note { min-width: 0; opacity: 0.92; }
+.envb__note { min-width: 0; opacity: 0.92; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The project ref settles the argument about which environment is on screen,
    so it sits at the far end in a monospace face where a wrong character is
    visible rather than merely present. */

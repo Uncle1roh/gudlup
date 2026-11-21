@@ -29,6 +29,7 @@ import { hasSupabaseEnv } from '../auth/supabaseClient'
 import { LiveCatalogProvider } from '../data/liveCatalog'
 import { mergeServerPatients, applyAppointments, pendingBookings, linkBooking } from './data'
 import { previewing, PREVIEW_USER_ID } from '../admin/preview'
+import { useBackgrounds } from '../app/backgrounds'
 import { demoProfile } from '../demo/world'
 import type { Therapist } from '../b2b/data'
 import { isUpcoming, type Appointment } from '../data/scheduling'
@@ -123,11 +124,33 @@ function virtualPatient(name: string): WorkspacePatient {
     prescription modal and the treatment player must agree about which
     protocols exist and which time signatures they publish. */
 export function WorkspaceApp(props: WorkspaceAppProps) {
+  useConsolePhoto()
   return (
     <LiveCatalogProvider>
       <WorkspaceGate {...props} />
     </LiveCatalogProvider>
   )
+}
+
+/**
+ * The photograph this console stands on, from the setting the commercial
+ * console writes (console → Sfondi) rather than from the stylesheet.
+ *
+ * It is written on <html> and not on `.w-app`, because the live room
+ * (`.w-call`, LiveSession) is a surface of its own and stands on the same
+ * picture: one declaration, inherited by both, and no second element to
+ * remember when a screen is added.
+ *
+ * The CSS keeps the shipped illustration as its fallback, so the first
+ * paint and a build that cannot reach the setting still have a ground.
+ */
+function useConsolePhoto(): void {
+  const app = useBackgrounds().app
+  useEffect(() => {
+    const root = document.documentElement
+    root.style.setProperty('--w-photo', `url("${app}")`)
+    return () => { root.style.removeProperty('--w-photo') }
+  }, [app])
 }
 
 /**

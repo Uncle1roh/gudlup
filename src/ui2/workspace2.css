@@ -30,9 +30,20 @@
   --w-ok: #7ac69b;
 
   background-color: #06140f;
+  /* THE PRODUCT'S OWN PHOTOGRAPH, not a mock-up's illustration.
+     `/ui/bg-colinas.jpg` is a flat vector of hills under a star — it came in
+     with the mockups and stayed, so the clinician's console was the one
+     surface standing on a drawing while the landing, the door and the
+     person's app all stand on photography. It is still the fallback, for the
+     first paint and for a build with no setting to read.
+
+     `--w-photo` is written by `WorkspaceApp` from the same `app_settings`
+     row the commercial console edits (console → Sfondi, `app/backgrounds.ts`),
+     so changing the app's picture changes this one too and there is no third
+     image to keep in step. */
   background-image:
     linear-gradient(rgba(4, 16, 13, 0.35), rgba(4, 16, 13, 0.55)),
-    url('/ui/bg-colinas.jpg');
+    var(--w-photo, url('/ui/bg-colinas.jpg'));
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -108,7 +119,7 @@
   background-color: #06140f;
   background-image:
     linear-gradient(rgba(4, 16, 13, 0.55), rgba(4, 16, 13, 0.7)),
-    url('/ui/bg-colinas.jpg');
+    var(--w-photo, url('/ui/bg-colinas.jpg'));
   background-size: cover;
   background-position: center;
   color: #faf8df;
@@ -215,3 +226,52 @@
 }
 
 .w-phases__t[aria-current='step'] { background: #faf8df; color: #0b2620; }
+
+/* ------------------------------------------------------- the week grid ---
+   THE ONE SCREEN THE RE-POINT FORGOT.
+
+   `workspace.css` draws the calendar for the white console it was written
+   for: the grid is a card with a hairline, an hour the clinician is
+   available is painted `#f6faf6`, and today's column is marked with
+   `--w-bg`. Two of those three stopped meaning what they said when the nine
+   tokens moved to glass over a photograph:
+
+     · `--w-bg` is `transparent` here, so TODAY LOST ITS MARK entirely.
+     · `#f6faf6` is a literal, so it did not move at all — every free hour
+       became a near-white brick, and a week of them is the brightest thing
+       on the screen. The agenda read as a wall of white blocks with the
+       appointments lost among them.
+
+   And the grid and the side cards were not in the list of panes that are
+   frosted (`.w-card`, `.w-panel`, `.w-table`, `.w-sidebar`, `.w-topbar`
+   above), so they were the only flat rectangles on a surface where
+   everything else is glass, with a 11–12px radius against the system's 22
+   and 28. All of it is answered here rather than in `workspace.css`,
+   because that sheet still has to draw a white console if the tokens ever
+   go back. */
+
+.w-app .w-grid,
+.w-app .w-sidecard {
+  background: var(--w-surface);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid var(--w-line);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  color: var(--w-ink);
+}
+.w-app .w-grid { border-radius: 22px; overflow: hidden; }
+.w-app .w-sidecard { border-radius: 18px; }
+
+/* An hour that is free is a HINT, not a block: barely lighter than the
+   glass, so what the eye finds first is still the appointments. */
+.w-app .w-cell.is-free { background: rgba(250, 248, 223, 0.055); }
+
+/* Today, back on the screen — the same cream the rest of the surface marks
+   a current thing with. */
+.w-app .w-grid__head > span.is-today { background: rgba(250, 248, 223, 0.12); }
+.w-app .w-grid__head > span.is-today em { color: #faf8df; }
+
+/* A booked hour. White on #3db189 is 2.3:1 — readable on paper, not over a
+   photograph at 10.5px. The dark ink the primary button uses is 7:1. */
+.w-app .w-block { background: #3db189; color: #06140f; border-radius: 10px; }
+.w-app .w-block em { opacity: 0.78; }
