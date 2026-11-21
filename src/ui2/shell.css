@@ -1408,7 +1408,25 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
      bottom over a scrim. That reads as a hole on a desk. */
   justify-content: flex-start;
   gap: 18px;
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 48px;
+  /* A PLAIN GUTTER, and the 760px column is the CHILDREN's (below).
+
+     It was `padding-inline: max(24px, calc((100% - 760px) / 2))`, which
+     reads like the centring every other screen here does and is not,
+     because this element is OFFSET. A percentage in padding resolves
+     against the containing block — `.gl-root`'s padding box, the whole
+     window — while the element's own box starts at `left`, past the rail.
+     So the gutter was computed for a box the width of the window and
+     applied to one that is narrower by `left`, and both numbers grow with
+     the monitor: the element gains (W − 1480)/2 at its left edge and loses
+     (W − 760)/2 at each gutter.
+
+     The column that is left over is 1384 − W/2 wide. It is 551px at 1666,
+     296px at 2176, 116px at 2536 — and ZERO at 2768, which is an ordinary
+     4K monitor at 100%. That is the screen a protocol opened on in the
+     demo: the title set one letter per line down the right-hand edge, the
+     lengths somewhere below the fold. Measured, not guessed, with the real
+     sheets in a browser at each of those widths. */
+  padding: 28px 24px 48px;
   color: #faf8df;
 
   background-image:
@@ -1439,8 +1457,18 @@ html.gl2[data-ground='light'] .stereo2-btn.is-failed { color: #8f2f2f; }
 @media (min-width: 900px) {
   .gl-root .sess-full {
     left: calc(max(28px, (100% - 1480px) / 2 + 28px) + 88px);
+    /* `left` already lands on the library's own column — `.gl-root`'s
+       padding plus the rail — so a left gutter here would push the words
+       24px off the line every other screen starts on. The right one stays:
+       nothing should touch the edge of the monitor. */
+    padding-inline: 0 24px;
   }
 }
+
+/* The reading column, as wide as it asks to be and no wider, measured from
+   the element's own box rather than from the window. Every child shares the
+   one left edge, which is what keeps the back button over the title. */
+.gl-root .sess-full > * { width: 100%; max-width: 760px; }
 
 /* The markup carries its own scrim element for the old surface. Here the
    gradient above is the scrim, and two of them is a black screen. */
