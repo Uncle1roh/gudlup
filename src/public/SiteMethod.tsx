@@ -3,15 +3,18 @@
 
    v19's `#page-methodology`: the longest page on the site, and the only one
    with two halves. The first is the waterfall — a cascade made of many
-   separate threads of water that you hear as one sound, with eight labels
-   sitting on eight of those threads — and the five numbers under it. The
+   separate threads of water that you hear as one sound, with the six phases
+   of a session marked along its fall — and the five numbers under it. The
    second is the POs' long body: nine tools, six phases, three lengths, the
    evidence table, why it works, and a band at the foot.
 
-   NOTHING PLAYS HERE. v19 dropped the "hear the layers" button the earlier
-   method page had, and so does this: there is no cleared public extract
-   (`config/publicSite.ts`), and a button that promises sound and gives none
-   is the worst thing a page like this could carry.
+   WHETHER ANYTHING PLAYS HERE depends on one list. The frame is
+   `MethodPhases.tsx`, which lights the phase whose clip is sounding and
+   draws a still diagram when `PHASE_CLIPS` is empty — which it is until
+   Giampiero's six cuts arrive (`config/publicSite.ts`). v19 dropped the
+   "hear the layers" button for the same rule and had no way back: a button
+   that promises sound and gives none is the worst thing a page like this
+   could carry, so the button exists only when the files do.
 
    THE FIVE NUMBERS are written down rather than counted from the live
    catalogue, on purpose: a public page that recomputed them would read
@@ -29,21 +32,8 @@ import { R_LOGIN, R_MODULOS, navigate } from '../components/ambient/stage'
    of the site does, so they go through the same reader. */
 import { rich as r2, useSite } from './lang'
 import type { CopyKey } from './copy'
+import { MethodPhases } from './MethodPhases'
 import { METHOD_BODY } from './methodCopy'
-
-/** The eight layers and where each one sits on the picture, as percentages
-    of the frame. The last two are out on the right-hand fall and are the
-    ones a phone has no room for. */
-const LAYERS: { key: CopyKey; left: number; top: number }[] = [
-  { key: 'ly1', left: 7.5, top: 30 },
-  { key: 'ly2', left: 12.5, top: 12 },
-  { key: 'ly3', left: 18.4, top: 42 },
-  { key: 'ly4', left: 25.6, top: 20 },
-  { key: 'ly5', left: 33.8, top: 36 },
-  { key: 'ly6', left: 42.5, top: 8 },
-  { key: 'ly7', left: 49.7, top: 25 },
-  { key: 'ly8', left: 88.1, top: 18 },
-]
 
 const STATS: { v: CopyKey; l: CopyKey }[] = [
   { v: 's1v', l: 's1l' },
@@ -105,18 +95,11 @@ export function SiteMethod() {
           <h1 className="glw-h1">{r('t_h1')}</h1>
           <p className="glw-sub">{s('t_sub')}</p>
 
-          <div className="pub-frame" role="img" aria-label={s('t_frame')}>
-            <div className="pub-frame__veil" aria-hidden="true" />
-            {LAYERS.map((l, i) => (
-              <span
-                key={l.key}
-                className={i >= 6 ? 'pub-layer pub-layer--far' : 'pub-layer'}
-                style={{ left: `${l.left}%`, top: `${l.top}%` }}
-              >
-                {s(l.key)}
-              </span>
-            ))}
-          </div>
+          {/* The eight tool labels used to sit here, scattered over the
+              waterfall under a headline that called them layers. Both were
+              wrong about the same thing and are gone — the six phases, and
+              the clip of the one playing, are in `MethodPhases.tsx`. */}
+          <MethodPhases />
 
           <div className="glw-stats glw-five">
             {STATS.map((st) => (

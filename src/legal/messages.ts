@@ -229,14 +229,27 @@ export const LEGAL_MESSAGES = {
     it: 'Pensato per questo momento. Rilassamento, non trattamento.' },
 
   /* ---- player ----------------------------------------------------------- */
+  /* DROWSINESS, 2026-11-22. Both player notes were revised by the analysts
+     for one reason: the audio can put a person to sleep, and neither note
+     said so. "Never while driving" was carrying the whole weight of it, and
+     driving is not the only task a drowsy listener can be in the middle of.
+     The words below are theirs, in all three languages, verbatim.
+
+     PLY-1 is 30 words in English, exactly its tier-C budget.
+
+     PLY-2 IS OVER ITS BUDGET AND THAT IS DELIBERATE. Tier B* allows twelve
+     words for a repeated safety note; this one is seventeen, because the
+     analysts asked for the drowsiness and the attention in the same breath
+     and neither half stands alone. Flagged here so a register sync reads it
+     as a decision rather than a drift. */
   'PLY-1': { tier: 'C',
-    en: 'Listen seated or lying down — never while driving. Keep the volume comfortable and stop if you feel unwell.',
-    'pt-BR': 'Ouça sentado ou deitado — nunca dirigindo. Mantenha o volume confortável e pare se não se sentir bem.',
-    it: 'Ascolta seduto o sdraiato — mai alla guida. Tieni il volume moderato e fermati se non ti senti bene.' },
+    en: 'Listen seated or lying down. May make you drowsy — never listen while driving or during other tasks that need your attention. Keep the volume comfortable; stop if you feel unwell.',
+    'pt-BR': 'Ouça sentado ou deitado. Pode dar sono — nunca ouça ao dirigir nem em outras tarefas que exijam atenção. Mantenha o volume confortável; pare se não se sentir bem.',
+    it: 'Ascolta seduto o sdraiato. Può dare sonno — non ascoltare mai alla guida né durante altre attività che richiedono attenzione. Tieni il volume moderato; fermati se non ti senti bene.' },
   'PLY-2': { tier: 'B*',
-    en: 'Never listen while driving. Before or after only.',
-    'pt-BR': 'Nunca ouça dirigindo. Apenas antes ou depois.',
-    it: 'Mai alla guida. Solo prima o dopo.' },
+    en: 'May make you drowsy: do not listen while driving or during other tasks that need your attention.',
+    'pt-BR': 'Pode dar sono: não ouça ao dirigir nem em outras tarefas que exijam atenção.',
+    it: 'Può dare sonno: non ascoltare alla guida né durante altre attività che richiedono attenzione.' },
   'PLY-3': { tier: 'D',
     en: 'How settled do you feel? 0 to 10 — optional.',
     'pt-BR': 'Quão tranquilo você se sente agora? De 0 a 10 — opcional.',

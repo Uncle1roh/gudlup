@@ -34,3 +34,21 @@ export const SAMPLE_AUDIO_URL = ''
  * line that changes.
  */
 export const DEMO_URL = 'mailto:Suporte@goodloop.com.br?subject=Good%20Loop%20—%20demonstra%C3%A7%C3%A3o'
+
+/**
+ * The six phase clips the methodology page plays, in phase order.
+ *
+ * EMPTY ON PURPOSE, exactly like `SAMPLE_AUDIO_URL` above and for the same
+ * reason: there is no file yet. Giampiero's six cuts (analysts, 2026-11-22)
+ * are a purpose-made public extract of a session, one per phase, and until
+ * they are in the repository the page draws the six phases as a still
+ * diagram with no play button. `MethodPhases.tsx` checks the length.
+ *
+ * To turn the player on: drop the six files in `public/media/phases/` and
+ * list them here IN PHASE ORDER, 01 first. Six entries, no fewer — a player
+ * that lights four of six phases is worse than one that lights none, so a
+ * short list is ignored and the page stays a diagram.
+ *
+ * e.g. ['/media/phases/01-intro.mp3', … , '/media/phases/06-return.mp3']
+ */
+export const PHASE_CLIPS: readonly string[] = []

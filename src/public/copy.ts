@@ -27,6 +27,18 @@
 
    DO NOT EDIT A TRANSLATION HERE to fix a typo in another language. Fix it
    in the POs' file and regenerate, or the next version silently undoes it.
+
+   ONE SET OF KEYS BREAKS THAT RULE, AND IS WRITTEN DOWN HERE SO THE NEXT
+   REGENERATION DOES NOT UNDO IT. The methodology page's opening — `t_h1`,
+   `t_sub`, `t_frame`, `s4l`, and the `ly1..ly8` labels that are gone — was
+   changed on 2026-11-22 on the analysts' reading of the Italian. v25 says
+   “Tanti strati. Un’unica esperienza.”, and `strati` is not the word: an
+   Italian hears geology, not sound, and `methodCopy.ts` already says
+   `livello` for the same idea two sections further down. The frame beneath
+   that headline was eight TOOLS labelled as layers, which is the other half
+   of the same complaint — the page is about SIX PHASES, so it now carries
+   the six, and lights the one being played (`MethodPhases.tsx`). The new
+   keys are `t_hint`, `t_play`, `t_pause`, `t_stop`, `t_player`.
    ============================================================================ */
 
 export type SiteLang = 'en' | 'it' | 'pt'
@@ -176,17 +188,14 @@ const EN = {
   ph6t: 'You come back, little by little, to your day.',
   w_note: 'In the short version, some phases are combined.',
   w_fine: 'Wellbeing content. It does not replace psychological or medical care.',
-  t_h1: 'Many layers. <i class="pub-em">One single experience.</i>',
-  t_sub: 'Every session layers voice, music, nature and breath, following a structured method drawn from approaches with a scientific basis.',
-  t_frame: 'A waterfall of many threads of water, each one standing for a layer of sound',
-  ly1: 'Guide voice',
-  ly2: 'Music and nature',
-  ly3: 'Binaural beats',
-  ly4: 'Bilateral stimulation',
-  ly5: 'Breath cues',
-  ly6: 'Word echo',
-  ly7: 'Background whisper',
-  ly8: 'Anchor phrase',
+  t_h1: 'Six phases. <i class="pub-em">One single experience.</i>',
+  t_sub: 'Every session crosses the same six phases, from the welcome to the return, with voice, music, nature and breath carried together through each one.',
+  t_frame: 'A waterfall, with the six phases of a session marked along its fall',
+  t_hint: 'Listen to a piece of each phase',
+  t_play: 'Listen',
+  t_pause: 'Pause',
+  t_stop: 'Stop',
+  t_player: 'The six phases of a session, as audio',
   s1v: '7',
   s1l: 'approaches with a scientific basis',
   s2v: '9',
@@ -334,17 +343,14 @@ const IT: Record<CopyKey, string> = {
   ph6t: 'Torni, poco a poco, alla tua giornata.',
   w_note: 'Nella versione breve alcune fasi sono unite.',
   w_fine: 'Contenuto di benessere. Non sostituisce un percorso psicologico o medico.',
-  t_h1: 'Tanti strati. <i class="pub-em">Un’unica esperienza.</i>',
-  t_sub: 'Ogni sessione combina voce, musica, natura e respiro a strati, seguendo un metodo strutturato e ispirato ad approcci con basi scientifiche.',
-  t_frame: 'Cascata con molti fili d’acqua, ognuno dei quali rappresenta uno strato sonoro',
-  ly1: 'Voce guida',
-  ly2: 'Musica e natura',
-  ly3: 'Battimenti binaurali',
-  ly4: 'Stimolazione bilaterale',
-  ly5: 'Segnali di respiro',
-  ly6: 'Eco di parole',
-  ly7: 'Sussurro di sottofondo',
-  ly8: 'Frase àncora',
+  t_h1: 'Sei fasi. <i class="pub-em">Un’unica esperienza.</i>',
+  t_sub: 'Ogni sessione attraversa le stesse sei fasi, dall’accoglienza al ritorno, e in ognuna voce, musica, natura e respiro si muovono insieme.',
+  t_frame: 'Una cascata, con le sei fasi di una sessione segnate lungo il suo corso',
+  t_hint: 'Ascolta un frammento di ogni fase',
+  t_play: 'Ascolta',
+  t_pause: 'Pausa',
+  t_stop: 'Ferma',
+  t_player: 'Le sei fasi di una sessione, in audio',
   s1v: '7',
   s1l: 'approcci con basi scientifiche',
   s2v: '9',
@@ -352,7 +358,7 @@ const IT: Record<CopyKey, string> = {
   s3v: '112',
   s3l: 'tecniche',
   s4v: 'fino a 8',
-  s4l: 'strati sonori contemporaneamente',
+  s4l: 'tracce sonore insieme',
   s5v: '6',
   s5l: 'fasi per sessione',
 }
@@ -492,17 +498,14 @@ const PT: Record<CopyKey, string> = {
   ph6t: 'Você volta, aos poucos, para o seu dia.',
   w_note: 'Na versão rápida, algumas fases são combinadas.',
   w_fine: 'Conteúdo de bem-estar. Não substitui acompanhamento psicológico ou médico.',
-  t_h1: 'Muitas camadas. <i class="pub-em">Uma só experiência.</i>',
-  t_sub: 'Cada sessão combina voz, música, natureza e respiração em camadas, seguindo um método estruturado e inspirado em abordagens com base científica.',
-  t_frame: 'Cachoeira com muitos fios de água, cada um representando uma camada de som',
-  ly1: 'Voz guia',
-  ly2: 'Música e natureza',
-  ly3: 'Batidas binaurais',
-  ly4: 'Estímulo bilateral',
-  ly5: 'Sinais de respiração',
-  ly6: 'Eco de palavras',
-  ly7: 'Sussurro de fundo',
-  ly8: 'Frase-âncora',
+  t_h1: 'Seis fases. <i class="pub-em">Uma só experiência.</i>',
+  t_sub: 'Cada sessão percorre as mesmas seis fases, da acolhida ao retorno, e em cada uma voz, música, natureza e respiração caminham juntas.',
+  t_frame: 'Uma cachoeira, com as seis fases de uma sessão marcadas ao longo da queda',
+  t_hint: 'Ouça um trecho de cada fase',
+  t_play: 'Ouvir',
+  t_pause: 'Pausar',
+  t_stop: 'Parar',
+  t_player: 'As seis fases de uma sessão, em áudio',
   s1v: '7',
   s1l: 'abordagens com base científica',
   s2v: '9',

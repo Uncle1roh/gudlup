@@ -39,6 +39,14 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   '“Find a comfortable position, when you are ready.” — feminine': '“Trova una posizione comoda, quando sei pronta.”',
   '“Find a comfortable position, when you are ready.” — masculine': '“Trova una posizione comoda, quando sei pronto.”',
 
+  /* The second half of the line above the Begin button. The first half is
+     PLY-2 and comes from the legal catalogue; this half is ordinary copy.
+     The parenthesised form is the analysts' own — `addressedAs` says which
+     RECORDING exists, not how this person is addressed in writing, so the
+     screen genuinely does not know. Analysts, 2026-11-22. */
+  'Find a comfortable position. Close your eyes when you are ready.':
+    'Trova una posizione comoda. Chiudi gli occhi quando sei pronto/a.',
+
   'Links': 'Collegamenti',
   'We could not save your answer just now. Check your connection and try again.': 'Non siamo riusciti a salvare la tua risposta. Controlla la connessione e riprova.',
   /* ---- the pathways: what each is for, the week focus lines, the when ---- */
@@ -285,6 +293,9 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Some sessions are only recorded in one form for now. When yours is missing you still hear the session, and the screen before it says so.': 'Algumas sessões, por ora, estão gravadas em apenas uma forma. Quando faltar a sua, você ouve a sessão mesmo assim, e a tela anterior avisa.',
   'This session is only recorded in the male form for now — it will say “pronto”.': 'Esta sessão, por ora, está gravada apenas no masculino: vai dizer “pronto”.',
   'This session is only recorded in the female form for now — it will say “pronta”.': 'Esta sessão, por ora, está gravada apenas no feminino: vai dizer “pronta”.',
+
+  'Find a comfortable position. Close your eyes when you are ready.':
+    'Encontre uma posição confortável. Feche os olhos quando estiver pronto(a).',
 
   'Links': 'Links',
   'We could not save your answer just now. Check your connection and try again.': 'Não conseguimos salvar sua resposta agora. Verifique a conexão e tente de novo.',

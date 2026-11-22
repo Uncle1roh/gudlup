@@ -108,7 +108,13 @@ interface SessionFlowProps {
    session ever, on this device. A first-occurrence note is static in the
    sense that matters: every person gets it on the same trigger, and nothing
    about the person is inferred. */
-const SAFE_USE_KEY = 'gl.legal.safeuse.v1'
+/* v1 → v2 ON 2026-11-22, and the bump is the point. PLY-1 gained the one
+   thing it never said — that the audio can put you to sleep, and that driving
+   is not the only task that is wrong to be in the middle of. Everybody who
+   dismissed v1 dismissed a note that did not carry that sentence, and a
+   first-occurrence note keyed to the old text would never show them the new
+   one. A second OK is a cheap price for the warning actually arriving. */
+const SAFE_USE_KEY = 'gl.legal.safeuse.v2'
 function safeUseSeen(): boolean {
   try { return localStorage.getItem(SAFE_USE_KEY) === '1' } catch { return true }
 }
@@ -277,10 +283,13 @@ function PreSession({
         <div className="screen__body pre-session__body">
           <span className="pre-session__len">{t('{n} min', { n: duration })}</span>
           <h2 className="display">{t(session.name)}</h2>
+          {/* "Get comfortable." used to be the third of these. It left the
+              screen when the safety line below the sliders arrived saying
+              `Find a comfortable position.` in full — the two were a
+              sentence apart and said the same thing twice. */}
           <ul className="pre-session__list">
             <li>{t('Find a quiet place.')}</li>
             <li>{t('Put on your headphones.')}</li>
-            <li>{t('Get comfortable.')}</li>
           </ul>
           <p className="small muted"><Icon name="headphones" size={15} /> {t('Headphones recommended')}</p>
 
@@ -306,6 +315,22 @@ function PreSession({
           </div>
         </div>
         <div className="screen__footer btn-stack">
+          {/* PLY-2 — EVERY SESSION, not once (analysts, 2026-11-22). The
+              drowsiness is the half of it a person needs in front of them
+              each time, because the circumstances are what change: the same
+              listener is at a desk on Tuesday and in a passenger seat on
+              Friday. PLY-1 above fires once and then never again, so without
+              this line the warning would live in one dismissed box.
+
+              Two sentences, two homes, on purpose. The first is safety copy
+              and comes from the catalogue by ID (MN-26 — no safety wording
+              hard-coded outside it). The second is ordinary interface copy
+              and goes through t() like the rest of the screen. They print as
+              one paragraph, which is how the analysts wrote them. */}
+          <p className="pre-session__safety" role="note">
+            <strong>{m('PLY-2')}</strong>{' '}
+            {t('Find a comfortable position. Close your eyes when you are ready.')}
+          </p>
           <button className="btn btn--primary" onClick={() => onBegin(mood)}>
             {t('Begin Session')}
           </button>

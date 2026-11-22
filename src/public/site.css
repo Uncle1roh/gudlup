@@ -380,15 +380,63 @@ html[data-gl-site] body {
 .glw .glw-mi{padding-bottom:0;}
 .glw .pub-frame{position:relative;width:100%;max-width:860px;aspect-ratio:16/10;border-radius:22px;overflow:hidden;margin-top:40px;border:1px solid var(--line-strong);background-image:var(--bg);background-size:128.8% auto;background-position:32.5% 6.35%;background-repeat:no-repeat;}
 .glw .pub-frame__veil{position:absolute;top:0;right:0;bottom:0;left:0;background:#05160f;opacity:.35;}
-.glw .pub-layer{position:absolute;transform:translate(-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(5,22,15,.72);border:1px solid rgba(244,240,190,.3);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;}
-.glw .pub-layer:before{content:"";width:6px;height:6px;border-radius:999px;background:var(--accent);flex:0 0 auto;}
+
+/* ======================================================= the six phases ====
+   `MethodPhases.tsx`. Replaces `.pub-layer`, which drew eight tool labels
+   scattered over the same frame (analysts, 2026-11-22). Two shapes in one
+   sheet, because the component draws two: a `<span>` per phase when there
+   are no clips, a `<button>` per phase when there are, and both want the
+   same pill. */
+.glw .pub-ph{position:absolute;transform:translate(-50%);display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 10px;border-radius:999px;background:rgba(5,22,15,.72);border:1px solid rgba(244,240,190,.3);font:inherit;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;text-align:left;transition:background .22s ease,border-color .22s ease,color .22s ease,box-shadow .22s ease;}
+.glw .pub-ph__no{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:999px;background:rgba(244,240,190,.14);border:1px solid rgba(244,240,190,.28);font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--ink);flex:0 0 auto;transition:background .22s ease,color .22s ease,border-color .22s ease;}
+
+/* Pressable only when there is something to press. */
+.glw .pub-ph--live{cursor:pointer;}
+.glw .pub-ph--live:hover{background:rgba(5,22,15,.86);border-color:rgba(244,240,190,.5);}
+.glw .pub-ph--live:focus-visible{outline:2px solid var(--cream);outline-offset:3px;}
+
+/* THE LIGHTING UP. One phase at a time, and it has to win over a
+   photograph: the pill fills with the accent and takes dark ink, which is
+   the one state on this page that is not cream-on-dark. */
+.glw .pub-ph--on{background:var(--accent);border-color:var(--accent);color:#06180f;box-shadow:0 0 0 5px rgba(122,198,155,.18),0 8px 26px rgba(0,0,0,.4);}
+.glw .pub-ph--on .pub-ph__no{background:rgba(6,24,15,.22);border-color:rgba(6,24,15,.3);color:#06180f;}
+
+/* The rail: six segments at the foot of the frame, each filling left to
+   right. `scaleX` and not `width`, so the fill rides the compositor and a
+   `timeupdate` four times a second does not lay the frame out again. */
+.glw .pub-ph-rail{position:absolute;left:18px;right:18px;bottom:16px;display:flex;gap:6px;}
+/* The empty segment has to read over the whole photograph, and the
+   photograph has a lit fire in it: a cream wash at 20% disappears into the
+   bright quarter of the frame. A dark ground with a cream hairline reads on
+   both ends of it. */
+.glw .pub-ph-rail__seg{flex:1 1 0;height:4px;border-radius:999px;background:rgba(5,22,15,.55);box-shadow:inset 0 0 0 1px rgba(244,240,190,.26);overflow:hidden;}
+.glw .pub-ph-rail__fill{display:block;width:100%;height:100%;border-radius:999px;background:var(--accent);transform-origin:left center;transform:scaleX(0);transition:transform .2s linear;}
+
+/* The bar under the picture: one button, one quiet escape, and the words
+   for whatever is sounding. */
+.glw .pub-ph-bar{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:18px;}
+.glw .pub-ph-btn{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 20px;border-radius:999px;border:1.5px solid rgba(250,248,223,.7);background:transparent;color:#faf8df;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s ease;}
+.glw .pub-ph-btn:hover{background:rgba(250,248,223,.12);}
+.glw .pub-ph-quiet{min-height:44px;padding:0 10px;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+.glw .pub-ph-quiet:hover{color:var(--ink);}
+.glw .pub-ph-say{margin:0;flex:1 1 240px;min-width:0;font-size:0.92rem;line-height:1.5;color:#c9d7c0;text-shadow:0 0 16px rgba(5,22,15,.95),0 1px 3px rgba(5,22,15,.7);}
 .glw .glw-stats.glw-five{grid-template-columns:repeat(5,1fr);margin-top:36px;}
 @media (max-width:920px){.glw .glw-stats.glw-five{grid-template-columns:repeat(2,1fr);}}
+/* A PHONE CANNOT SCATTER SIX PILLS OVER A 4/5 FRAME and keep them readable,
+   and the old sheet already knew it: `.pub-layer` went `position: static`
+   here and two of the eight were hidden outright. Six phases cannot lose
+   two — the sequence IS the content — so all six stack in order at the
+   foot of the picture, which is also the one layout where the fall reads
+   top to bottom like a list. The rail moves up to clear them. */
 @media (max-width:767px){
-  .glw .pub-layer--far{display:none;}
-  .glw .pub-frame{aspect-ratio:4/5;display:flex;flex-wrap:wrap;align-content:flex-end;gap:8px;padding:16px;}
+  .glw .pub-frame{aspect-ratio:4/5;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:flex-start;justify-content:flex-end;gap:7px;padding:16px 16px 34px;}
   .glw .pub-frame__veil{z-index:0;}
-  .glw .pub-layer{position:static!important;transform:none;z-index:1;font-size:12.5px;}
+  .glw .pub-ph{position:static!important;transform:none;z-index:1;font-size:12.5px;max-width:100%;}
+  .glw .pub-ph__h{overflow:hidden;text-overflow:ellipsis;}
+  .glw .pub-ph--on{box-shadow:0 0 0 3px rgba(122,198,155,.2);}
+  .glw .pub-ph-rail{left:16px;right:16px;bottom:14px;}
+  .glw .pub-ph-bar{gap:10px;}
+  .glw .pub-ph-say{flex-basis:100%;}
 }
 
 /* ===== v12: transparent header (as landing), no dark filter on long pages, outlined Enter button ===== */

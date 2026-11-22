@@ -428,6 +428,34 @@
 .su-dark .pre-session__len { color: var(--su-accent-2, #a7e8d0); }
 .pre-session__list { list-style: none; display: flex; flex-direction: column; gap: 6px; color: var(--slate); font-size: 16px; }
 
+/* PLY-2 plus the comfort line, printed as one paragraph above the button
+   (analysts, 2026-11-22). It sits in `.screen__footer`, which is the
+   bottom-anchored stack, so it is the last thing read before the thumb
+   moves — which is the whole reason the analysts asked for it there and
+   not with the three bullets at the top.
+
+   NO BOX. PLY-1 above it is a dismissible card with its own cream ground;
+   two cards on one screen and the person reads neither. This one is type on
+   the photograph, so it carries its own shadow instead of a background, and
+   the safety half is the bolder of the two sentences. */
+.pre-session__safety {
+  margin: 0 0 4px;
+  max-width: 44ch;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(243, 241, 221, 0.82);
+  text-shadow: 0 1px 10px rgba(5, 18, 14, 0.9), 0 1px 2px rgba(5, 18, 14, 0.7);
+}
+.pre-session__safety strong { font-weight: 600; color: #f3f1dd; }
+/* Daylight, which is where the commercial demo's walkthrough screenshots are
+   taken: the same line over a pale surface needs the dark ink and no glow. */
+html[data-su-theme='light'] .su-studio:not(.su-dark) .pre-session__safety {
+  color: var(--su-fg-2, #2a413a);
+  text-shadow: none;
+}
+html[data-su-theme='light'] .su-studio:not(.su-dark) .pre-session__safety strong { color: var(--su-fg, #11241e); }
+
 .stereo__body { justify-content: center; align-items: center; gap: 18px; text-align: center; }
 .stereo__art { font-size: 56px; }
 /* The two answers to "which ear hears the tone". 280px split in two left each

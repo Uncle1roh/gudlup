@@ -24,7 +24,14 @@
 export const IT_PUBLIC: Record<string, string> = {
   'goodloop — home': 'goodloop — home',
   'Good to have you here': 'Che bello averti qui',
-  'Sign in to carry on with your pauses.': 'Accedi per continuare le tue pause.',
+  /* "le tue pause" was the register's literal translation of "your pauses"
+     and it does not survive the trip: an Italian reading "pause" on a
+     door hears a coffee break, not a session of this. The app's own word
+     is `sessione` everywhere else in Italian (`it-selfuse.ts`), and
+     `riprendere` carries the "carry on" of the English without agreeing
+     with a gender nobody has been asked about yet.
+     Analysts, 2026-11-22. */
+  'Sign in to carry on with your pauses.': 'Accedi per riprendere le tue sessioni.',
   'E-mail': 'E-mail',
   'name@company.com': 'nome@azienda.it',
   'Your password': 'La tua password',
