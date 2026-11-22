@@ -419,5 +419,23 @@
 .gl-root .gam-unlock__art > * { grid-area: 1 / 1; }
 .gl-root .gam-unlock__orbits { fill: none; stroke: #3db189; stroke-width: 1; opacity: 0.3; }
 
+/* AND THE SHEET IS CENTRED, which is the other half of the same port.
+
+   `.su-studio .gam-unlock` sets `align-items: center` and `text-align:
+   center` (selfuse-studio.css §gam) and this surface never got either, so
+   on the redesign the whole dialog ran down the left edge: the badge and
+   its orbits parked at the left of a 520px box, the eyebrow, the name and
+   the line under them, and two full-width buttons with centred labels
+   underneath — the one part that looked deliberate. Measured at 1200px, the
+   art sat 129px left of the middle of its own dialog. Reported with an
+   arrow at the badge and another at the name.
+
+   The name also takes the inset the achievement sheet's name has
+   (`.gam-ach__name`, above): centred text in a box with a close button in
+   its corner has to clear the button, or a long title runs under it. */
+.gl-root .gam-unlock { align-items: center; text-align: center; gap: 14px; padding-top: 18px; }
+.gl-root .gam-unlock__name { margin: 0; font-size: 26px; padding-inline: 40px; }
+.gl-root .gam-unlock__line { margin: 0 0 4px; max-width: 34ch; }
+
 /* The Loops popup: the same dialog, with nothing drawn in it. */
 .gl-root .gam-about { gap: 10px; }

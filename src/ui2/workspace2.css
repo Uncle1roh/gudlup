@@ -275,3 +275,39 @@
    photograph at 10.5px. The dark ink the primary button uses is 7:1. */
 .w-app .w-block { background: #3db189; color: #06140f; border-radius: 10px; }
 .w-app .w-block em { opacity: 0.78; }
+
+/* ------------------------------------------- white ink on a cream fill ---
+   The re-point at the top of this sheet moved `--w-ink` from a near-black
+   to CREAM (#faf8df) and `--w-accent` / `--w-danger` to a mid green and a
+   light orange. `workspace.css` prints `#fff` on all three, which was right
+   when every one of them was dark and the console was a white card. It is
+   not right now: the selected roster filter came back from the owner's pass
+   circled, cream on cream, 1.04:1 — a pill with no word in it. The others
+   are the same sentence in other rooms: 2.4:1 on the accent, 1.9:1 on the
+   danger, and a tick already done printing cream on `#dfeee6`.
+
+   The ink goes dark on every filled thing, which is what `.w-btn--primary`
+   above already does. */
+.w-app .w-chip[aria-pressed='true'] { background: var(--w-ink); border-color: var(--w-ink); color: #0b2620; }
+.w-app .w-vasdot[aria-pressed='true'] { color: #06140f; }
+.w-app .w-ticks span.is-now { color: #06140f; }
+.w-app .w-ticks span.is-done { background: rgba(122, 198, 155, 0.22); color: var(--w-ink); }
+.w-app .w-tbtn--intervene.is-on { color: #2a1608; }
+
+/* --------------------------------------------- a table became a pane ---
+   `workspace.css` writes `padding-left: 0` on every cell — right when the
+   table stood bare on a white page and its first column had to line up with
+   the heading above it. This sheet made the table GLASS, with a border and
+   a 22px radius, and nobody moved the cells: measured, there is half a
+   pixel between "Pessoa", the avatars under it, and the left border of the
+   pane, and the same on the right. Reported as "sem padding".
+
+   A pane gets the inset a pane has. The rule under the last row goes with
+   it: a line drawn along the bottom border of a rounded box is a line that
+   misses both of its corners. */
+.w-app .w-table th:first-child,
+.w-app .w-table td:first-child { padding-left: 18px; }
+.w-app .w-table th:last-child,
+.w-app .w-table td:last-child { padding-right: 18px; }
+.w-app .w-table th { padding-top: 14px; padding-bottom: 11px; }
+.w-app .w-table tbody tr:last-child td { border-bottom: 0; padding-bottom: 14px; }
