@@ -311,6 +311,37 @@ html.gl2 .helpnow--bar {
 
 html.gl2 .helpnow--bar .helpnow__heart { opacity: 0.75; }
 
+/* ...AND IT STAYS TRANSPARENT OVER A SESSION.
+
+   `legal.css` paints this strip `#0a1211` whenever the surface under it is
+   one of the dark ones — the session flow, the stereo check, a call. That
+   rule was written when the page behind the strip was the app's own
+   photograph and a seam had to be covered. The page now carries the
+   PROTOCOL's cover (`[data-gl-session='on']`, above), so there is no seam
+   left to hide and the band was just a black bar laid across the top of the
+   picture: 1480px of it, the width of the column, with the cover showing on
+   either side of its ends. Reported from a demo, twice, with the band
+   crossed out.
+
+   The legacy selector is three classes deep (`.su-shell:has(> .su-dark) >
+   .su-shell__bar`), so the answer is the same three with the root in front
+   of them. */
+html.gl2 .su-shell:has(> .su-dark) > .su-shell__bar,
+html.gl2 .su-shell:has(> .call) > .su-shell__bar { background: transparent; }
+
+/* The pill then stands on a photograph instead of on a black band. Dark
+   glass and cream type: legible over any cover, light or dark, and it does
+   not take its colour from the mood of a screen the session has left. */
+html.gl2 .su-shell:has(> .su-dark) > .su-shell__bar .helpnow--bar,
+html.gl2 .su-shell:has(> .call) > .su-shell__bar .helpnow--bar {
+  background: rgba(8, 18, 15, 0.5);
+  border-color: rgba(250, 248, 223, 0.32);
+  color: #f3f1dd;
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.7);
+}
+html.gl2 .su-shell:has(> .su-dark) > .su-shell__bar .helpnow--bar .helpnow__heart,
+html.gl2 .su-shell:has(> .call) > .su-shell__bar .helpnow--bar .helpnow__heart { opacity: 0.9; }
+
 /* ------------------------------------------------------------------ root ---
    The token names the mockups use, pointed at the namespaced ones the
    provider writes. The admin, HR and workspace consoles read `--ink` and

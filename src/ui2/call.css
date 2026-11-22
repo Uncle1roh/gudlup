@@ -538,7 +538,14 @@
 .pf2-who strong { font-family: 'Outfit', system-ui, sans-serif; font-size: 20px; font-weight: 500; }
 .pf2-who .call2-note { overflow: hidden; text-overflow: ellipsis; }
 
-.pf2-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+/* THE ROW TAKES WHATEVER HEIGHT THE CARD HAS LEFT. The four Perfil cards
+   share a height (`.g2x2`, shell.css) and this card has the least in it, so
+   the leftover used to be dumped in one piece between the figures and Sair
+   — a hole, and reported as one. There is no spacer any more: the row grows
+   and the three boxes grow with it, each figure still centred in its own.
+   On a phone the cards are a single column with no height to share, so the
+   row is its own height again and nothing here applies. */
+.pf2-stats { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; align-content: stretch; }
 
 /* A STAT IS A FIGURE WITH A WORD UNDER IT.
 
@@ -565,6 +572,9 @@
   text-align: center;
   font-size: 12px;
   color: var(--ink-2);
+  /* A floor, so three short figures never draw three slivers, and no
+     ceiling, so the row can hand them the card's spare height. */
+  min-height: 64px;
 }
 
 .pf2-stat b { font-family: 'Outfit', system-ui, sans-serif; font-size: 24px; font-weight: 500; color: var(--ink); line-height: 1.1; }

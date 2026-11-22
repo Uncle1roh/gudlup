@@ -62,14 +62,23 @@
    Opaque is still right. It is just opaque in this surface's terms: a
    frosted pane with a hairline under it, so you can see the form pass
    beneath without reading two layers of type at once. */
+/* AND IT IS A PANE, NOT A SLAB. Frosting it was only half the port: a
+   translucent rectangle with square corners, bled to both edges of the
+   column and cut off flat under the back link, still reads as a box that
+   landed on the page by accident — which is how it came back, circled, from
+   the owner's pass over the person's app. Every other surface on these
+   screens is a rounded pane with a hairline; this one is now the same pane,
+   and being a pane is what makes it look deliberate when it sticks. */
 .gl-root .acct__bar {
   background: var(--glass);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
-  border-bottom: 1px solid var(--line);
-  padding: 10px 0 12px;
-  margin-bottom: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--gl-box-r);
+  padding: 12px 18px 12px 20px;
+  margin-bottom: 4px;
   gap: 16px;
+  box-shadow: 0 14px 30px -24px rgba(0, 0, 0, 0.55);
 }
 
 .gl-root .acct__bar .su-h1 { font-size: 24px; }
@@ -86,6 +95,20 @@
 }
 
 .gl-root .acct__end { gap: 10px; margin-top: 28px; }
+
+/* NOTHING TO SAVE IS NOT A DEAD SLAB. Both Saves are the filled action, and
+   the filled action at `opacity: 0.5` over cream is a grey block the size of
+   a button — the most prominent thing on a settings page, saying the one
+   thing that does not matter yet. Idle, it steps back to the quiet control
+   it is; the moment a field changes it fills in and means something. */
+.gl-root .acct__bar .btn:disabled,
+.gl-root .acct__end .btn:disabled {
+  opacity: 1;
+  background: var(--btn);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  box-shadow: none;
+}
 
 /* ----------------------------------------------------------- the toggles ---
    Notificações, and the consent list in Privacidade. One row per setting:
@@ -375,7 +398,18 @@
 @media (max-width: 899px) {
   .gl-root .acct__bar .btn,
   .gl-root .acct__end .btn { min-width: 0; }
-  .gl-root .acct__bar { flex-wrap: wrap; }
+  /* ON A PHONE IT STOPS STICKING. The title and the button do not fit on one
+     line at 390px, so the bar wraps to two rows — and a two-row pane pinned
+     to the top of a phone is about 110px of a 780px screen held permanently
+     against a form of eight fields. The Save at the foot of the form is the
+     one a thumb reaches anyway. So here the bar is a heading again, and the
+     screen scrolls past it. */
+  .gl-root .acct__bar {
+    flex-wrap: wrap;
+    position: static;
+    padding: 12px 16px;
+  }
+  .gl-root .acct__bar .su-h1 { font-size: 21px; }
 }
 
 /* ------------------------------------------------ leaving, and writing in ---

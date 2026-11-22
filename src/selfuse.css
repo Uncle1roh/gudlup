@@ -420,6 +420,12 @@
 
 .pre-session__body { justify-content: center; align-items: center; gap: 14px; text-align: center; }
 .pre-session__len { font-size: 16px; font-weight: 700; letter-spacing: 0.1em; color: var(--aura-deep); }
+/* CONTRASTE, and the photograph is the reason. `--aura-deep` is a deep
+   emerald, picked to be legible on cream; on the session flow it is printed
+   over the protocol's own cover, darkened, where it measures about 1.5:1 and
+   simply is not there. The light end of the same accent is the one that
+   reads on a dark picture. */
+.su-dark .pre-session__len { color: var(--su-accent-2, #a7e8d0); }
 .pre-session__list { list-style: none; display: flex; flex-direction: column; gap: 6px; color: var(--slate); font-size: 16px; }
 
 .stereo__body { justify-content: center; align-items: center; gap: 18px; text-align: center; }

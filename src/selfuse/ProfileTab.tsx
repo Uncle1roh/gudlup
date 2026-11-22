@@ -152,6 +152,13 @@ export function ProfileTab(props: ProfileProps) {
               its own box. The label is a span rather than a bare text node
               so it can be given a line height and allowed to wrap — "dias
               seguidos" takes two lines and the three boxes stay level. */}
+          {/* AND THE THREE BOXES TAKE THE SLACK. This card is one cell of a
+              2x2 grid whose cells share a height, and it is the cell with
+              the least to say: it used to end with a spacer that pushed Sair
+              to the floor, which left a hand's width of nothing between the
+              figures and the button. Reported with the hole circled. The row
+              grows instead (`.pf2-stats`, call.css), the figures stay
+              centred in their boxes, and the card has no gap in it. */}
           <div className="pf2-stats">
             <span className="pf2-stat">
               <b>{sessions}</b>
@@ -167,7 +174,6 @@ export function ProfileTab(props: ProfileProps) {
             </span>
           </div>
 
-          <div style={{ flex: 1 }} />
           {/* The word had nothing beside it, which on a card of figures and
               rows read as one more row. The door says what it does. */}
           <button type="button" className="glass-btn call2-pill pf2-out" onClick={props.onLogout}>
