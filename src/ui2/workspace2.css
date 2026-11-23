@@ -94,7 +94,47 @@
 .w-app .w-panel { border-radius: 28px; }
 .w-app .w-table { border-radius: 22px; overflow: hidden; }
 
+/* WIDTH, AND WHY IT IS SPELLED OUT THREE TIMES.
+
+   This used to be one flat `.w-app .w-sidebar { width: 196px }`, at (0,2,0)
+   and in the later sheet — so it beat BOTH of the ways `workspace.css`
+   narrows the rail: `.w-sidebar.is-collapsed` (same weight, earlier file)
+   and the 1024–1279px media rule (0,1,0). The labels went on hiding and the
+   rail went on being 196px, which is not a collapsed rail: it is a wide
+   green column with six small icons adrift in it and no words anywhere.
+   That is what the owner was looking at on the session report, and what
+   anyone on a 1280-or-under desktop sees on every screen. */
 .w-app .w-sidebar { width: 196px; border-radius: 0; background: var(--w-side); }
+
+/* NO `:not()` HERE, and that is not a style preference. `:not(.is-collapsed)`
+   carries its argument's weight, so the base rule would have been (0,3,0)
+   and would have beaten the breakpoint below it at (0,2,0) — a media query
+   adds no specificity. Measured that exact mistake at 1176px: labels
+   hidden, rail still 196px, which is the bug this block is here to end.
+   Plain (0,2,0) base, (0,3,0) for the collapsed state, and the breakpoint
+   wins on being later in the same sheet. */
+.w-app .w-sidebar.is-collapsed { width: 62px; }
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .w-app .w-sidebar { width: 62px; }
+  .w-app .w-sidebar:hover { width: 196px; }
+}
+
+/* AND THE GLYPH KEEPS ITS 18 PIXELS. In a 62px rail the row is an icon and,
+   on Calendario, a notification dot — and the icon was the one that gave
+   way: measured 0×22, a nav item with a red dot and nothing to click
+   towards. The icon stops shrinking, the dot stops taking part in the
+   layout at all and sits in the corner where a dot belongs, and what is
+   left centres in the rail. Both of the ways the rail narrows say it. */
+.w-app .w-navitem__icon { flex: 0 0 auto; }
+
+.w-app .w-sidebar.is-collapsed .w-navitem { justify-content: center; position: relative; }
+.w-app .w-sidebar.is-collapsed .w-navitem__badge { position: absolute; top: 7px; right: 9px; margin: 0; }
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .w-app .w-sidebar:not(:hover) .w-navitem { justify-content: center; position: relative; }
+  .w-app .w-sidebar:not(:hover) .w-navitem__badge { position: absolute; top: 7px; right: 9px; margin: 0; }
+}
 
 .w-app .w-topbar { border-radius: 0; border-top: 0; border-left: 0; border-right: 0; box-shadow: none; }
 

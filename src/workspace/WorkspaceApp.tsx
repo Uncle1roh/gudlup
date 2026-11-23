@@ -439,7 +439,13 @@ function WorkspaceSurface({ demoSeconds = null, sandboxOnEntry, cred }: Workspac
             setNav={(n) => { setNav(n); setView({ kind: 'nav' }) }}
             account={state.account}
             requests={state.requests.length}
-            collapsed
+            /* NOT `collapsed` any more (owner, 2026-11-23). The session
+               report was the one screen that hid the navigation's words,
+               and the owner read the result as broken text rather than as
+               a narrow rail — fairly, because the width override above it
+               meant the rail did not narrow either: six unlabelled icons
+               in a 196px green column. The report is a page like the
+               others and gets the menu the others get. */
           />
           <div className="w-content">
             <TopBar
@@ -642,7 +648,11 @@ function Sidebar({
               i.id === 'calendar' && requests > 0 ? '·'
               : null
             return (
-              <button key={i.id} className={`w-navitem${nav === i.id ? ' is-on' : ''}`} onClick={() => setNav(i.id)}>
+              /* `title`: between 1024 and 1279px the rail IS an icon rail
+                 until it is hovered, and an icon with its label display:none
+                 has no accessible name and no tooltip — six anonymous
+                 glyphs. The attribute gives it both. */
+              <button key={i.id} className={`w-navitem${nav === i.id ? ' is-on' : ''}`} title={t(i.label)} onClick={() => setNav(i.id)}>
                 <span className="w-navitem__icon" aria-hidden="true"><NavGlyph id={i.id} /></span>
                 <span className="w-navitem__label">{t(i.label)}</span>
                 {badge && <span className={`w-navitem__badge${badge === '·' ? ' is-dot' : ''}`}>{badge === '·' ? '' : badge}</span>}
