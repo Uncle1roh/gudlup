@@ -182,18 +182,56 @@
 
 .w-call .w-input::placeholder, .w-call .w-textarea::placeholder { color: rgba(250, 248, 223, 0.6); }
 
-/* Round, like the person's side of the same call. */
+/* Round, like the person's side of the same call — and with THREE states a
+   clinician can tell apart at a glance, which is the part that was missing.
+
+   Default is the translucent wash. OFF (muted, camera down) is a SOLID
+   CREAM disc with dark ink, because `aria-pressed` used to change nothing
+   at all: measured, true and false were both `rgba(250,248,223,0.08)` on
+   the same border, since `workspace.css`'s pressed rule is (0,2,0) and so
+   is this sheet's, and this sheet comes later. End is the one orange. The
+   icon carries a slash in both off states as well, so the state survives
+   for anybody who cannot tell the two fills apart.
+
+   Disabled had the same problem and gets the same answer: before the
+   camera is live these two invited a tap and did nothing. */
 .w-call .w-callbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 52px;
   height: 52px;
+  padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(250, 248, 223, 0.2);
-  background: rgba(250, 248, 223, 0.08);
+  /* A LITTLE MORE WASH THAN A PANEL WOULD TAKE. These three sit over live
+     video, not over the room's own ground, so the frame behind them is
+     whatever the patient's camera is pointing at. At 0.08 the disc measured
+     1.23:1 against a dark frame — the icon read, the BUTTON did not, and a
+     control you cannot find is not a control. */
+  border: 1px solid rgba(250, 248, 223, 0.34);
+  background: rgba(250, 248, 223, 0.16);
   color: #faf8df;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
+.w-call .w-callbtn:hover:not(:disabled) { background: rgba(250, 248, 223, 0.26); }
+.w-call .w-callbtn:focus-visible { outline: 2px solid #faf8df; outline-offset: 3px; }
+
+.w-call .w-callbtn[aria-pressed='true'] {
+  background: #faf8df;
+  border-color: transparent;
+  color: #0b2620;
+}
+.w-call .w-callbtn[aria-pressed='true']:hover:not(:disabled) { background: #fffbd6; }
 
 .w-call .w-callbtn--end { background: #e89d64; color: #2a1608; border-color: transparent; }
-.w-call .w-callbtn { font-size: 18px; line-height: 1; padding: 0; }
+.w-call .w-callbtn--end:hover:not(:disabled) { background: #efb183; }
+
+.w-call .w-callbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* The waiting room draws the same two controls; `workspace.css` widens them
+   there for the label that used to sit under the glyph. There is no label
+   any more, so they are the same disc as the ones in the call. */
+.w-call .w-call__waitbar .w-callbtn { width: 52px; min-width: 0; padding-inline: 0; }
 /* Visually hidden, still the button's name. Not `display: none`, which
    would take it from the accessibility tree as well and leave three
    unlabelled discs. */

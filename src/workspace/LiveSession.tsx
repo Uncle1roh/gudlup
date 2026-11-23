@@ -251,10 +251,10 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
             {call.camStatus === 'live' && (
               <div className="w-call__waitbar">
                 <button className="w-callbtn" aria-pressed={!call.micOn} onClick={call.toggleMic} title={t('Mute')}>
-                  {call.micOn ? '🎤' : '🔇'}<span className="w-callbtn__l">{t('Mute')}</span>
+                  <CallIcon kind={call.micOn ? 'mic' : 'mic-off'} /><span className="w-callbtn__l">{t('Mute')}</span>
                 </button>
                 <button className="w-callbtn" aria-pressed={!call.camOn} onClick={call.toggleCam} title={t('Camera')}>
-                  {call.camOn ? '📷' : '🚫'}<span className="w-callbtn__l">{t('Camera')}</span>
+                  <CallIcon kind={call.camOn ? 'cam' : 'cam-off'} /><span className="w-callbtn__l">{t('Camera')}</span>
                 </button>
               </div>
             )}
@@ -450,13 +450,13 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
                 to hold it. End Call gains a glyph for the same reason: it had
                 only a word, so hiding the word would have left a blank disc. */}
             <button className="w-callbtn" aria-pressed={!call.micOn} disabled={call.camStatus !== 'live'} onClick={call.toggleMic} title={t('Mute')}>
-              {call.micOn ? '🎤' : '🔇'}<span className="w-callbtn__l">{t('Mute')}</span>
+              <CallIcon kind={call.micOn ? 'mic' : 'mic-off'} /><span className="w-callbtn__l">{t('Mute')}</span>
             </button>
             <button className="w-callbtn" aria-pressed={!call.camOn} disabled={call.camStatus !== 'live'} onClick={call.toggleCam} title={t('Camera')}>
-              {call.camOn ? '📷' : '🚫'}<span className="w-callbtn__l">{t('Camera')}</span>
+              <CallIcon kind={call.camOn ? 'cam' : 'cam-off'} /><span className="w-callbtn__l">{t('Camera')}</span>
             </button>
             <button className="w-callbtn w-callbtn--end" onClick={() => setConfirmEnd(true)} title={t('End Call')}>
-              <span aria-hidden="true">✕</span><span className="w-callbtn__l">{t('End Call')}</span>
+              <CallIcon kind="hangup" /><span className="w-callbtn__l">{t('End Call')}</span>
             </button>
           </div>
         </div>
@@ -543,6 +543,67 @@ function SandboxBanner({ onExit }: { onExit: () => void }) {
         <button className="w-link" onClick={onExit}>{t('Exit Sandbox')}</button>
       </span>
     </div>
+  )
+}
+
+/* ------------------------------------------------------- call controls ----
+
+   THREE BUTTONS, AND THEY HAD THREE THINGS WRONG WITH THEM (owner,
+   2026-11-23: "ainda estao ruins").
+
+   ONE — they were EMOJI. The product draws its own line icons everywhere
+   else, at `viewBox 0 0 24 24`, `stroke-width 1.7`, round caps
+   (`NavGlyph` in WorkspaceApp, the nine tools on the methodology page).
+   Emoji are a different drawing in every operating system, they carry
+   colour nobody here chose, and two of them were standing in for states:
+   a loudspeaker-with-a-cross for "muted", a prohibition sign for "camera
+   off".
+
+   TWO — and this is the one that mattered clinically: `aria-pressed="true"`
+   LOOKED EXACTLY LIKE `false`. Measured: both `rgba(250,248,223,0.08)` on
+   the same border, because `workspace.css`'s pressed rule is (0,2,0) and
+   this surface's own `.w-call .w-callbtn` is (0,2,0) too and comes later.
+   A therapist could not tell whether their microphone was on.
+
+   THREE — `disabled` looked pressable for the same reason, so the two
+   controls invited a tap in the seconds before the camera is live.
+
+   The slash is drawn INTO the icon, so the state is legible even to
+   somebody who cannot see the fill change. */
+function CallIcon({ kind }: { kind: 'mic' | 'mic-off' | 'cam' | 'cam-off' | 'hangup' }) {
+  const common = {
+    width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none',
+    stroke: 'currentColor', strokeWidth: 1.7,
+    strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+  if (kind === 'hangup') {
+    return (
+      <svg {...common}>
+        {/* A handset turned down: the one gesture every call app agrees on. */}
+        <g transform="rotate(135 12 12)">
+          <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />
+        </g>
+      </svg>
+    )
+  }
+  const off = kind === 'mic-off' || kind === 'cam-off'
+  return (
+    <svg {...common}>
+      {kind.startsWith('mic') ? (
+        <>
+          <path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" />
+          <path d="M6 11a6 6 0 0 0 12 0" />
+          <path d="M12 17v4" />
+        </>
+      ) : (
+        <>
+          <rect x="3" y="6" width="12" height="12" rx="2.5" />
+          <path d="M15 10.5 20 7.5v9l-5-3z" />
+        </>
+      )}
+      {off && <path d="M4 4 20 20" />}
+    </svg>
   )
 }
 
