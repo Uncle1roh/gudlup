@@ -120,7 +120,11 @@ assert(circle.match(/<ellipse/g)?.length === 2, 'badge: two faint orbit ellipses
      forbids is unchanged and still asserted: nothing from gamification on
      the post-session screen, and no sheet while a session is up. */
   assert(/unlockSheetUp = unlocks\.length > 0 && !launch && overlay\.kind === 'none'/.test(app), 'GAM-R6: no unlock sheet while a session or an overlay is up')
-  assert(/checkUnlocks\(\)\n  \}/.test(app), 'the achievements are read again when a session ends, so the sheet is not a day late')
+  /* `\r?\n`, because this asserts on the TEXT of a source file and the
+     repository is checked out with `core.autocrlf=true` on Windows: a
+     bare `\n` here passes on the machine that wrote the file and fails
+     on the next clone of it, which is a false failure about nothing. */
+  assert(/checkUnlocks\(\)\r?\n  \}/.test(app), 'the achievements are read again when a session ends, so the sheet is not a day late')
 }
 
 console.log(process.exitCode ? '\nFAILED' : '\ndone.')
