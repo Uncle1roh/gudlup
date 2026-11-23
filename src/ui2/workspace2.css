@@ -2,12 +2,38 @@
    The therapist's console, on the system's surface
    (TerapeutaAgenda.dc.html, TerapeutaSessao.dc.html)
 
-   `workspace.css` is 921 lines written against a clean set of tokens —
-   `--w-bg`, `--w-surface`, `--w-ink`, `--w-line` and the rest. So this sheet
-   re-points those nine names and the whole console follows: tables, cards,
-   the live-session panel, all of it. That is a token re-point of a design
-   system that already exists, not a layout standing in for a port; the two
-   layouts the brief names are ported in the components themselves.
+   `workspace.css` is 934 lines written against a clean set of tokens —
+   `--w-bg`, `--w-surface`, `--w-ink`, `--w-line` and the rest. This sheet
+   adds the system's type and its radii on top of them; the two layouts the
+   brief names are ported in the components themselves.
+
+   IT USED TO RE-POINT THOSE NINE TOKENS TO GLASS OVER A PHOTOGRAPH, and on
+   2026-11-23 it stopped. The owner asked for the therapist's console and the
+   company's to stand on the ADMIN PANEL'S CREAM (`--mist`, #faf8df), which
+   is the ground every internal desktop tool in this product already uses: a
+   cream page, white panels, a dark rail down the left. So `--w-bg` moves to
+   that cream in `workspace.css` and the other eight tokens simply stay as
+   that sheet wrote them — near-black ink, white surfaces, a hairline.
+
+   THAT RETIRED THE CONSOLE'S CONTRAST PATCHES. The re-point had moved
+   `--w-ink` to cream, and `workspace.css` prints `#fff` on it: the roster
+   filter came back from the owner's pass circled, cream on cream at 1.04:1,
+   a pill with no word in it. With the ink near-black again that original is
+   correct on its own, so the patch is gone rather than inverted — and so
+   are the week grid's, which had lost today's mark because `--w-bg` was
+   `transparent` and had painted every free hour a near-white brick.
+
+   FOUR MORE PATCHES WENT WITH IT AND CAME BACK ONE SECTION DOWN, because
+   their scope was wrong. The same November pass swept `.w-vasdot`,
+   `.w-ticks` and `.w-tbtn--intervene` for the same disease and wrote the
+   three under `.w-app` — but all three are drawn by `LiveSession`, which
+   renders `.w-call`, and `.w-call` is a sibling of `.w-app` and not a
+   child. The rules never matched anything. They are below, under `.w-call`,
+   where the elements actually are.
+
+   THE LIVE ROOM (`.w-call`) KEEPS ITS PHOTOGRAPH AND ITS DARK GLASS. It is
+   70% video, it sits outside `.w-app`, and no product puts a video call on
+   cream. If that is wanted too, it is the one block below to change.
 
    One deliberate difference from the mockups: the sidebar keeps its labels.
    The mockup draws a 64px icon rail, and the person's app has one — but the
@@ -18,35 +44,14 @@
    ============================================================================ */
 
 .w-app {
-  --w-bg: transparent;
-  --w-surface: rgba(10, 32, 27, 0.46);
-  --w-side: rgba(6, 20, 15, 0.55);
-  --w-ink: #faf8df;
-  --w-muted: rgba(250, 248, 223, 0.78);
-  --w-line: rgba(250, 248, 223, 0.14);
-  --w-accent: #3db189;
-  --w-warn: #f2c29a;
-  --w-danger: #e89d64;
-  --w-ok: #7ac69b;
+  /* The admin panel's ground, to the hex (`index.css`, `--mist`). Named
+     again here rather than read from `--mist`, because `workspace.css` is a
+     self-contained sheet with its own nine tokens and one of them reaching
+     into another sheet's palette would be the only such line in it. If the
+     product's cream ever moves, these two move together. */
+  --w-bg: #faf8df;
 
-  background-color: #06140f;
-  /* THE PRODUCT'S OWN PHOTOGRAPH, not a mock-up's illustration.
-     `/ui/bg-colinas.jpg` is a flat vector of hills under a star — it came in
-     with the mockups and stayed, so the clinician's console was the one
-     surface standing on a drawing while the landing, the door and the
-     person's app all stand on photography. It is still the fallback, for the
-     first paint and for a build with no setting to read.
-
-     `--w-photo` is written by `WorkspaceApp` from the same `app_settings`
-     row the commercial console edits (console → Sfondi, `app/backgrounds.ts`),
-     so changing the app's picture changes this one too and there is no third
-     image to keep in step. */
-  background-image:
-    linear-gradient(rgba(4, 16, 13, 0.35), rgba(4, 16, 13, 0.55)),
-    var(--w-photo, url('/ui/bg-colinas.jpg'));
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  background: var(--w-bg);
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -55,17 +60,18 @@
 .w-app .w-h3,
 .w-app .w-brand { font-family: 'Outfit', system-ui, sans-serif; }
 
-/* Every panel is glass over the photograph rather than a white card. */
+/* Every panel is a white card on the cream, which is what the admin panel
+   does with the same two colours. No `backdrop-filter`: there is nothing
+   behind these to blur any more, and a 22px blur on five classes is a GPU
+   layer per pane for no pixel of difference. */
 .w-app .w-card,
 .w-app .w-panel,
 .w-app .w-table,
 .w-app .w-sidebar,
 .w-app .w-topbar {
   background: var(--w-surface);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--w-line);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 10px 28px -22px rgba(16, 36, 30, 0.5);
   color: var(--w-ink);
 }
 
@@ -85,30 +91,14 @@
 
 .w-app .w-topbar { border-radius: 0; border-top: 0; border-left: 0; border-right: 0; box-shadow: none; }
 
-/* Controls: round, like everywhere else in the system. */
+/* Controls: round, like everywhere else in the system. Only the SHAPE is
+   this sheet's business now — the fills come from `workspace.css`, which
+   paints the primary in the emerald with white on it, exactly as the admin
+   console paints its own. */
 .w-app .w-btn,
-.w-app button.w-btn {
-  border-radius: 999px;
-  border: 1px solid var(--w-line);
-  background: rgba(250, 248, 223, 0.08);
-  color: var(--w-ink);
-}
+.w-app button.w-btn { border-radius: 999px; }
 
-.w-app .w-btn--primary {
-  background: #faf8df;
-  color: #0b2620;
-  border-color: transparent;
-}
-
-.w-app .w-btn--danger { background: #e89d64; color: #2a1608; border-color: transparent; }
-.w-app .w-input, .w-app .w-select, .w-app .w-textarea {
-  border-radius: 14px;
-  background: rgba(250, 248, 223, 0.06);
-  border: 1px solid var(--w-line);
-  color: var(--w-ink);
-}
-
-.w-app .w-input::placeholder, .w-app .w-textarea::placeholder { color: var(--w-muted); }
+.w-app .w-input, .w-app .w-select, .w-app .w-textarea { border-radius: 14px; }
 .w-app .w-chip, .w-app .w-pill, .w-app .w-badge { border-radius: 999px; }
 
 /* ------------------------------------------------------- the live room ---
@@ -116,6 +106,25 @@
    and the panel on its own. */
 
 .w-call {
+  /* THE DARK NINE, WHICH USED TO LIVE ON `.w-app`. While the console was
+     glass over a photograph the live room inherited that palette for free
+     and only had to name its own ground. The console went cream on
+     2026-11-23 and the room did not, so the room now says the nine out
+     loud — otherwise every panel inside it that reads `--w-surface`
+     (`.w-call__prep` is the one that showed it: the pre-session column went
+     white and kept `#faf8df` ink, so "Obiettivo di oggi" was cream on
+     white) takes the console's white card and prints the room's cream ink
+     on it. `--w-bg` stays transparent here: this surface paints its own. */
+  --w-bg: transparent;
+  --w-surface: rgba(10, 32, 27, 0.46);
+  --w-ink: #faf8df;
+  --w-muted: rgba(250, 248, 223, 0.78);
+  --w-line: rgba(250, 248, 223, 0.14);
+  --w-accent: #3db189;
+  --w-warn: #f2c29a;
+  --w-danger: #e89d64;
+  --w-ok: #7ac69b;
+
   background-color: #06140f;
   background-image:
     linear-gradient(rgba(4, 16, 13, 0.55), rgba(4, 16, 13, 0.7)),
@@ -172,6 +181,19 @@
 
 .w-call .w-callbtn--end { background: #e89d64; color: #2a1608; border-color: transparent; }
 
+/* White ink on a light fill — the live room's copy of the November sweep,
+   and the only place those three ever belonged. `workspace.css` prints
+   `#fff` on `--w-accent` and `--w-danger`, which is right for the near-
+   black console; in here they are the mid green and the light orange of
+   the dark system, where white measures 2.4:1 and 1.9:1. The ink goes dark
+   on each filled thing, which is what `.w-btn--primary` above already does.
+   The finished tick is the fourth: `#dfeee6` is a literal, so it did not
+   move with the tokens, and this surface's inherited ink is cream. */
+.w-call .w-vasdot[aria-pressed='true'] { color: #06140f; }
+.w-call .w-ticks span.is-now { color: #06140f; }
+.w-call .w-ticks span.is-done { background: rgba(122, 198, 155, 0.22); color: var(--w-ink); }
+.w-call .w-tbtn--intervene.is-on { color: #2a1608; }
+
 /* ------------------------------------------------------------- greeting ---
    "Bom dia, Marina." is a greeting, not a page title — 48px, weight 400, and
    the count of today's sessions beside it in the quieter ink. */
@@ -209,8 +231,6 @@
   padding: 4px;
   border-radius: 999px;
   background: var(--w-surface);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--w-line);
 }
 
@@ -225,74 +245,54 @@
   cursor: default;
 }
 
-.w-phases__t[aria-current='step'] { background: #faf8df; color: #0b2620; }
+.w-phases__t[aria-current='step'] { background: var(--w-ink); color: #fff; }
 
 /* ------------------------------------------------------- the week grid ---
-   THE ONE SCREEN THE RE-POINT FORGOT.
+   The grid and the side cards were not in the list of panes above, so they
+   were the only flat rectangles on a surface where everything else is a
+   card, with an 11–12px radius against the system's 22 and 28. That part
+   is still true with the cream ground and is still answered here.
 
-   `workspace.css` draws the calendar for the white console it was written
-   for: the grid is a card with a hairline, an hour the clinician is
-   available is painted `#f6faf6`, and today's column is marked with
-   `--w-bg`. Two of those three stopped meaning what they said when the nine
-   tokens moved to glass over a photograph:
-
-     · `--w-bg` is `transparent` here, so TODAY LOST ITS MARK entirely.
-     · `#f6faf6` is a literal, so it did not move at all — every free hour
-       became a near-white brick, and a week of them is the brightest thing
-       on the screen. The agenda read as a wall of white blocks with the
-       appointments lost among them.
-
-   And the grid and the side cards were not in the list of panes that are
-   frosted (`.w-card`, `.w-panel`, `.w-table`, `.w-sidebar`, `.w-topbar`
-   above), so they were the only flat rectangles on a surface where
-   everything else is glass, with a 11–12px radius against the system's 22
-   and 28. All of it is answered here rather than in `workspace.css`,
-   because that sheet still has to draw a white console if the tokens ever
-   go back. */
+   WHAT IS NO LONGER ANSWERED HERE: this block used to repaint a free hour
+   and today's column as well, because the re-point had made `--w-bg`
+   transparent (today lost its mark) and left `#f6faf6` a literal (every
+   free hour became a near-white brick over a photograph). Both of those
+   were the dark ground's doing. `workspace.css` draws them correctly for a
+   white console and the console is one again, so those two rules are gone
+   rather than inverted. `.w-block`'s dark ink on the booked green stays:
+   white on #3db189 is 2.3:1 wherever it is printed. */
 
 .w-app .w-grid,
 .w-app .w-sidecard {
   background: var(--w-surface);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid var(--w-line);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 10px 28px -22px rgba(16, 36, 30, 0.5);
   color: var(--w-ink);
 }
 .w-app .w-grid { border-radius: 22px; overflow: hidden; }
 .w-app .w-sidecard { border-radius: 18px; }
 
-/* An hour that is free is a HINT, not a block: barely lighter than the
-   glass, so what the eye finds first is still the appointments. */
-.w-app .w-cell.is-free { background: rgba(250, 248, 223, 0.055); }
-
-/* Today, back on the screen — the same cream the rest of the surface marks
-   a current thing with. */
-.w-app .w-grid__head > span.is-today { background: rgba(250, 248, 223, 0.12); }
-.w-app .w-grid__head > span.is-today em { color: #faf8df; }
-
-/* A booked hour. White on #3db189 is 2.3:1 — readable on paper, not over a
-   photograph at 10.5px. The dark ink the primary button uses is 7:1. */
 .w-app .w-block { background: #3db189; color: #06140f; border-radius: 10px; }
 .w-app .w-block em { opacity: 0.78; }
 
 /* ------------------------------------------- white ink on a cream fill ---
-   The re-point at the top of this sheet moved `--w-ink` from a near-black
-   to CREAM (#faf8df) and `--w-accent` / `--w-danger` to a mid green and a
-   light orange. `workspace.css` prints `#fff` on all three, which was right
-   when every one of them was dark and the console was a white card. It is
-   not right now: the selected roster filter came back from the owner's pass
-   circled, cream on cream, 1.04:1 — a pill with no word in it. The others
-   are the same sentence in other rooms: 2.4:1 on the accent, 1.9:1 on the
-   danger, and a tick already done printing cream on `#dfeee6`.
+   FIVE OVERRIDES STOOD HERE AND ARE GONE, 2026-11-23. The re-point had
+   moved `--w-ink` to cream and `--w-accent` / `--w-danger` to a mid green
+   and a light orange, and `workspace.css` prints `#fff` on all three —
+   right when every one of them was dark. The roster filter came back from
+   the owner's pass circled, cream on cream at 1.04:1, a pill with no word
+   in it; the VAS dot was 2.4:1, the intervene button 1.9:1, and a finished
+   tick printed cream on #dfeee6. They were patched by forcing dark ink on
+   each filled thing.
 
-   The ink goes dark on every filled thing, which is what `.w-btn--primary`
-   above already does. */
-.w-app .w-chip[aria-pressed='true'] { background: var(--w-ink); border-color: var(--w-ink); color: #0b2620; }
-.w-app .w-vasdot[aria-pressed='true'] { color: #06140f; }
-.w-app .w-ticks span.is-now { color: #06140f; }
-.w-app .w-ticks span.is-done { background: rgba(122, 198, 155, 0.22); color: var(--w-ink); }
-.w-app .w-tbtn--intervene.is-on { color: #2a1608; }
+   With the nine tokens back where `workspace.css` wrote them, `.w-chip`'s
+   original is correct on its own again: deleting its patch is the fix, and
+   keeping it would have printed dark ink on the dark chip.
+
+   The other four moved to `.w-call` rather than dying, because the live
+   room still re-points the nine and still prints cream. Left as a note
+   because the bug is a property of re-pointing a token, not of these five
+   rules, and it will come back the next time one moves. */
 
 /* --------------------------------------------- a table became a pane ---
    `workspace.css` writes `padding-left: 0` on every cell — right when the

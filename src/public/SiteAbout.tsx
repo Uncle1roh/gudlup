@@ -7,8 +7,17 @@
    can check is the opposite of a claim, and shortening it would make it
    one.
 
-   The photograph is `public/media/varetti.jpg`, the file the project
-   already carries.
+   THE PHOTOGRAPH is `public/media/varetti.jpg`, and on 2026-11-23 it became
+   a different photograph. The app had been carrying the portrait it was
+   built with in October; the POs' own file (`Good Loop Visual ID/Website
+   goodloop_v25.html`, 2026-11-20) had replaced it with a newer one, and the
+   two surfaces were showing the same man at two different ages. v25 is the
+   later decision, so the site follows it. The one it replaced is kept beside
+   it as `varetti-2026-11-12.jpg` rather than deleted.
+
+   It arrives at 400×400, which is exactly 2× the 176px circle it is drawn
+   in and no more; the file it replaced was 1092×. Worth asking the POs for
+   a larger export before anyone enlarges that circle.
    ============================================================================ */
 
 import { useSite } from './lang'

@@ -11,7 +11,14 @@
    ============================================================================ */
 
 :root {
-  --c-bg:      #f4f5f1;
+  /* THE ADMIN PANEL'S CREAM (`index.css`, `--mist`), 2026-11-23. This was
+     #f4f5f1, a cool pale grey-green, and the therapist's console was a
+     third ground again — three internal desktop tools in one product,
+     each on its own almost-white. The owner asked for one, and the one is
+     the admin's. The chart greys below are unchanged: they are drawn on
+     `--c-surface`, which is white, and warming them would be a change to
+     the greyscale rule this file opens with. */
+  --c-bg:      #faf8df;
   --c-surface: #ffffff;
   --c-ink:     #1b2420;
   --c-muted:   #5f6b64;
