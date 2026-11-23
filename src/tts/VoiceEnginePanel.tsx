@@ -9,6 +9,11 @@
    Both selectable from the full catalog, grouped by archetype. "Test voice" /
    "Test M" speak through the real provider and surface the exact error
    (401, quota…) instead of silently falling back to the robotic browser voice.
+
+   The ACCOUNT is not a choice: the engine speaks with ACTIVE_ACCOUNT_ID
+   (voiceAccounts.ts) and with nothing else. A key in force that is not its
+   own — a personal workspace, the legacy account — is re-pointed on load,
+   and the shared row with it.
    ============================================================================ */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -20,10 +25,12 @@ import {
 import { TTS_MODELS, ttsModel, learnedFor, type TtsModelId } from './model'
 import { ARCHETYPES, defaultPrimary, defaultSecondary, resolveVoiceId, VOICE_CATALOG, voicesByArchetype, voiceLangOf } from './voiceCatalog'
 import { fetchAccountInfo, syncVoices, type AccountInfo } from './voiceSync'
-import { VOICE_ACCOUNTS, accountForKey } from './voiceAccounts'
+import { ACTIVE_ACCOUNT_ID, accountForKey, activeAccount, selectableAccounts } from './voiceAccounts'
 
 const TEST_LINE = 'Você está em segurança. Respire fundo e solte.'
 const TEST_LINE_M = 'La montagna è lì da sempre, sotto ogni tempesta.'
+/** The only account the engine may speak with (voiceAccounts.ts). */
+const ACTIVE = activeAccount()
 
 /**
  * A voice picker that never loses the operator's choice.
@@ -119,7 +126,8 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     setSyncing(false)
     setSyncTick((n) => n + 1)
     if (out.error) {
-      setError(`Sincronizzazione voci: ${out.error}`)
+      // the wrong-account message is already a full sentence; don't label it
+      setError(out.source === 'registry' ? out.error : `Sincronizzazione voci: ${out.error}`)
     } else if (out.source === 'registry') {
       setStatus(`Account riconosciuto: ${out.account} — ${out.voices.length} voci (ITA + BRA) dall’elenco fisso.`)
     } else if (force) {
@@ -162,9 +170,25 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
       /* The key in force is one of ours and the database does not hold it
          under that account yet: store it now, so the dropdown can come back
          to it without anybody pasting it again. */
-      if (acct && keys[acct.id] !== current.trim()) {
+      if (acct && !acct.legacy && keys[acct.id] !== current.trim()) {
         const res = await saveAccountKey(acct.id, current)
         if (res.state === 'ok' && alive) setAccountKeys({ ...keys, [acct.id]: current.trim() })
+      }
+      /* The engine speaks with ONE account (ACTIVE_ACCOUNT_ID). It was found
+         pointing at a personal ElevenLabs workspace, whose ids no protocol
+         was saved with — so the key in force is re-pointed here, every load,
+         and the shared row follows: nobody has to notice and nobody has to
+         remember. A key we cannot replace is NOT silently kept as if it were
+         fine; the panel says so and asks for the right one. */
+      if (!acct || acct.id !== ACTIVE_ACCOUNT_ID) {
+        const want = keys[ACTIVE_ACCOUNT_ID]?.trim()
+        if (want && want !== current.trim()) {
+          await switchTo(ACTIVE_ACCOUNT_ID, want)
+          if (alive) setStatus(`Il motore era collegato a un altro account ElevenLabs${acct ? ` (${acct.label})` : ''}: riportato su ${ACTIVE.label}.`)
+        } else if (!want && alive) {
+          setPasteFor(ACTIVE_ACCOUNT_ID)
+          setError(`Il motore vocale deve parlare con ${ACTIVE.label}. La sua chiave non è nel database: incollala qui sotto, una volta sola.`)
+        }
       }
       if (alive) setHydrated(true)
     })()
@@ -278,6 +302,8 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
   }
 
   async function chooseAccount(id: string) {
+    // the active account is the only one offered; anything else is ignored
+    if (id !== ACTIVE_ACCOUNT_ID) return
     const key = accountKeys[id]
     if (key) { await switchTo(id, key); return }
     // not stored yet: ask for it once, below the dropdown
@@ -289,9 +315,9 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
     if (!pasteFor) return
     const key = pasteValue.trim()
     const acct = await accountForKey(key)
-    const want = VOICE_ACCOUNTS.find((a) => a.id === pasteFor)
+    const want = selectableAccounts().find((a) => a.id === pasteFor)
     if (!acct || acct.id !== pasteFor) {
-      setError(`Questa chiave non appartiene a ${want?.label ?? 'questo account'}.`)
+      setError(`Questa chiave non appartiene a ${want?.label ?? ACTIVE.label}.`)
       return
     }
     const res = await saveAccountKey(acct.id, key)
@@ -338,6 +364,24 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         </div>
       )}
 
+      {/* The name above comes from ElevenLabs and is whoever opened that
+          workspace; WHICH GOODLOOP ACCOUNT the key is comes from its
+          fingerprint. The two are not the same sentence, and reading the
+          first as the second is how the engine stayed on a personal
+          workspace: "Account Giampiero Varetti" looked like information. */}
+      {hydrated && accountId === ACTIVE_ACCOUNT_ID && (
+        <div className="voice-panel__acct">
+          Chiave verificata: <b>{ACTIVE.label}</b> — l’unico account con cui il motore parla.
+        </div>
+      )}
+      {hydrated && accountId !== ACTIVE_ACCOUNT_ID && (
+        <div className="voice-panel__acct is-off" role="alert">
+          Il motore NON è su <b>{ACTIVE.label}</b>
+          {accountId === '?' ? ' — la chiave attuale non appartiene a nessun account goodloop' : ''}.
+          {' '}Le voci dei protocolli non esistono su un altro account: incolla qui sotto la chiave di {ACTIVE.label}.
+        </div>
+      )}
+
       <div className="voice-panel__fields">
         <select
           className="voice-panel__input"
@@ -345,9 +389,12 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
           onChange={(e) => void chooseAccount(e.target.value)}
           aria-label="Account ElevenLabs"
         >
-          {!accountId && !pasteFor && <option value="" disabled>Scegli l’account ElevenLabs…</option>}
+          {!accountId && !pasteFor && <option value="" disabled>Collega l’account ElevenLabs…</option>}
           {accountId === '?' && <option value="?" disabled>Chiave attuale — non è un account goodloop</option>}
-          {VOICE_ACCOUNTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          {/* One option, on purpose: the account is a constant in the code,
+              not a choice. The legacy account stays in the registry so old
+              ids resolve, and is not offered. */}
+          {selectableAccounts().map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
         </select>
         <VoiceSelect key={`p-${syncTick}`} value={voiceId} onChange={(v) => { setVoiceId(v); setDirty(true) }} />
         <VoiceSelect key={`m-${syncTick}`} value={voiceIdM} onChange={(v) => { setVoiceIdM(v); setDirty(true) }} />
@@ -356,7 +403,7 @@ export function VoiceEnginePanel({ onChanged }: { onChanged?: () => void }) {
         <div className="voice-panel__fields">
           <input
             className="voice-panel__input" type="password" autoComplete="off"
-            placeholder={`Chiave di ${VOICE_ACCOUNTS.find((a) => a.id === pasteFor)?.label ?? ''} — solo la prima volta`}
+            placeholder={`Chiave di ${selectableAccounts().find((a) => a.id === pasteFor)?.label ?? ACTIVE.label} — solo la prima volta`}
             value={pasteValue}
             onChange={(e) => setPasteValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void submitPaste() }}

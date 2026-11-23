@@ -26,6 +26,13 @@
 
    A key that matches neither account still gets the live list, read by the
    same parser — which now also understands "MALE - RITUAL".
+
+   ONE of them is the account the engine actually speaks with
+   (`ACTIVE_ACCOUNT_ID` — Giovanni Bartegno). The other is LEGACY: kept here
+   so the ids saved in old protocols still resolve to their twins, never
+   offered in the panel and never connected. Anything else — a personal
+   workspace, the previous agency account — is a key the panel re-points away
+   from the moment an admin opens it.
    ============================================================================ */
 
 import type { ArchetypeId } from './voiceCatalog'
@@ -44,6 +51,8 @@ export interface VoiceAccount {
   label: string
   /** First 24 hex characters of SHA-256(api key). */
   fingerprint: string
+  /** Registry only: its ids still resolve, but it is never offered or used. */
+  legacy?: boolean
   voices: AccountVoice[]
 }
 
@@ -51,8 +60,9 @@ export interface VoiceAccount {
    [ language, gender, archetype, id ]. MENTOR is the product's "wise",
    ASMR its "whisper". */
 type Row = [VoiceLang, 'F' | 'M', ArchetypeId, string]
-const account = (id: string, label: string, fingerprint: string, rows: Row[]): VoiceAccount => ({
+const account = (id: string, label: string, fingerprint: string, rows: Row[], legacy?: boolean): VoiceAccount => ({
   id, label, fingerprint,
+  ...(legacy ? { legacy: true } : {}),
   voices: rows.map(([language, gender, archetype, voiceId]) => ({ id: voiceId, language, gender, archetype })),
 })
 
@@ -80,7 +90,7 @@ export const VOICE_ACCOUNTS: VoiceAccount[] = [
     ['it', 'M', 'paternal', 'Zd5ZRxsNxAoZHMRh5hdm'],
     ['pt-BR', 'F', 'maternal', 'esolwfQMJakk5IMnRLnW'],
     ['it', 'F', 'maternal', 'aYBXyupCnZqrSVuPsR5i'],
-  ]),
+  ], true),
   account('giovanni', 'goodloop — Giovanni Bartegno', '17acff0d7372be969934250a', [
     ['pt-BR', 'M', 'ritual', 'h0DmKj0V07XbagTwk7R7'],
     ['it', 'M', 'ritual', 'dfEeRSEY7d1F7CF8Gf2z'],
@@ -106,6 +116,27 @@ export const VOICE_ACCOUNTS: VoiceAccount[] = [
     ['it', 'F', 'maternal', 'D0zGXCB1jW8c5sN9iDPp'],
   ]),
 ]
+
+/* ---- the one account the engine speaks with -----------------------------
+   The voice engine is pointed at Giovanni Bartegno and nowhere else. It was
+   found connected to a personal ElevenLabs workspace (Giampiero Varetti),
+   whose voice ids are not the ones any protocol was saved with: every render
+   either fails or comes out in a voice nobody chose, and the credits are
+   spent on the wrong account. So the account is a CONSTANT here, not a
+   preference somebody can leave on the wrong value. */
+export const ACTIVE_ACCOUNT_ID = 'giovanni'
+
+/** The account every key must belong to. */
+export function activeAccount(): VoiceAccount {
+  const a = VOICE_ACCOUNTS.find((x) => x.id === ACTIVE_ACCOUNT_ID)
+  if (!a) throw new Error(`ACTIVE_ACCOUNT_ID '${ACTIVE_ACCOUNT_ID}' is not in VOICE_ACCOUNTS`)
+  return a
+}
+
+/** What the panel may offer: the active account, and nothing else. */
+export function selectableAccounts(): VoiceAccount[] {
+  return VOICE_ACCOUNTS.filter((a) => !a.legacy)
+}
 
 /** First 24 hex characters of SHA-256(key) — how an account is recognised. */
 export async function keyFingerprint(key: string): Promise<string> {

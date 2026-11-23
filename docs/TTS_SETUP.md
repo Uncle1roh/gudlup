@@ -27,6 +27,27 @@ Reminder: a key used in the browser is visible to the browser. That's acceptable
 for a closed PO test; before a public release the ElevenLabs call moves behind a
 server proxy (e.g. a Supabase Edge Function) so the key never leaves the server.
 
+## Which ACCOUNT speaks — one, fixed in the code
+
+The engine speaks with **goodloop — Giovanni Bartegno** and with nothing else.
+It is a constant, `ACTIVE_ACCOUNT_ID` in `src/tts/voiceAccounts.ts`, not a
+preference: the panel offers that one account, and the key in force is checked
+against its fingerprint on every load.
+
+A key that is not its own — a personal workspace, the legacy account — is
+**re-pointed** the moment an admin opens the panel: Giovanni's key (stored in
+`app_settings`, admin-only) becomes the key in force and is pushed to the
+shared row, so every other machine follows on its next load. If his key is not
+in the database, the panel says so in red and asks for it once; it does not
+keep rendering on the wrong account as if nothing were wrong.
+
+Why it matters: a voice id belongs to the account that made it. On another
+account the ids saved in the protocols do not exist — every line either 400s
+or comes back in a voice nobody chose — and the credits are spent on the wrong
+bill. The older **Mattia Volpe** account stays in `voiceAccounts.ts` so ids
+saved under it still resolve to their twins (`resolveVoiceId`), and it is
+never offered and never connected.
+
 ## Which model speaks, and why it is a dropdown
 
 Admin -> Dettagli -> motore vocale, under the two voice pickers. It is stored

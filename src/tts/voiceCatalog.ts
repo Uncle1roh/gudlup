@@ -18,7 +18,7 @@
    ============================================================================ */
 
 import { isVoiceLang, type VoiceLang } from './voiceLang'
-import { registrySlot, type VoiceAccount } from './voiceAccounts'
+import { activeAccount, registrySlot, type VoiceAccount } from './voiceAccounts'
 
 export type ArchetypeId =
   | 'maternal' | 'paternal' | 'wise' | 'neutral' | 'warrior'
@@ -60,17 +60,32 @@ export interface CatalogVoice {
 /** A PO decision beats both the naming convention and label inference. */
 export const ARCHETYPE_OVERRIDES: Record<string, ArchetypeId> = {}
 
-/** Preferred defaults, in order. The first one that exists in the live list
-    wins, so a workspace change degrades instead of breaking. */
-const PRIMARY_PREFERENCE = ['aYBXyupCnZqrSVuPsR5i']   // [ok] MATERNAL - ITA
-const SECONDARY_PREFERENCE = ['Zd5ZRxsNxAoZHMRh5hdm'] // [ok] PATERNAL - ITA
+/**
+ * One Italian voice of the account the engine speaks with (voiceAccounts.ts),
+ * READ from the registry instead of copied.
+ *
+ * The two ids written here by hand were the LEGACY account's. Before the first
+ * sync — a fresh browser, a failed sync — they were the whole catalog and the
+ * default of every render, so the engine sent the previous workspace's ids to
+ * the current key: 400, or a voice nobody chose. Derived, they cannot name the
+ * account we are not on.
+ */
+function activeItalian(gender: 'F' | 'M', archetype: ArchetypeId): CatalogVoice {
+  const a = activeAccount()
+  const v = a.voices.find((x) => x.language === 'it' && x.gender === gender && x.archetype === archetype)
+  if (!v) throw new Error(`${a.id} has no Italian ${gender} ${archetype} voice`)
+  const name = archetype === 'maternal' ? 'Maternal' : archetype === 'paternal' ? 'Paternal' : archetype
+  return { id: v.id, name, gender, archetype, category: 'generated', language: 'it', approved: true }
+}
 
 /** Bootstrap list: the two defaults, so the pickers are never empty before the
     first sync. Replaced wholesale by the first successful sync. */
-const SEED: CatalogVoice[] = [
-  { id: 'aYBXyupCnZqrSVuPsR5i', name: 'Maternal', gender: 'F', archetype: 'maternal', category: 'generated', language: 'it', approved: true },
-  { id: 'Zd5ZRxsNxAoZHMRh5hdm', name: 'Paternal', gender: 'M', archetype: 'paternal', category: 'generated', language: 'it', approved: true },
-]
+const SEED: CatalogVoice[] = [activeItalian('F', 'maternal'), activeItalian('M', 'paternal')]
+
+/** Preferred defaults, in order. The first one that exists in the live list
+    wins, so a workspace change degrades instead of breaking. */
+const PRIMARY_PREFERENCE = [SEED[0].id]   // MATERNAL - ITA, active account
+const SECONDARY_PREFERENCE = [SEED[1].id] // PATERNAL - ITA, active account
 
 /* ---- the POs' naming convention ----------------------------------------
    Voices are authored in ElevenLabs as "[ok] ARCHETYPE (F|M) - ITA", e.g.

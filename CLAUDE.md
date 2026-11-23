@@ -46,8 +46,14 @@ ElevenLabs TTS, Vercel (hash routing — no SPA rewrite config needed).
 
 ## Voices
 
-Nine archetypes, seventeen named voices in `src/tts/voiceCatalog.ts`.
-Valeria = default primary female. Marco Trox = default secondary male.
+Nine archetypes; the live list is the connected account's own voices
+(`src/tts/voiceCatalog.ts`). Defaults: ITA Maternal (primary) and ITA Paternal
+(secondary), read from the registry — never hard-coded ids.
+
+The ElevenLabs account is ONE and fixed in the code: `ACTIVE_ACCOUNT_ID` in
+`src/tts/voiceAccounts.ts` (goodloop — Giovanni Bartegno). Never point the
+engine at another workspace, and never hard-code an id of the legacy account:
+its ids stay in the registry only so old protocols resolve to their twins.
 
 ## Style
 

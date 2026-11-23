@@ -18,6 +18,11 @@ import { createElevenLabsTts } from '../src/tts/elevenlabs'
 const key = process.argv[2]
 if (!key) { console.error('usage: node d.mjs <api-key>'); process.exit(1) }
 
+/* The ids of the GL-ANX 1.1 report, kept as recorded — they belong to the
+   LEGACY account (voiceAccounts.ts). The provider resolves each one to its
+   twin in the account connected now, EXCEPT the ones the bootstrap catalog
+   does not cover: run this against the active account and ASMR_F will 400.
+   Register the account's catalog first if you re-run the whole set. */
 const MATERNAL = 'aYBXyupCnZqrSVuPsR5i'
 const PATERNAL = 'Zd5ZRxsNxAoZHMRh5hdm'
 const ASMR_F = 'ZRvGXr3q13HhP63mThiX'

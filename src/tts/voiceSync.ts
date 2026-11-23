@@ -1,16 +1,24 @@
 /* ============================================================================
    Good Loop — voice sync
 
-   Pulls the voice list straight from the connected ElevenLabs account, so a
-   voice the POs create in their workspace appears in every picker on the next
-   load. No code change, no redeploy, no voice ids to copy by hand.
+   Installs the voice list of the ONE account the engine speaks with
+   (`ACTIVE_ACCOUNT_ID`, voiceAccounts.ts). Its 22 voices are written down, so
+   this needs no network at all: the pickers are right on the first paint and
+   an id is never read from a workspace nobody chose.
 
-   Cached in localStorage: the app renders the last known list instantly and
-   refreshes in the background. Fetch failures are non-fatal — the cache (or
-   the seed) stays in place.
+   It used to read /v1/voices for any key and install whatever came back —
+   which is how a personal ElevenLabs workspace became the catalog, with names
+   parsed out of its own conventions, while every id saved in a protocol
+   pointed at a voice that account does not have. A key that is not the active
+   account's now installs the ACTIVE catalog and says the key is wrong.
+
+   Cached in localStorage so the app paints the list before any await.
+   `selectCatalogVoices` / `toCatalogVoice` are still exported: the check
+   tools read a live account with them, and `normalizeCached` repairs lists
+   cached by the old path.
    ============================================================================ */
 
-import { accountForKey } from './voiceAccounts'
+import { ACTIVE_ACCOUNT_ID, accountForKey, activeAccount } from './voiceAccounts'
 import {
   accountCatalog,
   ARCHETYPE_OVERRIDES,
@@ -26,9 +34,6 @@ import { getTtsSettings } from './settings'
    parser hold every male voice as female and every name as "BRA"/"ITA" —
    they are dropped, not trusted. */
 const CACHE_KEY = 'gl.tts.voices.v2'
-const ENDPOINT = 'https://api.elevenlabs.io/v1/voices'
-/** Refresh in the background when the cache is older than this. */
-const STALE_MS = 10 * 60_000
 
 interface Cache { at: number; voices: CatalogVoice[]; key?: string }
 
@@ -168,8 +173,11 @@ export function hydrateVoicesFromCache(): boolean {
 }
 
 /**
- * Fetch the account's voices and install them.
- * @param force ignore the staleness window (the panel's manual button).
+ * Install the voices of the account the engine speaks with.
+ *
+ * @param apiKey check this key instead of the one in force (the panel, mid-change).
+ * @param force kept for the panel's manual button; there is nothing to
+ *        re-fetch any more, so it changes nothing.
  */
 export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}): Promise<SyncOutcome> {
   const key = opts.apiKey?.trim() || activeApiKey()
@@ -179,52 +187,37 @@ export async function syncVoices(opts: { apiKey?: string; force?: boolean } = {}
     if (cached) registerVoices(cached.voices, cached.at)
     return { voices: cached?.voices ?? [], at: cached?.at ?? 0, source: cached ? 'cache' : 'none', error: 'Nessuna chiave ElevenLabs configurata.' }
   }
-  /* One of OUR accounts: its voices are written down (voiceAccounts.ts) and
-     are exactly what it holds — no network, no name parsing, nothing extra
-     from the workspace. */
   const known = await accountForKey(key)
-  if (known) {
-    if (!opts.apiKey && activeApiKey() !== key) {
-      return { voices: [], at: 0, source: 'none', error: 'La chiave è cambiata durante l’aggiornamento.' }
-    }
+  if (!opts.apiKey && activeApiKey() !== key) {
+    return { voices: [], at: 0, source: 'none', error: 'La chiave è cambiata durante l’aggiornamento.' }
+  }
+  /* THE account (voiceAccounts.ts): its voices are written down and are
+     exactly what it holds — no network, no name parsing, nothing extra from
+     the workspace. */
+  if (known && known.id === ACTIVE_ACCOUNT_ID) {
     const voices = accountCatalog(known)
     const at = Date.now()
     registerVoices(voices, at)
     writeCache({ at, voices, key: keyTag(key) })
     return { voices, at, source: 'registry', account: known.label }
   }
-  if (!opts.force && cached && Date.now() - cached.at < STALE_MS) {
-    registerVoices(cached.voices, cached.at)
-    return { voices: cached.voices, at: cached.at, source: 'cache' }
-  }
-
-  try {
-    const res = await fetch(ENDPOINT, { headers: { 'xi-api-key': key, Accept: 'application/json' } })
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      throw new Error(`ElevenLabs ${res.status}: ${detail.slice(0, 160)}`)
-    }
-    const body = (await res.json()) as { voices?: ApiVoice[] }
-    const voices = selectCatalogVoices(body.voices ?? [])
-    if (!voices.length) throw new Error('L’account non espone alcuna voce.')
-    /* The key may have changed while this was on the wire — typed in the
-       panel after a startup refresh had already left. The older answer must
-       not land on top of the newer one. */
-    if (!opts.apiKey && activeApiKey() !== key) {
-      return { voices: [], at: 0, source: 'none', error: 'La chiave è cambiata durante l’aggiornamento.' }
-    }
-    const at = Date.now()
-    registerVoices(voices, at)
-    writeCache({ at, voices, key: keyTag(key) })
-    return { voices, at, source: 'api' }
-  } catch (e) {
-    if (cached) registerVoices(cached.voices, cached.at)
-    return {
-      voices: cached?.voices ?? [],
-      at: cached?.at ?? 0,
-      source: cached ? 'cache' : 'none',
-      error: (e as Error).message,
-    }
+  /* ANY OTHER KEY — a personal workspace, the legacy account — does NOT get
+     to install its own voices. Reading the live list is how a stranger's
+     workspace ended up in every picker, under names parsed out of whatever it
+     happened to contain, while the ids in the protocols pointed nowhere.
+     The active account's catalog is installed instead: the ids stay the ones
+     the protocols were saved with, the key is reported as the wrong one, and
+     a render fails loudly rather than speaking in a voice nobody chose. */
+  const active = activeAccount()
+  const voices = accountCatalog(active)
+  const at = Date.now()
+  registerVoices(voices, at)
+  return {
+    voices,
+    at,
+    source: 'registry',
+    account: active.label,
+    error: `La chiave in uso non è di ${active.label}${known ? ` (è di ${known.label})` : ''}: il motore deve parlare con ${active.label}.`,
   }
 }
 

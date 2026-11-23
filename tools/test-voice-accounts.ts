@@ -6,11 +6,14 @@
           --format=cjs --define:import.meta.env='{}' --outfile=<tmp>/tva.cjs && node <tmp>/tva.cjs
    No key appears here: the fingerprint is checked on the SHA-256 test vector. */
 
-import { VOICE_ACCOUNTS, keyFingerprint, registrySlot } from '../src/tts/voiceAccounts'
+import {
+  ACTIVE_ACCOUNT_ID, VOICE_ACCOUNTS, activeAccount, keyFingerprint, registrySlot, selectableAccounts,
+} from '../src/tts/voiceAccounts'
 import {
   accountCatalog, registerVoices, resolveVoiceId, parseVoiceName,
-  defaultPrimary, defaultSecondary, counterpartVoice, voiceLangOf,
+  defaultPrimary, defaultSecondary, counterpartVoice, voiceLangOf, VOICE_CATALOG,
 } from '../src/tts/voiceCatalog'
+import { syncVoices } from '../src/tts/voiceSync'
 
 let pass = 0
 let fail = 0
@@ -24,6 +27,23 @@ async function main(): Promise<void> {
   ok((await keyFingerprint('  abc ')) === 'ba7816bf8f01cfea414140de', 'a key pasted with spaces is the same key')
 
   const [mattia, giovanni] = VOICE_ACCOUNTS
+
+  /* ONE account speaks. The engine was found on a personal ElevenLabs
+     workspace, so this is a constant in the code, not a preference. */
+  ok(ACTIVE_ACCOUNT_ID === 'giovanni', 'the active account is Giovanni')
+  ok(activeAccount().label === 'goodloop — Giovanni Bartegno', `activeAccount() = ${activeAccount().label}`)
+  ok(activeAccount() === giovanni && !giovanni.legacy, 'the active account is not legacy')
+  ok(mattia.legacy === true, 'Mattia is legacy: in the registry, never connected')
+  const sel = selectableAccounts()
+  ok(sel.length === 1 && sel[0] === giovanni, `the panel may offer exactly one account (${sel.map((a) => a.id).join(', ')})`)
+
+  /* Before any sync the catalog IS the seed, and a render would use it: its
+     ids have to be the active account's, not the legacy one's. */
+  ok(VOICE_CATALOG.length === 2 && VOICE_CATALOG.every((v) => giovanni.voices.some((w) => w.id === v.id)),
+    'the bootstrap catalog is the active account’s own voices')
+  ok(defaultPrimary().id === 'D0zGXCB1jW8c5sN9iDPp' && defaultSecondary().id === '5QUQJ5kO3rFLoQn19xKw',
+    'the defaults before the first sync are Giovanni ITA maternal + paternal')
+
   for (const a of VOICE_ACCOUNTS) {
     const cat = accountCatalog(a)
     ok(cat.length === 22, `${a.id}: 22 voices`)
@@ -72,6 +92,25 @@ async function main(): Promise<void> {
   ok(old.approved && old.archetype === 'maternal' && old.language === 'it' && old.name === 'Maternal', 'the older "[ok] MATERNAL - ITA" form still parses')
   const oldM = parseVoiceName('[ok] ASMR (M) - ITA')
   ok(oldM.archetype === 'whisper' && oldM.gender === 'M', 'the older "ASMR (M) - ITA" form still parses')
+
+  /* A key that is not the active account's installs the ACTIVE catalog and is
+     reported as wrong — it does NOT get to put its own workspace's voices in
+     the pickers, which is what left the engine on a personal account. No
+     network: nothing here reads /v1/voices any more. */
+  const store = new Map<string, string>()
+  ;(globalThis as unknown as { localStorage: unknown }).localStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => { store.set(k, v) },
+    removeItem: (k: string) => { store.delete(k) },
+  }
+  ;(globalThis as unknown as { fetch: unknown }).fetch = () => {
+    throw new Error('syncVoices must not call the network')
+  }
+  const out = await syncVoices({ apiKey: 'a-key-of-somebody-else' })
+  ok(out.source === 'registry' && out.account === activeAccount().label, 'a foreign key gets the active account’s voices')
+  ok(!!out.error && out.error.includes('Giovanni Bartegno'), `and is reported as the wrong key: ${out.error ?? '(no error)'}`)
+  ok(VOICE_CATALOG.length === 22 && VOICE_CATALOG.every((v) => giovanni.voices.some((w) => w.id === v.id)),
+    'no voice of another workspace enters the catalog')
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail) process.exit(1)

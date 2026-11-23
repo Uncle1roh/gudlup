@@ -65,8 +65,14 @@ const okFetch = async (url: string, init: { body: string }) => {
 }
 ;(globalThis as unknown as { fetch: unknown }).fetch = okFetch
 
-const VOICE = 'aYBXyupCnZqrSVuPsR5i'
-const tts = createElevenLabsTts('key-under-test', VOICE, 'Zd5ZRxsNxAoZHMRh5hdm')
+/* The ids below are the ACTIVE account's (voiceAccounts.ts). The provider puts
+   every id through resolveVoiceId, and before any sync the catalog is that
+   account's seed — so an id of the legacy account would be posted to its TWIN,
+   and these assertions would be measuring the remap instead of the request.
+   The remap has its own assertion at the end of this block. */
+const VOICE = 'D0zGXCB1jW8c5sN9iDPp'   // Giovanni ITA maternal
+const VOICE_M = '5QUQJ5kO3rFLoQn19xKw' // Giovanni ITA paternal
+const tts = createElevenLabsTts('key-under-test', VOICE, VOICE_M)
 
 await tts.render('pace', { lang: 'it', previousText: 'sono al sicuro', nextText: 'protetto' })
 const r = sent[0].body
@@ -123,7 +129,13 @@ assert((sent[0].body.voice_settings as Record<string, unknown>).speed === 1.2,
 /* the secondary ([M]) voice still resolves */
 sent = []
 await tts.render('respira', { lang: 'it', voice: 'secondary' })
-assert(sent[0].url.endsWith('/Zd5ZRxsNxAoZHMRh5hdm'), 'voice:secondary still selects the male archetype')
+assert(sent[0].url.endsWith(`/${VOICE_M}`), 'voice:secondary still selects the male archetype')
+
+/* a voice id saved under the legacy ElevenLabs account is posted to its twin
+   in the account in force — never to an id that account cannot speak */
+sent = []
+await createElevenLabsTts('key-under-test', 'aYBXyupCnZqrSVuPsR5i').render('pace', { lang: 'it' })
+assert(sent[0].url.endsWith(`/${VOICE}`), 'a legacy-account id follows to its twin in the active account')
 
 /* ------------------------------------------------- changing the model ---- */
 
