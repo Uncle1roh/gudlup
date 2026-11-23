@@ -67,7 +67,6 @@
 .w-app .w-card,
 .w-app .w-panel,
 .w-app .w-table,
-.w-app .w-sidebar,
 .w-app .w-topbar {
   background: var(--w-surface);
   border: 1px solid var(--w-line);
@@ -75,19 +74,27 @@
   color: var(--w-ink);
 }
 
+/* THE RAIL IS NOT ONE OF THEM, and leaving it in that list cost the
+   clinician their own name. `.w-sidebar` was listed above and so took
+   `color: var(--w-ink)` at (0,2,0), which beat the `#e6ede9` that
+   `workspace.css` gives the rail at (0,1,0) — and the rail's ground is
+   `--w-side`, which is the same `#16241e` the ink had just become. "Dra.
+   Helena Costa" was printed in the rail's own colour ON the rail: 1.00:1,
+   found by measuring every text node on every screen of the console rather
+   than by looking, because there was nothing to look at. The rail is a dark
+   island on a cream page, exactly as it is in the admin panel, so it keeps
+   the light ink the sheet below already gives it and this one says nothing
+   about its colour at all. */
+.w-app .w-sidebar {
+  border-right: 1px solid var(--w-line);
+  box-shadow: none;
+}
+
 .w-app .w-card,
 .w-app .w-panel { border-radius: 28px; }
 .w-app .w-table { border-radius: 22px; overflow: hidden; }
 
-.w-app .w-sidebar {
-  width: 196px;
-  border-radius: 0;
-  border-top: 0;
-  border-bottom: 0;
-  border-left: 0;
-  box-shadow: none;
-  background: var(--w-side);
-}
+.w-app .w-sidebar { width: 196px; border-radius: 0; background: var(--w-side); }
 
 .w-app .w-topbar { border-radius: 0; border-top: 0; border-left: 0; border-right: 0; box-shadow: none; }
 
@@ -126,9 +133,15 @@
   --w-ok: #7ac69b;
 
   background-color: #06140f;
+  /* NO SHIPPED STAND-IN. This used to fall back to `/ui/bg-colinas.jpg`, a
+     flat vector of hills that came in with the mockups — so opening the
+     room drew the illustration, and then `WorkspaceApp`'s effect wrote
+     `--w-photo` and the real photograph replaced it. A drawing, then a
+     photograph, every time. `background-color` above is the near-black the
+     room is built on; that is what a loading room shows now. */
   background-image:
     linear-gradient(rgba(4, 16, 13, 0.55), rgba(4, 16, 13, 0.7)),
-    var(--w-photo, url('/ui/bg-colinas.jpg'));
+    var(--w-photo, none);
   background-size: cover;
   background-position: center;
   color: #faf8df;
@@ -180,6 +193,21 @@
 }
 
 .w-call .w-callbtn--end { background: #e89d64; color: #2a1608; border-color: transparent; }
+.w-call .w-callbtn { font-size: 18px; line-height: 1; padding: 0; }
+/* Visually hidden, still the button's name. Not `display: none`, which
+   would take it from the accessibility tree as well and leave three
+   unlabelled discs. */
+.w-call .w-callbtn__l {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* White ink on a light fill — the live room's copy of the November sweep,
    and the only place those three ever belonged. `workspace.css` prints
@@ -245,7 +273,12 @@
   cursor: default;
 }
 
-.w-phases__t[aria-current='step'] { background: var(--w-ink); color: #fff; }
+/* Cream fill, dark ink — and NOT `var(--w-ink)` on `#fff`, which is what
+   stood here for a few hours on 2026-11-23. `.w-phases` is drawn by
+   LiveSession and nowhere else, so it is always inside `.w-call`, where
+   `--w-ink` IS the cream: that spelling painted a cream chip and printed
+   white on it. The literals are the point. */
+.w-phases__t[aria-current='step'] { background: #faf8df; color: #0b2620; }
 
 /* ------------------------------------------------------- the week grid ---
    The grid and the side cards were not in the list of panes above, so they

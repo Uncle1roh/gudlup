@@ -250,11 +250,11 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
                 and had no way to until the session had already begun. */}
             {call.camStatus === 'live' && (
               <div className="w-call__waitbar">
-                <button className="w-callbtn" aria-pressed={!call.micOn} onClick={call.toggleMic}>
-                  {call.micOn ? '🎤' : '🔇'}<span>{t('Mute')}</span>
+                <button className="w-callbtn" aria-pressed={!call.micOn} onClick={call.toggleMic} title={t('Mute')}>
+                  {call.micOn ? '🎤' : '🔇'}<span className="w-callbtn__l">{t('Mute')}</span>
                 </button>
-                <button className="w-callbtn" aria-pressed={!call.camOn} onClick={call.toggleCam}>
-                  {call.camOn ? '📷' : '🚫'}<span>{t('Camera')}</span>
+                <button className="w-callbtn" aria-pressed={!call.camOn} onClick={call.toggleCam} title={t('Camera')}>
+                  {call.camOn ? '📷' : '🚫'}<span className="w-callbtn__l">{t('Camera')}</span>
                 </button>
               </div>
             )}
@@ -440,14 +440,23 @@ export function LiveSession({ patient, sandbox, roomId = null, demoSeconds, onEn
           <SelfVideo call={call} className="w-video__self" />
 
           <div className="w-video__bar">
-            <button className="w-callbtn" aria-pressed={!call.micOn} disabled={call.camStatus !== 'live'} onClick={call.toggleMic}>
-              {call.micOn ? '🎤' : '🔇'}<span>{t('Mute')}</span>
+            {/* ROUND BUTTONS CARRY A GLYPH, AND THE WORD IS THEIR NAME.
+                `.w-call .w-callbtn` is a 52px circle (workspace2.css) and the
+                word used to be printed inside it: in Portuguese `Mute` is
+                "Desativar o microfone", twenty-one characters, which wrapped
+                to three lines and spilled out of the circle on both sides —
+                reported with a ring drawn round it. The span stays for the
+                accessible name and the tooltip; only the circle stops trying
+                to hold it. End Call gains a glyph for the same reason: it had
+                only a word, so hiding the word would have left a blank disc. */}
+            <button className="w-callbtn" aria-pressed={!call.micOn} disabled={call.camStatus !== 'live'} onClick={call.toggleMic} title={t('Mute')}>
+              {call.micOn ? '🎤' : '🔇'}<span className="w-callbtn__l">{t('Mute')}</span>
             </button>
-            <button className="w-callbtn" aria-pressed={!call.camOn} disabled={call.camStatus !== 'live'} onClick={call.toggleCam}>
-              {call.camOn ? '📷' : '🚫'}<span>{t('Camera')}</span>
+            <button className="w-callbtn" aria-pressed={!call.camOn} disabled={call.camStatus !== 'live'} onClick={call.toggleCam} title={t('Camera')}>
+              {call.camOn ? '📷' : '🚫'}<span className="w-callbtn__l">{t('Camera')}</span>
             </button>
-            <button className="w-callbtn w-callbtn--end" onClick={() => setConfirmEnd(true)}>
-              <span>{t('End Call')}</span>
+            <button className="w-callbtn w-callbtn--end" onClick={() => setConfirmEnd(true)} title={t('End Call')}>
+              <span aria-hidden="true">✕</span><span className="w-callbtn__l">{t('End Call')}</span>
             </button>
           </div>
         </div>

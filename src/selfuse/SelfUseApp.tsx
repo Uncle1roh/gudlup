@@ -138,7 +138,7 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
      has to come from the same place, or the profile card reads
      "Mariana Alves / comercial@goodloop.app" in front of a prospect. */
   const accountEmail = (previewing() ? demoProfile('person').email : user?.email) ?? ''
-  const { state, update, reset } = useSelfUseStore(storeId)
+  const { state, update, reset, loaded: settingsLoaded } = useSelfUseStore(storeId)
   /* The catalog offers this person only what is recorded in their language
      and their form (owner's rule, 2026-10-21): tell it who is listening. */
   const setListener = useSetListener()
@@ -516,7 +516,15 @@ function SelfUseSurface({ demoSeconds = null, onDemoToggle }: SelfUseAppProps) {
     update((s) => ({ ...s, consents: { ...s.consents, termsAt: Date.now() } }))
   }
   if (!termsAccepted || !state.tutorialSeenAt) {
-    if (!legal.loaded) return <div className="app-frame su-studio" />
+    /* AND NOT UNTIL THE ACCOUNT HAS ANSWERED EITHER. `tutorialSeenAt` moved
+       onto the account in script 40 precisely so a second device would not
+       introduce the app again — but this device paints from its own cache
+       first, and a device that has never seen this account caches `null`.
+       So the three cards were drawn and then taken away a round trip later,
+       and "I keep on receiving the Introductory Wizard" survived its own
+       migration as a flash. `settingsLoaded` is false only while that one
+       request is in flight, and a failure sets it true. */
+    if (!legal.loaded || !settingsLoaded) return <div className="app-frame su-studio" />
     return (
       <FirstRun
         hasCompanyCode={!!convention}

@@ -23,7 +23,7 @@
    exactly the background it had.
    ============================================================================ */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FilledRings, OutlineRings, type Palette } from './rings'
 import {
   HERO_BASE_WIDTH,
@@ -94,7 +94,13 @@ export function AmbientBackground() {
     w: typeof window === 'undefined' ? HERO_BASE_WIDTH : window.innerWidth,
     h: typeof window === 'undefined' ? 900 : window.innerHeight,
   }))
-  const [img, setImg] = useState<{ w: number; h: number } | null>(null)
+  /* THE SOURCE IS PART OF THE ANSWER. `key={photoSrc}` remounts the <img>
+     when the picture changes, but this state survives that — so the old
+     file's dimensions were still here while the new one decoded, and the
+     ring maths ran against a crop the picture was not drawn with. Carrying
+     the src makes "loaded" mean "loaded THIS one", which is also what the
+     fade below needs. */
+  const [img, setImg] = useState<{ src: string; w: number; h: number } | null>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
   /* A direct load must open ON the target stage, not travel to it: without
@@ -134,13 +140,15 @@ export function AmbientBackground() {
   useEffect(() => {
     const el = imgRef.current
     if (el && el.complete && el.naturalWidth) {
-      setImg({ w: el.naturalWidth, h: el.naturalHeight })
+      setImg({ src: photoSrc, w: el.naturalWidth, h: el.naturalHeight })
     }
-  }, [])
+  }, [photoSrc])
 
   const pos = heroPos(vp.w)
-  const anchor: CoverPoint | null = img
-    ? coverPoint(vp.w, vp.h, img.w, img.h, pos.x, pos.y, HERO_FOCUS.fx, HERO_FOCUS.fy)
+  /** This picture, decoded. Not the one before it. */
+  const shown = img && img.src === photoSrc ? img : null
+  const anchor: CoverPoint | null = shown
+    ? coverPoint(vp.w, vp.h, shown.w, shown.h, pos.x, pos.y, HERO_FOCUS.fx, HERO_FOCUS.fy)
     : null
 
   /* `off` keeps the geometry it had rather than computing a new one, which
@@ -193,7 +201,14 @@ export function AmbientBackground() {
      opaque layer at `z-index: -1` is not enough on its own. Removed on the
      way out, and on unmount, so nothing can be left holding it. */
   const owning = stage !== 'off'
-  useEffect(() => {
+  /* `useLayoutEffect`, and that is the whole of one bug. Written in an
+     ordinary effect the attribute arrived AFTER the browser had painted,
+     so every load of the library showed one frame of `--gl-ground` — the
+     shipped mountain photograph in `ui2/shell.css` — and then replaced it
+     with the app's own picture. Two different photographs, in sequence,
+     which is what "sometimes while it loads we see other backgrounds" is.
+     A layout effect runs before the paint, so the frame does not exist. */
+  useLayoutEffect(() => {
     const root = document.documentElement
     if (owning) {
       /* The STAGE, not just "on": `shell.css` wants to know that the app's
@@ -269,7 +284,13 @@ export function AmbientBackground() {
           it. Always in the DOM: it is the heaviest thing either public page
           loads, and unmounting it on every nav would make going back to the
           landing a second download. */}
-      <div className={onHero ? 'amb-photo is-on' : 'amb-photo'}>
+      {/* `&& shown`: the fade starts when the file has decoded, not when the
+          element is created. Without it the layer was already at opacity 1
+          over a half-arrived image, and on a slow line the window went from
+          one picture to a partial one to the right one. Under it there is
+          `.amb-base`, which is near-black — so what a slow load now shows
+          is a dark window, and then the photograph. */}
+      <div className={onHero && shown ? 'amb-photo is-on' : 'amb-photo'}>
         <img
           ref={imgRef}
           className="amb-photo__img"
@@ -299,7 +320,7 @@ export function AmbientBackground() {
           }}
           onLoad={(e) => {
             const el = e.currentTarget
-            setImg({ w: el.naturalWidth, h: el.naturalHeight })
+            setImg({ src: photoSrc, w: el.naturalWidth, h: el.naturalHeight })
           }}
         />
         <div className="amb-photo__scrim" />

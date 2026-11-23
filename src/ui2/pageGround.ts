@@ -23,7 +23,7 @@
    back by itself — there is no cleanup to forget and no global to reset.
    ============================================================================ */
 
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 
 /* TWO SCREENS CAN WANT IT AT ONCE, and one of them leaves first.
    `SessionFlow` holds the ground for the whole flow while `PreSession`, its
@@ -54,7 +54,14 @@ function apply(): void {
  * unconditionally — the hook count must not change between renders.
  */
 export function usePageSessionGround(image: string | null): void {
-  useEffect(() => {
+  /* A LAYOUT EFFECT, not an ordinary one. This file was written because a
+     protocol screen showed fifty pixels of the app's mountains across its
+     top; an ordinary effect runs after the paint, so it was still showing
+     them — the whole window, for one frame, before the cover arrived. The
+     rule in `shell.css` carries `background-color: #07140f`, so what a
+     slow cover now shows under itself is that near-black and nothing
+     else. */
+  useLayoutEffect(() => {
     if (!image) return
     const id = nextId += 1
     claims.push({ id, image })

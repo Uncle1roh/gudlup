@@ -304,8 +304,16 @@ export function useCorporateState(tenant: Tenant) {
          copy is pushed up. Whoever configured their company before this
          existed keeps their work instead of meeting the wizard one last
          time. */
+  /* False only while the one round trip is in flight — and the dashboard
+     must not draw the SETUP WIZARD before it lands. The three rules below
+     are what stop a second device losing the configuration; this is what
+     stops it being SHOWN the wizard for a fraction of a second on the way,
+     which is the same complaint from the other end and the one the owner
+     reported on 2026-11-23. A failure sets it true: an older database
+     means the cache is the only answer there is. */
+  const [loaded, setLoaded] = useState(false)
   const pulled = useRef(false)
-  useEffect(() => { pulled.current = false }, [tenant.code])
+  useEffect(() => { pulled.current = false; setLoaded(false) }, [tenant.code])
   useEffect(() => {
     if (pulled.current) return
     pulled.current = true
@@ -327,10 +335,11 @@ export function useCorporateState(tenant: Tenant) {
         })
       })
       .catch(() => { /* older database, or no connection: the cache stands */ })
+      .finally(() => { if (alive) setLoaded(true) })
     return () => { alive = false }
   }, [dp, tenant.code])
 
-  return { state: current.state, update }
+  return { state: current.state, update, loaded }
 }
 
 /* --------------------------------------------------------- aggregates ---- */

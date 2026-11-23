@@ -180,7 +180,7 @@ function ContractPaused({ tenant }: { tenant: Tenant }) {
 function Dashboard({ tenant }: { tenant: Tenant }) {
   const { t, locale } = useI18n()
   const { user } = useAuth()
-  const { state, update } = useCorporateState(tenant)
+  const { state, update, loaded: settingsLoaded } = useCorporateState(tenant)
   const [nav, setNav] = useState<Nav>('overview')
   const [period, setPeriod] = useState<PeriodId>('month')
   const [menu, setMenu] = useState(false)
@@ -253,6 +253,13 @@ function Dashboard({ tenant }: { tenant: Tenant }) {
   }
 
   if (!state.setupDoneAt) {
+    /* NOT BEFORE THE SERVER HAS ANSWERED. The configuration lives in a row
+       (supabase/39) and the browser is only a cache, so a company admin on
+       a new machine starts with a cache that says "never configured" — and
+       the wizard was drawn from it, then taken away a round trip later.
+       Reported as the setup wizard coming back for people who had already
+       been through it. */
+    if (!settingsLoaded) return <div className="c-app" />
     return (
       <SetupWizard
         state={state}

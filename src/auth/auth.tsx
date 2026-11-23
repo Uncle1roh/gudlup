@@ -14,6 +14,8 @@ import { useI18n } from '../i18n'
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getSupabaseClient, hasSupabaseEnv } from './supabaseClient'
 import { clearIntended } from './intended'
+/* `#entrar` — the one sign-in screen, named where every other route is. */
+import { R_LOGIN } from '../components/ambient/stage'
 import { stashMockLegalProfile } from '../data/mockLegal'
 
 export type Role = 'b2c_user' | 'therapist' | 'admin' | 'hr_admin' | 'sales'
@@ -303,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* However the session ended — this tab, another tab, a refresh token
            that died, or the sign-up rollback, which signs out directly — a
            route remembered for a sign-in that never happened must not steer
-           the NEXT one. `toTheLanding()` clears it on the ordinary path; this
+           the NEXT one. `toTheDoor()` clears it on the ordinary path; this
            covers the others. */
         clearIntended()
         setUser(null); setRole(null); setDeactivated(null); setReady(true)
@@ -384,7 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async signOut() {
           try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
           setUser(null); setRole(null)
-          toTheLanding()
+          toTheDoor()
         },
         /* A demo has no half-made accounts: there is no profiles table for an
            insert to fail against, so the state this repairs cannot be reached
@@ -392,7 +394,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async releaseHalfMadeAccount() {
           try { localStorage.removeItem(DEMO_KEY) } catch { /* ignore */ }
           setUser(null); setRole(null)
-          toTheLanding()
+          toTheDoor()
         },
       }
     }
@@ -525,7 +527,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signOut() {
         createdRole.current = null
         await sb.auth.signOut()
-        toTheLanding()
+        toTheDoor()
       },
       async releaseHalfMadeAccount() {
         const { error } = await sb.rpc('abandon_orphan_signup')
@@ -540,7 +542,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* No round trip: the login this session belonged to no longer exists,
            so a global sign-out would be asking a deleted user to log out. */
         try { await sb.auth.signOut({ scope: 'local' }) } catch { /* the session dies with the tab */ }
-        toTheLanding()
+        toTheDoor()
       },
       async resetPassword(email: string) {
         /* The redirect comes back to THIS app with a recovery token in the
@@ -579,29 +581,43 @@ export function useAuth(): AuthApi {
 
 /** Sign-out button (shown in both demo and Supabase modes). */
 /**
- * Where signing out leaves you: the product's front door.
+ * Where signing out leaves you: THE ONE SIGN-IN SCREEN (`#entrar`).
  *
  * It used to leave you exactly where you were, which on a console meant the
  * console's own sign-in page — a door the POs reported as "an older version,
  * still with mountains/blue", because it is: the hero shell dresses the
  * public door, and the admin and commercial doors are separate screens with
- * their own stage. Signing out is leaving, and leaving lands on the landing
- * page like it does everywhere else.
+ * their own stage. That was answered by sending everyone to the LANDING,
+ * which fixed the wrong door and introduced a different complaint: somebody
+ * who signs out of the admin console, the commercial console or a company
+ * dashboard is almost always signing out to sign back in, and the landing
+ * is a marketing page with one more click in the way. The owner asked for
+ * the main login screen (2026-11-23), so that is where every account now
+ * lands, whichever surface it left.
  *
- * A full load, not a hash change. Every surface mounts its own data layer
- * and its own gate, and the session that was just dropped should not be
- * carried into the next screen by a React tree that merely re-rendered.
+ * AND IT IS A REAL LOAD. The old line set `href` to the path with the hash
+ * REMOVED, which from `#admin` is a same-document navigation: the browser
+ * changes the URL, fires `hashchange`, and does not reload — so the full
+ * load this comment promised never happened, and the React tree that had
+ * just lost its session carried straight into the next screen. `reload()`
+ * after the assignment is what makes the promise true.
  *
  * The team's doors are still reached the way they always were — by typing
  * `#admin` or `#sales`, which is the only way in to them anyway.
  */
-function toTheLanding(): void {
+function toTheDoor(): void {
   /* Signing out ends the errand the kept route belonged to. Leaving it would
      send the NEXT person who signs in on this tab to a screen the previous
      one asked for (`auth/intended.ts`). */
   clearIntended()
   try {
-    window.location.href = window.location.pathname + window.location.search
+    const door = window.location.pathname + window.location.search + R_LOGIN
+    if (window.location.href.endsWith(door) || window.location.hash === R_LOGIN) {
+      window.location.reload()
+      return
+    }
+    window.location.href = door
+    window.location.reload()
   } catch {
     /* no window (a test): nothing to navigate */
   }

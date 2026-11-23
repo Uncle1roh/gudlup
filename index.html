@@ -13,6 +13,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>goodloop</title>
 
+    <!-- BLACK UNTIL THE RIGHT GROUND ARRIVES (owner, 2026-11-23).
+
+         Inline, and before the stylesheet, because this is the only rule in
+         the product that applies during the window it is for: the browser
+         paints the canvas white from the first byte, so every cold load of a
+         dark surface — the landing, the door, the app, a session, the live
+         room — began with a white flash and then a photograph. Each surface
+         names its own ground the moment `index.css` is parsed, so this is
+         overridden within the same load; it is what is on screen before
+         anything else can be.
+
+         ON `body` AND NOT ON `html`, AND THAT IS THE WHOLE OF ONE BUG. The
+         canvas takes <html>'s background when it has one and <body>'s when
+         it does not — and the ambient background behind the landing, the
+         door and the app is a fixed layer at `z-index: -1`, which paints
+         over the canvas and under the content. Written as `html, body` for
+         ten minutes here, it gave <html> a background, stopped <body>'s
+         being propagated, and <body>'s cream was then painted in flow ON
+         TOP of the photograph: the landing came up cream with cream type
+         on it. `ui2/shell.css` warns about exactly this a hundred lines in.
+         -->
+    <style>body { background-color: #000; }</style>
+
     <!-- The tab, and the icon a phone keeps when the app is added to the home
          screen. Both are the official mark from `Good Loop Visual ID/`, scaled
          and nothing else. The touch icon is the cream mark on the brand's dark

@@ -345,14 +345,34 @@ export interface SelfUseStore {
   state: SelfUseState
   update: (fn: (s: SelfUseState) => SelfUseState) => void
   reset: () => void
+  /**
+   * Has the ACCOUNT's copy of the settings been heard from yet?
+   *
+   * THE WHOLE POINT OF THE FLAG. Script 40 moved `tutorialSeenAt` off the
+   * browser and onto the account, so a second device no longer loses it —
+   * but the device still PAINTS from its own cache first, and a device that
+   * has never seen this account has a cache saying `null`. So the three
+   * first-run cards were drawn, and a fraction of a second later the
+   * server's answer arrived and took them away. "I keep on receiving the
+   * Introductory Wizard" survived the migration that was supposed to end
+   * it, in the shape of a flash.
+   *
+   * False only while the one round trip is in flight. A failure sets it
+   * true: an older database or a dead connection means the cache is the
+   * only answer there is, and holding a blank screen for a stranger is
+   * worse than introducing the app to them twice.
+   */
+  loaded: boolean
 }
 
 export function useSelfUseStore(userId?: string): SelfUseStore {
   const dp = useDataProvider()
   const [state, setState] = useState<SelfUseState>(() => loadState(userId))
+  /* Nobody signed in: there is no row to wait for. */
+  const [loaded, setLoaded] = useState(() => !userId)
 
   // Switching account mid-session (sign out → sign in) must not carry state over.
-  useEffect(() => { setState(loadState(userId)) }, [userId])
+  useEffect(() => { setState(loadState(userId)); setLoaded(!userId) }, [userId])
 
   /* ---- the settings that follow the ACCOUNT, not the browser -------------
 
@@ -369,6 +389,7 @@ export function useSelfUseStore(userId?: string): SelfUseStore {
     if (!userId || pulled.current === userId) return
     pulled.current = userId
     let alive = true
+    const done = () => { if (alive) setLoaded(true) }
     void dp.getMySettings()
       .then((saved) => {
         if (!alive) return
@@ -391,6 +412,7 @@ export function useSelfUseStore(userId?: string): SelfUseStore {
         })
       })
       .catch(() => { /* older database, or offline: the cache stands */ })
+      .finally(done)
     return () => { alive = false }
   }, [dp, userId])
 
@@ -417,7 +439,7 @@ export function useSelfUseStore(userId?: string): SelfUseStore {
     setState(fresh)
   }, [userId])
 
-  return { state, update, reset }
+  return { state, update, reset, loaded }
 }
 
 /* ------------------------------------------------------------- selectors -- */
