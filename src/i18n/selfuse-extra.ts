@@ -215,8 +215,10 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'With a Professional*': 'Con un Professionista*',
   '* for corporate contracts only': '* solo per contratti aziendali',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.': 'La Metodologia GL completa, condotta da uno psicologo abilitato o da un professionista della salute sul lavoro che guida il tuo percorso.',
-  'Not belief. Neuroscience.': 'Non serve crederci. È neuroscienza.',
-  'goodloop doesn’t invent new science — it orchestrates the best of what already works.': 'goodloop non inventa una nuova scienza: orchestra il meglio di ciò che già funziona.',
+  'The method': 'Il metodo',
+  'Not meditation.': 'Non è meditazione.',
+  'A method.': 'È un metodo.',
+  'goodloop orchestrates 9 instruments of modern psychology into one method, built on what already works.': 'goodloop orchestra 9 strumenti della psicologia moderna in un unico metodo, basato su ciò che già funziona.',
   'Dichotic Listening': 'Ascolto Dicotico',
   'Bilateral stimulation, EMDR-style': 'Stimolazione bilaterale, stile EMDR',
   'Imagery Rehearsal': 'Ripetizione Immaginativa',
@@ -240,11 +242,52 @@ export const IT_SELFUSE_EXTRA: Record<string, string> = {
   'Your data, your control.': 'I tuoi dati, il tuo controllo.',
   'goodloop is built to LGPD and GDPR standards from day one.': 'goodloop è progettata secondo gli standard GDPR e LGPD fin dal primo giorno.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'La Metodologia GL completa, condotta da uno psicologo abilitato o da un professionista della salute sul lavoro che guida il tuo percorso. Disponibile con il piano esteso della tua azienda.',
-  /* The wizard's own buttons. Both translations are the POs'
-     (v08's dictionary). */
+  /* ---- v17 (POs, 2026-11-26) --------------------------------------------
+     Four screens the wizard did not have before — human creation / AI
+     narration, the four signature features, and the three things to
+     remember — plus the buttons that join them. All three languages are
+     the POs' own, from v17's dictionary, which is what that file SHOWS:
+     the dictionary is applied over the markup on load, in English too. */
+  'Human creation.': 'Creazione umana.',
+  'AI narration.': 'Narrazione con AI.',
+  'The goodloop method was created by the human mind. AI voices bring it to you: anywhere, in your language.': 'Il metodo goodloop è stato creato dalla mente umana. Le voci AI lo portano a te: ovunque, nella tua lingua.',
+  'Created by people': 'Creato da persone',
+  '30+ years of clinical psychology': '30+ anni di psicologia clinica',
+  'Patented instrument': 'Strumento brevettato',
+  '9 instruments of modern psychology': '9 strumenti della psicologia moderna',
+  'Voiced by AI': 'Narrato dall’AI',
+  'Global scale': 'Scala globale',
+  'In your language': 'Nella tua lingua',
+  'New sessions, sooner': 'Nuove sessioni, prima',
+  'Human depth. Global reach.': 'Profondità umana. Portata globale.',
+  'methodology creator': 'ideatore della metodologia',
+
+  'By design': 'Tutto voluto',
+  'Different on purpose.': 'Diverso di proposito.',
+  'Your first session will sound like nothing you know. That’s the method at work:': 'La tua prima sessione non somiglierà a nulla di ciò che conosci. È il metodo al lavoro:',
+  'Signature features': 'Caratteristiche distintive',
+  'Two ears, two voices': 'Due orecchie, due voci',
+  'A different message in each ear at the same time, adding depth to every session.': 'Un messaggio diverso in ciascun orecchio, nello stesso momento: aggiunge profondità a ogni sessione.',
+  'Echoes': 'Echi',
+  'Phrases that return and resonate, so each idea settles in layer by layer.': 'Frasi che tornano e risuonano, perché ogni idea si depositi strato dopo strato.',
+  'Intentional repetition': 'Ripetizione voluta',
+  'Every repeat is designed in: each return settles the message a little deeper.': 'Ogni ripetizione è pensata: a ogni ritorno il messaggio si deposita un po’ più a fondo.',
+  'Layered by design': 'A strati, per scelta',
+  'Voices, sounds and rhythms working together, each with its own purpose.': 'Voci, suoni e ritmi che lavorano insieme, ciascuno con un proprio scopo.',
+  'Hearing something new? That’s by design. Put on headphones and let it unfold.': 'Senti qualcosa di nuovo? È voluto. Indossa le cuffie e lascia che si sviluppi.',
+
+  'You’re ready': 'Ci siamo',
+  'Three things to remember.': 'Tre cose da ricordare.',
+  'Human creation. AI narration.': 'Creazione umana. Narrazione con AI.',
+  'Not meditation. A method.': 'Non è meditazione. È un metodo.',
+  'Multiple audio layers. Everything you hear is intentional.': 'Molteplici strati audio. Tutto ciò che ascolti è voluto.',
+  /* The wizard's own buttons, one per screen (v17's dictionary). */
   'Begin →': 'Inizia →',
+  'See the method →': 'Scopri il metodo →',
+  'What you’ll hear →': 'Cosa ascolterai →',
   'Continue →': 'Continua →',
-  'See how it works →': 'Scopri come funziona →',
+  'Almost there →': 'Quasi fatto →',
+  'Last step →': 'Ultimo passo →',
   'Accept & Continue': 'Accetta e continua',
 }
 
@@ -517,8 +560,10 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'With a Professional*': 'Com um Profissional*',
   '* for corporate contracts only': '* apenas para contratos corporativos',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey.': 'A Metodologia GL completa, conduzida por um psicólogo habilitado ou profissional de saúde ocupacional que guia a sua jornada.',
-  'Not belief. Neuroscience.': 'Não é preciso acreditar. É neurociência.',
-  'goodloop doesn’t invent new science — it orchestrates the best of what already works.': 'A goodloop não inventa uma nova ciência — ela orquestra o melhor do que já funciona.',
+  'The method': 'O método',
+  'Not meditation.': 'Não é meditação.',
+  'A method.': 'É um método.',
+  'goodloop orchestrates 9 instruments of modern psychology into one method, built on what already works.': 'A goodloop orquestra 9 instrumentos da psicologia moderna em um único método, baseado no que já funciona.',
   'Dichotic Listening': 'Escuta Dicótica',
   'Bilateral stimulation, EMDR-style': 'Estimulação bilateral, estilo EMDR',
   'Imagery Rehearsal': 'Ensaio de Imagens',
@@ -542,10 +587,51 @@ export const PT_SELFUSE_EXTRA: Record<string, string> = {
   'Your data, your control.': 'Seus dados, seu controle.',
   'goodloop is built to LGPD and GDPR standards from day one.': 'A goodloop foi construída segundo os padrões da LGPD e do GDPR desde o primeiro dia.',
   'The full GL Methodology, delivered by a licensed psychologist or occupational-health provider who guides your journey. Available with your company’s extended plan.': 'A Metodologia GL completa, conduzida por um psicólogo habilitado ou profissional de saúde ocupacional que guia a sua jornada. Disponível no plano estendido da sua empresa.',
-  /* The wizard's own buttons. Both translations are the POs'
-     (v08's dictionary). */
+  /* ---- v17 (POs, 2026-11-26) --------------------------------------------
+     Four screens the wizard did not have before — human creation / AI
+     narration, the four signature features, and the three things to
+     remember — plus the buttons that join them. All three languages are
+     the POs' own, from v17's dictionary, which is what that file SHOWS:
+     the dictionary is applied over the markup on load, in English too. */
+  'Human creation.': 'Criação humana.',
+  'AI narration.': 'Narração com IA.',
+  'The goodloop method was created by the human mind. AI voices bring it to you: anywhere, in your language.': 'O método da goodloop foi criado pela mente humana. As vozes com IA o levam até você: em qualquer lugar, no seu idioma.',
+  'Created by people': 'Criado por pessoas',
+  '30+ years of clinical psychology': '30+ anos de psicologia clínica',
+  'Patented instrument': 'Instrumento patenteado',
+  '9 instruments of modern psychology': '9 instrumentos da psicologia moderna',
+  'Voiced by AI': 'Narrado por IA',
+  'Global scale': 'Escala global',
+  'In your language': 'No seu idioma',
+  'New sessions, sooner': 'Novas sessões, mais rápido',
+  'Human depth. Global reach.': 'Profundidade humana. Alcance global.',
+  'methodology creator': 'criador da metodologia',
+
+  'By design': 'Tudo de propósito',
+  'Different on purpose.': 'Diferente de propósito.',
+  'Your first session will sound like nothing you know. That’s the method at work:': 'Sua primeira sessão não vai soar como nada que você conhece. É o método em ação:',
+  'Signature features': 'Características marcantes',
+  'Two ears, two voices': 'Dois ouvidos, duas vozes',
+  'A different message in each ear at the same time, adding depth to every session.': 'Uma mensagem diferente em cada ouvido ao mesmo tempo, dando profundidade a cada sessão.',
+  'Echoes': 'Ecos',
+  'Phrases that return and resonate, so each idea settles in layer by layer.': 'Frases que voltam e ressoam, para cada ideia se assentar camada por camada.',
+  'Intentional repetition': 'Repetição intencional',
+  'Every repeat is designed in: each return settles the message a little deeper.': 'Cada repetição foi pensada: a cada retorno, a mensagem se assenta um pouco mais fundo.',
+  'Layered by design': 'Em camadas, de propósito',
+  'Voices, sounds and rhythms working together, each with its own purpose.': 'Vozes, sons e ritmos trabalhando juntos, cada um com o seu propósito.',
+  'Hearing something new? That’s by design. Put on headphones and let it unfold.': 'Ouviu algo novo? É de propósito. Coloque os fones de ouvido e deixe se desenrolar.',
+
+  'You’re ready': 'Tudo pronto',
+  'Three things to remember.': 'Três coisas para lembrar.',
+  'Human creation. AI narration.': 'Criação humana. Narração com IA.',
+  'Not meditation. A method.': 'Não é meditação. É um método.',
+  'Multiple audio layers. Everything you hear is intentional.': 'Múltiplas camadas de áudio. Tudo o que você ouve é proposital.',
+  /* The wizard's own buttons, one per screen (v17's dictionary). */
   'Begin →': 'Começar →',
+  'See the method →': 'Conheça o método →',
+  'What you’ll hear →': 'O que você vai ouvir →',
   'Continue →': 'Continuar →',
-  'See how it works →': 'Veja como funciona →',
+  'Almost there →': 'Quase lá →',
+  'Last step →': 'Último passo →',
   'Accept & Continue': 'Aceitar e continuar',
 }

@@ -2,27 +2,39 @@
    Self Use — the first run: the POs' onboarding wizard, and then everything
    legal on the last screen
 
-   THE SHAPE IS THE WIZARD'S (POs, 2026-11-12), the words are v12's
-   (2026-11-13). `Good Loop Visual ID/goodloop-onboarding-wizard-v12.html`
-   is drawn screen by screen, in order,
-   with its own furniture: the dots and the language pill, the wordmark
-   centred under them, the eyebrow, the figures, the session lengths, the two
-   ways of using it, the nine techniques, the quote and the man who wrote the
-   method. Four screens, four dots, and the fourth is the legal one.
+   THE SHAPE AND THE WORDS ARE v17's (POs, 2026-11-26).
+   `Good Loop Visual ID/goodloop-onboarding-wizard-v17.html` is drawn screen
+   by screen, in order, with its own furniture: the dots and the language
+   pill, the wordmark centred under them, the eyebrow, the figures, the
+   session lengths, the human/AI pair, the nine techniques, the four
+   signature features, the two ways of using it and the three things to
+   remember. Six screens in the prototype, and the seventh is the legal one.
 
      1  The methodology — what goodloop is, in figures and in lengths.
-     2  One platform, two ways to transform.
-     3  Not belief. Neuroscience. — the nine techniques, the quote.
-     4  Your data, your control. — EVERYTHING legal, in one screen.
+     2  Human creation. AI narration. — who made the method, who speaks it.
+     3  Not meditation. A method. — the nine techniques, the quote.
+     4  Different on purpose. — the four signature features, and headphones.
+     5  One platform, two ways to transform.
+     6  Three things to remember. — the recap.
+     7  Your data, your control. — EVERYTHING legal, in one screen.
 
-   THE FOURTH SCREEN IS NOT THE WIZARD'S (POs, 2026-11-12). The wizard was
-   drawn when the app had no legal corpus, so its last screen is a short
-   paragraph and one tick box — a summary of documents that did not exist
-   yet. The screen that stands here is the one this flow already had, with
-   every notice, every acknowledgement and every optional purpose on it;
-   only the ground and the furniture are the wizard's. The wizard's own
-   paragraph is gone with this change: it is legal copy with no id in the
-   registered corpus, standing on the screen where the corpus is accepted.
+   THE COPY IS THE PROTOTYPE'S DICTIONARY, NOT ITS MARKUP. v17 ships both,
+   and the dictionary is applied over the markup on load — in English too —
+   so what the POs see on screen 3 is "Not meditation. A method.", not the
+   "Not belief. Neuroscience." left in the HTML. The dictionary is what is
+   ported, in all three languages, with the markup kept only where the two
+   agree.
+
+   SCREEN 7 IS NOT THE PROTOTYPE'S LAST SCREEN (POs, 2026-11-26). v17 ends
+   on the recap WITH a legal paragraph and one tick box under it; that part
+   was drawn when the app had no legal corpus and summarises documents that
+   did not exist yet. So the recap keeps its three points and its button
+   leads to the screen this flow already had — every notice, every
+   acknowledgement and every optional purpose on it — and only the ground
+   and the furniture there are the wizard's. The prototype's own paragraph
+   is not carried over: it is legal copy with no id in the registered
+   corpus, standing on the screen where the corpus is accepted. Its heading
+   and its one-liner are, because they are what that screen already says.
 
    THE BRAND IS ONE WORD. v12 writes it `goodloop`, lowercase, bold inside
    a sentence. The dictionaries hold no markup — a translation is text — so
@@ -69,7 +81,7 @@
    written down in it.
    ============================================================================ */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useI18n, LOCALES, type Locale } from '../i18n'
 import { BrandLogo, brandText } from '../components/Brand'
 import { Icon, type IconName } from './icons'
@@ -81,7 +93,7 @@ import type { ConsentPurpose } from '../legal/records'
 import { clearArrival, useStageClaim } from '../components/ambient/stage'
 import './firstrun.css'
 
-type Step = 'welcome' | 'modes' | 'science' | 'legal'
+type Step = 'welcome' | 'human' | 'method' | 'features' | 'modes' | 'recap' | 'legal'
 
 /* ---- screen 1: the methodology -----------------------------------------
    The figures are the POs' own count of what the method is made of; the
@@ -100,6 +112,30 @@ const DURATIONS: { label: string; mins: string }[] = [
   { label: 'Quick', mins: '6 min' },
   { label: 'Standard', mins: '12 min' },
   { label: 'Deep', mins: '24 min' },
+]
+
+/* ---- screen 2: human creation, AI narration -----------------------------
+   The two columns of v17's second screen. The left one is about the method
+   and is a claim about a person's work; the right one is about the VOICE
+   and is the plainest statement in the product that nobody human is
+   speaking. It is here, second, before anything is heard. */
+const MADE_BY_PEOPLE: string[] = [
+  '30+ years of clinical psychology',
+  'Patented instrument',
+  '9 instruments of modern psychology',
+]
+const VOICED_BY_AI: string[] = [
+  'Global scale',
+  'In your language',
+  'New sessions, sooner',
+]
+
+/* ---- screen 6: the three things ----------------------------------------
+   The recap, in the order the screens made the points. */
+const RECAP: string[] = [
+  'Human creation. AI narration.',
+  'Not meditation. A method.',
+  'Multiple audio layers. Everything you hear is intentional.',
 ]
 
 /* ---- screen 3: where it comes from --------------------------------------
@@ -169,6 +205,15 @@ const IcoHeadphones = (
     <rect x="17.5" y="13" width="4" height="6" rx="1.5" />
   </svg>
 )
+/** The same pair of headphones, at the size v17 gives the tip on screen 4. */
+const IcoHeadphonesTip = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 13v-1a8 8 0 0 1 16 0v1" />
+    <rect x="2.5" y="13" width="4" height="6" rx="1.5" />
+    <rect x="17.5" y="13" width="4" height="6" rx="1.5" />
+  </svg>
+)
 const IcoShield = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -196,6 +241,51 @@ const IcoGlobe = (
     <path d="M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z" />
   </svg>
 )
+
+/* ---- screen 4's four little animations ----------------------------------
+   v17 draws each signature feature as a moving thing rather than an icon:
+   two groups of bars beating out of step (a different message in each ear),
+   a dot throwing rings (the echoes), two arrows turning (the repetition),
+   three bars sliding over each other (the layers). They are CSS animations
+   in `firstrun.css` and every one of them stops under
+   `prefers-reduced-motion`, which is the prototype's own rule. */
+const ArtEars = (
+  <>
+    <span className="frw__eq frw__eq--l"><i /><i /><i /></span>
+    <span className="frw__eq frw__eq--r"><i /><i /><i /></span>
+  </>
+)
+const ArtEcho = (
+  <>
+    <span className="frw__ring" /><span className="frw__ring" /><span className="frw__ring" />
+    <span className="frw__echo" />
+  </>
+)
+const ArtRepeat = (
+  <svg className="frw__spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+  </svg>
+)
+const ArtLayers = <span className="frw__lay"><i /><i /><i /></span>
+
+/** The four signature features, with the wizard's own art and glosses. */
+const FEATURES: { art: ReactNode; t: string; d: string }[] = [
+  { art: ArtEars, t: 'Two ears, two voices',
+    d: 'A different message in each ear at the same time, adding depth to every session.' },
+  { art: ArtEcho, t: 'Echoes',
+    d: 'Phrases that return and resonate, so each idea settles in layer by layer.' },
+  { art: ArtRepeat, t: 'Intentional repetition',
+    d: 'Every repeat is designed in: each return settles the message a little deeper.' },
+  { art: ArtLayers, t: 'Layered by design',
+    d: 'Voices, sounds and rhythms working together, each with its own purpose.' },
+]
+
+/** The five bars on the AI card — the only thing on that card that moves. */
+const ArtWave = <span className="frw__wave" aria-hidden="true"><i /><i /><i /><i /><i /></span>
 
 export function FirstRun({
   onDone,
@@ -264,7 +354,7 @@ export function FirstRun({
   const [showTutorial] = useState(needsTutorial)
 
   const steps: Step[] = [
-    ...(showTutorial ? (['welcome', 'modes', 'science'] as Step[]) : []),
+    ...(showTutorial ? (['welcome', 'human', 'method', 'features', 'modes', 'recap'] as Step[]) : []),
     ...(showLegal ? (['legal'] as Step[]) : []),
   ]
 
@@ -329,11 +419,21 @@ export function FirstRun({
     else go(i + 1)
   }
 
-  /** The word on the pill: the wizard's own, screen by screen. */
-  const cta = step === 'welcome' ? 'Begin →'
-    : step === 'modes' ? 'Continue →'
-      : step === 'science' ? 'See how it works →'
-        : 'Accept & Continue'
+  /** The word on the pill: the wizard's own, screen by screen.
+
+      The recap's button says "Last step →" because what follows it is the
+      legal screen. On an account that has already accepted the Terms there
+      is no step after it, so it says what it does instead. */
+  const CTA: Record<Step, string> = {
+    welcome: 'Begin →',
+    human: 'See the method →',
+    method: 'What you’ll hear →',
+    features: 'Continue →',
+    modes: 'Almost there →',
+    recap: last ? 'Continue →' : 'Last step →',
+    legal: 'Accept & Continue',
+  }
+  const cta = CTA[step]
 
   return (
     <div className="app-frame su-studio frw">
@@ -344,7 +444,7 @@ export function FirstRun({
       <div className="frw__inner">
         <div
           ref={scroller}
-          className={`frw__content${step === 'science' ? ' frw__content--science' : ''}${step === 'legal' ? ' frw__content--legal' : ''}`}
+          className={`frw__content frw__content--${step}`}
           key={`step-${i}`}
         >
           {/* ---- the head: back, where you are, the language ------------- */}
@@ -424,9 +524,51 @@ export function FirstRun({
             </>
           )}
 
-          {/* ---- screen 2 ------------------------------------------------
+          {/* ---- screen 2: human creation, AI narration ------------------
+              The portrait is here now, on the card about the people, where
+              v17 puts it; screen 3 keeps the quote and signs it in type. */}
+          {step === 'human' && (
+            <>
+              <div className="frw__headline">
+                <h1 className="is-hero">
+                  {t('Human creation.')}
+                  <br />
+                  <span className="frw__accent">{t('AI narration.')}</span>
+                </h1>
+                <p>{brandText(t('The goodloop method was created by the human mind. AI voices bring it to you: anywhere, in your language.'), 'frw__brandword')}</p>
+              </div>
+
+              <div className="frw__hx">
+                <div className="frw__hx__card frw__hx__card--human">
+                  <div className="frw__hx__top">
+                    <img className="frw__hx__photo" src="/media/varetti.jpg" alt="" width={56} height={56} />
+                  </div>
+                  <div className="frw__hx__lbl">{t('Created by people')}</div>
+                  <ul>
+                    {MADE_BY_PEOPLE.map((l) => <li key={l}>{t(l)}</li>)}
+                  </ul>
+                </div>
+                <div className="frw__hx__card frw__hx__card--ai">
+                  <div className="frw__hx__top">{ArtWave}</div>
+                  <div className="frw__hx__lbl">{t('Voiced by AI')}</div>
+                  <ul>
+                    {VOICED_BY_AI.map((l) => <li key={l}>{t(l)}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="frw__hxfoot">
+                <b>Giampiero Varetti</b>
+                <span>{t('Clinical Psychologist · Methodology Creator · 30+ yrs of clinical practice')}</span>
+              </div>
+
+              <p className="frw__mantra">{t('Human depth. Global reach.')}</p>
+            </>
+          )}
+
+          {/* ---- screen 5 ------------------------------------------------
               The qualifier on the second card is the one sentence on these
-              three screens that is not the wizard's: what the wizard calls
+              six screens that is not the wizard's: what the wizard calls
               Professionally Guided Use is a plan an employer either bought
               or did not. */}
           {step === 'modes' && (
@@ -464,12 +606,18 @@ export function FirstRun({
             </>
           )}
 
-          {/* ---- screen 3 ------------------------------------------------ */}
-          {step === 'science' && (
+          {/* ---- screen 3: the nine instruments -------------------------- */}
+          {step === 'method' && (
             <>
+              <span className="frw__eyebrow">{t('The method')}</span>
+
               <div className="frw__headline">
-                <h1 className="is-small">{t('Not belief. Neuroscience.')}</h1>
-                <p>{brandText(t('goodloop doesn’t invent new science — it orchestrates the best of what already works.'), 'frw__brandword')}</p>
+                <h1 className="is-small">
+                  {t('Not meditation.')}
+                  <br />
+                  {t('A method.')}
+                </h1>
+                <p>{brandText(t('goodloop orchestrates 9 instruments of modern psychology into one method, built on what already works.'), 'frw__brandword')}</p>
               </div>
 
               <ul className="frw__chips">
@@ -486,13 +634,66 @@ export function FirstRun({
                 <blockquote>{brandText(t('goodloop speaks directly to the nervous system, using the language it truly understands.'), 'frw__brandword')}</blockquote>
               </figure>
 
-              <div className="frw__credit">
-                <img src="/media/varetti.jpg" alt="" width={44} height={44} />
-                <div>
-                  <b>Giampiero Varetti</b>
-                  <span>{t('Clinical Psychologist · Methodology Creator · 30+ yrs of clinical practice')}</span>
-                </div>
+              {/* v17 signs the quote in type here — the portrait is on the
+                  screen before, where the card is about the person. */}
+              <p className="frw__qattr">— Giampiero Varetti, {t('methodology creator')}</p>
+            </>
+          )}
+
+          {/* ---- screen 4: what makes it sound unlike anything else ------
+              The four things somebody is about to hear and would otherwise
+              think were faults: two different messages at once, phrases
+              coming back, the same line again, and several layers running
+              together. Said BEFORE the first session, on purpose. */}
+          {step === 'features' && (
+            <>
+              <span className="frw__eyebrow">{t('By design')}</span>
+
+              <div className="frw__headline">
+                <h1 className="is-small">{t('Different on purpose.')}</h1>
+                <p>{t('Your first session will sound like nothing you know. That’s the method at work:')}</p>
               </div>
+
+              <div className="frw__feats">
+                <div className="frw__featlabel">{t('Signature features')}</div>
+                {FEATURES.map((f) => (
+                  <div className="frw__feat" key={f.t}>
+                    <span className="frw__feat__art" aria-hidden="true">{f.art}</span>
+                    <div className="frw__feat__body">
+                      <div className="frw__feat__t">{t(f.t)}</div>
+                      <p>{t(f.d)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="frw__tip">
+                {IcoHeadphonesTip}
+                <p>{t('Hearing something new? That’s by design. Put on headphones and let it unfold.')}</p>
+              </div>
+            </>
+          )}
+
+          {/* ---- screen 6: the three things ------------------------------
+              v17 ends here, with a legal paragraph and a tick box under the
+              three points. The points are the screen; the acceptance is the
+              one after it, which is the app's own. */}
+          {step === 'recap' && (
+            <>
+              <span className="frw__eyebrow">{t('You’re ready')}</span>
+
+              <div className="frw__headline">
+                <h1 className="is-small">{t('Three things to remember.')}</h1>
+              </div>
+
+              <ol className="frw__recap">
+                {RECAP.map((r, n) => (
+                  <li key={r}>
+                    <span className="frw__recap__n" aria-hidden="true">{n + 1}</span>
+                    <span className="frw__recap__t">{t(r)}</span>
+                  </li>
+                ))}
+              </ol>
             </>
           )}
 
